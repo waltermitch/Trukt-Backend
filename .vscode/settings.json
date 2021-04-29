@@ -1,0 +1,14 @@
+{
+    "azureFunctions.deploySubpath": ".",
+    "azureFunctions.postDeployTask": "npm install",
+    "azureFunctions.projectLanguage": "JavaScript",
+    "azureFunctions.projectRuntime": "~3",
+    "debug.internalConsoleOptions": "neverOpen",
+    "azureFunctions.preDeployTask": "npm prune",
+        "workbench.colorCustomizations": {
+        "titleBar.activeBackground": "#ac82e2",
+        "titleBar.activeForeground": "#000000",
+        "titleBar.inactiveBackground": "#000000",
+        "titleBar.inactiveForeground": "#8454c3"
+        }
+}
