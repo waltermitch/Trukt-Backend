@@ -48,3 +48,11 @@ Thumbs.db
 *.mov
 *.wmv
 
+
+#func app files
+__pycache__/
+*.py[cod]
+*$py.class
+node_modules
+coverage
+globalConfig.json
