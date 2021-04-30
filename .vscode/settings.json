@@ -5,10 +5,23 @@
     "azureFunctions.projectRuntime": "~3",
     "debug.internalConsoleOptions": "neverOpen",
     "azureFunctions.preDeployTask": "npm prune",
-        "workbench.colorCustomizations": {
+    "workbench.colorCustomizations": {
         "titleBar.activeBackground": "#ac82e2",
         "titleBar.activeForeground": "#000000",
         "titleBar.inactiveBackground": "#000000",
         "titleBar.inactiveForeground": "#8454c3"
-        }
+    },
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
+    "editor.formatOnSave": true,
+    // turn it off for specific style JS in this case
+    "[javascript]": {
+        "editor.formatOnSave": false
+    },
+    // enforcing edit and JS 
+    "javascript.updateImportsOnFileMove.enabled": "always",
+    "eslint.alwaysShowStatus": true,
+    "editor.formatOnPaste": true,
+    "editor.tabSize": 4
 }

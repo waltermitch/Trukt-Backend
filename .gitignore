@@ -58,3 +58,6 @@ coverage
 globalConfig.json
 local.settings.json
 config.json
+git/hooks/prepare-commit-msg.py
+notes.txt
+file.js
