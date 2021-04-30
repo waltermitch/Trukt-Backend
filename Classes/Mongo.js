@@ -16,6 +16,7 @@ class Mongo
 {
     constructor()
     { }
+
     static async connect()
     {
         if (!db)
@@ -43,6 +44,7 @@ class Mongo
 
         return res;
     }
+
     static async queryAll(collection, filter, projections)
     {
         const db = await Mongo.connect();
@@ -51,6 +53,7 @@ class Mongo
 
         return res;
     }
+
     static async getSecret(query)
     {
         const db = await Mongo.connect();
