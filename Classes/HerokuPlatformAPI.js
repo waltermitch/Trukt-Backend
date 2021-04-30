@@ -1,6 +1,7 @@
 const HTTPController = require('../Classes/HTTPController');
 const DB = require('../Classes/Mongo');
-const qs = require('qs')
+const qs = require('qs');
+const { DateTime } = require('luxon');
 
 //init config
 const config = HTTPController.getConfig();
@@ -62,9 +63,20 @@ class Heroku
         //get auth connection
         const auth = new HTTPController({ 'url': 'https://id.heroku.com' }).connect();
 
-        const res = await auth.post(`/oauth/token`, payload, { headers: { 'Content-Type': 'application/json' } })
+        //get new token
+        const res = await auth.post(`/oauth/token`, payload, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
 
-        return res.data;
+        //compose payload
+        const update =
+        {
+            'value': res.data.access_token,
+            'exp': DateTime.utc().plus({ hours: 7 }).toString()
+        }
+
+        //update in db
+        await DB.updateSecret(config.heroku.accessToken, update)
+
+        return { 'status': 200 }
     }
 }
 

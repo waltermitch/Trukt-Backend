@@ -1,3 +1,3 @@
 const Heroku = require('../Classes/HerokuPlatformAPI')
 
-module.exports = async (context) => App.next(context, Heroku.getNewToken)
+module.exports = async (context) => App.timer(context, Heroku.getNewToken)

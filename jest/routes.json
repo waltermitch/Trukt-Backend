@@ -1,0 +1,22 @@
+{
+  "geoRoutePickup": "/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?sourceCountry=USA,CAN&outFields=*&SingleLine=3565 W Columbus Ave Chicago, IL 60652",
+  "geoRouteDelivery": "/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?sourceCountry=USA,CAN&outFields=*&SingleLine=1409 W Wagoner Rd Phoenix, AZ 85023",
+  "cancelOfferRoute": "/v1/public/orders/1234/offers/5678/cancel",
+  "orderActivitiesRoute": "/v1/public/orders/1234/activities",
+  "updateOP": "/v1/public/orders/1234/purchase_order_number",
+  "findByVinRoute": "/v1/public/orders/find_by_vin/vin",
+  "addVehicleRoute": "/v1/public/orders/1234/vehicles",
+  "offerRoute": "/v1/public/orders/1234/offers",
+  "getOrder": "/v1/public/orders/1234",
+  "createOrderRoute": "/v1/public/orders",
+  "upsertCustomerRoute": "/v1/public/customers/custom_external_id/123",
+  "getCustomerRoute": "/v1/public/customers/custom_external_id/543",
+  "customerRoute": "/v1/public/customers/Customer GUID",
+  "postCustomerRoute": "/v1/public/customers",
+  "getByIdRoute": "/v1/public/carriers/custom_external_id/externalId",
+  "getByUSDOTRoute": "/v1/public/carriers/full_search?query=123321",
+  "carrierRoute": "/v1/public/carriers/Carrier GUID/profile",
+  "terminalContactsRoute": "/v1/public/terminals/1234/contacts",
+  "SDLoadboardRoute": "/v1/public/loadboard/orders/1234",
+  "findCarriers": "/internal/load_matching?pickup_address=95832&delivery_address=61616"
+}
