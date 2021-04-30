@@ -14,7 +14,8 @@
     "knex": "^0.95.4",
     "luxon": "^1.26.0",
     "mongodb": "^3.6.6",
-    "pg": "^8.6.0"
+    "pg": "^8.6.0",
+    "qs": "^6.10.1"
   },
   "devDependencies": {
     "axios-mock-adapter": "^1.19.0",

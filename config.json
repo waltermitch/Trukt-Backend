@@ -1,14 +1,13 @@
 {
-  "prod": {
-    "ArcMapsTokenName": "arc_access_token_prod"
-  },
-  "staging": {
-    "ArcMapsTokenName": "arc_access_token_prod"
-  },
-  "dev": {
-    "ArcMapsTokenName": "arc_access_token_prod"
-  },
+  "prod": {},
+  "staging": {},
+  "dev": {},
   "test": {
-    "ArcMapsTokenName": "arc_access_token_prod"
+    "heroku": {
+      "appId": "4a6714da-087f-4344-9351-071e09a7c87f",
+      "refreshToken": "heroku_refresh_token_dev",
+      "accessToken": "heroku_access_token_dev",
+      "clientSecret": "8d248276-40e5-49d0-890b-3dcb3cb62477"
+    }
   }
 }
