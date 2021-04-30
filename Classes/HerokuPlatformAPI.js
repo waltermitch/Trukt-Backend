@@ -3,9 +3,6 @@ const DB = require('../Classes/Mongo');
 const qs = require('qs');
 const { DateTime } = require('luxon');
 
-//init config
-const config = HTTPController.getConfig();
-
 let api;
 
 class Heroku

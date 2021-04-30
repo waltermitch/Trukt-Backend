@@ -1,4 +1,3 @@
-const config = require('../config.json')[`${process.env.ENV}`];
 const { DateTime } = require('luxon');
 const axios = require('axios');
 const https = require('https');
@@ -61,11 +60,6 @@ class HTTPController
     {
         // set the exp time
         this.exp = DateTime.utc().plus({ minutes: int }).toString()
-    }
-
-    static getConfig()
-    {
-        return config;
     }
 }
 
