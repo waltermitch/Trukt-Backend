@@ -1,4 +1,5 @@
-const { MongoClient } = require('mongodb')
+const { MongoClient } = require('mongodb');
+
 const dbUrl = process.env.dbUri;
 const dbName = process.env.dbName;
 const dbOptions =
@@ -12,7 +13,7 @@ require('../tools/start')();
 // db instance
 let db;
 
-class Mongo 
+class Mongo
 {
     constructor()
     { }
@@ -21,8 +22,10 @@ class Mongo
         if (!db)
         {
             const client = new MongoClient(dbUrl, dbOptions);
-            db = (await client.connect()).db(dbName)
+
+            db = (await client.connect()).db(dbName);
         }
+
         return db;
     }
 
@@ -30,16 +33,16 @@ class Mongo
     {
         const db = await Mongo.connect();
 
-        await db.collection(collection).updateOne(filter, { $set: data }, { upsert: true })
+        await db.collection(collection).updateOne(filter, { $set: data }, { upsert: true });
     }
 
     static async query(collection, filter, projections = {})
     {
-        Object.assign(projections, { '_id': 0 })
+        Object.assign(projections, { '_id': 0 });
 
         const db = await Mongo.connect();
 
-        const res = await db.collection(collection).findOne(filter, { projection: projections })
+        const res = await db.collection(collection).findOne(filter, { projection: projections });
 
         return res;
     }
@@ -55,7 +58,7 @@ class Mongo
     {
         const db = await Mongo.connect();
 
-        const res = await db.collection('secrets').findOne(query, { projection: { '_id': 0 } })
+        const res = await db.collection('secrets').findOne(query, { projection: { '_id': 0 }});
 
         return res;
     }
@@ -64,7 +67,7 @@ class Mongo
     {
         const db = await Mongo.connect();
 
-        await db.collection('secrets').updateOne({ 'name': key }, { $set: data }, { upsert: true })
+        await db.collection('secrets').updateOne({ 'name': key }, { $set: data }, { upsert: true });
     }
 }
 
