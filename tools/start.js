@@ -5,6 +5,6 @@ module.exports = () =>
     if (global.App)
         return;
 
-    //make app global
+    // make app global
     global.App = App;
-}
+};
