@@ -6,10 +6,10 @@ const DB = require('../Classes/DB');
 
 module.exports = async function (context, req)
 {
-    let response = { status: 400, data: "Missing Payload" };
+    let response = { status: 400, data: 'Missing Payload' };
 
     if (req?.body)
-    {
+    
         try
         {
             response = await test(context, req);
@@ -18,7 +18,6 @@ module.exports = async function (context, req)
         {
             response = new ErrorHandler(context, req);
         }
-    }
 
     context.res =
     {
@@ -26,7 +25,7 @@ module.exports = async function (context, req)
         status: response.status,
         body: response
     };
-}
+};
 
 async function test(context, req)
 {
@@ -34,7 +33,7 @@ async function test(context, req)
 
     const res = await DB.getSecret({ 'name': value });
 
-    return { "status": 200, "data": res };
+    return { 'status': 200, 'data': res };
 }
 
 // function setExpTime()
