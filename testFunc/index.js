@@ -4,7 +4,7 @@ module.exports = async (context) => App.next(context, get);
 
 async function get(context)
 {
-    crypt();
+    global.config = crypt();
 
     context.log(config);
 }
