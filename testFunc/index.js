@@ -1,8 +1,5 @@
 const ErrorHandler = require('../Classes/ErrorHandler');
-const DB = require('../Classes/DB');
-
-// const HTTPController = require('../Classes/HTTPController');
-// const DateTime = require('luxon').DateTime;
+const start = require('../tools/start');
 
 module.exports = async function (context, req)
 {
@@ -27,16 +24,9 @@ module.exports = async function (context, req)
     };
 };
 
-async function test(context, req)
+async function test()
 {
-    const value = req?.body?.name;
+    start();
 
-    const res = await DB.getSecret({ 'name': value });
-
-    return { 'status': 200, 'data': res };
+    return { 'status': 200 };
 }
-
-// function setExpTime()
-// {
-//     return DateTime.utc().plus({ hours: 24 }).toString().substr(0, 19);
-// }
