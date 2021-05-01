@@ -9,7 +9,7 @@
         "Atomics": "readonly",
         "SharedArrayBuffer": "readonly",
         "App": "writable",
-        "config":"writable"
+        "config":"readonly"
     },
     "extends": [
         "eslint:recommended",
