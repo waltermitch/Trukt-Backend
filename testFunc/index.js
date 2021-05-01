@@ -1,10 +1,10 @@
-const start = require('../tools/start');
+const crypt = require('../tools/crypt');
 
 module.exports = async (context) => App.next(context, get);
 
 async function get(context)
 {
-    start();
+    crypt();
 
     context.log(config);
 }
