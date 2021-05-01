@@ -4,16 +4,20 @@
   "description": "Backend for trukt app",
   "scripts": {
     "start": "func start --verbose",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "encrypt": "npx run-func .\\tools\\crypt.js encrypt",
+    "decrypt": "npx run-func .\\tools\\crypt.js decrypt"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "ajv": "^8.2.0",
     "axios": "^0.21.1",
+    "knex": "^0.95.4",
     "luxon": "^1.26.0",
     "mongodb": "^3.6.6",
-    "pg": "^8.6.0"
+    "pg": "^8.6.0",
+    "qs": "^6.10.1"
   },
   "devDependencies": {
     "axios-mock-adapter": "^1.19.0",

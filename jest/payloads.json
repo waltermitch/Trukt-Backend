@@ -1,0 +1,2083 @@
+{
+  "pushToDB": [
+    {
+      "key": "name",
+      "collection": "secrets",
+      "value": "super_access_token_staging",
+      "data": {
+        "value": "token",
+        "exp": "2099-04-04T00:00:00.000Z"
+      }
+    },
+    {
+      "key": "name",
+      "collection": "secrets",
+      "value": "super_access_token_internal_staging",
+      "data": {
+        "value": "token",
+        "exp": "2099-04-04T00:00:00.000Z"
+      }
+    }
+  ],
+  "missingPayload": { "status": 400, "data": "Missing Payload" },
+
+  "GUID": { "SDGUID": "1234" },
+  "offerAccepted": { "SDGUID": "1234", "action": "offer.accepted" },
+  "offerDeclined": { "SDGUID": "1234", "action": "offer.declined" },
+
+  "validateDeliveryPayload": {
+    "body": {
+      "photos": [
+        {
+          "is_active": true,
+          "created_at": "2021-03-24T15:30:49",
+          "changed_at": "2021-03-24T15:30:49",
+          "photo_url": "https://storage.googleapis.com/carrier-tms/media/carriers/89906c34-6b7d-4f83-b143-3dbf78b5884b/2021/3/24/e42d55f0-6262-4d51-97a6-f89024048615.jpg",
+          "photo_type": "pickup",
+          "rendered_photo_url": "",
+          "guid": "f231dabe-9931-4f52-bbec-c92462631321",
+          "latitude": 34.027275,
+          "longitude": -117.464722222222
+        },
+        {
+          "is_active": true,
+          "created_at": "2021-03-24T15:30:49",
+          "changed_at": "2021-03-24T15:30:49",
+          "photo_url": "https://storage.googleapis.com/carrier-tms/media/carriers/89906c34-6b7d-4f83-b143-3dbf78b5884b/2021/3/24/e42d55f0-6262-4d51-97a6-f89024048615.jpg",
+          "photo_type": "Delivery",
+          "rendered_photo_url": "",
+          "guid": "f231dabe-9931-4f52-bbec-c92462631321",
+          "latitude": 34.027275,
+          "longitude": -117.464722222222
+        }
+      ],
+      "expectedAddress": {
+        "latitude": 34.0189169,
+        "longitude": -117.463001
+      }
+    }
+  },
+  "validateResponse": {
+    "status": 200,
+    "message": "Delivered To Correct Address",
+    "invalidLocation": false,
+    "distance": "0.9428 km"
+  },
+  "validateResponseDist": {
+    "status": 200,
+    "message": "Delivered To Incorrect Address",
+    "invalidLocation": true,
+    "distance": "1.112e+4 km"
+  },
+  "validateFakeBody": {
+    "photos": [],
+    "expectedAddress": {
+      "latitude": 34.0189169,
+      "longitude": -117.463001
+    }
+  },
+  "validateEmptyArray": {
+    "status": 400,
+    "data": "No delivery type in Array."
+  },
+  "wrongValidatePayload": {
+    "photos": [
+      {
+        "is_active": true,
+        "created_at": "2021-03-24T15:30:49",
+        "changed_at": "2021-03-24T15:30:49",
+        "photo_url": "https://storage.googleapis.com/carrier-tms/media/carriers/89906c34-6b7d-4f83-b143-3dbf78b5884b/2021/3/24/e42d55f0-6262-4d51-97a6-f89024048615.jpg",
+        "photo_type": "pickup",
+        "rendered_photo_url": "",
+        "guid": "f231dabe-9931-4f52-bbec-c92462631321",
+        "latitude": 34.027275,
+        "longitude": -117.464722222222
+      },
+      {
+        "is_active": true,
+        "created_at": "2021-03-24T15:30:49",
+        "changed_at": "2021-03-24T15:30:49",
+        "photo_url": "https://storage.googleapis.com/carrier-tms/media/carriers/89906c34-6b7d-4f83-b143-3dbf78b5884b/2021/3/24/e42d55f0-6262-4d51-97a6-f89024048615.jpg",
+        "photo_type": "pickup",
+        "rendered_photo_url": "",
+        "guid": "f231dabe-9931-4f52-bbec-c92462631321",
+        "latitude": 34.027275,
+        "longitude": -117.464722222222
+      }
+    ],
+    "expectedAddress": {
+      "latitude": 34.0189169,
+      "longitude": -117.463001
+    }
+  },
+  "validateNull": {
+    "photos": [
+      {
+        "is_active": true,
+        "created_at": "2021-03-24T15:30:49",
+        "changed_at": "2021-03-24T15:30:49",
+        "photo_url": "https://storage.googleapis.com/carrier-tms/media/carriers/89906c34-6b7d-4f83-b143-3dbf78b5884b/2021/3/24/e42d55f0-6262-4d51-97a6-f89024048615.jpg",
+        "photo_type": "Delivery",
+        "rendered_photo_url": "",
+        "guid": "f231dabe-9931-4f52-bbec-c92462631321",
+        "latitude": null,
+        "longitude": null
+      }
+    ],
+    "expectedAddress": {
+      "latitude": 34.0189169,
+      "longitude": -117.463001
+    }
+  },
+
+  "updateOrderPayload": {
+    "SDGUID": "1234",
+    "transportType": "Van",
+    "po": "NP222",
+    "pickup": {
+      "zip": "77038",
+      "street": null,
+      "state": "TX",
+      "start_date": "2020-12-06T00:00:00.000Z",
+      "notes": null,
+      "name": "IAA HOUSTON - TML",
+      "end_date": "2020-12-07T00:00:00.000Z",
+      "city": "Houston",
+      "address": "2535 West Mt. Houston Rd."
+    },
+    "customerId": "543",
+    "paymentTerms": "ACH",
+    "orderNumber": "AF100003",
+    "orderInstructions": "LOTS OF ATVS GO VROOM VROOM",
+    "number_of_work_orders": 2,
+    "ltl": false,
+    "loadType": "Partial Load",
+    "loadboardInstructions": "LOTS OF ATVS GO VROOM VROOM",
+    "length": null,
+    "latestPickupDate": "2020-12-07T00:00:00.000Z",
+    "inspectionType": "advanced",
+    "guid": "1232481a81213",
+    "firstAvailablePickupDate": "2020-12-06T00:00:00.000Z",
+    "equipmentTypeOptions": null,
+    "equipmentType": "Van w/Team",
+    "enclosed": false,
+    "dispatcher": "Brad Marinov",
+    "deliveryStartDate": "2020-12-08T00:00:00.000Z",
+    "delivery": {
+      "zip": "30344",
+      "street": null,
+      "state": "GA",
+      "start_date": "2020-12-08T00:00:00.000Z",
+      "notes": null,
+      "name": "NPA ATLANTA - TML",
+      "end_date": "2020-12-08T00:00:00.000Z",
+      "city": "East Point",
+      "address": "4800 NORTH COMMERCE DR #200"
+    },
+    "commodities": [
+      {
+        "year": null,
+        "weight": 2344,
+        "vin": "2342424",
+        "vehicleType": "Coupe",
+        "SDGUID": "1234",
+        "model": "BIG ATV",
+        "make": "Pallets",
+        "lotNumber": "4534",
+        "length": 12,
+        "isInoperable": false,
+        "inspectionType": "Advanced",
+        "description": "BIG ATV",
+        "commodityType": "Pallets",
+        "carrierPay": 44,
+        "guid": "1234"
+      }
+    ],
+    "carrierPay": 44
+  },
+  "updateResponse": {
+    "status": 200,
+    "SDGUID": "1234",
+    "commodities": [
+      {
+        "SDGUID": "1234",
+        "year": "year",
+        "make": "make",
+        "model": "model",
+        "vin": "vin"
+      }
+    ]
+  },
+  "validateResponseFail": {
+    "status": 400,
+    "data": ["body must have required property 'orderNumber'"]
+  },
+  "updateOrder": {
+    "data": {
+      "object": {
+        "guid": "1234",
+        "vehicles": [
+          {
+            "guid": "1234",
+            "year": "year",
+            "make": "make",
+            "model": "model",
+            "vin": "vin"
+          }
+        ]
+      }
+    }
+  },
+  "trafficArray": [
+    { "incoming": "offer.sent", "output": "/notifier" },
+    { "incoming": "offer.sent.failed", "output": "/notifier" },
+    { "incoming": "offer.accepted", "output": "/offerAccepted" },
+    { "incoming": "offer.updated_to_accepted", "output": "/offerAccepted" },
+    { "incoming": "offer.accepted.ignored", "output": "/offerAcceptedIgnored" },
+    {
+      "incoming": "offer.updated_to_accepted.ignored",
+      "output": "/offerUpdatedIgnored"
+    },
+    { "incoming": "offer.canceled", "output": "/notifier" },
+    { "incoming": "offer.declined", "output": "/offerDeclined" },
+    { "incoming": "offer.declined.ignored", "output": "/notifier" },
+    { "incoming": "load_request.created", "output": "/loadRequestCreated" },
+    {
+      "incoming": "load_request.canceled_by_carrier",
+      "output": "/loadRequestCancelled"
+    },
+    { "incoming": "order.paid", "output": "/orderPaid" },
+    { "incoming": "order.delivered", "output": "/orderDelivered" },
+    {
+      "incoming": "order.delivered.ignored",
+      "output": "/orderDeliveredIgnored"
+    },
+    { "incoming": "order.picked_up", "output": "/orderPickedUp" },
+    {
+      "incoming": "order.picked_up.ignored",
+      "output": "/orderPickedUpIgnored"
+    },
+    { "incoming": "order.submitted_by_customer", "output": "/orderToSF" },
+    { "incoming": "untracked", "output": "" }
+  ],
+  "trafficArrayPayload": {
+    "order_guid": 1234,
+    "offer_guid": "12345",
+    "request": {}
+  },
+  "getOrder": { "body": { "SDGUID": "1234" } },
+  "getOrderPayload": {
+    "status": 200,
+    "out": {
+      "is_active": true,
+      "created_at": "2020-12-09T13:46:08",
+      "changed_at": "2020-12-15T15:34:39",
+      "inspection_type": "advanced",
+      "status": "new",
+      "is_status_changed_manually": false,
+      "purchase_order_number": null,
+      "dispatcher_name": "Josh Zemlyankin",
+      "dispatcher": {
+        "is_active": true,
+        "created_at": "2020-01-02T15:29:34.310+0000",
+        "changed_at": "2020-07-02T15:10:48.353+0000",
+        "username": "jzemlyankin@rcglogistics.com",
+        "email": "jzemlyankin@rcglogistics.com",
+        "first_name": "Josh",
+        "last_name": "Zemlyankin",
+        "guid": "3e8c2f48-1431-4439-a005-8a7bcd751deb"
+      },
+      "sales_representative": null,
+      "number": "SD-228648",
+      "price": 850,
+      "price_per_km": 0.43,
+      "is_posted_to_centraldispatch": true,
+      "is_posted_to_loadboard": true,
+      "posted_to_loadboard_at": "2020-12-09T20:46:11.588+0000",
+      "is_flagged": false,
+      "is_on_hold": false,
+      "broker_fee": null,
+      "instructions": "Please do not dispatch unless getting approval from Josh or Ross\n\nPreferred pickup window: Around Dec. 16\n\nRun and Drive: Yes\n\nKeys: Yes\n\nPlease call in advance to schedule for pickup and delivery",
+      "loadboard_instructions": null,
+      "is_archived": false,
+      "payment": {
+        "terms": "other",
+        "notes": null,
+        "method": null,
+        "amount": null,
+        "reference_number": null,
+        "sent_date": null
+      },
+      "customer_payment": {
+        "tariff": 1225,
+        "deposit": null,
+        "amount": null,
+        "terms": null,
+        "notes": null,
+        "method": null,
+        "reference_number": null,
+        "received_date": null
+      },
+      "pickup": {
+        "first_available_pickup_date": "2020-12-14T10:00:00",
+        "scheduled_at": "2020-12-14T10:00:00",
+        "scheduled_at_by_carrier": null,
+        "scheduled_ends_at": "2020-12-16T19:00:00",
+        "scheduled_at_by_customer": "2020-12-14T17:00:00.000+0000",
+        "scheduled_ends_at_by_customer": "2020-12-17T02:00:00.000+0000",
+        "adjusted_date": null,
+        "notes": null,
+        "date_type": "estimated",
+        "completed_at": null,
+        "latitude": 40.7021429,
+        "longitude": -73.57409402,
+        "venue": {
+          "name": "Residence",
+          "business_type": "BUSINESS",
+          "address": "726 Preston rd",
+          "city": "East Meadow",
+          "state": "NY",
+          "zip": "11554",
+          "contact_name": null,
+          "contact_title": null,
+          "contact_email": null,
+          "contact_phone": null,
+          "contact_mobile_phone": null
+        },
+        "counterparty_guid": null,
+        "save_as_new": null,
+        "save_as_new_contact": null
+      },
+      "delivery": {
+        "scheduled_at": null,
+        "scheduled_at_by_carrier": null,
+        "scheduled_ends_at": null,
+        "scheduled_at_by_customer": null,
+        "scheduled_ends_at_by_customer": null,
+        "adjusted_date": null,
+        "notes": null,
+        "date_type": "estimated",
+        "completed_at": null,
+        "latitude": 27.1465659,
+        "longitude": -80.28262801,
+        "venue": {
+          "name": "Residence",
+          "business_type": "BUSINESS",
+          "address": "4738 sw long bay dr",
+          "city": "Palm City",
+          "state": "FL",
+          "zip": "34990",
+          "contact_name": null,
+          "contact_title": null,
+          "contact_email": null,
+          "contact_phone": null,
+          "contact_mobile_phone": null
+        },
+        "counterparty_guid": null,
+        "save_as_new": null,
+        "save_as_new_contact": null
+      },
+      "customer": {
+        "name": "Consumers",
+        "business_type": null,
+        "address": null,
+        "city": null,
+        "state": null,
+        "zip": null,
+        "phone": null,
+        "email": null,
+        "contact_name": "Michael weidler",
+        "notes": null,
+        "contact_title": null,
+        "contact_email": "mweidler2000@yahoo.com",
+        "contact_phone": "516-318-8385",
+        "contact_mobile_phone": "516-538-0085",
+        "counterparty_guid": "ae09c07f-e47a-4513-8c46-adff6e5ce196",
+        "bill_the_delivery": false,
+        "save_as_new": null,
+        "save_as_new_contact": null
+      },
+      "dispatch_sheet_url": null,
+      "pdf_bol_url": null,
+      "pdf_bol_url_with_template": null,
+      "pdf_delivery_receipt_url": null,
+      "online_bol_url": "asd",
+      "vehicles": [
+        {
+          "is_active": true,
+          "created_at": "2020-12-09T13:46:08",
+          "changed_at": "2020-12-15T15:34:39",
+          "last_revision_id": 2898533,
+          "make": "Lincoln",
+          "model": "Nautilus",
+          "year": 2020,
+          "color": null,
+          "vin": null,
+          "vin_short": null,
+          "price": 850,
+          "tariff": 1225,
+          "type": "suv",
+          "lot_number": null,
+          "is_inoperable": false,
+          "curb_weight": null,
+          "curb_weight_unit": null,
+          "is_damaged": false,
+          "inspection_type": "advanced",
+          "requires_enclosed_trailer": false,
+          "is_driveaway": false,
+          "photos": [
+            {
+              "photo_type": "Delivery",
+              "photo_url": "some bologne"
+            }
+          ],
+          "pdf_bol_url": null,
+          "guid": "edd012d2-e451-483d-9a39-c2b7b5c26b3f"
+        }
+      ],
+      "guid": "5fecbcd8-8a4f-4a69-8bc6-60ef02669f8c",
+      "distance_meters": 1966825,
+      "distance_duration_seconds": 70888,
+      "transport_type": "OPEN",
+      "vins": "",
+      "p_guid": "407-7021429-737-57409402",
+      "d_guid": "277-1465659-807-28262801",
+      "customer_external_id": "0011U00001H5oMmQAJ",
+      "SFCarrierId": "0011U00001GMkYPQA1",
+      "offerSender": {},
+      "dispatcher_email": "jzemlyankin@rcglogistics.com",
+      "distance_miles": 1222.39,
+      "price_per_mile": 0.7
+    }
+  },
+  "loadRequest": {
+    "body": {
+      "action": "load_request.created",
+      "SDGUID": "1234",
+      "request": {
+        "carrier_address": "1234",
+        "carrier_city": "Thanosville",
+        "carrier_state": "TA",
+        "carrier_usdot": "12354",
+        "carrier_contact_name": "Thanos Mans",
+        "carrier_email": "thanos@avengers.inc",
+        "carrier_name": "Thanos",
+        "requested_price": 200
+      }
+    }
+  },
+  "findByVinPayload": {
+    "data": {
+      "objects": [
+        {
+          "number": "SD-227610",
+          "guid": "1234",
+          "created_at": "2020-11-18T21:30:11.671+0000"
+        },
+        {
+          "number": "Wrong Order",
+          "guid": "Wrong GUID",
+          "created_at": "2019-11-18T21:30:11.671+0000"
+        }
+      ]
+    }
+  },
+  "orderActivities": {
+    "status": "success",
+    "data": {
+      "objects": [
+        {
+          "code": "accepted",
+          "created_at": "2020-12-04T22:53:03.005+0000",
+          "action_status": "SUCCESS",
+          "guid": "d5902f01-9927-44ea-a764-2895e951571d",
+          "user": {},
+          "status": "accepted",
+          "carrier_phone": "3128014933",
+          "carrier_name": "DIRECT MOTOR LINES INC",
+          "carrier_address": "5522 CLARENDON HILLS RD",
+          "carrier_city": "CLARENDON HILLS",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60514",
+          "carrier_usdot": "2795768",
+          "carrier_email": "dmcars87@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "offer_sent",
+          "created_at": "2020-12-04T22:49:26.237+0000",
+          "action_status": "SUCCESS",
+          "guid": "c970372c-a36b-4252-8b70-783a15d12d58",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "pending",
+          "carrier_phone": "3128014933",
+          "carrier_name": "DIRECT MOTOR LINES INC",
+          "carrier_address": "5522 CLARENDON HILLS RD",
+          "carrier_city": "CLARENDON HILLS",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60514",
+          "carrier_usdot": "2795768",
+          "carrier_email": "dmcars87@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-12-04T22:23:19.508+0000",
+          "action_status": "SUCCESS",
+          "guid": "34f49288-5766-411f-81b0-3e23e7cff46b",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-12-04T22:17:50.844+0000",
+          "action_status": "SUCCESS",
+          "guid": "0bd76fef-f48e-419c-b715-917ec9a998d4",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-12-04T21:49:27.950+0000",
+          "action_status": "SUCCESS",
+          "guid": "a77ba149-b1ff-463a-bed5-4b4e5484c58c",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-12-04T17:56:59.049+0000",
+          "action_status": "SUCCESS",
+          "guid": "674af9da-6ee4-490a-a839-b55d2ce81087",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-12-04T17:56:37.519+0000",
+          "action_status": "SUCCESS",
+          "guid": "e9bde937-4329-47c3-9160-2f199cb47dff",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_loadboard",
+          "created_at": "2020-12-04T17:56:35.970+0000",
+          "action_status": "SUCCESS",
+          "guid": "3fc2bab6-cd80-4a39-9e5b-c1336d7b457b",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "canceled",
+          "created_at": "2020-12-04T17:56:24.010+0000",
+          "action_status": "SUCCESS",
+          "guid": "9782dbb7-60b7-4363-96d2-0c49c749c079",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "canceled",
+          "carrier_phone": "630 854 2767",
+          "carrier_name": "Green Light Carrier Inc",
+          "carrier_contact_name": "David",
+          "carrier_address": "1336 MC DOWELL RD UNIT 202",
+          "carrier_city": "NAPERVILLE",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60563",
+          "carrier_usdot": "2958246",
+          "carrier_email": "greenlightcarrierinc@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "accepted",
+          "created_at": "2020-12-01T15:52:09.087+0000",
+          "action_status": "SUCCESS",
+          "guid": "bb0b9e2b-0c67-4e46-acb5-fbff5fd7c02c",
+          "user": {},
+          "status": "accepted",
+          "carrier_phone": "630 854 2767",
+          "carrier_name": "Green Light Carrier Inc",
+          "carrier_contact_name": "David",
+          "carrier_address": "1336 MC DOWELL RD UNIT 202",
+          "carrier_city": "NAPERVILLE",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60563",
+          "carrier_usdot": "2958246",
+          "carrier_email": "greenlightcarrierinc@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "load_request_approved_by_broker",
+          "created_at": "2020-12-01T15:12:35.141+0000",
+          "action_status": "SUCCESS",
+          "guid": "b5066955-1cee-4f13-a67f-65547fbf8f99",
+          "user": {
+            "is_active": true,
+            "created_at": "2019-06-03T19:53:05.178+0000",
+            "changed_at": "2020-07-02T15:10:08.382+0000",
+            "username": "framirez@rcglogistics.com",
+            "email": "framirez@rcglogistics.com",
+            "first_name": "Felix",
+            "last_name": "Ramirez",
+            "guid": "b11fabfc-0196-48c0-8559-d3f826696817"
+          },
+          "status": "new",
+          "carrier_phone": "630 854 2767",
+          "carrier_name": "Green Light Carrier Inc",
+          "carrier_contact_name": "Max",
+          "carrier_address": "1336 MC DOWELL RD UNIT 202",
+          "carrier_city": "NAPERVILLE",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60563",
+          "carrier_usdot": "2958246",
+          "carrier_email": "greenlightcarrierinc@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "load_request_updated",
+          "created_at": "2020-12-01T01:39:22.422+0000",
+          "action_status": "SUCCESS",
+          "guid": "b6dbefe7-b4be-40e8-bd45-3445cb7ebb10",
+          "user": {},
+          "status": "new",
+          "carrier_phone": "630 854 2767",
+          "carrier_name": "Green Light Carrier Inc",
+          "carrier_contact_name": "Max",
+          "carrier_address": "1336 MC DOWELL RD UNIT 202",
+          "carrier_city": "NAPERVILLE",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60563",
+          "carrier_usdot": "2958246",
+          "carrier_email": "greenlightcarrierinc@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "load_request_created",
+          "created_at": "2020-12-01T00:21:32.241+0000",
+          "action_status": "SUCCESS",
+          "guid": "61176346-5dac-4e59-871c-adf4e88243da",
+          "user": {},
+          "status": "new",
+          "carrier_phone": "630 854 2767",
+          "carrier_name": "Green Light Carrier Inc",
+          "carrier_contact_name": "Max",
+          "carrier_address": "1336 MC DOWELL RD UNIT 202",
+          "carrier_city": "NAPERVILLE",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60563",
+          "carrier_usdot": "2958246",
+          "carrier_email": "greenlightcarrierinc@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-30T18:56:37.334+0000",
+          "action_status": "SUCCESS",
+          "guid": "a69d31b1-56ae-4cdd-92cf-39fa6871b480",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-30T18:54:38.440+0000",
+          "action_status": "SUCCESS",
+          "guid": "60629d2a-dd92-4c35-867b-2f70afff2ed3",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-27T20:02:11.612+0000",
+          "action_status": "SUCCESS",
+          "guid": "a629b3e2-517c-4942-ba50-b3680e0d5657",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-27T18:38:35.472+0000",
+          "action_status": "SUCCESS",
+          "guid": "f93982e3-5912-4475-8f72-8b92110f1887",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "load_request_created",
+          "created_at": "2020-11-27T08:31:19.682+0000",
+          "action_status": "SUCCESS",
+          "guid": "a0eaf714-e0b2-44cc-b896-4eb7cfa5e79d",
+          "user": {},
+          "status": "new",
+          "carrier_phone": "+1(216) 762-9528",
+          "carrier_name": "UNIVERSAL TRUCKING AND SERVICES LLC",
+          "carrier_contact_name": "Corey Courtney",
+          "carrier_address": "5900 GLENWOOD AVE",
+          "carrier_city": "MAPLE HEIGHTS",
+          "carrier_state": "OH",
+          "carrier_zip": "44137",
+          "carrier_usdot": "3464831",
+          "carrier_email": "universaltruckingandservices@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-23T16:56:14.125+0000",
+          "action_status": "SUCCESS",
+          "guid": "061a1968-eaee-4e80-8e3a-1e3ce3fb9c9b",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-23T16:08:44.882+0000",
+          "action_status": "SUCCESS",
+          "guid": "b91f9f9b-a0c2-43e4-a2b8-d443da2f0a9e",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-20T22:06:55.594+0000",
+          "action_status": "SUCCESS",
+          "guid": "17f50f08-49a7-41c8-bb27-03b291050654",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-19T21:15:02.142+0000",
+          "action_status": "SUCCESS",
+          "guid": "e7ffdd30-3e19-4477-af80-9d07d0806aa8",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-19T20:00:22.560+0000",
+
+          "action_status": "SUCCESS",
+          "guid": "b613cade-ea4c-4654-b813-e6b5f21750a3",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-19T20:00:14.050+0000",
+          "action_status": "SUCCESS",
+          "guid": "35fa96e1-db01-4ed0-843f-8eec70f77f25",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-19T19:59:59.101+0000",
+          "action_status": "SUCCESS",
+          "guid": "a19dc982-11cf-44b7-8a5c-d97fe1521c85",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-19T19:59:11.356+0000",
+          "action_status": "SUCCESS",
+          "guid": "43a88137-c666-4de6-a33a-87a9e7bde9cd",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-19T18:16:22.837+0000",
+          "action_status": "SUCCESS",
+          "guid": "22a7ec6c-7109-4af6-aea6-e442207fabfc",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "load_request_canceled",
+          "created_at": "2020-11-18T22:25:03.795+0000",
+          "action_status": "SUCCESS",
+          "guid": "df936116-78b5-4246-95e7-919c549b26dc",
+          "user": {},
+          "status": "new",
+          "carrier_phone": "+1(630) 686-5793",
+          "carrier_name": "NEXT DAY INC",
+          "carrier_contact_name": "Jack ",
+          "carrier_address": "2200 S MAIN ST STE 207",
+          "carrier_city": "LOMBARD",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60148",
+          "carrier_usdot": "3177474",
+          "carrier_email": "nextdaycars@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-18T22:13:56.459+0000",
+          "action_status": "SUCCESS",
+          "guid": "99b794d9-7986-4415-b165-a53032cd2907",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "load_request_created",
+          "created_at": "2020-11-18T22:02:49.826+0000",
+          "action_status": "SUCCESS",
+          "guid": "56ef7adb-9945-4639-b6a7-a0c0621e996f",
+          "user": {},
+          "status": "new",
+          "carrier_phone": "+1(630) 686-5793",
+          "carrier_name": "NEXT DAY INC",
+          "carrier_contact_name": "Jack ",
+          "carrier_address": "2200 S MAIN ST STE 207",
+          "carrier_city": "LOMBARD",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60148",
+          "carrier_usdot": "3177474",
+          "carrier_email": "nextdaycars@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_cd",
+          "created_at": "2020-11-18T21:30:24.252+0000",
+          "action_status": "SUCCESS",
+          "guid": "c7cb4698-c530-4e92-882d-5ab8609faca4",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "posted_to_loadboard",
+          "created_at": "2020-11-18T21:30:23.119+0000",
+          "action_status": "SUCCESS",
+          "guid": "e285efb7-1182-4e98-ace4-aa9b4f4df2ae",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        },
+        {
+          "code": "created",
+          "created_at": "2020-11-18T21:30:11.673+0000",
+          "action_status": "SUCCESS",
+          "guid": "200ff81b-c8e4-4b2f-a01d-82c9f08aae92",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "new",
+          "vehicles": []
+        }
+      ],
+      "pagination": {
+        "total_pages": 1,
+        "total_objects": 33,
+        "limit": 33,
+        "page": 0
+      }
+    }
+  },
+  "superCustomer": {
+    "data": {
+      "object": {
+        "custom_external_id": "001234"
+      }
+    }
+  },
+  "superOrder": {
+    "status": "success",
+    "data": {
+      "object": {
+        "is_active": true,
+        "created_at": "2020-11-18T21:30:11.671+0000",
+        "changed_at": "2020-12-04T22:53:53.775+0000",
+        "inspection_type": "advanced",
+        "last_revision_id": 2867067,
+        "status": "accepted",
+        "is_status_changed_manually": false,
+        "purchase_order_number": null,
+        "dispatcher_name": "David Atamanyuk",
+        "dispatcher": {
+          "is_active": true,
+          "created_at": "2020-01-06T15:04:41.962+0000",
+          "changed_at": "2020-07-02T15:08:52.780+0000",
+          "username": "datamanyuk@rcglogistics.com",
+          "email": "datamanyuk@rcglogistics.com",
+          "first_name": "David",
+          "last_name": "Atamanyuk",
+          "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+        },
+        "sales_representative": null,
+        "number": "SD-227610",
+        "price": 750.0,
+        "price_per_km": 0.27,
+        "is_posted_to_centraldispatch": false,
+        "is_posted_to_loadboard": false,
+        "posted_to_loadboard_at": "2020-12-04T17:56:35.966+0000",
+        "is_flagged": false,
+        "is_on_hold": false,
+        "broker_fee": null,
+        "instructions": "**IMPORTANT**\nMust call pick up location at least 24 hours and 1hr in advance to arrange pick up.\n\nKeys: Yes\nDrives: Yes\n\nReleasing Hours: \nMonday - Friday  8:00am - 5:00pm\nSaturday - Sunday  8:00am - 4:00pm\nBOL: Electronic Acceptable\n\nMust use Super Dispatch.\n- Please be sure to fill out the condition report on Super Dispatch. As well as take clear pictures of the unit and vin. -\n\n\nCall or text at any time if you have any questions 916-573-6630",
+        "loadboard_instructions": "request deliver by or on 12/10/12",
+        "is_archived": false,
+        "payment": {
+          "terms": "ach",
+          "notes": null,
+          "method": null,
+          "amount": null,
+          "reference_number": null,
+          "sent_date": null
+        },
+        "customer_payment": {
+          "tariff": 1395.0,
+          "deposit": null,
+          "amount": null,
+          "terms": null,
+          "notes": null,
+          "method": null,
+          "reference_number": null,
+          "received_date": null
+        },
+        "pickup": {
+          "first_available_pickup_date": "2020-12-05T17:00:00.000+0000",
+          "scheduled_at": "2020-12-05T17:00:00.000+0000",
+          "scheduled_at_by_carrier": null,
+          "scheduled_ends_at": "2020-12-05T17:00:00.000+0000",
+          "scheduled_at_by_customer": "2020-12-05T17:00:00.000+0000",
+          "scheduled_ends_at_by_customer": "2020-12-10T02:00:00.000+0000",
+          "adjusted_date": null,
+          "notes": null,
+          "date_type": "estimated",
+          "completed_at": null,
+          "latitude": 41.74357,
+          "longitude": -87.71127,
+          "venue": {
+            "name": "X L Towing",
+            "business_type": "BUSINESS",
+            "address": "3565 W Columbus Ave",
+            "city": "Chicago",
+            "state": "IL",
+            "zip": "60652",
+            "contact_name": null,
+            "contact_title": null,
+            "contact_email": null,
+            "contact_phone": "(312) 626-2700",
+            "contact_mobile_phone": null
+          },
+          "counterparty_guid": null,
+          "save_as_new": null,
+          "save_as_new_contact": null
+        },
+        "delivery": {
+          "scheduled_at": "2020-12-11T17:00:00.000+0000",
+          "scheduled_at_by_carrier": null,
+          "scheduled_ends_at": "2020-12-12T02:00:00.000+0000",
+          "scheduled_at_by_customer": "2020-12-11T17:00:00.000+0000",
+          "scheduled_ends_at_by_customer": "2020-12-12T02:00:00.000+0000",
+          "adjusted_date": null,
+          "notes": null,
+          "date_type": "estimated",
+          "completed_at": null,
+          "latitude": 33.653118,
+          "longitude": -112.090944,
+          "venue": {
+            "name": "Residence",
+            "business_type": "PRIVATE",
+            "address": "1409 W Wagoner Rd",
+            "city": "Phoenix",
+            "state": "AZ",
+            "zip": "85023",
+            "contact_name": "Mohammed Aal Iessa",
+            "contact_title": null,
+            "contact_email": null,
+            "contact_phone": "(602) 451-6503",
+            "contact_mobile_phone": null
+          },
+          "counterparty_guid": null,
+          "save_as_new": null,
+          "save_as_new_contact": null
+        },
+        "customer": {
+          "name": "Swoop Towing",
+          "business_type": null,
+          "address": "One Cabot Rd",
+          "city": "Medford",
+          "state": "MA",
+          "zip": "02155",
+          "phone": "(415) 855-7532",
+          "email": null,
+          "contact_name": "Swoop Towing",
+          "notes": null,
+          "contact_title": null,
+          "contact_email": null,
+          "contact_phone": null,
+          "contact_mobile_phone": null,
+          "counterparty_guid": "Customer GUID",
+          "bill_the_delivery": false,
+          "save_as_new": null,
+          "save_as_new_contact": null
+        },
+        "dispatch_sheet_url": "https://storage.googleapis.com/prod-broker-files/2020/11/18/f0370705-d0b0-4e9a-ae3f-d18530a395e8/dispatch_sheets/SD-227610 Dispatch Sheet 1607122165873.pdf",
+        "pdf_bol_url": null,
+        "pdf_bol_url_with_template": null,
+        "pdf_delivery_receipt_url": null,
+        "online_bol_url": null,
+        "vehicles": [
+          {
+            "is_active": true,
+            "created_at": "2020-11-18T21:30:11.674+0000",
+            "changed_at": "2020-12-04T22:53:53.775+0000",
+            "last_revision_id": 2866380,
+            "make": "Hyundai",
+            "model": "Accent",
+            "year": 2014,
+            "color": "Grey",
+            "vin": "KMHCT4AE1EU724426",
+            "vin_short": "EU724426",
+            "price": 750.0,
+            "tariff": 1395.0,
+            "type": "sedan",
+            "lot_number": "10769565",
+            "is_inoperable": false,
+            "curb_weight": "2480",
+            "curb_weight_unit": "lbs",
+            "is_damaged": false,
+            "inspection_type": "advanced",
+            "requires_enclosed_trailer": false,
+            "is_driveaway": false,
+            "photos": [],
+            "pdf_bol_url": null,
+            "guid": "6fc9a0c3-8167-49ae-bd22-dd9cd83e23ae"
+          },
+          {
+            "is_active": true,
+            "created_at": "2020-11-18T21:30:11.674+0000",
+            "changed_at": "2020-12-04T22:53:53.775+0000",
+            "last_revision_id": 2866380,
+            "make": "Hyundai",
+            "model": "Accent",
+            "year": 2014,
+            "color": "Grey",
+            "vin": "KMHCT4AE1EU724426",
+            "vin_short": "EU724426",
+            "price": 750.0,
+            "tariff": 1395.0,
+            "type": "sedan",
+            "lot_number": "10769565",
+            "is_inoperable": false,
+            "curb_weight": "2480",
+            "curb_weight_unit": "lbs",
+            "is_damaged": false,
+            "inspection_type": "advanced",
+            "requires_enclosed_trailer": false,
+            "is_driveaway": false,
+            "photos": [],
+            "pdf_bol_url": null,
+            "guid": "randomGUID"
+          },
+          {
+            "is_active": true,
+            "created_at": "2020-11-18T21:30:11.674+0000",
+            "changed_at": "2020-12-04T22:53:53.775+0000",
+            "last_revision_id": 2866380,
+            "make": "Hyundai",
+            "model": "Accent",
+            "year": 2014,
+            "color": "Grey",
+            "vin": "KMHCT4AE1EU724426",
+            "vin_short": "EU724426",
+            "price": 750.0,
+            "tariff": 1395.0,
+            "type": "sedan",
+            "lot_number": "10769565",
+            "is_inoperable": false,
+            "curb_weight": "2480",
+            "curb_weight_unit": "lbs",
+            "is_damaged": false,
+            "inspection_type": "advanced",
+            "requires_enclosed_trailer": false,
+            "is_driveaway": false,
+            "photos": [],
+            "pdf_bol_url": null,
+            "guid": "weirdGUID"
+          }
+        ],
+        "guid": "f0370705-d0b0-4e9a-ae3f-d18530a395e8",
+        "distance_meters": 2805787,
+        "distance_duration_seconds": 105516,
+        "transport_type": "OPEN",
+        "archived": false,
+        "imported_from_jtracker": false,
+        "imported_from_central_dispatch": false
+      }
+    }
+  },
+  "orderPayload": {
+    "customerId": "SOME STRING",
+    "po": "NP222",
+    "totalTariff": 140,
+    "pickup": {
+      "zip": "77038",
+      "street": null,
+      "state": "TX",
+      "notes": null,
+      "name": "IAA HOUSTON - TML",
+      "city": "Houston",
+      "address": "2535 West Mt. Houston Rd.",
+      "contactName": "Peter Pan",
+      "contactPhone": "91645445454",
+      "contactEmail": "some@exmaple.com",
+      "contactMobile": "9164544545"
+    },
+    "orderNumber": "AF100003",
+    "orderInstructions": "LOTS OF ATVS GO VROOM VROOM",
+    "loadType": "Partial Load",
+    "loadboardInstructions": "LOTS OF ATVS GO VROOM VROOM",
+    "latestPickupDate": "2020-12-07T00:00:00.000Z",
+    "inspectionType": "advanced",
+    "firstAvailablePickupDate": "2020-12-06T00:00:00.000Z",
+    "equipmentType": "Van w/Team",
+    "dispatcher": "Brad Marinov",
+    "deliveryStartDate": "2020-12-08T00:00:00.000Z",
+    "delivery": {
+      "zip": "30344",
+      "street": null,
+      "state": "GA",
+      "notes": null,
+      "name": "NPA ATLANTA - TML",
+      "city": "East Point",
+      "address": "4800 NORTH COMMERCE DR #200",
+      "contactName": "Peter Pan",
+      "contactPhone": "91645445454",
+      "contactEmail": "some@exmaple.com",
+      "contactMobile": "9164544545"
+    },
+    "commodities": [
+      {
+        "year": null,
+        "weight": 2344,
+        "vin": "2342424",
+        "vehicleType": "Coupe",
+        "SDGUID": null,
+        "model": "BIG ATV",
+        "make": "Pallets",
+        "lotNumber": "4534",
+        "length": 12,
+        "isInoperable": false,
+        "inspectionType": "Advanced",
+        "description": "BIG ATV",
+        "commodityType": "Pallets",
+        "carrierPay": 44,
+        "tariff": 150.0
+      }
+    ],
+    "carrierPay": 44
+  },
+  "commodity": {
+    "vin": "vin",
+    "year": "year",
+    "make": "make",
+    "model": "model",
+    "isInoperable": true,
+    "lotNumber": "lotNumber",
+    "carrierPay": 100,
+    "vehicleType": "Coupe"
+  },
+  "addVehicleReq": {
+    "body": {
+      "vin": "vin",
+      "year": "year",
+      "make": "make",
+      "model": "model",
+      "isInoperable": true,
+      "lotNumber": "lotNumber",
+      "carrierPay": 100,
+      "vehicleType": "Coupe",
+      "SDGUID": "1234"
+    }
+  },
+  "addVehicleResponse": {
+    "data": {
+      "object": {
+        "guid": "420"
+      }
+    }
+  },
+  "pickupCoords": {
+    "candidates": [
+      {
+        "location": {
+          "x": 120.1234567589,
+          "y": 121.4431245246
+        },
+        "attributes": {
+          "LongLabel": "9300 Tech Center Drive Sacramento, CA 95826",
+          "Postal": "95826",
+          "City": "Sacramento",
+          "Region": "CA",
+          "RegionAbbr": "CA"
+        }
+      }
+    ]
+  },
+  "deliveryCoords": {
+    "candidates": [
+      {
+        "location": {
+          "x": 20.123412315151243,
+          "y": 21.4431123514515
+        },
+        "attributes": {
+          "LongLabel": "",
+          "Postal": "",
+          "City": "",
+          "Region": ""
+        }
+      }
+    ]
+  },
+  "expectedPayload": { "purchase_order_number": 123 },
+  "responseByUSDOTRoute": {
+    "data": {
+      "objects": [
+        {
+          "broker_records": {
+            "custom_external_id": "externalId",
+            "insurance_expires_at": "never",
+            "approved": false,
+            "in_blacklist": false,
+            "insurance_certificate_holder": "none",
+            "preferred": false,
+            "guid": "Carrier GUID"
+          },
+          "us_dot": "123321",
+          "custom_external_id": "externalId",
+          "insurance_expires_at": "never",
+          "approved": false,
+          "in_blacklist": false,
+          "insurance_certificate_holder": "none",
+          "preferred": false,
+          "guid": "Carrier GUID"
+        }
+      ]
+    }
+  },
+  "updateCarrierPayload": {
+    "body": {
+      "usdot_number": "123321",
+      "custom_external_id": "externalId",
+      "insurance_expires_at": "never",
+      "approved": false,
+      "in_blacklist": true,
+      "insurance_certificate_holder": "none",
+      "preferred": false
+    }
+  },
+  "updatePoReq": { "body": { "po": 123, "guid": "1234" } },
+  "success": { "status": 200 },
+  "successData": { "status": 200, "data": {} },
+  "dataObjectArray": { "data": { "objects": [] } },
+  "tokenPayload": {
+    "access_token": "newVal"
+  },
+  "orderByVin": { "body": { "vin": "vin" } },
+  "whoSentResponse": {
+    "carrier": "DIRECT MOTOR LINES INC",
+    "dot": "2795768",
+    "email": "datamanyuk@rcglogistics.com",
+    "name": "David Atamanyuk",
+    "offer_date": "2020-12-04"
+  },
+  "updateCarrierReq": {
+    "body": {
+      "usdot_number": "123321",
+      "custom_external_id": "externalId",
+      "insurance_expires_at": "never",
+      "approved": "nothing good",
+      "in_blacklist": "nothing good",
+      "insurance_certificate_holder": null,
+      "preferred": false
+    }
+  },
+  "getByIdPayload": {
+    "data": {
+      "objects": [
+        {
+          "custom_external_id": "externalId",
+          "insurance_expires_at": "never",
+          "approved": false,
+          "in_blacklist": false,
+          "insurance_certificate_holder": "none",
+          "preferred": false,
+          "guid": "Carrier GUID"
+        }
+      ]
+    }
+  },
+  "updateExternalID": {
+    "body": {
+      "approved": false,
+      "custom_external_id": "externalId",
+      "in_blacklist": false,
+      "insurance_expires_at": "never",
+      "insurance_certificate_holder": "none",
+      "preferred": false
+    }
+  },
+  "sendOffer": {
+    "body": {
+      "carrierGuid": "Carrier GUID",
+      "USDOT": "123321",
+      "SDGUID": "1234"
+    }
+  },
+  "orderPickedUpIgnored": {
+    "orderLookupField": "1234",
+    "orderLookupValue": "SD_GUID__c",
+    "noteType": "Update",
+    "noteText": "Super Dispatch Carrier updated the order to Picked Up today after the order was manually marked as Delivered previously."
+  },
+  "oderPickedUpPayload": {
+    "orderLookupField": "SD_GUID__c",
+    "orderLookupValue": "1234",
+    "status": "Picked Up"
+  },
+  "orderDeliveryIgnored": {
+    "orderLookupField": "1234",
+    "orderLookupValue": "SD_GUID__c",
+    "noteType": "Update",
+    "noteText": "Super Dispatch Carrier updated the order to Delivered today after the order was manually updated previously."
+  },
+  "orderDeliveredReq": {
+    "body": {
+      "SDGUID": "1234",
+      "action": "order.delivered"
+    }
+  },
+  "offerUpdateIgnored": {
+    "orderLookupValue": "1234",
+    "orderLookupField": "SD_GUID__c",
+    "noteType": "Update",
+    "noteText": "Super Dispatch Carrier reverted the order status from Delivered to Picked up or New.\n"
+  },
+  "offerAcceptIgnored": {
+    "orderLookupValue": "1234",
+    "orderLookupField": "SD_GUID__c",
+    "noteType": "Update",
+    "noteText": "Super Dispatch Carrier Accepted thier Load Offer after the order was already marked Picked up or Delivered."
+  },
+  "loadRequestCreated": {
+    "SDGUID": "1234",
+    "action": "load_request.created"
+  },
+  "loadRequestCanceledPayload": {
+    "body": {
+      "SDGUID": "1234",
+      "action": "load_request.canceled",
+      "request": { "guid": "1234" }
+    }
+  },
+  "sendEmailWrongPayload": { "body": { "to": "t", "subject": "add" } },
+  "notifierDummy": {
+    "body": { "action": "load_request.created", "SDGUID": "1234" }
+  },
+  "offerEmptyPayload": {
+    "data": {
+      "objects": []
+    }
+  },
+  "customerExternalID": { "body": { "customerId": "543" } },
+  "customerExternalPayload": { "data": { "objects": [{ "guid": "1234" }] } },
+  "terminalReq": { "body": { "t_guid": "1234" } },
+  "cancelOffer": { "body": { "SDGUID": "1234", "SDOfferGUID": "5678" } },
+  "createOrderpayload": {
+    "data": {
+      "object": {
+        "guid": "1234",
+        "vehicles": [
+          {
+            "SDGUID": "1010",
+            "vin": "vin",
+            "year": "year",
+            "make": "make",
+            "model": "model",
+            "isInoperable": true,
+            "lotNumber": "lotNumber",
+            "carrierPay": 100,
+            "vehicleType": "Coupe"
+          }
+        ]
+      }
+    }
+  },
+  "upsertCustomerReq": { "body": { "custom_external_id": "123" } },
+  "upsertCustomer200": { "status": 200, "guid": "Customer GUID" },
+  "upsertCustomerObject": { "data": { "object": { "guid": "Customer GUID" } } },
+  "upsertCustomerArray": {
+    "data": { "objects": [{ "guid": "Customer GUID" }] }
+  },
+  "terminalClass": {
+    "address": "Where are we going",
+    "city": "City",
+    "state": "CA",
+    "zip": "12345",
+    "businessType": "BUSINESS"
+  },
+  "setEquipmentType": [
+    { "incoming": "Open", "output": "OPEN" },
+    { "incoming": "Enclosed", "output": "ENCLOSED" },
+    { "incoming": "Van", "output": "ENCLOSED" },
+    { "incoming": "Flatbed", "output": "OPEN" },
+    { "incoming": "Step Deck", "output": "OPEN" },
+    { "incoming": "Lowboy or RGN", "output": "OPEN" },
+    { "incoming": "RGN", "output": "OPEN" },
+    { "incoming": "Reefer", "output": "ENCLOSED" },
+    { "incoming": "Flatbed/Van/Reefer", "output": "OPEN" },
+    { "incoming": "Sprinter Van", "output": "ENCLOSED" },
+    { "incoming": "Power Only", "output": "DRIVEAWAY" },
+    { "incoming": "Driveaway", "output": "DRIVEAWAY" },
+    { "incoming": "Box Truck", "output": "ENCLOSED" },
+    { "incoming": "Lowboy", "output": "OPEN" },
+    { "incoming": "Hot Shot", "output": "OPEN" },
+    { "incoming": "Van/Reefer", "output": "ENCLOSED" },
+    { "incoming": "Van/Flatbed/Step Deck", "output": "ENCLOSED" },
+    { "incoming": "Flatbed/Step Deck", "output": "OPEN" },
+    { "incoming": "Van w/Team", "output": "ENCLOSED" }
+  ],
+  "commodityArray": [
+    { "incoming": "Sedan", "output": "sedan" },
+    { "incoming": "SUV", "output": "suv" },
+    { "incoming": "Minivan", "output": "van" },
+    { "incoming": "Cargo Van", "output": "van" },
+    { "incoming": "Box Truck", "output": "truck_daycab" },
+    { "incoming": "Pickup Truck (4 Door)", "output": "4_door_pickup" },
+    { "incoming": "Pickup Truck (2 Door)", "output": "pickup" },
+    { "incoming": "Pickup Dually", "output": "pickup" },
+    { "incoming": "Trailer (Bumper Pull)", "output": "trailer_bumper_pull" },
+    { "incoming": "Trailer (Gooseneck)", "output": "trailer_gooseneck" },
+    { "incoming": "Trailer (5th Wheel)", "output": "trailer_5th_wheel" },
+    { "incoming": "RV", "output": "rv" },
+    { "incoming": "Motorcycle", "output": "motorcycle" },
+    { "incoming": "ATV", "output": "atv" },
+    { "incoming": "Boat", "output": "boat" }
+  ],
+  "emailBody": {
+    "body": {
+      "cc": "this is  cc field",
+      "to": "thanos@avengers.inc",
+      "from": "no-reply@rcglogistics.com",
+      "subject": "XOXO",
+      "message": "I miss you senpai",
+      "html": "I miss you senpai",
+      "mail_settings": {
+        "sandbox_mode": {
+          "enable": true
+        }
+      }
+    }
+  },
+  "SuperOrderLKQ": {
+    "status": "success",
+    "data": {
+      "object": {
+        "is_active": true,
+        "created_at": "2020-11-18T21:30:11.671+0000",
+        "changed_at": "2020-12-04T22:53:53.775+0000",
+        "inspection_type": "advanced",
+        "last_revision_id": 2867067,
+        "status": "accepted",
+        "is_status_changed_manually": false,
+        "purchase_order_number": null,
+        "dispatcher_name": "David Atamanyuk",
+        "dispatcher": {
+          "is_active": true,
+          "created_at": "2020-01-06T15:04:41.962+0000",
+          "changed_at": "2020-07-02T15:08:52.780+0000",
+          "username": "datamanyuk@rcglogistics.com",
+          "email": "datamanyuk@rcglogistics.com",
+          "first_name": "David",
+          "last_name": "Atamanyuk",
+          "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+        },
+        "sales_representative": null,
+        "number": "SD-227610",
+        "price": 750.0,
+        "price_per_km": 0.27,
+        "is_posted_to_centraldispatch": false,
+        "is_posted_to_loadboard": false,
+        "posted_to_loadboard_at": "2020-12-04T17:56:35.966+0000",
+        "is_flagged": false,
+        "is_on_hold": false,
+        "broker_fee": null,
+        "instructions": "**IMPORTANT**\nMust call pick up location at least 24 hours and 1hr in advance to arrange pick up.\n\nKeys: Yes\nDrives: Yes\n\nReleasing Hours: \nMonday - Friday  8:00am - 5:00pm\nSaturday - Sunday  8:00am - 4:00pm\nBOL: Electronic Acceptable\n\nMust use Super Dispatch.\n- Please be sure to fill out the condition report on Super Dispatch. As well as take clear pictures of the unit and vin. -\n\n\nCall or text at any time if you have any questions 916-573-6630",
+        "loadboard_instructions": "request deliver by or on 12/10/12",
+        "is_archived": false,
+        "payment": {
+          "terms": "ach",
+          "notes": null,
+          "method": null,
+          "amount": null,
+          "reference_number": null,
+          "sent_date": null
+        },
+        "customer_payment": {
+          "tariff": 1395.0,
+          "deposit": null,
+          "amount": null,
+          "terms": null,
+          "notes": null,
+          "method": null,
+          "reference_number": null,
+          "received_date": null
+        },
+        "pickup": {
+          "first_available_pickup_date": "2020-12-05T17:00:00.000+0000",
+          "scheduled_at": "2020-12-05T17:00:00.000+0000",
+          "scheduled_at_by_carrier": null,
+          "scheduled_ends_at": "2020-12-05T17:00:00.000+0000",
+          "scheduled_at_by_customer": "2020-12-05T17:00:00.000+0000",
+          "scheduled_ends_at_by_customer": "2020-12-10T02:00:00.000+0000",
+          "adjusted_date": null,
+          "notes": null,
+          "date_type": "estimated",
+          "completed_at": null,
+          "latitude": 41.74357,
+          "longitude": -87.71127,
+          "venue": {
+            "name": "X L Towing",
+            "business_type": "BUSINESS",
+            "address": "3565 W Columbus Ave",
+            "city": "Chicago",
+            "state": "IL",
+            "zip": "60652",
+            "contact_name": null,
+            "contact_title": null,
+            "contact_email": null,
+            "contact_phone": "(312) 626-2700",
+            "contact_mobile_phone": null
+          },
+          "counterparty_guid": null,
+          "save_as_new": null,
+          "save_as_new_contact": null
+        },
+        "delivery": {
+          "scheduled_at": "2020-12-11T17:00:00.000+0000",
+          "scheduled_at_by_carrier": null,
+          "scheduled_ends_at": "2020-12-12T02:00:00.000+0000",
+          "scheduled_at_by_customer": "2020-12-11T17:00:00.000+0000",
+          "scheduled_ends_at_by_customer": "2020-12-12T02:00:00.000+0000",
+          "adjusted_date": null,
+          "notes": null,
+          "date_type": "estimated",
+          "completed_at": null,
+          "latitude": 33.653118,
+          "longitude": -112.090944,
+          "venue": {
+            "name": "Residence",
+            "business_type": "PRIVATE",
+            "address": "1409 W Wagoner Rd",
+            "city": "Phoenix",
+            "state": "AZ",
+            "zip": "85023",
+            "contact_name": "Mohammed Aal Iessa",
+            "contact_title": null,
+            "contact_email": null,
+            "contact_phone": "(602) 451-6503",
+            "contact_mobile_phone": null
+          },
+          "counterparty_guid": null,
+          "save_as_new": null,
+          "save_as_new_contact": null
+        },
+        "customer": {
+          "name": "LKQ - Towing",
+          "business_type": null,
+          "address": "One Cabot Rd",
+          "city": "Medford",
+          "state": "MA",
+          "zip": "02155",
+          "phone": "(415) 855-7532",
+          "email": null,
+          "contact_name": "Swoop Towing",
+          "notes": null,
+          "contact_title": null,
+          "contact_email": null,
+          "contact_phone": null,
+          "contact_mobile_phone": null,
+          "counterparty_guid": "Customer GUID",
+          "bill_the_delivery": false,
+          "save_as_new": null,
+          "save_as_new_contact": null
+        },
+        "dispatch_sheet_url": "https://storage.googleapis.com/prod-broker-files/2020/11/18/f0370705-d0b0-4e9a-ae3f-d18530a395e8/dispatch_sheets/SD-227610 Dispatch Sheet 1607122165873.pdf",
+        "pdf_bol_url": null,
+        "pdf_bol_url_with_template": null,
+        "pdf_delivery_receipt_url": null,
+        "online_bol_url": null,
+        "vehicles": [
+          {
+            "is_active": true,
+            "created_at": "2020-11-18T21:30:11.674+0000",
+            "changed_at": "2020-12-04T22:53:53.775+0000",
+            "last_revision_id": 2866380,
+            "make": "Hyundai",
+            "model": "Accent",
+            "year": 2014,
+            "color": "Grey",
+            "vin": "KMHCT4AE1EU724426",
+            "vin_short": "EU724426",
+            "price": 750.0,
+            "tariff": 1395.0,
+            "type": "sedan",
+            "lot_number": "10769565",
+            "is_inoperable": false,
+            "curb_weight": "2480",
+            "curb_weight_unit": "lbs",
+            "is_damaged": false,
+            "inspection_type": "advanced",
+            "requires_enclosed_trailer": false,
+            "is_driveaway": false,
+            "photos": [],
+            "pdf_bol_url": null,
+            "guid": "6fc9a0c3-8167-49ae-bd22-dd9cd83e23ae"
+          },
+          {
+            "is_active": true,
+            "created_at": "2020-11-18T21:30:11.674+0000",
+            "changed_at": "2020-12-04T22:53:53.775+0000",
+            "last_revision_id": 2866380,
+            "make": "Hyundai",
+            "model": "Accent",
+            "year": 2014,
+            "color": "Grey",
+            "vin": "KMHCT4AE1EU724426",
+            "vin_short": "EU724426",
+            "price": 750.0,
+            "tariff": 1395.0,
+            "type": "sedan",
+            "lot_number": "10769565",
+            "is_inoperable": false,
+            "curb_weight": "2480",
+            "curb_weight_unit": "lbs",
+            "is_damaged": false,
+            "inspection_type": "advanced",
+            "requires_enclosed_trailer": false,
+            "is_driveaway": false,
+            "photos": [],
+            "pdf_bol_url": null,
+            "guid": "randomGUID"
+          },
+          {
+            "is_active": true,
+            "created_at": "2020-11-18T21:30:11.674+0000",
+            "changed_at": "2020-12-04T22:53:53.775+0000",
+            "last_revision_id": 2866380,
+            "make": "Hyundai",
+            "model": "Accent",
+            "year": 2014,
+            "color": "Grey",
+            "vin": "KMHCT4AE1EU724426",
+            "vin_short": "EU724426",
+            "price": 750.0,
+            "tariff": 1395.0,
+            "type": "sedan",
+            "lot_number": "10769565",
+            "is_inoperable": false,
+            "curb_weight": "2480",
+            "curb_weight_unit": "lbs",
+            "is_damaged": false,
+            "inspection_type": "advanced",
+            "requires_enclosed_trailer": false,
+            "is_driveaway": false,
+            "photos": [],
+            "pdf_bol_url": null,
+            "guid": "weirdGUID"
+          }
+        ],
+        "guid": "f0370705-d0b0-4e9a-ae3f-d18530a395e8",
+        "distance_meters": 2805787,
+        "distance_duration_seconds": 105516,
+        "transport_type": "OPEN",
+        "archived": false,
+        "imported_from_jtracker": false,
+        "imported_from_central_dispatch": false
+      }
+    }
+  },
+  "orderActivitesChange": {
+    "status": "success",
+    "data": {
+      "objects": [
+        {
+          "code": "manually_marked_as_new",
+          "created_at": "2020-12-04T22:53:03.005+0000",
+          "action_status": "SUCCESS",
+          "guid": "d5902f01-9927-44ea-a764-2895e951571d",
+          "user": {},
+          "status": "new",
+          "carrier_phone": "3128014933",
+          "carrier_name": "DIRECT MOTOR LINES INC",
+          "carrier_address": "5522 CLARENDON HILLS RD",
+          "carrier_city": "CLARENDON HILLS",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60514",
+          "carrier_usdot": "2795768",
+          "carrier_email": "dmcars87@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        },
+        {
+          "code": "manually_marked_as_accepted",
+          "created_at": "2020-12-04T22:49:26.237+0000",
+          "action_status": "SUCCESS",
+          "guid": "c970372c-a36b-4252-8b70-783a15d12d58",
+          "user": {
+            "is_active": true,
+            "created_at": "2020-01-06T15:04:41.962+0000",
+            "changed_at": "2020-07-02T15:08:52.780+0000",
+            "username": "datamanyuk@rcglogistics.com",
+            "email": "datamanyuk@rcglogistics.com",
+            "first_name": "David",
+            "last_name": "Atamanyuk",
+            "guid": "eccdd816-b0e7-41e6-847e-e037d82b86f2"
+          },
+          "status": "pending",
+          "carrier_phone": "3128014933",
+          "carrier_name": "DIRECT MOTOR LINES INC",
+          "carrier_address": "5522 CLARENDON HILLS RD",
+          "carrier_city": "CLARENDON HILLS",
+          "carrier_state": "Illinois",
+          "carrier_zip": "60514",
+          "carrier_usdot": "2795768",
+          "carrier_email": "dmcars87@gmail.com",
+          "carrier_guid": "Carrier GUID",
+          "vehicles": []
+        }
+      ],
+      "pagination": {
+        "total_pages": 1,
+        "total_objects": 33,
+        "limit": 33,
+        "page": 0
+      }
+    }
+  },
+  "updateNotes": { "customer": { "notes": "hi" } },
+  "findCarriers": {
+    "pickup": "95832",
+    "delivery": "61616"
+  },
+  "foundCarriers": {
+    "data": {
+      "object": {
+        "location": {
+          "pickup_latitude": 38.48,
+          "pickup_longitude": -121.49,
+          "delivery_latitude": 40.76,
+          "delivery_longitude": -89.57
+        },
+        "carriers": [],
+        "prices": [
+          {
+            "estimated_price": 860,
+            "is_inoperable": false,
+            "vehicle_type_name": "sedan"
+          },
+          {
+            "estimated_price": 880,
+            "is_inoperable": false,
+            "vehicle_type_name": "suv"
+          },
+          {
+            "estimated_price": 1110,
+            "is_inoperable": false,
+            "vehicle_type_name": "pickup_2_doors"
+          },
+          {
+            "estimated_price": 1100,
+            "is_inoperable": false,
+            "vehicle_type_name": "van"
+          },
+          {
+            "estimated_price": 1110,
+            "is_inoperable": false,
+            "vehicle_type_name": "pickup_4_doors"
+          },
+          {
+            "estimated_price": 900,
+            "is_inoperable": true,
+            "vehicle_type_name": "sedan"
+          },
+          {
+            "estimated_price": 910,
+            "is_inoperable": true,
+            "vehicle_type_name": "suv"
+          },
+          {
+            "estimated_price": 1150,
+            "is_inoperable": true,
+            "vehicle_type_name": "pickup_2_doors"
+          },
+          {
+            "estimated_price": 1140,
+            "is_inoperable": true,
+            "vehicle_type_name": "van"
+          },
+          {
+            "estimated_price": 1140,
+            "is_inoperable": true,
+            "vehicle_type_name": "pickup_4_doors"
+          }
+        ]
+      }
+    }
+  }
+}
