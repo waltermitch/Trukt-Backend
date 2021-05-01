@@ -37,7 +37,8 @@ function encrypt()
     const cipher = crypto.createCipheriv(alg, Values.CryptKey, Buffer.from(Values.CryptIv, 'hex'));
 
     // read file
-    // const file = require('../config.json');
+    // eslint-disable-next-line
+    const file = require('../config.json');
 
     // encrypt
     const enc = Buffer.concat([ cipher.update(JSON.stringify(file)), cipher.final() ]);

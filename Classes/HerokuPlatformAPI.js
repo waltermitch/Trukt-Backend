@@ -1,7 +1,7 @@
 const HTTPController = require('../Classes/HTTPController');
 const DB = require('../Classes/Mongo');
-const qs = require('qs');
 const { DateTime } = require('luxon');
+const qs = require('qs');
 
 let api;
 
@@ -49,7 +49,8 @@ class Heroku
     static async getNewToken()
     {
         // get refreshtoken
-        const data = await DB.getSecret({ 'name': config.heroku.refreshToken });        const payload = qs.stringify(
+        const data = await DB.getSecret({ 'name': config.heroku.refreshToken });
+        const payload = qs.stringify(
             {
                 'refresh_token': data.value,
                 'grant_type': 'refresh_token',
@@ -60,12 +61,10 @@ class Heroku
         const auth = new HTTPController({ 'url': 'https://id.heroku.com' }).connect();
 
         // get new token
-        const res = await auth.post('/oauth/token', payload, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }});        // compose payload
-        const update =
-        {
-            'value': res.data.access_token,
-            'exp': DateTime.utc().plus({ hours: 7 }).toString()
-        };
+        const res = await auth.post('/oauth/token', payload, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }});
+
+        // compose payload
+        const update = { 'value': res.data.access_token, 'exp': DateTime.utc().plus({ hours: 7 }).toString() };
 
         // update in db
         await DB.updateSecret(config.heroku.accessToken, update);

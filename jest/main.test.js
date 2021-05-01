@@ -12,6 +12,8 @@ const r = require('./routes.json');
 
 // mutate native functionality (uncomment to mute)
 // console.log = jest.fn();
+
+// eslint-disable-next-line no-console
 console.warn = jest.fn();
 
 const spyOnDelete = jest.spyOn(moxios, 'onDelete');
