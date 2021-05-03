@@ -57,6 +57,5 @@ node_modules
 coverage
 globalConfig.json
 local.settings.json
-git/hooks/prepare-commit-msg.py
 notes.txt
 file.js
