@@ -1,5 +1,5 @@
 const ErrorHandler = require('../Classes/ErrorHandler');
-const DB = require('../Classes/DB');
+const DB = require('../Classes/Mongo');
 
 // const HTTPController = require('../Classes/HTTPController');
 // const DateTime = require('luxon').DateTime;
@@ -9,17 +9,15 @@ module.exports = async function (context, req)
     let response = { status: 400, data: 'Missing Payload' };
 
     context.log(req);
-
-    if (req?.body)
     
-        try
-        {
-            response = await test(context, req);
-        }
-        catch
-        {
-            response = new ErrorHandler(context, req);
-        }
+    try
+    {
+        response = await test(context, req);
+    }
+    catch
+    {
+        response = new ErrorHandler(context, req);
+    }
 
     context.res =
     {
@@ -29,11 +27,10 @@ module.exports = async function (context, req)
     };
 };
 
-async function test(context, req)
+async function test()
 {
-    const value = req?.body?.name;
 
-    const res = await DB.getSecret({ 'name': value });
+    const res = await DB.getSecret({ 'name': 'super_access_token_staging' });
 
     return { 'status': 200, 'data': res };
 }
