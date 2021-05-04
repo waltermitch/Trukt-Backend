@@ -19,6 +19,9 @@
     "[javascript]": {
         "editor.formatOnSave": false
     },
+    // "eslint.validate": [
+    //     "json"
+    // ],
     // enforcing edit and JS 
     "javascript.updateImportsOnFileMove.enabled": "always",
     "eslint.alwaysShowStatus": true,

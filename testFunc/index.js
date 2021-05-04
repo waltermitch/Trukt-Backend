@@ -8,6 +8,8 @@ module.exports = async function (context, req)
 {
     let response = { status: 400, data: 'Missing Payload' };
 
+    context.log(req);
+
     if (req?.body)
     
         try

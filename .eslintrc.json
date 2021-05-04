@@ -12,7 +12,8 @@
     },
     "extends": [
         "eslint:recommended",
-        "plugin:import/errors"
+        "plugin:import/errors",
+        "plugin:json/recommended"
     ],
     "parserOptions": {
         "ecmaVersion": 12
@@ -199,11 +200,6 @@
                 "prev": "*",
                 "next": "while"
             },
-            // {
-            //     "blankLine": "always",
-            //     "prev": "*",
-            //     "next": "const"
-            // },
             {
                 "blankLine": "never",
                 "prev": "const",
@@ -230,10 +226,17 @@
                 "next": "block-like"
             }
         ]
+        // "json/*": [
+        //     "error",
+        //     {
+        //         "allowComments": true
+        //     }
+        // ]
     }
     // no need for prettier plug in
     // "plugins": [
-    //     "prettier",
-    //     "import"
+    //     // "prettier",
+    //     // "import",
+    //     "json-format"
     // ]
 }
