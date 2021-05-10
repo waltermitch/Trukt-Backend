@@ -1,95 +1,97 @@
 {
-	"env": {
-		"browser": true,
-		"commonjs": true,
-		"es2021": true,
-		"node": true
-	},
-	"globals": {
-		"Atomics": "readonly",
-		"SharedArrayBuffer": "readonly",
-		"App": "writable"
-	},
-	"extends": ["eslint:recommended", "plugin:import/errors", "prettier"],
-	"plugins": ["import", "prettier"],
-	"parserOptions": {
-		"ecmaVersion": 12
-	},
-	"rules": {
-		"prettier/prettier": [
-			"error",
-			{
-				"trailingComma": "es5",
-				"tabWidth": 4,
-				"semi": true,
-				"useTabs": true,
-				"singleQuote": true,
-				"bracketSpacing": true,
-				"jsxBracketSameLine": false,
-				"arrowParens": "always"
-			}
-		],
-		"no-unused-vars": 2,
-		"lines-around-comment": [
-			"error",
-			{
-				"beforeBlockComment": true,
-				"afterBlockComment": true,
-				"beforeLineComment": true,
-				"afterLineComment": false,
-				"allowBlockStart": true,
-				"allowBlockEnd": true,
-				"allowObjectStart": true,
-				"allowObjectEnd": true,
-				"allowArrayStart": true,
-				"allowArrayEnd": true
-			}
-		],
-		"spaced-comment": [
-			"error",
-			"always",
-			{
-				"line": {
-					"markers": ["/"],
-					"exceptions": ["-", "+"]
-				},
-				"block": {
-					"markers": ["!"],
-					"exceptions": ["*"],
-					"balanced": true
-				}
-			}
-		],
-		"no-console": ["warn"],
-		"no-multi-spaces": "error",
-		"no-regex-spaces": "error",
-		"no-redeclare": "error",
-		"import/newline-after-import": [
-			"error",
-			{
-				"count": 1
-			}
-		],
-		"one-var-declaration-per-line": ["error", "always"],
-		"no-trailing-spaces": [
-			"error",
-			{
-				"skipBlankLines": true
-			}
-		],
-		"space-unary-ops": 2,
-		"space-infix-ops": "error",
-		"no-var": "error",
-		// "array-bracket-spacing": [
-		// 	"error",
-		// 	"always",
-		// 	{
-		// 		"singleValue": true
-		// 	}
-		// ],
-		"curly": ["error", "multi", "consistent"],
-		"no-floating-decimal": "error",
-		"no-lone-blocks": "error",
-		"prefer-const": "error"
-	}
+  "env": {
+    "browser": true,
+    "commonjs": true,
+    "es2021": true,
+    "node": true
+  },
+  "globals": {
+    "Atomics": "readonly",
+    "SharedArrayBuffer": "readonly",
+    "App": "writable"
+  },
+  "extends": ["eslint:recommended", "plugin:import/errors", "prettier"],
+  "plugins": ["import", "prettier"],
+  "parserOptions": {
+    "ecmaVersion": 12
+  },
+  "rules": {
+    "prettier/prettier": [
+      "error",
+      {
+        "trailingComma": "es5",
+        "tabWidth": 4,
+        "semi": true,
+        "useTabs": true,
+        "singleQuote": true,
+        "bracketSpacing": true,
+        "jsxBracketSameLine": false,
+        "arrowParens": "always",
+        "endOfLine": "auto",
+        "printWidth": 120
+      }
+    ],
+    "no-unused-vars": 2,
+    "lines-around-comment": [
+      "error",
+      {
+        "beforeBlockComment": true,
+        "afterBlockComment": true,
+        "beforeLineComment": false,
+        "afterLineComment": false,
+        "allowBlockStart": true,
+        "allowBlockEnd": true,
+        "allowObjectStart": true,
+        "allowObjectEnd": true,
+        "allowArrayStart": true,
+        "allowArrayEnd": true
+      }
+    ],
+    "spaced-comment": [
+      "error",
+      "always",
+      {
+        "line": {
+          "markers": ["/"],
+          "exceptions": ["-", "+"]
+        },
+        "block": {
+          "markers": ["!"],
+          "exceptions": ["*"],
+          "balanced": true
+        }
+      }
+    ],
+    "no-console": ["warn"],
+    "no-multi-spaces": "error",
+    "no-regex-spaces": "error",
+    "no-redeclare": "error",
+    "import/newline-after-import": [
+      "error",
+      {
+        "count": 1
+      }
+    ],
+    "one-var-declaration-per-line": ["error", "always"],
+    "no-trailing-spaces": [
+      "error",
+      {
+        "skipBlankLines": true
+      }
+    ],
+    "space-unary-ops": 2,
+    "space-infix-ops": "error",
+    "no-var": "error",
+    // "array-bracket-spacing": [
+    // 	"error",
+    // 	"always",
+    // 	{
+    // 		"singleValue": true
+    // 	}
+    // ],
+    "curly": ["error", "multi", "consistent"],
+    "no-floating-decimal": "error",
+    "no-lone-blocks": "error",
+    "prefer-const": "error"
+  }
 }
