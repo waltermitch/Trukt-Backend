@@ -1,5 +1,5 @@
-const knex = require('knex');
-const pg = require('pg');
+// const knex = require('knex');
+// const pg = require('pg');
 
 class PG
 {

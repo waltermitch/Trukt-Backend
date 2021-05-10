@@ -1,7 +1,7 @@
 const HTTPController = require('../Classes/HTTPController');
 const DB = require('../Classes/Mongo');
-const qs = require('qs');
 const { DateTime } = require('luxon');
+const qs = require('qs');
 
 let api;
 
@@ -12,34 +12,35 @@ class Heroku
 
     static async getConfig()
     {
-        //connect
+        // connect
         const heroku = await Heroku.connect();
 
-        //search for config
-        const res = await heroku.get(`/apps/${config.heroku.appId}/confning-vars`)
+        // search for config
+        const res = await heroku.get(`/apps/${config.heroku.appId}/config-vars`);
 
         return res.data;
     }
 
     static async connect()
     {
-        if (!api.expCheck())
+        if (!api?.expCheck())
         {
             const opts =
             {
                 url: 'https://api.heroku.com',
                 tokenName: config.heroku.accessToken
-            }
+            };
 
-            const token = await DB.getSecret({ 'name': opts.tokenName })
+            const token = await DB.getSecret({ 'name': opts.tokenName });
 
             if (!api?.instance)
             {
                 api = new HTTPController(opts);
+
                 api.connect();
             }
 
-            api.setToken(token.value)
+            api.setToken(token.value);
         }
 
         return api.instance;
@@ -47,33 +48,26 @@ class Heroku
 
     static async getNewToken()
     {
-        //get refreshtoken
-        const data = await DB.getSecret({ 'name': config.heroku.refreshToken })
-
         const payload = qs.stringify(
             {
-                'refresh_token': data.value,
+                'refresh_token': config.heroku.refreshToken,
                 'grant_type': 'refresh_token',
                 'client_secret': config.heroku.clientSecret
-            })
+            });
 
-        //get auth connection
+        // get auth connection
         const auth = new HTTPController({ 'url': 'https://id.heroku.com' }).connect();
 
-        //get new token
-        const res = await auth.post(`/oauth/token`, payload, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
+        // get new token
+        const res = await auth.post('/oauth/token', payload, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }});
 
-        //compose payload
-        const update =
-        {
-            'value': res.data.access_token,
-            'exp': DateTime.utc().plus({ hours: 7 }).toString()
-        }
+        // compose payload
+        const update = { 'value': res.data.access_token, 'exp': DateTime.utc().plus({ hours: 7 }).toString() };
 
-        //update in db
-        await DB.updateSecret(config.heroku.accessToken, update)
+        // update in db
+        await DB.updateSecret(config.heroku.accessToken, update);
 
-        return { 'status': 200 }
+        return { 'status': 200 };
     }
 }
 
