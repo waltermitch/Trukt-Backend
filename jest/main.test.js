@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 /* eslint-disable padding-line-between-statements */
-const config = require('../config.json')[`${process.env.ENV}`];
+require('../tools/start')();
 const context = require('./defaultContext');
 const _ = require('lodash');
 const axios = require('axios');
@@ -53,6 +53,17 @@ describe ('Classes', () =>
 
             expect(spyOnPost).toHaveBeenCalledWith(r.herokuIdentityAPI);
             expect(res.status).toBe(200);
+        });
+
+        it('Get Config', async () =>
+        {
+            moxios.onGet(r.herokuGetConfig).replyOnce(200, p.herokuGetConfig);
+
+            const res = await Heroku.getConfig();
+
+            expect(res).toMatchObject(p.herokuGetConfig);
+            expect(res).toHaveProperty('DATABASE_URL');
+            expect(spyOnGet).toHaveBeenCalledWith(r.herokuGetConfig);
         });
     });
 });

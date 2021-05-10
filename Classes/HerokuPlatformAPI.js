@@ -16,14 +16,14 @@ class Heroku
         const heroku = await Heroku.connect();
 
         // search for config
-        const res = await heroku.get(`/apps/${config.heroku.appId}/confning-vars`);
+        const res = await heroku.get(`/apps/${config.heroku.appId}/config-vars`);
 
         return res.data;
     }
 
     static async connect()
     {
-        if (!api.expCheck())
+        if (!api?.expCheck())
         {
             const opts =
             {
@@ -59,7 +59,7 @@ class Heroku
         const auth = new HTTPController({ 'url': 'https://id.heroku.com' }).connect();
 
         // get new token
-        const res = await auth.post('/oauth/token', payload, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+        const res = await auth.post('/oauth/token', payload, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }});
 
         // compose payload
         const update = { 'value': res.data.access_token, 'exp': DateTime.utc().plus({ hours: 7 }).toString() };
