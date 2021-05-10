@@ -1,5 +1,4 @@
 {
-  "disabled": "IS_DISABLED",
   "bindings": [
     {
       "name": "myTimer",
