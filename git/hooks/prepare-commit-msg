@@ -2,7 +2,7 @@
 
 # Include any branches for which you wish to disable this script staging 
 if [ -z "$BRANCHES_TO_SKIP" ]; then
-  BRANCHES_TO_SKIP=(master dev staging ilya justin vlad valeriy andrey)
+  BRANCHES_TO_SKIP=(master staging dev ilya justin andrey vlad valeriy)
 fi
 # Get the current branch name and check if it is excluded
 BRANCH_NAME=$(git symbolic-ref --short HEAD)
@@ -17,6 +17,3 @@ TRIMMED=$(echo $BRANCH_NAME | sed -e 's:^\([^-]*-[^-]*\)-.*:\1:' -e \
 if [ -n "$BRANCH_NAME" ] &&  ! [[ $BRANCH_EXCLUDED -eq 1 ]]; then
   sed -i.bak -e "1s/^/$TRIMMED /" $1
 fi
-
-
-# python git/hooks/prepare-commit-msg.py $@
