@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
+/* eslint-disable padding-line-between-statements */
 const config = require('../config.json')[`${process.env.ENV}`];
 const context = require('./defaultContext');
 const _ = require('lodash');
@@ -15,6 +16,9 @@ const r = require('./routes.json');
 
 // eslint-disable-next-line no-console
 console.warn = jest.fn();
+
+// List of Classes
+const Heroku = require('../Classes/HerokuPlatformAPI');
 
 const spyOnDelete = jest.spyOn(moxios, 'onDelete');
 const spyOnPost = jest.spyOn(moxios, 'onPost');
@@ -33,4 +37,22 @@ beforeEach(() =>
     moxios.resetHistory();
 
     jest.clearAllMocks();
+});
+
+describe ('Classes', () =>
+{
+    describe('Heroku API', () =>
+    {
+        it('Refresh Access Token', async () =>
+        {
+            // listen
+            moxios.onPost(r.herokuIdentityAPI).replyOnce(200, p.herokuGetToken);
+
+            // do call
+            const res = await Heroku.getNewToken();
+
+            expect(spyOnPost).toHaveBeenCalledWith(r.herokuIdentityAPI);
+            expect(res.status).toBe(200);
+        });
+    });
 });

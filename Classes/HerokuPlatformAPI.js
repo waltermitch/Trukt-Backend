@@ -48,11 +48,9 @@ class Heroku
 
     static async getNewToken()
     {
-        // get refreshtoken
-        const data = await DB.getSecret({ 'name': config.heroku.refreshToken });
         const payload = qs.stringify(
             {
-                'refresh_token': data.value,
+                'refresh_token': config.heroku.refreshToken,
                 'grant_type': 'refresh_token',
                 'client_secret': config.heroku.clientSecret
             });
@@ -61,7 +59,7 @@ class Heroku
         const auth = new HTTPController({ 'url': 'https://id.heroku.com' }).connect();
 
         // get new token
-        const res = await auth.post('/oauth/token', payload, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }});
+        const res = await auth.post('/oauth/token', payload, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
 
         // compose payload
         const update = { 'value': res.data.access_token, 'exp': DateTime.utc().plus({ hours: 7 }).toString() };
