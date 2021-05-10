@@ -16,14 +16,14 @@ class Heroku
         const heroku = await Heroku.connect();
 
         // search for config
-        const res = await heroku.get(`/apps/${config.heroku.appId}/confning-vars`);
+        const res = await heroku.get(`/apps/${config.heroku.appId}/config-vars`);
 
         return res.data;
     }
 
     static async connect()
     {
-        if (!api.expCheck())
+        if (!api?.expCheck())
         {
             const opts =
             {
@@ -48,11 +48,9 @@ class Heroku
 
     static async getNewToken()
     {
-        // get refreshtoken
-        const data = await DB.getSecret({ 'name': config.heroku.refreshToken });
         const payload = qs.stringify(
             {
-                'refresh_token': data.value,
+                'refresh_token': config.heroku.refreshToken,
                 'grant_type': 'refresh_token',
                 'client_secret': config.heroku.clientSecret
             });
