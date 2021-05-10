@@ -1,7 +1,6 @@
 const urlParser = require('pg-connection-string').parse;
 const Heroku = require('./HerokuPlatformAPI');
 const knex = require('knex');
-const pg = require('pg');
 
 let db;
 
