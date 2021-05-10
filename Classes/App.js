@@ -8,17 +8,17 @@ class App
     static async next(context, func, params)
     {
         if (!Array.isArray(params))
-            params = [params]
+            params = [ params ];
 
         let response = {};
 
         try
         {
-            response = await func(context, ...params)
+            response = await func(context, ...params);
         }
         catch (err)
         {
-            response = new ErrorHandler(context, err)
+            response = new ErrorHandler(context, err);
         }
 
         context.res =
@@ -26,12 +26,12 @@ class App
             headers: { 'Content-Type': 'application/json' },
             status: response?.status,
             body: response
-        }
+        };
     }
 
     static async timer(context, func)
     {
-        let response = {}
+        let response = {};
 
         try
         {
@@ -39,11 +39,11 @@ class App
         }
         catch (err)
         {
-            response = new ErrorHandler(context, err)
+            response = new ErrorHandler(context, err);
         }
         finally
         {
-            context.log(response)
+            context.log(response);
         }
     }
 
@@ -54,7 +54,7 @@ class App
             headers: { 'Content-Type': 'application/json' },
             status: response?.status,
             body: response
-        }
+        };
     }
 }
 
