@@ -19,7 +19,10 @@
     "[javascript]": {
         "editor.formatOnSave": false
     },
+    
     // enforcing edit and JS 
+    "javascript.format.placeOpenBraceOnNewLineForControlBlocks": true,
+    "javascript.format.placeOpenBraceOnNewLineForFunctions": true,
     "javascript.updateImportsOnFileMove.enabled": "always",
     "eslint.alwaysShowStatus": true,
     "editor.formatOnPaste": true,
