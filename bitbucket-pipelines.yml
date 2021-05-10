@@ -1,21 +1,21 @@
 image: node:14.15.0
 
 pipelines:
-  branches:
-    "{master,dev}":
-      - parallel:
-          - step:
-              name: Jest Unit Tests
-              caches:
-                - node
-              script:
-                - openssl enc -d -a -in local.settings.enc -out local.settings.json -iv $SharedIv -K $SharedKey -S $SharedSalt
-                - npm install
-                - npm test
-          - step:
-              name: ESLint
-              script:
-                - npm install eslint
-                - npx eslint .
-              caches:
-                - node
+    branches:
+        '{master,dev}':
+            - parallel:
+                  - step:
+                        name: Jest Unit Tests
+                        caches:
+                            - node
+                        script:
+                            - openssl enc -d -a -in local.settings.enc -out local.settings.json -iv $SharedIv -K $SharedKey -S $SharedSalt
+                            - npm install
+                            - npm test
+                  - step:
+                        name: ESLint
+                        script:
+                            - npm install eslint
+                            - npx eslint .
+                        caches:
+                            - node

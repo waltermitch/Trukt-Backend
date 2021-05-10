@@ -1,14 +1,14 @@
 {
-  "prod": {
-    "ArcMapsTokenName": "arc_access_token_prod"
-  },
-  "staging": {
-    "ArcMapsTokenName": "arc_access_token_prod"
-  },
-  "dev": {
-    "ArcMapsTokenName": "arc_access_token_prod"
-  },
-  "test": {
-    "ArcMapsTokenName": "arc_access_token_prod"
-  }
+	"prod": {
+		"ArcMapsTokenName": "arc_access_token_prod"
+	},
+	"staging": {
+		"ArcMapsTokenName": "arc_access_token_prod"
+	},
+	"dev": {
+		"ArcMapsTokenName": "arc_access_token_prod"
+	},
+	"test": {
+		"ArcMapsTokenName": "arc_access_token_prod"
+	}
 }

@@ -1,10 +1,9 @@
 const App = require('../Classes/App');
 
-module.exports = () =>
-{
-    if (global.App)
-        return;
+module.exports = () => {
+	if (global.App) return;
 
-    // make app global
-    global.App = App;
+	// make app global
+
+	global.App = App;
 };

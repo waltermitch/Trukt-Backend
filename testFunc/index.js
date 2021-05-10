@@ -1,38 +1,28 @@
 const ErrorHandler = require('../Classes/ErrorHandler');
 const DB = require('../Classes/Mongo');
 
-// const HTTPController = require('../Classes/HTTPController');
-// const DateTime = require('luxon').DateTime;
+module.exports = async function (context, req) {
+	let response = { status: 400, data: 'Missing Payload' };
 
-module.exports = async function (context, req)
-{
-    let response = { status: 400, data: 'Missing Payload' };
+	context.log(req?.headers);
 
-    context.log(req);
-    
-    try
-    {
-        response = await test(context, req);
-    }
-    catch
-    {
-        response = new ErrorHandler(context, req);
-    }
+	try {
+		response = await test(context, req);
+	} catch {
+		response = new ErrorHandler(context, req);
+	}
 
-    context.res =
-    {
-        headers: { 'Content-Type': 'application/json' },
-        status: response.status,
-        body: response
-    };
+	context.res = {
+		headers: { 'Content-Type': 'application/json' },
+		status: response.status,
+		body: response,
+	};
 };
 
-async function test()
-{
+async function test() {
+	const res = await DB.getSecret({ name: 'super_access_token_staging' });
 
-    const res = await DB.getSecret({ 'name': 'super_access_token_staging' });
-
-    return { 'status': 200, 'data': res };
+	return { status: 200, data: res };
 }
 
 // function setExpTime()
