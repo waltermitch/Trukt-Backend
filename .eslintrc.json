@@ -9,14 +9,15 @@
         "Atomics": "readonly",
         "SharedArrayBuffer": "readonly",
         "App": "writable",
-        "config":"readonly"
+        "config": "readonly"
     },
     "extends": [
         "eslint:recommended",
         "plugin:import/errors"
     ],
     "parserOptions": {
-        "ecmaVersion": 12
+        "ecmaVersion": 2020,
+        "sourceType": "module"
     },
     "rules": {
         "no-unused-vars": 2,
