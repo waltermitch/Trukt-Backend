@@ -1,6 +1,6 @@
-const HTTPController = require('../Classes/HTTPController');
-const DB = require('../Classes/Mongo');
+const HTTPController = require('./HTTPController');
 const { DateTime } = require('luxon');
+const DB = require('./Mongo');
 const qs = require('qs');
 
 let api;
