@@ -110,7 +110,7 @@
             "error",
             "always",
             {
-                "objectsInObjects": false
+                "objectsInObjects": true
             }
         ],
         "key-spacing": [
