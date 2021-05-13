@@ -3,8 +3,8 @@ const { MongoClient } = require('mongodb');
 const dbUrl = process.env.dbUri;
 const dbName = process.env.dbName;
 const dbOptions = {
-	useUnifiedTopology: false,
-	useNewUrlParser: true,
+    useUnifiedTopology: false,
+    useNewUrlParser: true
 };
 
 require('../tools/start')();
@@ -12,56 +12,64 @@ require('../tools/start')();
 // db instance
 let db;
 
-class Mongo {
-	constructor() {}
+class Mongo
+{
+    constructor() { }
 
-	static async connect() {
-		if (!db) {
-			const client = new MongoClient(dbUrl, dbOptions);
+    static async connect()
+    {
+        if (!db)
+        {
+            const client = new MongoClient(dbUrl, dbOptions);
 
-			db = (await client.connect()).db(dbName);
-		}
+            db = (await client.connect()).db(dbName);
+        }
 
-		return db;
-	}
+        return db;
+    }
 
-	static async upsert(collection, filter, data) {
-		const db = await Mongo.connect();
+    static async upsert(collection, filter, data)
+    {
+        const db = await Mongo.connect();
 
-		await db.collection(collection).updateOne(filter, { $set: data }, { upsert: true });
-	}
+        await db.collection(collection).updateOne(filter, { $set: data }, { upsert: true });
+    }
 
-	static async query(collection, filter, projections = {}) {
-		Object.assign(projections, { _id: 0 });
+    static async query(collection, filter, projections = {})
+    {
+        Object.assign(projections, { _id: 0 });
 
-		const db = await Mongo.connect();
+        const db = await Mongo.connect();
 
-		const res = await db.collection(collection).findOne(filter, { projection: projections });
+        const res = await db.collection(collection).findOne(filter, { projection: projections });
 
-		return res;
-	}
+        return res;
+    }
 
-	static async queryAll(collection, filter, projections) {
-		const db = await Mongo.connect();
+    static async queryAll(collection, filter, projections)
+    {
+        const db = await Mongo.connect();
 
-		const res = await db.collection(collection).find(filter).project(projections).toArray();
+        const res = await db.collection(collection).find(filter).project(projections).toArray();
 
-		return res;
-	}
+        return res;
+    }
 
-	static async getSecret(query) {
-		const db = await Mongo.connect();
+    static async getSecret(query)
+    {
+        const db = await Mongo.connect();
 
-		const res = await db.collection('secrets').findOne(query, { projection: { _id: 0 } });
+        const res = await db.collection('secrets').findOne(query, { projection: { _id: 0 }});
 
-		return res;
-	}
+        return res;
+    }
 
-	static async updateSecret(key, data) {
-		const db = await Mongo.connect();
+    static async updateSecret(key, data)
+    {
+        const db = await Mongo.connect();
 
-		await db.collection('secrets').updateOne({ name: key }, { $set: data }, { upsert: true });
-	}
+        await db.collection('secrets').updateOne({ name: key }, { $set: data }, { upsert: true });
+    }
 }
 
 module.exports = Mongo;

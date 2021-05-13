@@ -5,52 +5,65 @@ const DB = require('./Mongo');
 
 const jHeaders = { 'Content-Type': 'application/json' };
 
-class HTTPController {
-	constructor(data) {
-		this.baseURL = data?.url;
-		this.tokenName = data?.tokenName;
-		this.instanceName = data?.name;
-		this.headers = data?.headers;
-		this.params = data?.params;
-	}
+class HTTPController
+{
+    constructor(data)
+    {
+        this.baseURL = data?.url;
 
-	async getSecret(query) {
-		return await DB.getSecret(query);
-	}
+        this.tokenName = data?.tokenName;
 
-	async updateSecret(key, data) {
-		return await DB.updateSecret(key, data);
-	}
+        this.instanceName = data?.name;
 
-	connect() {
-		this.instance = axios.create({
-			baseURL: this.baseURL,
-			httpsAgent: new https.Agent({ keepAlive: true }),
-			headers: this?.headers || jHeaders,
-			params: this?.params,
-		});
+        this.headers = data?.headers;
 
-		return this.instance;
-	}
+        this.params = data?.params;
+    }
 
-	setToken(token) {
-		// set Bearer Token
-		this.setOAuthHeader(`Bearer ${token}`);
-	}
+    async getSecret(query)
+    {
+        return await DB.getSecret(query);
+    }
 
-	setOAuthHeader(value) {
-		this.instance.defaults.headers.common['Authorization'] = value;
-	}
+    async updateSecret(key, data)
+    {
+        return await DB.updateSecret(key, data);
+    }
 
-	expCheck() {
-		// check if exptime is up
-		return this.exp && this.exp > DateTime.utc().toString();
-	}
+    connect()
+    {
+        this.instance = axios.create({
+            baseURL: this.baseURL,
+            httpsAgent: new https.Agent({ keepAlive: true }),
+            headers: this?.headers || jHeaders,
+            params: this?.params
+        });
 
-	setExpTime(int) {
-		// set the exp time
-		this.exp = DateTime.utc().plus({ minutes: int }).toString();
-	}
+        return this.instance;
+    }
+
+    setToken(token)
+    {
+        // set Bearer Token
+        this.setOAuthHeader(`Bearer ${token}`);
+    }
+
+    setOAuthHeader(value)
+    {
+        this.instance.defaults.headers.common[ 'Authorization' ] = value;
+    }
+
+    expCheck()
+    {
+        // check if exptime is up
+        return this.exp && this.exp > DateTime.utc().toString();
+    }
+
+    setExpTime(int)
+    {
+        // set the exp time
+        this.exp = DateTime.utc().plus({ minutes: int }).toString();
+    }
 }
 
 module.exports = HTTPController;

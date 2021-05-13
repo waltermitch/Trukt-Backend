@@ -26,36 +26,41 @@ const spyOnGet = jest.spyOn(moxios, 'onGet');
 const spyOnPut = jest.spyOn(moxios, 'onPut');
 const spyOnPatch = jest.spyOn(moxios, 'onPatch');
 
-beforeAll(async () => {});
+beforeAll(async () => { });
 
-beforeEach(() => {
-	// clear history and reset all calls
-	moxios.resetHistory();
+beforeEach(() =>
+{
+    // clear history and reset all calls
+    moxios.resetHistory();
 
-	jest.clearAllMocks();
+    jest.clearAllMocks();
 });
 
-describe('Classes', () => {
-	describe('Heroku API', () => {
-		it('Refresh Access Token', async () => {
-			// listen
-			moxios.onPost(r.herokuIdentityAPI).replyOnce(200, p.herokuGetToken);
+describe('Classes', () =>
+{
+    describe('Heroku API', () =>
+    {
+        it('Refresh Access Token', async () =>
+        {
+            // listen
+            moxios.onPost(r.herokuIdentityAPI).replyOnce(200, p.herokuGetToken);
 
-			// do call
-			const res = await Heroku.getNewToken();
+            // do call
+            const res = await Heroku.getNewToken();
 
-			expect(spyOnPost).toHaveBeenCalledWith(r.herokuIdentityAPI);
-			expect(res.status).toBe(200);
-		});
+            expect(spyOnPost).toHaveBeenCalledWith(r.herokuIdentityAPI);
+            expect(res.status).toBe(200);
+        });
 
-		it('Get Config', async () => {
-			moxios.onGet(r.herokuGetConfig).replyOnce(200, p.herokuGetConfig);
+        it('Get Config', async () =>
+        {
+            moxios.onGet(r.herokuGetConfig).replyOnce(200, p.herokuGetConfig);
 
-			const res = await Heroku.getConfig();
+            const res = await Heroku.getConfig();
 
-			expect(res).toMatchObject(p.herokuGetConfig);
-			expect(res).toHaveProperty('DATABASE_URL');
-			expect(spyOnGet).toHaveBeenCalledWith(r.herokuGetConfig);
-		});
-	});
+            expect(res).toMatchObject(p.herokuGetConfig);
+            expect(res).toHaveProperty('DATABASE_URL');
+            expect(spyOnGet).toHaveBeenCalledWith(r.herokuGetConfig);
+        });
+    });
 });

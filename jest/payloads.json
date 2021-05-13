@@ -1,9 +1,9 @@
 {
-  "herokuGetToken": {
-    "access_token": "token"
-  },
-  "herokuGetConfig": {
-    "DATABASE_URL": "url",
-    "OtherStuff": "stuff"
-  }
+    "herokuGetToken": {
+        "access_token": "token"
+    },
+    "herokuGetConfig": {
+        "DATABASE_URL": "url",
+        "OtherStuff": "stuff"
+    }
 }
