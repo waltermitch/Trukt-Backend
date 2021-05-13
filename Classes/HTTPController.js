@@ -7,6 +7,7 @@ const jHeaders = { 'Content-Type': 'application/json' };
 
 class HTTPController
 {
+    /* eslint-disable */
     constructor(data)
     {
         this.baseURL = data?.url;
@@ -15,6 +16,7 @@ class HTTPController
         this.headers = data?.headers;
         this.params = data?.params;
     }
+    /* eslint-enable */
 
     async getSecret(query)
     {

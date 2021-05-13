@@ -33,7 +33,7 @@
             {
                 "beforeLineComment": true,
                 "beforeBlockComment": false,
-                "afterLineComment": true,
+                "afterLineComment": false,
                 "allowBlockStart": true,
                 "allowObjectStart": true,
                 "allowArrayStart": true,
