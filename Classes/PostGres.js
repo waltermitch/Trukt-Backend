@@ -11,23 +11,41 @@ class PG
 
     static async connect()
     {
-        if(!db)
+        if (!db)
         {
             // get url
             const res = await Heroku.getConfig();
 
-            // parse url
-            const config = urlParser(res.DATABASE_URL);
+            // parse url and no ssl
+            const opts = Object.assign({ ssl: { rejectUnauthorized: false } }, urlParser(res.DATABASE_URL));
 
             // connect
-            db = knex(
+            db = await knex(
                 {
                     client: 'pg',
-                    connection: Object.assign({ ssl: { rejectUnauthorized: false }}, config)
-                }).withSchema('salesforce');
+                    connection: opts,
+                    searchPath: 'salesforce'
+                });
         }
 
         return db;
+    }
+
+    static async getVariable(value)
+    {
+        const db = await PG.connect();
+
+        // eslint-disable-next-line
+        const res = await db.select(db.raw(`"Data"`)).from('variables').whereRaw(`"Data" ->> 'name' = ?`, value)
+
+        return res;
+    }
+
+    static async upsertVariable(payload)
+    {
+        const db = await PG.connect();
+
+        await db.insert({ 'Data': JSON.stringify(payload) }).into('variables');
     }
 }
 

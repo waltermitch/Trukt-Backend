@@ -17,8 +17,7 @@
     "luxon": "^1.26.0",
     "mongodb": "^3.6.6",
     "pg": "^8.6.0",
-    "pg-connection-string": "^2.5.0",
-    "qs": "^6.10.1"
+    "pg-connection-string": "^2.5.0"
   },
   "devDependencies": {
     "@shelf/jest-mongodb": "^1.2.4",
