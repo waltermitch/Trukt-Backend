@@ -35,8 +35,7 @@ class PG
     {
         const db = await PG.connect();
 
-        // eslint-disable-next-line
-        const res = await db.select(db.raw(`"Data"`)).from('variables').whereRaw(`"Data" ->> 'name' = ?`, value)
+        const res = await db.select(db.raw('"Data"')).from('variables').where(`name = '${value}'`);
 
         return res;
     }
@@ -45,7 +44,7 @@ class PG
     {
         const db = await PG.connect();
 
-        await db.insert({ 'Data': JSON.stringify(payload) }).into('variables');
+        await db.insert({ 'Data': JSON.stringify(payload), 'Name': payload.name }).into('variables');
     }
 }
 
