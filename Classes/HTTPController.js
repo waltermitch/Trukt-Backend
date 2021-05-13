@@ -9,13 +9,11 @@ class HTTPController
 {
     constructor(data)
     {
-        /* eslint-disable padding-line-between-statements */
         this.baseURL = data?.url;
         this.tokenName = data?.tokenName;
         this.instanceName = data?.name;
         this.headers = data?.headers;
         this.params = data?.params;
-        /* eslint-enable padding-line-between-statements */
     }
 
     async getSecret(query)

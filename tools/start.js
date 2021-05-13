@@ -10,5 +10,5 @@ const App = require('../Classes/App');
     global.App = App;
 
     // decrypt env goodies
-    global.config = decrypt()[`${process.env.ENV}`];
+    global.config = decrypt()[ `${process.env.ENV}` ];
 })();

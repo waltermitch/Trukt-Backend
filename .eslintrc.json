@@ -15,6 +15,9 @@
         "eslint:recommended",
         "plugin:import/errors"
     ],
+    "plugins": [
+        "import"
+    ],
     "parserOptions": {
         "ecmaVersion": 2020,
         "sourceType": "module"
@@ -29,7 +32,12 @@
             "error",
             {
                 "beforeLineComment": true,
-                "allowBlockStart": true
+                "beforeBlockComment": false,
+                "afterLineComment": true,
+                "allowBlockStart": true,
+                "allowObjectStart": true,
+                "allowArrayStart": true,
+                "allowClassStart": true
             }
         ],
         "line-comment-position": [
@@ -233,9 +241,4 @@
             }
         ]
     }
-    // no need for prettier plug in
-    // "plugins": [
-    //     "prettier",
-    //     "import"
-    // ]
 }

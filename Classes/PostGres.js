@@ -6,8 +6,7 @@ let db;
 
 class PG
 {
-    constructor()
-    { }
+    constructor() { }
 
     static async connect()
     {

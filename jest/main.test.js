@@ -26,10 +26,7 @@ const spyOnGet = jest.spyOn(moxios, 'onGet');
 const spyOnPut = jest.spyOn(moxios, 'onPut');
 const spyOnPatch = jest.spyOn(moxios, 'onPatch');
 
-beforeAll(async () =>
-{
-
-});
+beforeAll(async () => { });
 
 beforeEach(() =>
 {
@@ -39,7 +36,7 @@ beforeEach(() =>
     jest.clearAllMocks();
 });
 
-describe ('Classes', () =>
+describe('Classes', () =>
 {
     describe('Heroku API', () =>
     {
