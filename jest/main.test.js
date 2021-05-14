@@ -40,18 +40,6 @@ describe('Classes', () =>
 {
     describe('Heroku API', () =>
     {
-        it('Refresh Access Token', async () =>
-        {
-            // listen
-            moxios.onPost(r.herokuIdentityAPI).replyOnce(200, p.herokuGetToken);
-
-            // do call
-            const res = await Heroku.getNewToken();
-
-            expect(spyOnPost).toHaveBeenCalledWith(r.herokuIdentityAPI);
-            expect(res.status).toBe(200);
-        });
-
         it('Get Config', async () =>
         {
             moxios.onGet(r.herokuGetConfig).replyOnce(200, p.herokuGetConfig);
