@@ -1,244 +1,213 @@
 {
-    "env": {
-        "browser": true,
-        "commonjs": true,
-        "es2021": true,
-        "node": true
-    },
-    "globals": {
-        "Atomics": "readonly",
-        "SharedArrayBuffer": "readonly",
-        "App": "writable",
-        "config": "readonly"
-    },
-    "extends": [
-        "eslint:recommended",
-        "plugin:import/errors"
+  "env": {
+    "browser": true,
+    "commonjs": true,
+    "es2021": true,
+    "node": true
+  },
+  "globals": {
+    "Atomics": "readonly",
+    "SharedArrayBuffer": "readonly",
+    "App": "writable",
+    "config": "readonly"
+  },
+  "extends": ["eslint:recommended", "plugin:import/errors"],
+  "plugins": ["import"],
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-unused-vars": 2,
+    "quotes": ["error", "single"],
+    "lines-around-comment": [
+      "error",
+      {
+        "beforeLineComment": true,
+        "beforeBlockComment": false,
+        "afterLineComment": false,
+        "allowBlockStart": true,
+        "allowObjectStart": true,
+        "allowArrayStart": true,
+        "allowClassStart": true
+      }
     ],
-    "plugins": [
-        "import"
+    "line-comment-position": [
+      "error",
+      {
+        "position": "above"
+      }
     ],
-    "parserOptions": {
-        "ecmaVersion": 2020,
-        "sourceType": "module"
-    },
-    "rules": {
-        "no-unused-vars": 2,
-        "quotes": [
-            "error",
-            "single"
-        ],
-        "lines-around-comment": [
-            "error",
-            {
-                "beforeLineComment": true,
-                "beforeBlockComment": false,
-                "afterLineComment": false,
-                "allowBlockStart": true,
-                "allowObjectStart": true,
-                "allowArrayStart": true,
-                "allowClassStart": true
-            }
-        ],
-        "line-comment-position": [
-            "error",
-            {
-                "position": "above"
-            }
-        ],
-        "spaced-comment": [
-            "error",
-            "always",
-            {
-                "line": {
-                    "markers": [
-                        "/"
-                    ],
-                    "exceptions": [
-                        "-",
-                        "+"
-                    ]
-                },
-                "block": {
-                    "markers": [
-                        "!"
-                    ],
-                    "exceptions": [
-                        "*"
-                    ],
-                    "balanced": true
-                }
-            }
-        ],
-        "no-console": [
-            "warn"
-        ],
-        "brace-style": [
-            "error",
-            "allman",
-            {
-                "allowSingleLine": true
-            }
-        ],
-        "no-multi-spaces": "error",
-        "no-regex-spaces": "error",
-        "no-multiple-empty-lines": [
-            "error",
-            {
-                "max": 1,
-                "maxEOF": 0
-            }
-        ],
-        "no-redeclare": "error",
-        "import/newline-after-import": [
-            "error",
-            {
-                "count": 1
-            }
-        ],
-        "one-var-declaration-per-line": [
-            "error",
-            "always"
-        ],
-        "no-trailing-spaces": [
-            "error",
-            {
-                "skipBlankLines": true
-            }
-        ],
-        "object-curly-spacing": [
-            "error",
-            "always",
-            {
-                "objectsInObjects": true
-            }
-        ],
-        "key-spacing": [
-            "error",
-            {
-                "mode": "strict"
-            }
-        ],
-        "comma-dangle": [
-            "error",
-            "never"
-        ],
-        "space-unary-ops": 2,
-        "space-infix-ops": "error",
-        "no-var": "error",
-        "array-bracket-spacing": [
-            "error",
-            "always",
-            {
-                "singleValue": true
-            }
-        ],
-        "comma-spacing": [
-            "error",
-            {
-                "before": false,
-                "after": true
-            }
-        ],
-        "array-bracket-newline": [
-            "error",
-            {
-                "multiline": true,
-                "minItems": 4
-            }
-        ],
-        "array-element-newline": [
-            "error",
-            {
-                "multiline": true,
-                "minItems": 4
-            }
-        ],
-        "curly": [
-            "error",
-            "multi",
-            "consistent"
-        ],
-        "block-spacing": "error",
-        "no-floating-decimal": "error",
-        "no-lone-blocks": "error",
-        "no-mixed-spaces-and-tabs": [
-            "error"
-        ],
-        "semi": "error",
-        "no-extra-semi": "error",
-        "semi-spacing": [
-            "error",
-            {
-                "before": false,
-                "after": true
-            }
-        ],
-        "object-property-newline": [
-            "error",
-            {
-                "allowAllPropertiesOnSameLine": true
-            }
-        ],
-        "indent": "error",
-        "prefer-const": "error",
-        "padding-line-between-statements": [
-            "error",
-            {
-                "blankLine": "always",
-                "prev": "*",
-                "next": "cjs-export"
-            },
-            {
-                "blankLine": "always",
-                "prev": "*",
-                "next": "block-like"
-            },
-            {
-                "blankLine": "always",
-                "prev": "*",
-                "next": "expression"
-            },
-            {
-                "blankLine": "always",
-                "prev": "*",
-                "next": "return"
-            },
-            {
-                "blankLine": "always",
-                "prev": "*",
-                "next": "while"
-            },
-            // {
-            //     "blankLine": "always",
-            //     "prev": "*",
-            //     "next": "const"
-            // },
-            {
-                "blankLine": "never",
-                "prev": "const",
-                "next": "cjs-import"
-            },
-            {
-                "blankLine": "always",
-                "prev": "*",
-                "next": "function"
-            },
-            {
-                "blankLine": "always",
-                "prev": "*",
-                "next": "multiline-block-like"
-            },
-            {
-                "blankLine": "never",
-                "prev": "*",
-                "next": "multiline-const"
-            },
-            {
-                "blankLine": "never",
-                "prev": "class",
-                "next": "block-like"
-            }
-        ]
-    }
+    "spaced-comment": [
+      "error",
+      "always",
+      {
+        "line": {
+          "markers": ["/"],
+          "exceptions": ["-", "+"]
+        },
+        "block": {
+          "markers": ["!"],
+          "exceptions": ["*"],
+          "balanced": true
+        }
+      }
+    ],
+    "no-console": ["warn"],
+    "brace-style": [
+      "error",
+      "allman",
+      {
+        "allowSingleLine": true
+      }
+    ],
+    "no-multi-spaces": "error",
+    "no-regex-spaces": "error",
+    "no-multiple-empty-lines": [
+      "error",
+      {
+        "max": 1,
+        "maxEOF": 0
+      }
+    ],
+    "no-redeclare": "error",
+    "import/newline-after-import": [
+      "error",
+      {
+        "count": 1
+      }
+    ],
+    "one-var-declaration-per-line": ["error", "always"],
+    "no-trailing-spaces": [
+      "error",
+      {
+        "skipBlankLines": true
+      }
+    ],
+    "object-curly-spacing": [
+      "error",
+      "always",
+      {
+        "objectsInObjects": true
+      }
+    ],
+    "key-spacing": [
+      "error",
+      {
+        "mode": "strict"
+      }
+    ],
+    "comma-dangle": ["error", "never"],
+    "space-unary-ops": 2,
+    "space-infix-ops": "error",
+    "no-var": "error",
+    "array-bracket-spacing": [
+      "error",
+      "always",
+      {
+        "singleValue": true
+      }
+    ],
+    "comma-spacing": [
+      "error",
+      {
+        "before": false,
+        "after": true
+      }
+    ],
+    "array-bracket-newline": [
+      "error",
+      {
+        "multiline": true,
+        "minItems": 4
+      }
+    ],
+    "array-element-newline": [
+      "error",
+      {
+        "multiline": true,
+        "minItems": 4
+      }
+    ],
+    "curly": ["error", "multi", "consistent"],
+    "block-spacing": "error",
+    "no-floating-decimal": "error",
+    "no-lone-blocks": "error",
+    "no-mixed-spaces-and-tabs": ["error"],
+    "semi": "error",
+    "no-extra-semi": "error",
+    "semi-spacing": [
+      "error",
+      {
+        "before": false,
+        "after": true
+      }
+    ],
+    "object-property-newline": [
+      "error",
+      {
+        "allowAllPropertiesOnSameLine": true
+      }
+    ],
+    "indent": "error",
+    "prefer-const": "error",
+    "padding-line-between-statements": [
+      "error",
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": "cjs-export"
+      },
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": "block-like"
+      },
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": "expression"
+      },
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": "return"
+      },
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": "while"
+      },
+      // {
+      //     "blankLine": "always",
+      //     "prev": "*",
+      //     "next": "const"
+      // },
+      {
+        "blankLine": "never",
+        "prev": "const",
+        "next": "cjs-import"
+      },
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": "function"
+      },
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": "multiline-block-like"
+      },
+      {
+        "blankLine": "never",
+        "prev": "*",
+        "next": "multiline-const"
+      },
+      {
+        "blankLine": "never",
+        "prev": "class",
+        "next": "block-like"
+      }
+    ]
+  }
 }
