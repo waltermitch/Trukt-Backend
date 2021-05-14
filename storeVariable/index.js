@@ -7,7 +7,7 @@ async function storeVar(context, req)
     if (!req.body.name)
         return { 'status': 400, 'data': 'Variable Must Have Name' };
 
-    await PG.storeVariable(req.body);
+    await PG.upsertVariable(req.body);
 
     return { 'status': 200 };
 }

@@ -8,7 +8,7 @@ class PG
 {
     constructor() { }
 
-    static async connect()
+    static async connect(searchPath = 'salesforce')
     {
         if (!db)
         {
@@ -23,7 +23,7 @@ class PG
                 {
                     client: 'pg',
                     connection: opts,
-                    searchPath: 'salesforce'
+                    searchPath: searchPath
                 });
         }
 
@@ -43,7 +43,7 @@ class PG
     {
         const db = await PG.connect();
 
-        await db.insert({ 'Data': JSON.stringify(payload), 'Name': payload.name }).into('variables');
+        await db.insert({ 'Data': JSON.stringify(payload), 'Name': payload.name }).into('variables').onConflict('Name').merge();
     }
 }
 
