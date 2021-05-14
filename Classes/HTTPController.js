@@ -7,16 +7,16 @@ const jHeaders = { 'Content-Type': 'application/json' };
 
 class HTTPController
 {
+    /* eslint-disable */
     constructor(data)
     {
-        /* eslint-disable padding-line-between-statements */
         this.baseURL = data?.url;
         this.tokenName = data?.tokenName;
         this.instanceName = data?.name;
         this.headers = data?.headers;
         this.params = data?.params;
-        /* eslint-enable padding-line-between-statements */
     }
+    /* eslint-enable */
 
     async getSecret(query)
     {
@@ -49,7 +49,7 @@ class HTTPController
 
     setOAuthHeader(value)
     {
-        this.instance.defaults.headers.common['Authorization'] = value;
+        this.instance.defaults.headers.common[ 'Authorization' ] = value;
     }
 
     expCheck()

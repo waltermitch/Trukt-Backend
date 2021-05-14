@@ -9,14 +9,18 @@
         "Atomics": "readonly",
         "SharedArrayBuffer": "readonly",
         "App": "writable",
-        "config":"readonly"
+        "config": "readonly"
     },
     "extends": [
         "eslint:recommended",
         "plugin:import/errors"
     ],
+    "plugins": [
+        "import"
+    ],
     "parserOptions": {
-        "ecmaVersion": 12
+        "ecmaVersion": 2020,
+        "sourceType": "module"
     },
     "rules": {
         "no-unused-vars": 2,
@@ -28,7 +32,12 @@
             "error",
             {
                 "beforeLineComment": true,
-                "allowBlockStart": true
+                "beforeBlockComment": false,
+                "afterLineComment": false,
+                "allowBlockStart": true,
+                "allowObjectStart": true,
+                "allowArrayStart": true,
+                "allowClassStart": true
             }
         ],
         "line-comment-position": [
@@ -101,7 +110,7 @@
             "error",
             "always",
             {
-                "objectsInObjects": false
+                "objectsInObjects": true
             }
         ],
         "key-spacing": [
@@ -232,9 +241,4 @@
             }
         ]
     }
-    // no need for prettier plug in
-    // "plugins": [
-    //     "prettier",
-    //     "import"
-    // ]
 }

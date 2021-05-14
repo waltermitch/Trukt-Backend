@@ -15,8 +15,7 @@ let db;
 
 class Mongo
 {
-    constructor()
-    { }
+    constructor() { }
 
     static async connect()
     {
@@ -39,7 +38,7 @@ class Mongo
 
     static async query(collection, filter, projections = {})
     {
-        Object.assign(projections, { '_id': 0 });
+        Object.assign(projections, { _id: 0 });
 
         const db = await Mongo.connect();
 
@@ -61,7 +60,7 @@ class Mongo
     {
         const db = await Mongo.connect();
 
-        const res = await db.collection('secrets').findOne(query, { projection: { '_id': 0 }});
+        const res = await db.collection('secrets').findOne(query, { projection: { _id: 0 } });
 
         return res;
     }
