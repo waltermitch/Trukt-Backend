@@ -5,8 +5,9 @@ const DB = require('./Mongo');
 
 const jHeaders = { 'Content-Type': 'application/json' };
 
-class HTTPController 
+class HTTPController
 {
+    /* eslint-disable */
     constructor(data)
     {
         this.baseURL = data?.url;
@@ -15,6 +16,7 @@ class HTTPController
         this.headers = data?.headers;
         this.params = data?.params;
     }
+    /* eslint-enable */
 
     async getSecret(query)
     {
@@ -23,7 +25,7 @@ class HTTPController
 
     async updateSecret(key, data)
     {
-        return await DB.updateSecret(key, data)
+        return await DB.updateSecret(key, data);
     }
 
     connect()
@@ -34,7 +36,7 @@ class HTTPController
                 httpsAgent: new https.Agent({ keepAlive: true }),
                 headers: (this?.headers || jHeaders),
                 params: this?.params
-            })
+            });
 
         return this.instance;
     }
@@ -42,24 +44,24 @@ class HTTPController
     setToken(token)
     {
         // set Bearer Token
-        this.setOAuthHeader(`Bearer ${token}`)
+        this.setOAuthHeader(`Bearer ${token}`);
     }
 
     setOAuthHeader(value)
     {
-        this.instance.defaults.headers.common['Authorization'] = value;
+        this.instance.defaults.headers.common[ 'Authorization' ] = value;
     }
 
     expCheck()
     {
         // check if exptime is up
-        return (this.exp && this.exp > DateTime.utc().toString())
+        return (this.exp && this.exp > DateTime.utc().toString());
     }
 
     setExpTime(int)
     {
         // set the exp time
-        this.exp = DateTime.utc().plus({ minutes: int }).toString()
+        this.exp = DateTime.utc().plus({ minutes: int }).toString();
     }
 }
 

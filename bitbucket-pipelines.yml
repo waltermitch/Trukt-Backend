@@ -2,7 +2,7 @@ image: node:14.15.0
 
 pipelines:
   branches:
-    "{master,dev}":
+    "{master,staging,dev}":
       - parallel:
           - step:
               name: Jest Unit Tests
