@@ -34,9 +34,10 @@ class PG
     {
         const db = await PG.connect();
 
-        const res = await db.select(db.raw('"Data"')).from('variables').where(`name = '${value}'`);
+        const res = await db.select('Data').from('variables').where({ Name: value });
 
-        return res;
+        // return the first element and the data object because it comes in a dumb format
+        return res[ 0 ].Data;
     }
 
     static async upsertVariable(payload)
