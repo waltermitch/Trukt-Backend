@@ -18,6 +18,8 @@ class PG
             // parse url and no ssl
             const opts = Object.assign({ ssl: { rejectUnauthorized: false } }, urlParser(res.DATABASE_URL));
 
+            console.log(opts);
+
             // connect
             db = await knex(
                 {
@@ -37,7 +39,7 @@ class PG
         const res = await db.select('Data').from('variables').where({ Name: value });
 
         // return the first element and the data object because it comes in a dumb format
-        return res[ 0 ].Data;
+        return res[0].Data;
     }
 
     static async upsertVariable(payload)
