@@ -7,7 +7,7 @@ class App
 
     static async next(context, func, params)
     {
-        if (!Array.isArray(params)) params = [ params ];
+        if (!Array.isArray(params)) params = [params];
 
         let response = {};
 
