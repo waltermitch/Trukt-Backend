@@ -1,8 +1,8 @@
-const PG = require('../Classes/PostGres');
+const Account = require('../Classes/Account');
 
 module.exports = async (context, req) => await App.next(context, getAccount, req);
 
 async function getAccount(context, req)
 {
-    return await PG.getAccountByType(req.params.type, req.params.query);
+    return await Account.getAccountByType(req.params.type, req.params.query);
 }

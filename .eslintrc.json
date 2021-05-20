@@ -20,6 +20,7 @@
   "rules": {
     "no-unused-vars": 2,
     "quotes": ["error", "single"],
+    "no-fallthrough": "off",
     "lines-around-comment": [
       "error",
       {
@@ -142,60 +143,6 @@
         "allowAllPropertiesOnSameLine": true
       }
     ],
-    "indent": ["error", { "SwitchCase": 0 }],
-    "prefer-const": "error",
-    "padding-line-between-statements": [
-      "error",
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "cjs-export"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "block-like"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "expression"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "return"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "while"
-      },
-      {
-        "blankLine": "never",
-        "prev": "const",
-        "next": "cjs-import"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "function"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "multiline-block-like"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "multiline-const"
-      },
-      {
-        "blankLine": "never",
-        "prev": "class",
-        "next": "block-like"
-      }
-    ]
+    "prefer-const": "error"
   }
 }
