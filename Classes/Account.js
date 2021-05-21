@@ -62,8 +62,6 @@ class Account
         // connect
         const db = await PG.connect();
 
-        console.log('Searching');
-
         const res = await db.raw(query);
 
         return res?.rows;
