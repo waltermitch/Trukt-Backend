@@ -1,6 +1,6 @@
 const urlParser = require('pg-connection-string').parse;
 const Heroku = require('./HerokuPlatformAPI');
-const knex = require('knex');
+const Knex = require('knex');
 
 let db;
 
@@ -8,7 +8,7 @@ class PG
 {
     constructor() { }
 
-    static async connect(searchPath = 'salesforce')
+    static async connect()
     {
         if (!db)
         {
@@ -19,11 +19,11 @@ class PG
             const opts = Object.assign({ ssl: { rejectUnauthorized: false } }, urlParser(res.DATABASE_URL));
 
             // connect
-            db = await knex(
+            db = await Knex(
                 {
                     client: 'pg',
                     connection: opts,
-                    searchPath: searchPath
+                    searchPath: ['salesforce']
                 });
         }
 
@@ -37,14 +37,30 @@ class PG
         const res = await db.select('Data').from('variables').where({ Name: value });
 
         // return the first element and the data object because it comes in a dumb format
-        return res[ 0 ].Data;
+        return res?.[0]?.Data || {};
     }
 
     static async upsertVariable(payload)
     {
         const db = await PG.connect();
 
-        await db.insert({ 'Data': JSON.stringify(payload), 'Name': payload.name }).into('variables').onConflict('Name').merge();
+        await db.insert({ 'Data': JSON.stringify(payload), 'Name': payload.name }).into('variables')
+            .onConflict('Name')
+            .merge();
+    }
+
+    static likeOnNColumns(value, columns)
+    {
+        const search = [];
+        for (let i = 0; i < columns.length; i++)
+            search.push(`${columns[i]} like '%${value}%'`);
+
+        return search.join(' or ');
+    }
+
+    static getRecordTypeId(objectName, recordTypeName)
+    {
+        return config.SF.RecordTypeIds?.[`${objectName}`]?.[`${recordTypeName}`];
     }
 }
 
