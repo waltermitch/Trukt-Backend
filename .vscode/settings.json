@@ -17,11 +17,26 @@
     "editor.formatOnSave": true,
     // turn it off for specific style JS in this case
     "[javascript]": {
-        "editor.formatOnSave": false
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "vscode.typescript-language-features"
     },
-    // enforcing edit and JS 
+    // enforcing edit and JS
+    "javascript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets": false,
+    "javascript.format.placeOpenBraceOnNewLineForControlBlocks": true,
+    "javascript.format.placeOpenBraceOnNewLineForFunctions": true,
     "javascript.updateImportsOnFileMove.enabled": "always",
-    "eslint.alwaysShowStatus": true,
+    "javascript.preferences.quoteStyle": "single",
     "editor.formatOnPaste": true,
-    "editor.tabSize": 4
+    "editor.detectIndentation": false,
+    "eslint.alwaysShowStatus": true,
+    "editor.tabSize": 4,
+    "[json]": {
+        "breadcrumbs.showArrays": true,
+        "breadcrumbs.showClasses": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
 }
