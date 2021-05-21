@@ -4,7 +4,7 @@ const arr = Array.from(Object.keys(config));
 
 for (let i = 0; i < arr.length; i++)
 
-    process.env[`${[ arr[i] ]}`] = config[`${[ arr[i] ]}`];
+    process.env[ `${[ arr[ i ] ]}` ] = config[ `${[ arr[ i ] ]}` ];
 
 process.env.dbName = 'randomDb';
 

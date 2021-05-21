@@ -1,4 +1,4 @@
 {
-  "herokuIdentityAPI": "https://id.heroku.com/oauth/token",
-  "herokuGetConfig": "https://api.heroku.com/apps/4a6714da-087f-4344-9351-071e09a7c87f/config-vars"
+    "herokuIdentityAPI": "https://id.heroku.com/oauth/token",
+    "herokuGetConfig": "https://api.heroku.com/apps/e5be3f8e-77a9-4895-ba2d-82e6232aef53/config-vars"
 }

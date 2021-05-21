@@ -7,8 +7,7 @@ class App
 
     static async next(context, func, params)
     {
-        if (!Array.isArray(params))
-            params = [ params ];
+        if (!Array.isArray(params)) params = [ params ];
 
         let response = {};
 
@@ -21,8 +20,7 @@ class App
             response = new ErrorHandler(context, err);
         }
 
-        context.res =
-        {
+        context.res = {
             headers: { 'Content-Type': 'application/json' },
             status: response?.status,
             body: response
@@ -49,8 +47,7 @@ class App
 
     static resolve(context, response)
     {
-        context.res =
-        {
+        context.res = {
             headers: { 'Content-Type': 'application/json' },
             status: response?.status,
             body: response
