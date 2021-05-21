@@ -20,7 +20,7 @@ class Heroku
 
     static connect()
     {
-        if (!api?.expCheck())
+        if (!api)
         {
             const opts =
             {
@@ -28,22 +28,16 @@ class Heroku
                 headers:
                 {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/vnd.heroku+json; version=3'
+                    'Accept': 'application/vnd.heroku+json; version=3',
+                    'Authorization': `Bearer ${process.env.herokuAccessToken}`
                 }
             };
 
             // init
-            api = new HTTPController(opts);
-
-            // connect
-            api.connect();
-
-            // set token
-            api.setToken(process.env.herokuAccessToken);
-
-            // set instance
-            api = api.instance;
+            api = new HTTPController(opts).connect();
         }
+
+        return api;
     }
 }
 

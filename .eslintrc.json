@@ -20,11 +20,12 @@
   "rules": {
     "no-unused-vars": 2,
     "quotes": ["error", "single"],
+    "no-fallthrough": "off",
     "lines-around-comment": [
       "error",
       {
         "beforeLineComment": true,
-        "beforeBlockComment": false,
+        "beforeBlockComment": true,
         "afterLineComment": false,
         "allowBlockStart": true,
         "allowObjectStart": true,
@@ -101,13 +102,6 @@
     "space-unary-ops": 2,
     "space-infix-ops": "error",
     "no-var": "error",
-    "array-bracket-spacing": [
-      "error",
-      "always",
-      {
-        "singleValue": true
-      }
-    ],
     "comma-spacing": [
       "error",
       {
@@ -149,65 +143,6 @@
         "allowAllPropertiesOnSameLine": true
       }
     ],
-    "indent": "error",
-    "prefer-const": "error",
-    "padding-line-between-statements": [
-      "error",
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "cjs-export"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "block-like"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "expression"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "return"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "while"
-      },
-      // {
-      //     "blankLine": "always",
-      //     "prev": "*",
-      //     "next": "const"
-      // },
-      {
-        "blankLine": "never",
-        "prev": "const",
-        "next": "cjs-import"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "function"
-      },
-      {
-        "blankLine": "always",
-        "prev": "*",
-        "next": "multiline-block-like"
-      },
-      {
-        "blankLine": "never",
-        "prev": "*",
-        "next": "multiline-const"
-      },
-      {
-        "blankLine": "never",
-        "prev": "class",
-        "next": "block-like"
-      }
-    ]
+    "prefer-const": "error"
   }
 }

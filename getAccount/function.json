@@ -6,7 +6,7 @@
       "direction": "in",
       "name": "req",
       "methods": ["get"],
-      "route": "accounts"
+      "route": "accounts/{type:required}/{query:required}"
     },
     {
       "type": "http",
