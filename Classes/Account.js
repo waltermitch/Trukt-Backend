@@ -1,84 +1,73 @@
+const AccountSelectors = require('./Selectors/AccountSelectors');
 const PG = require('./PostGres');
 
 class Account
 {
-    constructor() { }
+    constructor()
+    { }
 
-    static async getAccountByType(type, searchString)
+    static async searchAccountByType(type, searchString)
     {
-        // connect
-        const db = await PG.connect();
-
         // get record type
         const recordTypeId = PG.getRecordTypeId('Account', type);
 
         // default list of fields to select
-        const select = ['name', 'email__c as email', 'phone'];
-        const searchIn = ['name'];
+        const accSelector = new AccountSelectors();
+
+        accSelector.withName().withPhone().withEmail();
+        accSelector.inName();
 
         // query for different things based on account type
         switch (type)
         {
             case 'Carrier':
-                select.push('dot_number__c as dotNumber');
-                searchIn.push('dot_number__c');
-                select.push(...Account.withAddress('Billing'));
-                select.push(...Account.withAddress('Shipping'));
-                searchIn.push(...Account.withAddress('Shipping'));
+                accSelector
+                    .withContacts()
+                    .withDOTNumber()
+                    .withAddress('billing')
+                    .withAddress('shipping');
+                accSelector
+                    .inDOTNumber()
+                    .inAddress('shipping')
+                    .inAddress('billing');
                 break;
             case 'Client':
-                select.push(Account.withContacts());
-
-                // select.push(Account.withConsignee());
-                select.push(Account.withLoadboardInstructions(), Account.withOrderInstructions());
-                select.push(...Account.withAddress('Billing'), ...Account.withAddress('Shipping'));
-                searchIn.push(...Account.withAddress('Shipping'));
+                accSelector
+                    .withContacts()
+                    .withLoadboardInstructions()
+                    .withOrderInstructions()
+                    .withAddress('billing')
+                    .withAddress('Shipping');
+                accSelector
+                    .inAddress('shipping')
+                    .inAddress('billing');
                 break;
             case 'Referrer':
-                select.push(Account.withReferralAmount());
+                accSelector.withReferralAmount();
+                break;
+            default:
+                break;
         }
 
-        // execute
-        const res = await db.raw(`(select ${select.join(', ')} from account a
-                                    where recordtypeid = '${recordTypeId}'
-                                    and (${PG.likeOnNColumns(searchString, searchIn)}) order by name ASC)`);
+        // write query
+        const query = `select ${accSelector.joinSelectors()} from account a 
+                        where recordtypeid = '${recordTypeId}' and (${PG.likeOnNColumns(searchString, accSelector.searchIn)})
+                        order by name ASC`;
 
-        return res.rows;
+        return await Account.get(query);
     }
 
-    static withContacts()
+    static async get(query)
     {
-        return ` (select coalesce(json_agg(contacts), '[]'::json) as contacts from 
-                    (select firstname, lastname, phone
-                    from salesforce.contact c where a.sfid = c.accountid)
-                    as contacts) `;
-    }
+        // connect
+        const db = await PG.connect();
 
-    static withReferralAmount()
-    {
-        return 'referral_amount__c as referralAmount';
-    }
+        console.log('Searching');
 
-    static withOrderInstructions()
-    {
-        return 'order_instructions__c as orderInstructions';
-    }
+        const res = await db.raw(query);
 
-    static withLoadboardInstructions()
-    {
-        return 'loadboard_instructions__c as loadboardInstructions';
+        return res?.rows;
     }
-
-    static withAddress(type)
-    {
-        return [
-            `${type}Street`,
-            `${type}City`,
-            `${type}State`,
-            `${type}PostalCode`
-        ];
-    }
-
 }
 
 module.exports = Account;

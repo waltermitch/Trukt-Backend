@@ -6,6 +6,7 @@ const context = require('./defaultContext');
 const _ = require('lodash');
 const axios = require('axios');
 const AxiosMocker = require('axios-mock-adapter');
+const mockDb = require('mock-knex');
 
 const moxios = new AxiosMocker(axios);
 const p = require('./payloads.json');
@@ -19,6 +20,8 @@ console.warn = jest.fn();
 
 // List of Classes
 const Heroku = require('../Classes/HerokuPlatformAPI');
+const Account = require('../Classes/Account');
+const PG = require('../Classes/PostGres');
 
 const spyOnDelete = jest.spyOn(moxios, 'onDelete');
 const spyOnPost = jest.spyOn(moxios, 'onPost');
@@ -26,7 +29,18 @@ const spyOnGet = jest.spyOn(moxios, 'onGet');
 const spyOnPut = jest.spyOn(moxios, 'onPut');
 const spyOnPatch = jest.spyOn(moxios, 'onPatch');
 
-beforeAll(async () => { });
+// moxios mocks
+moxios.onGet(r.herokuGetConfig).reply(200, p.herokuGetConfig);
+
+// mock knex/pg
+let db;
+
+beforeAll(async () =>
+{
+    db = await PG.connect();
+
+    mockDb.mock(db);
+});
 
 beforeEach(() =>
 {
@@ -42,8 +56,8 @@ describe('Classes', () =>
     {
         it('Get Config', async () =>
         {
+            // moxios mocks
             moxios.onGet(r.herokuGetConfig).replyOnce(200, p.herokuGetConfig);
-
             const res = await Heroku.getConfig();
 
             expect(res).toMatchObject(p.herokuGetConfig);
@@ -51,4 +65,27 @@ describe('Classes', () =>
             expect(spyOnGet).toHaveBeenCalledWith(r.herokuGetConfig);
         });
     });
+
+    describe('Account', () =>
+    {
+        beforeAll(() =>
+        {
+            const tracker = mockDb.getTracker();
+
+            tracker.install();
+
+            tracker.once('query', (query) =>
+            {
+                query.response(p.getAccountByTypeAndSearch);
+            });
+        });
+
+        it('search Account By Type', async () =>
+        {
+            const res = await Account.searchAccountByType('Client', 'LKQ');
+
+            expect(res?.[0]).toMatchObject(p.getAccountByTypeAndSearch.rows[0]);
+        });
+    });
+
 });
