@@ -5,8 +5,6 @@
   "herokuGetConfig": {
     "DATABASE_URL": "url",
     "OtherStuff": "stuff"
-<<<<<<< HEAD
-=======
   },
   "getAccountByTypeAndSearch": {
     "rows": [
@@ -43,6 +41,5 @@
         "shippingPostalCode": null
       }
     ]
->>>>>>> STS-1318
   }
 }
