@@ -1,3 +1,5 @@
+const ContactSelectors = require('./ContactSelector');
+
 class AccountSelectors
 {
     constructor()
@@ -13,8 +15,10 @@ class AccountSelectors
 
     withContacts()
     {
+        const contactsSelector = new ContactSelectors().withFirstName().withLastName().withPhone().withGUID();
+
         this.select.push(` (select coalesce(json_agg(contacts), '[]'::json) as contacts from
-                    (select firstname as "firstName", lastname as "lastName", phone
+                    (select ${contactsSelector.joinSelectors()}
                     from salesforce.contact c where a.sfid = c.accountid)
                     as contacts) `);
 
@@ -45,6 +49,13 @@ class AccountSelectors
     withPhone()
     {
         this.select.push('phone');
+
+        return this;
+    }
+
+    withGUID()
+    {
+        this.select.push('guid__c as GUID');
 
         return this;
     }
