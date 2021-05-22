@@ -14,7 +14,7 @@ class Account
         // default list of fields to select
         const accSelector = new AccountSelectors();
 
-        accSelector.withName().withPhone().withEmail();
+        accSelector.withName().withPhone().withEmail().withGUID();
         accSelector.inName();
 
         // query for different things based on account type
