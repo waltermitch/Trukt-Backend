@@ -53,7 +53,7 @@ class PG
     {
         const search = [];
         for (let i = 0; i < columns.length; i++)
-            search.push(`${columns[i]} like '%${value}%'`);
+            search.push(`${columns[i]} ilike '%${value}%'`);
 
         return search.join(' or ');
     }
