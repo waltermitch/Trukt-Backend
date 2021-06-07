@@ -24,14 +24,15 @@ const vehicle_type_records = [
 
 exports.up = function (knex)
 {
-    return Promise.all([
-        knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
-        {
-            table.string('name', 32).unique().notNullable().primary();
-        }),
-        knex(table_name).insert(vehicle_type_records)
-    ]
-    );
+    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    {
+        table.string('name', 32).unique().notNullable().primary();
+    }).then((
+        result
+    ) =>
+    {
+        knex(table_name).insert(vehicle_type_records);
+    });
 };
 
 exports.down = function (knex)
