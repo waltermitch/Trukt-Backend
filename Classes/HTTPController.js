@@ -49,7 +49,7 @@ class HTTPController
 
     setOAuthHeader(value)
     {
-        this.instance.defaults.headers.common[ 'Authorization' ] = value;
+        this.instance.defaults.headers.common['Authorization'] = value;
     }
 
     expCheck()
