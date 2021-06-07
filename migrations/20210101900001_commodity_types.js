@@ -28,16 +28,17 @@ const table_name = 'commodity_types';
 
 exports.up = function (knex)
 {
-    return Promise.all([
-        knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
-        {
-            table.increments('id', { primaryKey: true }).notNullable();
-            table.enu('type', [ 'vehicle', 'freight' ]).notNullable().index();
-            table.string('subtype', 32);
-            table.unique([ 'type', 'subtype' ]);
-        }),
-        knex(table_name).insert(commodity_type_records)
-    ]);
+    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    {
+        table.increments('id', { primaryKey: true }).notNullable();
+        table.enu('type', [ 'vehicle', 'freight' ]).notNullable().index();
+        table.string('subtype', 32);
+        table.unique([ 'type', 'subtype' ]);
+    }).then((result) =>
+    {
+        knex(table_name).insert(commodity_type_records);
+
+    });
 };
 
 exports.down = function (knex)
