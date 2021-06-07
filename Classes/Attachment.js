@@ -1,44 +1,12 @@
-const AzureStorage = require('./AzureStorage');
-
-const containerName = config.DocumentContainerName;
-const docTypeEnums =
-    [
-        'Undefined',
-        'VendorInvoice',
-        'BillOfLading',
-        'ProofOfDelivery',
-        'LumperTicket',
-        'ScaleTicket',
-        'InGateTicket',
-        'OutGateTicket',
-        'Miscellaneous',
-        'AccessorialAgreement',
-        'RateConfirmation',
-        'LoadTender',
-        'Invoice',
-        'CustomsDocuments',
-        'InvoiceWithPaperwork',
-        'DetentionLoading',
-        'DetentionUnloading',
-        'PalletReceipt',
-        'SpotApproval',
-        'TruckNotUsed',
-        'ExitPass',
-        'BalanceDue',
-        'PackingList'
-    ];
+const Storage = require('./AzureStorage');
+const PG = require('./PostGres');
 
 class Attachment
 {
     constructor(data)
     {
-        this.fileName = data?.fileName;
-        this.fileType = data.fileType;
-        this.objectId = data.objectId;
-        this;
+        this.name = data.fileName;
     }
-
-    async storeFile(data) { }
 }
 
 module.exports = Attachment;

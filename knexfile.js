@@ -1,4 +1,7 @@
 // Update with your config settings.
+const urlParser = require('pg-connection-string');
+
+const url = 'postgres://cicfcrqswbsfal:4e2d97e15dbeee22629fbe00b1f2bb4d0e7d992882e2a45601a02e697db0e527@ec2-54-166-167-192.compute-1.amazonaws.com:5432/dbfms4ghb6oo55';
 
 module.exports = {
     local: {
@@ -9,19 +12,14 @@ module.exports = {
             port: '6776',
             database: 'rcg_trukt'
         },
-        searchPath: [ 'rcg_tms' ],
+        searchPath: ['rcg_tms'],
         migrations: {
             tableName: 'knex_migrations'
         }
     },
     development: {
         client: 'postgresql',
-        connection: {
-            user: 'postgres',
-            password: 'password',
-            port: '6776',
-            database: 'rcg_tms'
-        },
+        connection: Object.assign({ ssl: { rejectUnauthorized: false } }, urlParser(url)),
         migrations: {
             tableName: 'knex_migrations'
         }
