@@ -9,9 +9,12 @@ module.exports = {
             port: '6776',
             database: 'rcg_trukt'
         },
-        searchPath: [ 'rcg_tms' ],
+        searchPath: ['rcg_tms'],
         migrations: {
             tableName: 'knex_migrations'
+        },
+        seeds: {
+            directory: './seeds/local'
         }
     },
     development: {
