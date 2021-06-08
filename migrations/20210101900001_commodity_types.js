@@ -31,12 +31,12 @@ exports.up = function (knex)
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
         table.increments('id', { primaryKey: true }).notNullable();
-        table.enu('type', [ 'vehicle', 'freight' ]).notNullable().index();
+        table.enu('type', ['vehicle', 'freight']).notNullable().index();
         table.string('subtype', 32);
-        table.unique([ 'type', 'subtype' ]);
-    }).then((result) =>
+        table.unique(['type', 'subtype']);
+    }).then(() =>
     {
-        knex(table_name).insert(commodity_type_records);
+        return knex(table_name).insert(commodity_type_records);
 
     });
 };
