@@ -26,7 +26,7 @@ exports.up = function (knex)
         table.string('zip_code', 16).notNullable();
         table.decimal('latitude', 15, 7);
         table.decimal('longitude', 15, 7);
-        for (const type of [ 'primary', 'alternative' ])
+        for (const type of ['primary', 'alternative'])
         {
             const fieldname = type + '_contact';
             table.integer(fieldname).unsigned().comment('the default ' + type + ' contact for this terminal');
@@ -34,7 +34,8 @@ exports.up = function (knex)
         }
 
         table.index('guid');
-        table.unique([ 'latitude', 'longitude' ]);
+        table.unique(['latitude', 'longitude']);
+        migration_tools.timestamps(knex, table);
 
     }).raw(guid_function(table_name));
 };
