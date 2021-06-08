@@ -32,10 +32,11 @@ exports.up = function (knex)
             table.integer(fieldname).unsigned().comment('the default ' + type + ' contact for this terminal');
             table.foreign(fieldname).references('id').inTable('salesforce.contact');
         }
+        table.binary('is_resolved').notNullable().defaultsTo(false).comment('this is set to true only and only when the address is verified and proper geo-coords are stored');
+        migration_tools.timestamps(knex, table);
 
         table.index('guid');
         table.unique(['latitude', 'longitude']);
-        migration_tools.timestamps(knex, table);
 
     }).raw(guid_function(table_name));
 };
