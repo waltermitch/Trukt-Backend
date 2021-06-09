@@ -35,6 +35,8 @@ exports.up = function (knex)
         table.string('url').notNullable();
         table.string('extension');
         table.string('name').notNullable();
+        table.uuid('parent').notNullable();
+        table.string('parent_table').notNullable();
     });
 };
 
