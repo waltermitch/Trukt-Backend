@@ -7,8 +7,8 @@ exports.up = function (knex)
 {
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
-        table.string('name').unique().notNullable();
-        table.uuid('guid').unique();
+        table.string('name').notNullable();
+        table.uuid('guid').unique().notNullable().primary();
         table.enu('location_type', [
             'dealer',
             'private',
