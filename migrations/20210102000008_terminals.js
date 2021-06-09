@@ -38,7 +38,7 @@ exports.up = function (knex)
         table.index('guid');
         table.unique(['latitude', 'longitude']);
 
-    }).raw(guid_function(table_name));
+    }).raw(guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
 };
 
 exports.down = function (knex)
