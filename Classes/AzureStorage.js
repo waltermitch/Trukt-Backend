@@ -1,37 +1,20 @@
 const { BlobServiceClient } = require('@azure/storage-blob');
 
 // init blob client
-const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AzureWebJobsStorage);
+const blobServiceClient = BlobServiceClient.fromConnectionString(config.AzureStorage.connectionString);
+
+// init container client
+const container = blobServiceClient.getContainerClient(config.AzureStorage.container);
 
 class AzureStorage
 {
     constructor()
     { }
 
-    static async getBlob(containerName, blobName)
+    static async storeBlob(fileName, fileContents)
     {
-        // nav to container
-        const containerClient = blobServiceClient.getContainerClient(containerName);
-
-        // get blob connection
-        const blobClient = containerClient.getBlobClient(blobName);
-
-        // download
-        const buffer = await blobClient.downloadToBuffer();
-
-        return buffer;
-    }
-
-    static async storeBlob(fileName, fileContents, containerName)
-    {
-        // init container connection
-        const containerClient = blobServiceClient.getContainerClient(containerName);
-
         // init blob connection
-        const blobClient = containerClient.getAppendBlobClient(fileName);
-
-        // delete old if exists
-        await blobClient.deleteIfExists();
+        const blobClient = container.getAppendBlobClient(fileName);
 
         // init empty blob
         await blobClient.create();

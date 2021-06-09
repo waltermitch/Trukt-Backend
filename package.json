@@ -16,6 +16,7 @@
         "knex": "^0.95.4",
         "luxon": "^1.26.0",
         "mongodb": "^3.6.6",
+        "parse-multipart": "^1.0.4",
         "pg": "^8.6.0",
         "pg-connection-string": "^2.5.0",
         "uuid": "^8.3.2"
