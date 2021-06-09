@@ -15,8 +15,9 @@ exports.up = function (knex)
         table.string('phone_number', 15);
         table.string('modile_number', 15);
         table.string('email');
+        migration_tools.timestamps(knex, table);
 
-    }).raw(guid_function(table_name));
+    }).raw(guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
 };
 
 exports.down = function (knex)
