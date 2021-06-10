@@ -48,7 +48,7 @@ exports.up = function (knex)
 
         COMMENT ON TRIGGER rcg_order_job_number_assignment ON rcg_tms.${table_name}
             IS 'Assigns the order job number and prevents users from changing it willy nilly';
-    `);
+    `).raw(migration_tools.timestamps_trigger(table_name));
 };
 
 exports.down = function (knex)
