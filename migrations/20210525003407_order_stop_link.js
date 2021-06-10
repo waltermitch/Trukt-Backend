@@ -1,3 +1,5 @@
+const migration_tools = require('../tools/migration');
+
 const table_name = 'order_stop_links';
 exports.up = function (knex)
 {
@@ -23,7 +25,8 @@ exports.up = function (knex)
             'stop',
             'commodity'
         ]);
-    });
+        migration_tools.timestamps(knex, table);
+    }).raw(migration_tools.timestamps_trigger(table_name));
 };
 
 exports.down = function (knex)
