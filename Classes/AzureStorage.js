@@ -1,10 +1,14 @@
 const { BlobServiceClient } = require('@azure/storage-blob');
+require('../tools/start')();
 
 // init blob client
 const blobServiceClient = BlobServiceClient.fromConnectionString(config.AzureStorage.connectionString);
 
 // init container client
 const container = blobServiceClient.getContainerClient(config.AzureStorage.container);
+
+// amount to upload by;
+const ThreeMB = 3000000;
 
 class AzureStorage
 {
@@ -19,10 +23,31 @@ class AzureStorage
         // init empty blob
         await blobClient.create();
 
-        // fill
-        const res = await blobClient.appendBlock(fileContents, fileContents.length);
+        // fill with chunks
+        await AzureStorage.storeChunks(fileContents, blobClient);
 
-        return res;
+        return blobClient.generateSasUrl;
+    }
+
+    static async storeChunks(data, blobClient)
+    {
+        for (let i = 0; i < data.length; i++)
+        {
+            // set right index
+            let diff = i + ThreeMB;
+
+            if (i + ThreeMB > data.length)
+                diff = data.length;
+
+            // extract chunk
+            const chunk = data.slice(i, diff);
+
+            // upload
+            await blobClient.appendBlock(chunk, chunk.length);
+
+            // move up left index
+            i = diff;
+        }
     }
 
     static async storeJSON(fileName, data, container)
