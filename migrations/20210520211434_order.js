@@ -15,7 +15,6 @@ exports.up = function (knex)
             table.integer('contact').unsigned();
             table.foreign('contact').references('id').inTable('salesforce.contact');
             table.text('instructions');
-            migration_tools.timestamps(knex, table);
             table.uuid('owner').comment('This is the person in charge of making sure the order is full-filled. Either dispatcher or other actor.');
             table.uuid('referrer').comment('This is the person who referred this order');
 
@@ -40,6 +39,7 @@ exports.up = function (knex)
             // date time fields
             table.datetime('date_expected_complete_by').comment('The date this order is expected to be completed by');
             table.datetime('date_completed').comment('The date that the order was completed and all commodities delivered');
+            migration_tools.timestamps(knex, table);
 
         }).raw(migration_tools.guid_function(table_name)).raw(`
         
@@ -51,7 +51,7 @@ exports.up = function (knex)
             
             COMMENT ON TRIGGER rcg_order_number_assignment ON rcg_tms.${table_name}
                 IS 'Assigns the order number and prevents users from changing it willy nilly';
-        `)
+        `).raw(migration_tools.timestamps_trigger(table_name))
     ]);
 };
 
