@@ -9,16 +9,16 @@ exports.up = function (knex)
     {
         table.uuid('guid').unique().notNullable();
         table.integer('terminal').unsigned();
-        table.enu('stop_type', [ 'pickup', 'delivery' ]);
+        table.enu('stop_type', ['pickup', 'delivery']);
         table.uuid('location').notNullable();
         table.foreign('location').references('guid').inTable('rcg_tms.terminals');
-        for (const type of [ 'primary', 'alternative' ])
+        for (const type of ['primary', 'alternative'])
         {
             table.uuid(`${type}_contact`);
             table.foreign(`${type}_contact`).references('guid').inTable('rcg_tms.contacts');
         }
 
-        for (const type of [ 'customer', 'vender' ])
+        for (const type of ['customer', 'vender'])
         {
 
             table.datetime(`date_scheduled_start_${type}`);
@@ -38,7 +38,7 @@ exports.up = function (knex)
         table.string('status', 24).comment('do not modify this status field, it is purely for displaying to users');
         migration_tools.timestamps(knex, table);
 
-    }).raw(guid_function(table_name));
+    }).raw(guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
 };
 
 exports.down = function (knex)
