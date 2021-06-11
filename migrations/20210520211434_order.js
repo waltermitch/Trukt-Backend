@@ -10,9 +10,9 @@ exports.up = function (knex)
             table.comment('The information about the customer order');
             table.uuid('guid').primary().notNullable().unique();
             table.string('number', 8).unique().comment('the order number will be generated from a trigger stored in the index numbers table ');
-            table.uuid('client').notNullable();
+            table.string('client', 100).notNullable();
             table.foreign('client').references('guid__c').inTable('salesforce.account');
-            table.uuid('contact').unsigned();
+            table.string('contact', 100).unsigned();
             table.foreign('contact').references('guid__c').inTable('salesforce.contact');
             table.text('instructions');
             table.uuid('owner').comment('This is the person in charge of making sure the order is full-filled. Either dispatcher or other actor.');
