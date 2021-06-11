@@ -11,11 +11,11 @@ exports.up = function (knex)
         table.uuid('order');
         table.foreign('order').references('guid').inTable('rcg_tms.orders');
 
-        table.integer('vendor').unsigned().comment('The account completing the job for the company');
-        table.foreign('vendor').references('id').inTable('salesforce.account');
+        table.uuid('vendor').comment('The account completing the job for the company');
+        table.foreign('vendor').references('guid__c').inTable('salesforce.account');
 
-        table.integer('vendor_contact').unsigned().comment('The vendor\'s primary contact');
-        table.foreign('vendor_contact').references('id').inTable('salesforce.contact');
+        table.uuid('vendor_contact').comment('The vendor\'s primary contact');
+        table.foreign('vendor_contact').references('guid__c').inTable('salesforce.contact');
 
         migration_tools.timestamps(knex, table);
         table.uuid('owner').comment('This is the person in charge of making sure the job is full-filled. Either dispatcher or other actor.');
