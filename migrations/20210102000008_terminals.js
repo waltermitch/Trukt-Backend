@@ -30,7 +30,7 @@ exports.up = function (knex)
         {
             const fieldname = type + '_contact';
             table.uuid(fieldname).comment('the default ' + type + ' contact for this terminal');
-            table.foreign(fieldname).references('guid').inTable('rcg_tms.contact');
+            table.foreign(fieldname).references('guid').inTable('rcg_tms.contacts');
         }
         table.binary('is_resolved').notNullable().defaultsTo(false).comment('this is set to true only and only when the address is verified and proper geo-coords are stored');
         migration_tools.timestamps(knex, table);
