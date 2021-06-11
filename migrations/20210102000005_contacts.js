@@ -6,7 +6,7 @@ exports.up = function (knex)
 {
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
-        table.uuid('guid').unique();
+        table.uuid('guid').unique().primary().notNullable();
         table.string('first_name', 24);
         table.string('last_name', 24);
 
