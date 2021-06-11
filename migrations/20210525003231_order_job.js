@@ -11,10 +11,10 @@ exports.up = function (knex)
         table.uuid('order');
         table.foreign('order').references('guid').inTable('rcg_tms.orders');
 
-        table.uuid('vendor').comment('The account completing the job for the company');
+        table.string('vendor', 100).comment('The account completing the job for the company');
         table.foreign('vendor').references('guid__c').inTable('salesforce.account');
 
-        table.uuid('vendor_contact').comment('The vendor\'s primary contact');
+        table.string('vendor_contact', 100).comment('The vendor\'s primary contact');
         table.foreign('vendor_contact').references('guid__c').inTable('salesforce.contact');
 
         migration_tools.timestamps(knex, table);
