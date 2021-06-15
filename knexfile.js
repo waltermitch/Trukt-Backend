@@ -14,7 +14,7 @@ const conConfig = {
     }
 };
 
-module.exports = async () =>
+module.exports = () =>
 {
     switch (env)
     {
@@ -36,11 +36,13 @@ module.exports = async () =>
         case 'staging':
         case 'production':
         case 'prod':
-            /* eslint-disable */
-            const c = await Heroku.getConfig();
-            /* eslint-enable */
             // rejectUnathorized is used for self signed certificates, it still encrypts the data
-            conConfig.connection = Object.assign({ ssl: { rejectUnauthorized: false } }, urlParser(c.DATABASE_URL));
+            conConfig.connection = async () =>
+            {
+                const base = { ssl: { rejectUnauthorized: false } };
+                const c = await Heroku.getConfig();
+                return Object.assign(base, urlParser(c.DATABASE_URL));
+            };
             conConfig.pool = { min: 1, max: 5 };
             break;
         default:
