@@ -44,5 +44,5 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
+    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name).raw('DROP TYPE IF EXISTS rcg_tms.location_types');
 };
