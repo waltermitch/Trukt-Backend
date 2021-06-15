@@ -4,8 +4,8 @@ module.exports = async (context, req) => await App.next(context, addAttachment, 
 
 async function addAttachment(context, req)
 {
-    if (!req.query?.parentGUID || !req.query?.parentType)
-        return { 'status': 400, 'data': 'Specify Parent GUID and Type' };
+    if (!req.query?.parent || !req.query?.parentType || !req?.query?.attachmentType)
+        return { 'status': 400, 'data': 'Missing Query Params' };
 
     return await Attachments.store(req, req.query);
 }

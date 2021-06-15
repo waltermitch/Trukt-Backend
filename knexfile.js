@@ -8,11 +8,10 @@ module.exports = {
         client: 'postgresql',
         connection: {
             user: 'postgres',
-            password: 'Rcgauto202020',
-            port: '6776',
-            database: 'rcg_trukt'
+            password: 'password',
+            port: '5432',
+            database: 'postgres'
         },
-        searchPath: ['rcg_tms'],
         migrations: {
             tableName: 'knex_migrations'
         }

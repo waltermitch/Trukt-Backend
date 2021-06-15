@@ -26,7 +26,7 @@ class AzureStorage
         // fill with chunks
         await AzureStorage.storeChunks(fileContents, blobClient);
 
-        return blobClient.generateSasUrl;
+        return;
     }
 
     static async storeChunks(data, blobClient)
@@ -62,6 +62,11 @@ class AzureStorage
         const file = await AzureStorage.getBlob(fileName, container);
 
         return JSON.parse(file.toString());
+    }
+
+    static getBaseUrl()
+    {
+        return `https://rcgfilestorage.blob.core.windows.net/${config.AzureStorage.container}`;
     }
 }
 

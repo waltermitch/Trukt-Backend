@@ -21,12 +21,10 @@ class Validator
         const errors = [];
 
         if (!valid)
-
-            // iterate over every error and prettify
             for (let i = 0; i < schemas.errors.length; i++)
             {
                 // get pretty message
-                const msg = prettify(schemas.errors[ i ]);
+                const msg = prettify(schemas.errors[i]);
 
                 // make sure it's not null
                 if (msg)
@@ -95,7 +93,7 @@ function initialize()
     for (let i = 0; i < files.length; i++)
     {
         // save file in mem
-        const temp = require(`${__dirname}/Schemas/${files[ i ]}`);
+        const temp = require(`${__dirname}/Schemas/${files[i]}`);
 
         // load into constructor
         schemas.addSchema(temp, temp.$id);

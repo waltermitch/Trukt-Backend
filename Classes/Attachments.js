@@ -1,8 +1,10 @@
 const multipart = require('parse-multipart');
 const Storage = require('./AzureStorage');
+const PG = require('./PostGres');
 
-// const PG = require('./PostGres');
 const uuid = require('uuid');
+
+const baseURL = Storage.getBaseUrl();
 
 class Attachments
 {
@@ -14,6 +16,9 @@ class Attachments
         if (!req.body)
             return { 'status': 400, 'data': 'No Files Attached' };
 
+        if (['job'].includes(opts.parentType))
+            return { 'status': 400, 'data': 'Not An Allowed parentType' };
+
         // parse form data into buffer
         const files = Attachments.parse(req);
 
@@ -21,21 +26,41 @@ class Attachments
         const urls = [];
 
         // compose path
-        const basePath = `${opts.parentType}/${opts.parentGUID}`;
+        const path = `${opts.parentType}/${opts.parent}`;
 
         for (let i = 0; i < files.length; i++)
         {
+            const guid = uuid.v4();
+
+            const file =
+            {
+                'guid': guid,
+                'type': opts.attachmentType,
+                'url': `${baseURL}/${path}/${guid}/${files[i].filename}`,
+                'extension': files[i].type,
+                'name': files[i].filename,
+                'parent': opts.parent,
+                'parent_table': opts.parentType
+            };
+
             // compose full path of file
-            const fullPath = `${basePath}/${uuid.v4()}/${files[i].filename}`;
+            const fullPath = `${path}/${guid}/${file.name}`;
 
-            // store it
-            const url = await Storage.storeBlob(fullPath, files[i].data);
+            await Promise.all([Storage.storeBlob(fullPath, files[i].data), Attachments.insert(file)]);
 
-            urls.push({ 'url': url, 'name': files[i].filename });
+            urls.push({ 'url': file.url, 'name': file.name });
         }
 
         return urls;
+    }
 
+    static async insert(opts)
+    {
+        const db = await PG.connect();
+
+        const res = await db('attachments').insert(opts);
+
+        return res;
     }
 
     // async get(relatedObject, relatedId)
