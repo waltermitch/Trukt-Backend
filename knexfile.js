@@ -1,65 +1,50 @@
-// Update with your config settings.
+const urlParser = require('pg-connection-string').parse;
+const Heroku = require('./Classes/HerokuPlatformAPI');
+require('./local.settings');
 
-module.exports = {
-    local: {
-        client: 'postgresql',
-        connection: {
-            user: 'postgres',
-            password: 'Rcgauto202020',
-            port: '6776',
-            database: 'rcg_trukt'
-        },
-        searchPath: ['rcg_tms'],
-        migrations: {
-            tableName: 'knex_migrations'
-        },
-        seeds: {
-            directory: './seeds/local'
-        }
+const env = process.env.NODE_ENV || process.env.ENV;
+const conConfig = {
+    client: process.env['knex.client'],
+    searchPath: ['rcg_tms'],
+    migrations: {
+        tableName: process.env['knex.migration.table']
     },
-    development: {
-        client: 'postgresql',
-        connection: {
-            user: 'postgres',
-            password: 'password',
-            port: '6776',
-            database: 'rcg_tms'
-        },
-        migrations: {
-            tableName: 'knex_migrations'
-        }
-    },
-
-    staging: {
-        client: 'postgresql',
-        connection: {
-            database: 'my_db',
-            user: 'username',
-            password: 'password'
-        },
-        pool: {
-            min: 2,
-            max: 10
-        },
-        migrations: {
-            tableName: 'knex_migrations'
-        }
-    },
-
-    production: {
-        client: 'postgresql',
-        connection: {
-            database: 'my_db',
-            user: 'username',
-            password: 'password'
-        },
-        pool: {
-            min: 2,
-            max: 10
-        },
-        migrations: {
-            tableName: 'knex_migrations'
-        }
+    seeds: {
+        directory: process.env['knex.migration.seeds']
     }
+};
 
+module.exports = async () =>
+{
+    switch (env)
+    {
+        case 'local':
+        case 'test':
+            conConfig.connection = {};
+            for (const field of [
+                'user',
+                'password',
+                'port',
+                'database'
+            ])
+
+                conConfig.connection[field] = process.env[`knex.connection.${field}`];
+
+            break;
+        case 'development':
+        case 'dev':
+        case 'staging':
+        case 'production':
+        case 'prod':
+            /* eslint-disable */
+            const c = await Heroku.getConfig();
+            /* eslint-enable */
+            // rejectUnathorized is used for self signed certificates, it still encrypts the data
+            conConfig.connection = Object.assign({ ssl: { rejectUnauthorized: false } }, urlParser(c.DATABASE_URL));
+            conConfig.pool = { min: 1, max: 5 };
+            break;
+        default:
+            throw new Error('Unknown environment set : ' + env);
+    }
+    return conConfig;
 };
