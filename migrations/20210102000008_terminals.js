@@ -16,7 +16,10 @@ exports.up = function (knex)
             'repo yard',
             'port',
             'business'
-        ]);
+        ], {
+            useNative: true, enumName: 'location_types'
+        });
+
         table.string('street1');
         table.string('street2');
 
