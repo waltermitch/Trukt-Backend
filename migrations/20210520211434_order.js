@@ -23,9 +23,9 @@ exports.up = function (knex)
             table.decimal('distance', 8, 1).unsigned().comment('The maximum truck-route distance between all the order stops sorted by the sequence in miles');
 
             // boolean status fields
-            table.binary('is_dummy').defaultTo('false');
-            table.binary('is_deleted').defaultTo('false');
-            table.binary('is_completed').defaultTo('false');
+            table.boolean('is_dummy').defaultTo(false);
+            table.boolean('is_deleted').defaultTo(false);
+            table.boolean('is_completed').defaultTo(false);
 
             // currency values / fields
             table.decimal('estimated_expense', 15, 2).unsigned().comment('This is the estimated amount of money it will cost to hire a vendor/carrier to complete the order');

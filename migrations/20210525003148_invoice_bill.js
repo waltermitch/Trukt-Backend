@@ -21,10 +21,10 @@ exports.up = function (knex)
         table.string('payment_method');
         table.string('payment_terms');
 
-        table.binary('is_valid').notNullable().defaultTo(false).comment('the invoice or bill is valid when this is set, by default invalid, when user "generates" then sets it to valid');
-        table.binary('is_generated').notNullable().defaultTo(false).comment('This is set to true when a user generates the invoice or bill in the system');
-        table.binary('is_paid').notNullable().defaultTo(false);
-        table.binary('is_invoice').notNullable().comment('true value is invoice, false value is bill');
+        table.boolean('is_valid').notNullable().defaultTo(false).comment('the invoice or bill is valid when this is set, by default invalid, when user "generates" then sets it to valid');
+        table.boolean('is_generated').notNullable().defaultTo(false).comment('This is set to true when a user generates the invoice or bill in the system');
+        table.boolean('is_paid').notNullable().defaultTo(false);
+        table.boolean('is_invoice').notNullable().comment('true value is invoice, false value is bill');
 
     }).raw(migration_tools.guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
 };

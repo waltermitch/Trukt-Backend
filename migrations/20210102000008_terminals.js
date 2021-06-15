@@ -32,7 +32,7 @@ exports.up = function (knex)
             table.uuid(fieldname).comment('the default ' + type + ' contact for this terminal');
             table.foreign(fieldname).references('guid').inTable('rcg_tms.contacts');
         }
-        table.binary('is_resolved').notNullable().defaultsTo(false).comment('this is set to true only and only when the address is verified and proper geo-coords are stored');
+        table.boolean('is_resolved').notNullable().defaultsTo(false).comment('this is set to true only and only when the address is verified and proper geo-coords are stored');
         migration_tools.timestamps(knex, table);
         table.unique(['latitude', 'longitude']);
 

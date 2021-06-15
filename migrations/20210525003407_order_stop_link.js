@@ -17,7 +17,7 @@ exports.up = function (knex)
         table.string('lot_number', 32).comment('Location for the commodity at this stop');
         table.datetime('date_completed').comment('the date this commodity was pickedup/delivered');
 
-        table.binary('is_completed').notNullable().defaultTo(false);
+        table.boolean('is_completed').notNullable().defaultTo(false);
 
         table.unique([
             'order',
