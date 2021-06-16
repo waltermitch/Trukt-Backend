@@ -48,7 +48,6 @@ Thumbs.db
 *.mov
 *.wmv
 
-
 #func app files
 __pycache__/
 *.py[cod]
@@ -62,3 +61,5 @@ git/hooks/prepare-commit-msg.py
 notes.txt
 file.js
 test.js
+*.data
+/secrets

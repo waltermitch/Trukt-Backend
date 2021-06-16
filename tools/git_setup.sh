@@ -1,26 +1,18 @@
 #! /bin/bash
 
 # getting git hook directory
-HOOK_DIR=$(git rev-parse --show-toplevel)/.git/hooks
-REPO_HOOKS=$(git rev-parse --show-toplevel)/git/hooks
-WRAPPER=$(git rev-parse --show-toplevel)/git/hook-wrapper
-
-# echo $REPO_HOOKS
+ROOT_DIR=$(git rev-parse --show-toplevel)
+HOOK_DIR=$ROOT_DIR/.git/hooks
+REPO_HOOKS=$ROOT_DIR/git/hooks
+WRAPPER_PATH=$ROOT_DIR/git/hook-wrapper
 
 find "$REPO_HOOKS" -type f | while read filename; do
-    # my git folder
-    echo "printing git folder: $filename"
-
     # look for files files that don't have extentions such as .file .txt etc.
     if [[ ! $filename =~ \.[a-zA-Z0-9]+$ ]]; then
-        hook=$(basename "$filename")  
-        echo 'printing hook: ' $hook
-        # echo 
+        hook=$(basename "$filename")
         # check to see if .git/hook has the same code as in my wrapper
         # if yes, then we ignore this statement
         if [ -f "$HOOK_DIR/$hook" ]; then
-            echo "printing HOOK/hook:  $HOOK_DIR/$hook"
-
             # if .local files already exist
             difference=$(diff -q --strip-trailing-cr "$WRAPPER_PATH" "$HOOK_DIR/$hook")
             if [[ $difference =~ \w+ ]]; then
@@ -30,29 +22,29 @@ find "$REPO_HOOKS" -type f | while read filename; do
                     if [ ! -h "$HOOK_DIR/$hook" ] && [ -x "$HOOK_DIR/$hook" ]; then
                         # move file to proper .git/hooks folder
                         mv "$HOOK_DIR/$hook" "$HOOK_DIR/$hook.local"
-                    else 
-                        echo INFO: no "$hook.local" hook file found   
+                    else
+                        echo INFO: no "$hook.local" hook file found or not executable
                     fi
                 else
-                    echo WARNING: "$HOOK_DIR/$hook.local" already exist
+                    echo WARNING: "$HOOK_DIR/$hook.local" already exists
                 fi
 
                 # symlink move wrapper code to .git/hook
-                if [ -a "$WRAPPER" ]; then
-                    # moving wrapper to .git/hook 
-                    ln -s -f "$WRAPPER" "$HOOK_DIR/$hook"
+                if [ -a "$WRAPPER_PATH" ]; then
+                    # moving wrapper to .git/hook
+                    ln -s -f "$WRAPPER_PATH" "$HOOK_DIR/$hook"
                 else
                     # if file doesn't exist throw error
                     echo ERROR: missing git/wrapper file
                 fi
-            else 
-                echo INFO: "$hook" already been set
+            else
+                echo INFO: "$hook" already set
             fi
         else
             # symlink move wrapper code to .git/hook
-            if [ -a "$WRAPPER" ]; then
-            # moving wrapper to .git/hook 
-                ln -s -f "$WRAPPER" "$HOOK_DIR/$hook"
+            if [ -a "$WRAPPER_PATH" ]; then
+                # moving wrapper to .git/hook
+                ln -s -f "$WRAPPER_PATH" "$HOOK_DIR/$hook"
             else
                 # if file doesn't exist throw error
                 echo ERROR: missing git/wrapper file
