@@ -62,3 +62,4 @@ notes.txt
 file.js
 test.js
 *.data
+/secrets
