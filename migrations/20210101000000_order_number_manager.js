@@ -1,5 +1,3 @@
-const db_owner = require('../tools/migration').db_owner;
-
 const function_name = 'rcg_next_order_number';
 
 exports.up = function (knex)
@@ -63,9 +61,6 @@ exports.up = function (knex)
         return nxt_idx;
     END;
     $$;
-
-    ALTER FUNCTION rcg_tms.${function_name}()
-            OWNER TO ${db_owner};
 
     COMMENT ON FUNCTION rcg_tms.${function_name}()
         IS 'Calculates the next order number and stores it into a table';

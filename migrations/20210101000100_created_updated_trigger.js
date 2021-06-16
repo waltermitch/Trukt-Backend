@@ -1,5 +1,3 @@
-const db_owner = require('../tools/migration').db_owner;
-
 const function_name = 'rcg_created_updated_timestamps';
 exports.up = function (knex)
 {
@@ -8,7 +6,7 @@ exports.up = function (knex)
             RETURNS trigger
             LANGUAGE 'plpgsql'
             COST 1
-            STABLE LEAKPROOF
+            STABLE NOT LEAKPROOF
         AS $BODY$
         BEGIN
             IF (TG_OP = 'INSERT') THEN
@@ -24,9 +22,6 @@ exports.up = function (knex)
             RETURN NEW;
         END;
         $BODY$;
-
-        ALTER FUNCTION rcg_tms.${function_name}()
-            OWNER TO ${db_owner};
 
         COMMENT ON FUNCTION rcg_tms.${function_name}()
             IS 'Sets the date_created and date_updated fields, prevents users from changing date_created';
