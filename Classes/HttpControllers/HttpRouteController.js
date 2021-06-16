@@ -55,7 +55,7 @@ class HttpRouteController
         }
         catch (err)
         {
-            context.error(err);
+            console.error(err);
 
             // handle generic errors here?
             context.res.status = 500;
