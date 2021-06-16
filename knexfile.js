@@ -1,6 +1,6 @@
 const urlParser = require('pg-connection-string').parse;
 const Heroku = require('./Classes/HerokuPlatformAPI');
-require('./local.settings');
+require('./local.settings.js');
 
 const env = process.env.NODE_ENV || process.env.ENV;
 const conConfig = {
