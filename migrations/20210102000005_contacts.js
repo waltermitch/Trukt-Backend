@@ -13,7 +13,7 @@ exports.up = function (knex)
         // In the United States and other countries participating in NANP, the maximum length of a phone number is 10 digits.
         // Internationally, phone lengths vary, but the ITU E.164 states that phone numbers around the globe are recommended to not be longer than 15 digits.
         table.string('phone_number', 15);
-        table.string('modile_number', 15);
+        table.string('mobile_number', 15);
         table.string('email');
         migration_tools.timestamps(knex, table);
 
