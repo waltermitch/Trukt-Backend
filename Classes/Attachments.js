@@ -63,10 +63,21 @@ class Attachments
         return res;
     }
 
-    // async get(relatedObject, relatedId)
-    // {
+    async get(guid, parentType, docType = undefined)
+    {
+        const db = await PG.connect();
 
-    // }
+        const opts =
+        {
+            'parent': guid,
+            'parentType': parentType,
+            'type': docType
+        };
+
+        const res = await db.from('attachments').select('url', 'name').where(opts);
+
+        return res;
+    }
 
     static parse(req)
     {
