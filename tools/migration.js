@@ -1,22 +1,3 @@
-
-let db_owner = 'postgres';
-
-switch (process.env.NODE_ENV)
-{
-    case 'development':
-        db_owner = 'cicfcrqswbsfal';
-        break;
-    case 'staging':
-        db_owner = 'mwkksnszmlilmn';
-        break;
-    case 'production':
-        db_owner = 'u988a4g03s01v';
-        break;
-    default:
-        db_owner = 'postgres';
-        break;
-}
-
 const guid_function = (table_name) =>
 {
     return `
@@ -65,7 +46,6 @@ const ternary_options = ['yes', 'no', 'unknown'];
 
 // list these alphabetically
 module.exports = {
-    db_owner,
     guid_function,
     ternary_options,
     timestamps,
