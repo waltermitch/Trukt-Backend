@@ -1,5 +1,7 @@
 const urlParser = require('pg-connection-string').parse;
 const Heroku = require('./Classes/HerokuPlatformAPI');
+const { knexSnakeCaseMappers } = require('objection');
+
 require('./local.settings.js');
 
 const env = process.env.NODE_ENV || process.env.ENV;
@@ -11,7 +13,8 @@ const conConfig = {
     },
     seeds: {
         directory: process.env['knex.migration.seeds']
-    }
+    },
+    ...knexSnakeCaseMappers()
 };
 
 module.exports = () =>
