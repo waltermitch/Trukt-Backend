@@ -1,4 +1,4 @@
-const HTTPController = require('./HTTPController');
+const AuthController = require('./AuthController');
 
 let api;
 
@@ -13,7 +13,7 @@ class Heroku
         Heroku.connect();
 
         // search for config
-        const res = await api.get(`/apps/${config.heroku.appId}/config-vars`);
+        const res = await api.get(`/apps/${process.env['heroku.appId']}/config-vars`);
 
         return res.data;
     }
@@ -29,12 +29,12 @@ class Heroku
                 {
                     'Content-Type': 'application/json',
                     'Accept': 'application/vnd.heroku+json; version=3',
-                    'Authorization': `Bearer ${process.env.herokuAccessToken}`
+                    'Authorization': `Bearer ${process.env['heroku.accessToken']}`
                 }
             };
 
             // init
-            api = new HTTPController(opts).connect();
+            api = new AuthController(opts).connect();
         }
 
         return api;
