@@ -5,36 +5,35 @@ exports.seed = function (knex)
 {
 
     // Deletes ALL existing entries
-    return knex(table_name).del()
-        .then(function ()
+    return knex.schema.withSchema('rcg_tms').raw('TRUNCATE TABLE rcg_tms.terminals, rcg_tms.contacts CASCADE').then(function ()
+    {
+        const terminals = [];
+        for (let i = 0; i < 30; i++)
         {
-            const terminals = [];
-            for (let i = 0; i < 1000; i++)
-            {
-                const state = faker.address.state();
-                terminals.push({
-                    name: faker.company.companyName(),
-                    location_type: faker.random.arrayElement([
-                        'dealer',
-                        'private',
-                        'auction',
-                        'repo yard',
-                        'port',
-                        'business'
-                    ]),
-                    street1: faker.address.streetAddress(),
-                    street2: faker.datatype.number(100) < 75 ? faker.address.secondaryAddress() : null,
-                    city: faker.address.city(),
-                    state,
-                    zip_code: faker.address.zipCodeByState(state),
-                    latitude: faker.address.latitude(),
-                    longitude: faker.address.longitude(),
-                    is_resolved: true,
-                    created_by: faker.datatype.uuid()
-                });
-            }
+            const state = faker.address.state();
+            terminals.push({
+                name: faker.company.companyName(),
+                location_type: faker.random.arrayElement([
+                    'dealer',
+                    'private',
+                    'auction',
+                    'repo yard',
+                    'port',
+                    'business'
+                ]),
+                street1: faker.address.streetAddress(),
+                street2: faker.datatype.number(100) < 75 ? faker.address.secondaryAddress() : null,
+                city: faker.address.city(),
+                state,
+                zip_code: faker.address.zipCodeByState(state),
+                latitude: faker.address.latitude(),
+                longitude: faker.address.longitude(),
+                is_resolved: true,
+                created_by: faker.datatype.uuid()
+            });
+        }
 
-            // Inserts seed entries
-            return knex(table_name).insert(terminals).onConflict(['latitude', 'longitude'], ['name']).ignore();
-        });
+        // Inserts seed entries
+        return knex(table_name).insert(terminals).onConflict(['latitude', 'longitude'], ['name']).ignore();
+    });
 };
