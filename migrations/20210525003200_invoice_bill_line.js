@@ -13,7 +13,7 @@ exports.up = function (knex)
         table.integer('item').unsigned().notNullable();
         table.foreign('item').references('id').inTable('rcg_tms.invoice_bill_lineitems');
 
-    }).raw(migration_tools.guid_function(table_name));
+    }).raw(migration_tools.guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
 };
 
 exports.down = function (knex)

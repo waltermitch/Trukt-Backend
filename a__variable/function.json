@@ -5,10 +5,8 @@
             "type": "httpTrigger",
             "direction": "in",
             "name": "req",
-            "methods": [
-                "post"
-            ],
-            "route": "variables"
+            "methods": ["get"],
+            "route": "variables/{name:required}"
         },
         {
             "type": "http",

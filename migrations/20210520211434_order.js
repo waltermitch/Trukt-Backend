@@ -10,12 +10,11 @@ exports.up = function (knex)
             table.comment('The information about the customer order');
             table.uuid('guid').primary().notNullable().unique();
             table.string('number', 8).unique().comment('the order number will be generated from a trigger stored in the index numbers table ');
-            table.integer('client').unsigned();
-            table.foreign('client').references('id').inTable('salesforce.account');
-            table.integer('contact').unsigned();
-            table.foreign('contact').references('id').inTable('salesforce.contact');
+            table.string('client', 100).notNullable();
+            table.foreign('client').references('guid__c').inTable('salesforce.account');
+            table.string('contact', 100).unsigned();
+            table.foreign('contact').references('guid__c').inTable('salesforce.contact');
             table.text('instructions');
-            migration_tools.timestamps(knex, table);
             table.uuid('owner').comment('This is the person in charge of making sure the order is full-filled. Either dispatcher or other actor.');
             table.uuid('referrer').comment('This is the person who referred this order');
 
@@ -24,9 +23,9 @@ exports.up = function (knex)
             table.decimal('distance', 8, 1).unsigned().comment('The maximum truck-route distance between all the order stops sorted by the sequence in miles');
 
             // boolean status fields
-            table.binary('is_dummy').defaultTo('false');
-            table.binary('is_deleted').defaultTo('false');
-            table.binary('is_completed').defaultTo('false');
+            table.boolean('is_dummy').defaultTo(false);
+            table.boolean('is_deleted').defaultTo(false);
+            table.boolean('is_completed').defaultTo(false);
 
             // currency values / fields
             table.decimal('estimated_expense', 15, 2).unsigned().comment('This is the estimated amount of money it will cost to hire a vendor/carrier to complete the order');
@@ -40,6 +39,7 @@ exports.up = function (knex)
             // date time fields
             table.datetime('date_expected_complete_by').comment('The date this order is expected to be completed by');
             table.datetime('date_completed').comment('The date that the order was completed and all commodities delivered');
+            migration_tools.timestamps(knex, table);
 
         }).raw(migration_tools.guid_function(table_name)).raw(`
         
@@ -51,7 +51,7 @@ exports.up = function (knex)
             
             COMMENT ON TRIGGER rcg_order_number_assignment ON rcg_tms.${table_name}
                 IS 'Assigns the order number and prevents users from changing it willy nilly';
-        `)
+        `).raw(migration_tools.timestamps_trigger(table_name))
     ]);
 };
 

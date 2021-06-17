@@ -16,7 +16,7 @@ exports.up = function (knex)
         table.foreign('type').references('id').inTable('rcg_tms.commodity_types');
 
         // this should be FTL (Full Truck Load) and LTL (Less-Than Full-load)
-        table.enu('capacity', [ 'Full TL', 'Partial TL' ]).notNullable();
+        table.enu('capacity', ['Full TL', 'Partial TL']).notNullable();
         table.enu('damaged', ternary_options).defaultTo('unknown').notNullable();
         table.enu('inoperable', ternary_options).defaultTo('unknown').notNullable();
         table.enu('delivery_status', [
@@ -36,9 +36,9 @@ exports.up = function (knex)
         table.integer('vehicle').unsigned();
         table.foreign('vehicle').references('id').inTable('rcg_tms.vehicles');
 
-        table.timestamps(true, true);
+        migration_tools.timestamps(knex, table);
 
-    }).raw(guid_function(table_name));
+    }).raw(guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
 };
 
 exports.down = function (knex)

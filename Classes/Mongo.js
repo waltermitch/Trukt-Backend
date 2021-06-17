@@ -9,8 +9,6 @@ const dbOptions =
     useNewUrlParser: true
 };
 
-require('../tools/start')();
-
 // db instance
 let db;
 

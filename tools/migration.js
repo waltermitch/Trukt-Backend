@@ -1,22 +1,3 @@
-
-let db_owner = 'postgres';
-
-switch (process.env.NODE_ENV)
-{
-    case 'development':
-        db_owner = 'cicfcrqswbsfal';
-        break;
-    case 'staging':
-        db_owner = 'mwkksnszmlilmn';
-        break;
-    case 'production':
-        db_owner = 'u988a4g03s01v';
-        break;
-    default:
-        db_owner = 'postgres';
-        break;
-}
-
 const guid_function = (table_name) =>
 {
     return `
@@ -46,12 +27,27 @@ const timestamps = (knex, table) =>
     table.index('date_updated');
 };
 
-const ternary_options = [ 'yes', 'no', 'unknown' ];
+const timestamps_trigger = (table_name) =>
+{
+    const trigger_name = `rcg_${table_name}_created_updated_timestamps`;
+    return `
+        CREATE TRIGGER ${trigger_name}
+            BEFORE INSERT OR UPDATE
+            ON rcg_tms.${table_name}
+            FOR EACH ROW 
+            EXECUTE FUNCTION rcg_tms.rcg_created_updated_timestamps();
+        
+        COMMENT ON TRIGGER ${trigger_name} on rcg_tms.${table_name}
+            IS 'sets the date_created and date_updated fields and prevents users from changing date_created';
+    `;
+};
+
+const ternary_options = ['yes', 'no', 'unknown'];
 
 // list these alphabetically
 module.exports = {
-    db_owner,
     guid_function,
     ternary_options,
-    timestamps
+    timestamps,
+    timestamps_trigger
 };

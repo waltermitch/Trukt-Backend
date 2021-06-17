@@ -1,4 +1,5 @@
 const Account = require('../Classes/Account');
+const App = require('../Classes/HttpControllers/HttpRouteController');
 
 module.exports = async (context, req) => await App.next(context, getAccount, req);
 

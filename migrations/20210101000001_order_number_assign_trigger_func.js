@@ -1,11 +1,9 @@
-const db_owner = require('../tools/migration').db_owner;
-
 const function_name = 'rcg_order_number_assign';
 
 exports.up = function (knex)
 {
     return knex.raw(`
-    CREATE FUNCTION rcg_tms.${function_name}()
+    CREATE OR REPLACE FUNCTION rcg_tms.${function_name}()
         RETURNS trigger
         LANGUAGE 'plpgsql'
         COST 100
@@ -23,9 +21,6 @@ exports.up = function (knex)
         RETURN NEW;
     END;
     $BODY$;
-
-    ALTER FUNCTION rcg_tms.${function_name}()
-        OWNER TO ${db_owner};
 
     COMMENT ON FUNCTION rcg_tms.${function_name}()
         IS 'Assigns the order the next available order number and prevents changing it';`);

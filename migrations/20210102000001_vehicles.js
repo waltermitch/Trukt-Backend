@@ -6,9 +6,9 @@ exports.up = function (knex)
     {
         table.increments('id', { primaryKey: true }).unique().notNullable();
         table.integer('year');
-        table.string('make');
-        table.string('model');
-        table.string('trim');
+        table.string('make', 16);
+        table.string('model', 16);
+        table.string('trim', 5);
         table.unique([
             'year',
             'make',

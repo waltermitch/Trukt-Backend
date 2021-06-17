@@ -1,3 +1,5 @@
+const migration_tools = require('../tools/migration');
+
 const table_name = 'order_stop_links';
 exports.up = function (knex)
 {
@@ -15,7 +17,7 @@ exports.up = function (knex)
         table.string('lot_number', 32).comment('Location for the commodity at this stop');
         table.datetime('date_completed').comment('the date this commodity was pickedup/delivered');
 
-        table.binary('is_completed').notNullable().defaultTo(false);
+        table.boolean('is_completed').notNullable().defaultTo(false);
 
         table.unique([
             'order',
@@ -23,7 +25,8 @@ exports.up = function (knex)
             'stop',
             'commodity'
         ]);
-    });
+        migration_tools.timestamps(knex, table);
+    }).raw(migration_tools.timestamps_trigger(table_name));
 };
 
 exports.down = function (knex)
