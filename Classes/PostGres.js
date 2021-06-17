@@ -49,15 +49,6 @@ class PG
             .merge();
     }
 
-    static likeOnNColumns(value, columns)
-    {
-        const search = [];
-        for (let i = 0; i < columns.length; i++)
-            search.push(`${columns[i]} ilike '%${value}%'`);
-
-        return search.join(' or ');
-    }
-
     static getRecordTypeId(objectName, recordTypeName)
     {
         return config.SF.RecordTypeIds?.[`${objectName}`]?.[`${recordTypeName}`];

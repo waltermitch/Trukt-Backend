@@ -5,51 +5,53 @@ class HttpRouteController
     /* eslint-disable */
     async handleGet(context, request)
     {
-        context.res.status = 501;
+        return { 'status': 501 };
     }
 
     async handlePost(context, request)
     {
-        context.res.status = 501;
+        return { 'status': 501 };
     }
 
     async handlePut(context, request)
     {
-        context.res.status = 501;
+        return { 'status': 501 };
     }
 
     async handlePatch(context, request)
     {
-        context.res.status = 501;
+        return { 'status': 501 };
     }
 
     async handleDelete(context, request)
     {
-        context.res.status = 501;
+        return { 'status': 501 };
     }
 
     /* eslint-enable */
     async handleHttp(context, request)
     {
         // we get no JS access in the function.json so have to do introspection
+        let response = {};
+
         try
         {
             switch (request.method)
             {
                 case 'GET':
-                    await this.handleGet(context, request);
+                    response = await this.handleGet(context, request);
                     break;
                 case 'POST':
-                    await this.handlePost(context, request);
+                    response = await this.handlePost(context, request);
                     break;
                 case 'PUT':
-                    await this.handlePut(context, request);
+                    response = await this.handlePut(context, request);
                     break;
                 case 'PATCH':
-                    await this.handlePatch(context, request);
+                    response = await this.handlePatch(context, request);
                     break;
                 case 'DELETE':
-                    await this.handleDelete(context, request);
+                    response = await this.handleDelete(context, request);
                     break;
             }
         }
@@ -58,22 +60,16 @@ class HttpRouteController
             context.log(err);
 
             // handle generic errors here?
-            const res = new ErrorHandler(context, err);
+            response = new ErrorHandler(context, err);
 
-            context.res =
-            {
-                status: res.status,
-                body: res.data,
-                headers: { 'Content-Type': 'application/json' }
-            };
         }
-        finally
+
+        context.res =
         {
-            if (!context?.res?.headers['Content-Type'])
-
-                context.res.headers['Content-Type'] = 'application/json';
-
-        }
+            status: response?.status,
+            body: response,
+            headers: { 'Content-Type': 'application/json' }
+        };
 
     }
 
@@ -104,7 +100,8 @@ class HttpRouteController
             response = new ErrorHandler(context, err);
         }
 
-        context.res = {
+        context.res =
+        {
             headers: { 'Content-Type': 'application/json' },
             status: response?.status,
             body: response

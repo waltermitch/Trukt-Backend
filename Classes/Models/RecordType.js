@@ -1,10 +1,10 @@
 const BaseModel = require('./BaseModel');
 
-class AccountModel extends BaseModel
+class RecordTypeModel extends BaseModel
 {
     static get tableName()
     {
-        return 'salesforce.accounts';
+        return 'salesforce.recordtype';
     }
 
     static get idColumn()
@@ -13,4 +13,4 @@ class AccountModel extends BaseModel
     }
 }
 
-module.exports = AccountModel;
+module.exports = RecordTypeModel;
