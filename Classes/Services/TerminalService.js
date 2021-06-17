@@ -13,7 +13,7 @@ class TerminalService
 {
     static async getById(terminalId)
     {
-        const terminal = await Terminal.query().where('guid', '=', `${terminalId}`).withGraphJoined('[contacts, primaryContact, alternativeContact]');
+        const terminal = await Terminal.query().where('rcg_tms.terminals.guid', '=', `${terminalId}`).withGraphJoined('[contacts, primaryContact, alternativeContact]');
         return terminal;
     }
 
