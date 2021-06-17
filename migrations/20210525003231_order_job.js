@@ -10,7 +10,7 @@ exports.up = function (knex)
 
         table.uuid('order');
         table.foreign('order').references('guid').inTable('rcg_tms.orders');
-
+        table.string('number', 9).comment('The job number based off of the order number');
         table.string('vendor', 100).comment('The account completing the job for the company');
         table.foreign('vendor').references('guid__c').inTable('salesforce.account');
 
