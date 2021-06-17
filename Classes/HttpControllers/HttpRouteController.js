@@ -55,13 +55,17 @@ class HttpRouteController
         }
         catch (err)
         {
-            context.error(err);
+            context.log(err);
 
             // handle generic errors here?
             const res = new ErrorHandler(context, err);
 
-            context.res.status = res.status;
-            context.res.body = res.data;
+            context.res =
+            {
+                status: res.status,
+                body: res.data,
+                headers: { 'Content-Type': 'application/json' }
+            };
         }
         finally
         {
