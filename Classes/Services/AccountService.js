@@ -1,23 +1,22 @@
-const AccountSelectors = require('./Selectors/AccountSelectors');
-const PG = require('./PostGres');
+const RecordTypeService = require('../Services/RecordTypeService');
+const AccountSelector = require('../Selectors/AccountSelector');
+const Account = require('../Models/Account');
 
-class Account
+class AccountService
 {
-    constructor()
-    { }
-
-    static async searchAccountByType(type, searchString)
+    static async searchByType(type, query)
     {
-        // get record type
-        const recordTypeId = PG.getRecordTypeId('Account', type);
+        // get recordType id
+        const { sfid } = await RecordTypeService.getId(type);
 
-        // default list of fields to select
-        const accSelector = new AccountSelectors();
+        // init new selector
+        const accSelector = new AccountSelector();
 
+        // default list
         accSelector.withName().withPhone().withEmail().withGUID();
         accSelector.inName();
 
-        // query for different things based on account type
+        // add additional selectors based on type
         switch (type)
         {
             case 'Carrier':
@@ -49,23 +48,15 @@ class Account
                 break;
         }
 
-        // write query
-        const query = `select ${accSelector.joinSelectors()} from account a 
-                        where recordtypeid = '${recordTypeId}' and (${PG.likeOnNColumns(searchString, accSelector.searchIn)})
+        // write query ${AccountSelector.likeOnNColumns(query, accSelector.searchIn)}
+        const q = `select ${accSelector.joinSelectors()} from salesforce.account a 
+                        where recordtypeid = '${sfid}' and (${AccountSelector.likeOnNColumns(query, accSelector.searchIn)})
                         order by name ASC`;
 
-        return await Account.get(query);
-    }
+        const { rows } = await Account.knex().raw(q);
 
-    static async get(query)
-    {
-        // connect
-        const db = await PG.connect();
-
-        const res = await db.raw(query);
-
-        return res?.rows;
+        return rows;
     }
 }
 
-module.exports = Account;
+module.exports = AccountService;

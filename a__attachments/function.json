@@ -1,12 +1,14 @@
 {
+    "scriptFile": "../Classes/HttpControllers/AttachmentController.js",
+    "entryPoint": "handleHttp",
     "bindings": [
         {
-            "authLevel": "function",
+            "authLevel": "anonymous",
             "type": "httpTrigger",
             "direction": "in",
             "name": "req",
-            "methods": ["post"],
-            "route": "variables"
+            "methods": ["post", "get"],
+            "route": "attachments"
         },
         {
             "type": "http",
