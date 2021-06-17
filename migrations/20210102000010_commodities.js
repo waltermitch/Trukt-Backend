@@ -33,8 +33,8 @@ exports.up = function (knex)
         table.string('identifier').comment('this should be the VIN if a vehicle is related to this table, otherwise it is a string that identifies the commodity');
 
         // if this commodity is a vehicle, then there should be a vehicle attached to it
-        table.integer('vehicle').unsigned();
-        table.foreign('vehicle').references('id').inTable('rcg_tms.vehicles');
+        table.integer('vehicle_id').unsigned();
+        table.foreign('vehicle_id').references('id').inTable('rcg_tms.vehicles');
 
         migration_tools.timestamps(knex, table);
 

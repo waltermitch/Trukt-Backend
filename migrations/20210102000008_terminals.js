@@ -31,7 +31,7 @@ exports.up = function (knex)
         table.decimal('longitude', 15, 7);
         for (const type of ['primary', 'alternative'])
         {
-            const fieldname = type + '_contact';
+            const fieldname = type + '_contact_guid';
             table.uuid(fieldname).comment('the default ' + type + ' contact for this terminal');
             table.foreign(fieldname).references('guid').inTable('rcg_tms.contacts');
         }
