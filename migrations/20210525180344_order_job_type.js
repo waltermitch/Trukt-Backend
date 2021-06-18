@@ -53,7 +53,7 @@ exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms').table(related_table_name, (table) =>
     {
-        table.dropForeign('type');
+        table.dropForeign('type_id');
     }).then(() =>
     {
         return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
