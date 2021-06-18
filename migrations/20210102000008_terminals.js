@@ -20,12 +20,13 @@ exports.up = function (knex)
             useNative: true, enumName: 'location_types'
         });
 
-        table.string('street1');
-        table.string('street2');
+        table.string('street1', 64);
+        table.string('street2', 64);
 
         // this will not be an enum because if we ship internationally want to include other countries states/provinces
-        table.string('state');
-        table.string('city');
+        table.string('state', 100);
+        table.string('city', 64);
+        table.string('country', 64);
         table.string('zip_code', 16).notNullable();
         table.decimal('latitude', 15, 7);
         table.decimal('longitude', 15, 7);
