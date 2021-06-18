@@ -3,27 +3,27 @@ const ErrorHandler = require('../ErrorHandler');
 class HttpRouteController
 {
     /* eslint-disable */
-    async handleGet(context, request)
+    async handleGet()
     {
         return { 'status': 501 };
     }
 
-    async handlePost(context, request)
+    async handlePost()
     {
         return { 'status': 501 };
     }
 
-    async handlePut(context, request)
+    async handlePut()
     {
         return { 'status': 501 };
     }
 
-    async handlePatch(context, request)
+    async handlePatch()
     {
         return { 'status': 501 };
     }
 
-    async handleDelete(context, request)
+    async handleDelete()
     {
         return { 'status': 501 };
     }
@@ -32,8 +32,10 @@ class HttpRouteController
     async handleHttp(context, request)
     {
         // we get no JS access in the function.json so have to do introspection
-        let response = {};
+        let response = undefined;
 
+        // response should mimic the http response at the top level
+        // setting the status, body and headers etc.
         try
         {
             switch (request.method)
@@ -60,28 +62,27 @@ class HttpRouteController
             context.log(err);
 
             // handle generic errors here?
-            response = new ErrorHandler(context, err);
-
+            const errResp = new ErrorHandler(context, err);
+            response.status = errResp.status;
+            response.body = errResp.data;
         }
-
-        context.res =
+        finally
         {
-            status: response?.status,
-            body: response,
-            headers: { 'Content-Type': 'application/json' }
-        };
+            if (response)
 
-    }
+                // conditionally assign the properties
+                // dont assign if they are falsey
+                for (const prop in response)
 
-    onlyOne(context, result)
-    {
-        if (result.length > 0)
-        {
-            context.res.status = 200;
-            context.res.body = result[0];
+                    if (response[prop])
+
+                        context.res[prop] = response[prop];
+
+            // set the default Content-Type to application/json
+            if (!('Content-Type' in context.res.headers))
+
+                context.res.headers['Content-Type'] = 'application/json';
         }
-        else
-        { context.res.status = 404; }
 
     }
 
