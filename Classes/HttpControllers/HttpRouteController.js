@@ -63,8 +63,10 @@ class HttpRouteController
 
             // handle generic errors here?
             const errResp = new ErrorHandler(context, err);
-            response.status = errResp.status;
-            response.body = errResp.data;
+            response = {
+                status: errResp.status,
+                body: errResp.data
+            };
         }
         finally
         {
