@@ -1,14 +1,14 @@
 {
-    "scriptFile": "../Classes/HttpControllers/SearchAccountsController.js",
+    "scriptFile": "../Classes/HttpControllers/AccountController.js",
     "entryPoint": "handleHttp",
     "bindings": [
         {
-            "authLevel": "anonymous",
+            "authLevel": "function",
             "type": "httpTrigger",
             "direction": "in",
             "name": "req",
             "methods": ["get"],
-            "route": "accounts/{type:required}/{query:required}"
+            "route": "account/{accountType:required}/{accountId?}"
         },
         {
             "type": "http",
