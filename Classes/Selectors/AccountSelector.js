@@ -122,6 +122,15 @@ class AccountSelectors
 
         return this;
     }
+
+    static likeOnNColumns(value, columns)
+    {
+        const search = [];
+        for (let i = 0; i < columns.length; i++)
+            search.push(`${columns[i]} ilike '%${value}%'`);
+
+        return search.join(' or ');
+    }
 }
 
 module.exports = AccountSelectors;

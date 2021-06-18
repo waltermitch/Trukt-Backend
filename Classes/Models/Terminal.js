@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const Contact = require('./Contact');
 
 class Terminal extends BaseModel
 {
@@ -14,7 +15,7 @@ class Terminal extends BaseModel
 
     static get relationMappings()
     {
-        const Contact = require('./Contact');
+
         return {
             contacts: {
                 relation: BaseModel.HasManyRelation,
