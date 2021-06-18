@@ -6,9 +6,9 @@ class TerminalController extends HttpRouteController
 {
     async handleGet(context, request)
     {
-        if (!('terminalId' in request.params) && ('search' in request.query))
+        if (!('terminalId' in request.params) && this.searchQueryCriteria(request.query))
         {
-            context.res.body = await TerminalService.search(request.query.search);
+            context.res.body = await TerminalService.search(request.query);
         }
         else if (uuidRegex.test(request.params.terminalId))
         {
@@ -19,7 +19,14 @@ class TerminalController extends HttpRouteController
         {
             context.res.status = 400;
         }
+    }
 
+    searchQueryCriteria(query)
+    {
+        const clone = Object.assign({}, query);
+        delete clone.pg;
+        delete clone.rc;
+        return Object.keys(clone).length > 0;
     }
 }
 
