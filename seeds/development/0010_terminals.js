@@ -24,6 +24,7 @@ exports.seed = function (knex)
                 street1: faker.address.streetAddress(),
                 street2: faker.datatype.number(100) < 75 ? faker.address.secondaryAddress() : null,
                 city: faker.address.city(),
+                country: faker.random.arrayElement(['USA', 'CA']),
                 state,
                 zip_code: faker.address.zipCodeByState(state),
                 latitude: faker.address.latitude(),

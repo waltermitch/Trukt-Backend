@@ -8,17 +8,20 @@ exports.up = function (knex)
     {
         table.uuid('guid').unique().notNullable().primary();
 
-        table.uuid('order');
-        table.foreign('order').references('guid').inTable('rcg_tms.orders');
+        const orderguid = 'order_guid';
+        table.uuid(orderguid);
+        table.foreign(orderguid).references('guid').inTable('rcg_tms.orders');
         table.string('number', 9).comment('The job number based off of the order number');
-        table.string('vendor', 100).comment('The account completing the job for the company');
-        table.foreign('vendor').references('guid__c').inTable('salesforce.account');
+        const vendorguid = 'vendor_guid';
+        table.string(vendorguid, 100).comment('The account completing the job for the company');
+        table.foreign(vendorguid).references('guid__c').inTable('salesforce.account');
 
-        table.string('vendor_contact', 100).comment('The vendor\'s primary contact');
-        table.foreign('vendor_contact').references('guid__c').inTable('salesforce.contact');
+        const vendorcontguid = 'vendor_contact_guid';
+        table.string(vendorcontguid, 100).comment('The vendor\'s primary contact');
+        table.foreign(vendorcontguid).references('guid__c').inTable('salesforce.contact');
 
         migration_tools.timestamps(knex, table);
-        table.uuid('owner').comment('This is the person in charge of making sure the job is full-filled. Either dispatcher or other actor.');
+        table.uuid('owner_guid').comment('This is the person in charge of making sure the job is full-filled. Either dispatcher or other actor.');
 
         table.string('status').comment('This is purley for display for user, do not change this status manually');
         table.decimal('distance', 8, 1).unsigned().comment('The maximum truck-route distance between all the order stops sorted by the sequence in miles');

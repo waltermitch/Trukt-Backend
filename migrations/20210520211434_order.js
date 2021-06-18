@@ -10,10 +10,12 @@ exports.up = function (knex)
             table.comment('The information about the customer order');
             table.uuid('guid').primary().notNullable().unique();
             table.string('number', 8).unique().comment('the order number will be generated from a trigger stored in the index numbers table ');
-            table.string('client', 100).notNullable();
-            table.foreign('client').references('guid__c').inTable('salesforce.account');
-            table.string('contact', 100).unsigned();
-            table.foreign('contact').references('guid__c').inTable('salesforce.contact');
+            const clientfieldname = 'client_guid';
+            table.string(clientfieldname, 100).notNullable();
+            table.foreign(clientfieldname).references('guid__c').inTable('salesforce.account');
+            const contactfieldname = 'contact_guid';
+            table.string(contactfieldname, 100).unsigned();
+            table.foreign(contactfieldname).references('guid__c').inTable('salesforce.contact');
             table.text('instructions');
             table.uuid('owner').comment('This is the person in charge of making sure the order is full-filled. Either dispatcher or other actor.');
             table.uuid('referrer').comment('This is the person who referred this order');

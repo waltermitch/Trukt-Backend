@@ -6,10 +6,12 @@ exports.up = function (knex)
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
         table.uuid('guid').primary().notNullable().unique();
-        table.string('external_party', 100).notNullable();
-        table.foreign('external_party').references('guid__c').inTable('salesforce.account');
-        table.uuid('order');
-        table.foreign('order').references('guid').inTable('rcg_tms.orders');
+        const expartyfn = 'external_party_guid';
+        table.string(expartyfn, 100).notNullable();
+        table.foreign(expartyfn).references('guid__c').inTable('salesforce.account');
+        const orderguid = 'order_guid';
+        table.uuid(orderguid);
+        table.foreign(orderguid).references('guid').inTable('rcg_tms.orders');
 
         migration_tools.timestamps(knex, table);
         table.datetime('date_filed');

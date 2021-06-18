@@ -4,7 +4,7 @@ class Order extends BaseModel
 {
     static get tableName()
     {
-        return 'rcg_tms.orders';
+        return 'rcgTms.orders';
     }
 }
 

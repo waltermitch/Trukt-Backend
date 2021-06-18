@@ -5,7 +5,7 @@ class Terminal extends BaseModel
 {
     static get tableName()
     {
-        return 'rcg_tms.terminals';
+        return 'rcgTms.terminals';
     }
 
     static get idColumn()
@@ -21,8 +21,8 @@ class Terminal extends BaseModel
                 relation: BaseModel.HasManyRelation,
                 modelClass: Contact,
                 join: {
-                    from: 'rcg_tms.terminals.guid',
-                    to: 'rcg_tms.contacts.contact_for'
+                    from: 'rcgTms.terminals.guid',
+                    to: 'rcgTms.contacts.terminalGuid'
                 }
             },
 
@@ -30,8 +30,8 @@ class Terminal extends BaseModel
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Contact,
                 join: {
-                    from: 'rcg_tms.terminals.primary_contact',
-                    to: 'rcg_tms.contacts.guid'
+                    from: 'rcgTms.terminals.primaryContactGuid',
+                    to: 'rcgTms.contacts.guid'
                 }
             },
 
@@ -39,8 +39,8 @@ class Terminal extends BaseModel
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Contact,
                 join: {
-                    from: 'rcg_tms.terminals.alternative_contact',
-                    to: 'rcg_tms.contacts.guid'
+                    from: 'rcgTms.terminals.alternativeContactGuid',
+                    to: 'rcgTms.contacts.guid'
                 }
             }
         };
