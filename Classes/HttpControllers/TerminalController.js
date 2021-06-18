@@ -4,21 +4,33 @@ const { uuidRegex } = require('../Utils/Regexes');
 
 class TerminalController extends HttpRouteController
 {
-    async handleGet(context, request)
+    async handleGet(context, req)
     {
-        if (!('terminalId' in request.params) && this.searchQueryCriteria(request.query))
+        const res = {};
+
+        if (!('terminalId' in req.params) && this.searchQueryCriteria(req.query))
         {
-            context.res.body = await TerminalService.search(request.query);
+            res.body = await TerminalService.search(req.query);
+            res.status = 200;
         }
-        else if (uuidRegex.test(request.params.terminalId))
+        else if (uuidRegex.test(req.params.terminalId))
         {
-            const result = await TerminalService.getById(request.params.terminalId);
-            this.onlyOne(context, result);
+            const result = await TerminalService.getById(req.params.terminalId);
+            if (result.length > 0)
+            {
+                res.status = 200;
+                res.body = result[0];
+            }
+            else
+            {
+                res.status = 404;
+            }
         }
         else
         {
-            context.res.status = 400;
+            res.status = 400;
         }
+        return res;
     }
 
     searchQueryCriteria(query)

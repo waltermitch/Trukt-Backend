@@ -7,8 +7,8 @@
             "type": "httpTrigger",
             "direction": "in",
             "name": "req",
-            "route": "terminal/{terminalId?}",
-            "methods": ["get"]
+            "methods": ["get"],
+            "route": "terminal/{terminalId?}"
         },
         {
             "type": "http",
