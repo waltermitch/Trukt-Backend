@@ -4,7 +4,7 @@ class Attachment extends BaseModel
 {
     static get tableName()
     {
-        return 'rcg_tms.attachments';
+        return 'rcgTms.attachments';
     }
 
     static get idColumn()
