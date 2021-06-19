@@ -9,6 +9,7 @@ class AccountService
         // get types
         const recordTypes = await AccountService.getTypes();
 
+        type = type.toLowerCase();
         return recordTypes.find((e) => AccountService.isMatch(e, type));
     }
 
@@ -22,7 +23,7 @@ class AccountService
         if (!recordTypes)
             recordTypes = (await RecordType.query()).map((e) =>
             {
-                return { 'sfid': e.sfid, 'name': e.name };
+                return { 'sfid': e.sfid, 'name': e.name.toLowerCase() };
             });
 
         return recordTypes;

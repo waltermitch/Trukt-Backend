@@ -1,21 +1,19 @@
-const TerminalService = require('../Services/TerminalService');
 const HttpRouteController = require('./HttpRouteController');
+const AccountService = require('../Services/AccountService');
 const { uuidRegex } = require('../Utils/Regexes');
 
-class TerminalController extends HttpRouteController
+class AccountController extends HttpRouteController
 {
     async handleGet(context, req)
     {
         const res = {};
-
-        if (!('terminalId' in req.params) && this.searchQueryCriteria(req.query))
+        if (!('accountId' in req.params) && this.searchQueryCriteria(req.query))
         {
-            res.body = await TerminalService.search(req.query);
-            res.status = 200;
+            res.body = await AccountService.searchByType(req.params.accountType, req.query.search);
         }
-        else if (uuidRegex.test(req.params.terminalId))
+        else if (('accountId' in req.params) && uuidRegex.test(req.params.accountId))
         {
-            const result = await TerminalService.getById(req.params.terminalId);
+            const result = await AccountService.searchByType(req.params.accountType, req.params.accountId);
             if (result.length > 0)
             {
                 res.status = 200;
@@ -42,5 +40,6 @@ class TerminalController extends HttpRouteController
     }
 }
 
-const controller = new TerminalController();
+const controller = new AccountController();
+
 module.exports = controller;

@@ -1,5 +1,3 @@
-const migration_tools = require('../tools/migration');
-
 const table_name = 'order_job_types';
 const related_table_name = 'order_jobs';
 
@@ -39,8 +37,9 @@ exports.up = function (knex)
     {
         return knex.schema.withSchema('rcg_tms').table(related_table_name, (table) =>
         {
-            table.integer('type').unsigned().notNullable();
-            table.foreign('type').references('id').inTable(`rcg_tms.${table_name}`);
+            const typefn = 'type_id';
+            table.integer(typefn).unsigned().notNullable();
+            table.foreign(typefn).references('id').inTable(`rcg_tms.${table_name}`);
 
         });
 
@@ -54,7 +53,7 @@ exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms').table(related_table_name, (table) =>
     {
-        table.dropForeign('type');
+        table.dropForeign('type_id');
     }).then(() =>
     {
         return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);

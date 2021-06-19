@@ -4,7 +4,7 @@ class Contact extends BaseModel
 {
     static get tableName()
     {
-        return 'rcg_tms.contacts';
+        return 'rcgTms.contacts';
     }
 
     static get idColumn()

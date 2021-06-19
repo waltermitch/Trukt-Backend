@@ -8,7 +8,7 @@
         "encrypt": "bash ./tools/encrypt.sh",
         "decrypt": "bash ./tools/decrypt.sh",
         "setup": "bash ./tools/git_setup.sh && bash ./tools/decrypt.sh './local.settings.enc' './local.settings.json'",
-        "knex-debug": "bash ./tools/knex-debug.sh"
+        "knex-debug": "set DEBUG=knex* && func start"
     },
     "author": "",
     "license": "ISC",
