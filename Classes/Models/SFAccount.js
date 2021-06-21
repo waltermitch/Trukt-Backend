@@ -1,6 +1,6 @@
 const BaseModel = require('./BaseModel');
 
-class AccountModel extends BaseModel
+class SFAccount extends BaseModel
 {
     static get tableName()
     {
@@ -11,6 +11,7 @@ class AccountModel extends BaseModel
     {
         return 'guid';
     }
+
 }
 
-module.exports = AccountModel;
+module.exports = SFAccount;
