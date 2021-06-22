@@ -4,7 +4,7 @@ class SFAccount extends BaseModel
 {
     static get tableName()
     {
-        return 'salesforce.accounts';
+        return 'salesforce.account';
     }
 
     static get idColumn()
