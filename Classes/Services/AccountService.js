@@ -1,61 +1,72 @@
-const RecordTypeService = require('../Services/RecordTypeService');
-const AccountSelector = require('../Selectors/AccountSelector');
-const Account = require('../Models/Account');
+const SFAccount = require('../Models/SFAccount');
+
+const addressTypes = ['billing', 'shipping'];
+const addressFields = [
+    'street',
+    'state',
+    'city',
+    'postalcode',
+    'country'
+];
+const tableName = 'salesforce.account';
+
+const orderbypriority = [`${tableName}.name`, `${tableName}.dot_number__c`];
+
+for (const type of addressTypes)
+
+    for (const field of addressFields)
+
+        orderbypriority.push(`${tableName}.${type + field}`);
 
 class AccountService
 {
-    static async searchByType(type, query)
+    static async searchByType(accountType, query)
     {
-        // get recordType id
-        const { sfid } = await RecordTypeService.getId(type);
-
-        // init new selector
-        const accSelector = new AccountSelector();
-
-        // default list
-        accSelector.withName().withPhone().withEmail().withGUID();
-        accSelector.inName();
-
-        // add additional selectors based on type
-        switch (type)
+        const search = query.search.replace(/%/g, '');
+        const pg = Math.max(1, query.pg || 1) - 1;
+        const rc = Math.min(100, Math.max(1, query.rc || 10));
+        const rtype = accountType?.toLowerCase();
+        let qb = SFAccount.query().modify('byType', rtype);
+        qb = qb.where((builder =>
         {
-            case 'Carrier':
-                accSelector
-                    .withContacts()
-                    .withDOTNumber()
-                    .withAddress('billing')
-                    .withAddress('shipping');
-                accSelector
-                    .inDOTNumber()
-                    .inAddress('shipping')
-                    .inAddress('billing');
-                break;
-            case 'Client':
-                accSelector
-                    .withContacts()
-                    .withLoadboardInstructions()
-                    .withOrderInstructions()
-                    .withAddress('billing')
-                    .withAddress('Shipping');
-                accSelector
-                    .inAddress('shipping')
-                    .inAddress('billing');
-                break;
-            case 'Referrer':
-                accSelector.withReferralAmount();
-                break;
-            default:
+
+            switch (rtype)
+            {
+                case 'carrier':
+                    builder.orWhere(`${tableName}.dot_number__c`, 'ilike', `%${search}%`);
+                    break;
+            }
+
+            builder.orWhere(`${tableName}.name`, 'ilike', `%${search}%`);
+
+            for (const type of addressTypes)
+
+                for (const field of addressFields)
+
+                    builder.orWhere(`${tableName}.${type + field}`, 'ilike', `%${search}%`);
+        }));
+
+        qb = qb.orderBy(orderbypriority).page(pg, rc);
+        const result = await qb.withGraphFetched('[contacts, primaryContact]');
+
+        return result.results || result;
+    }
+
+    static async getById(accountType, accountId)
+    {
+        const rtype = accountType?.toLowerCase();
+        const qb = SFAccount.query().where('guid__c', accountId).modify('byType', rtype);
+        switch (rtype)
+        {
+            case 'carrier':
+            case 'client':
+                qb.withGraphFetched('[contacts, primaryContact]');
+
                 break;
         }
+        const result = await qb;
 
-        // write query ${AccountSelector.likeOnNColumns(query, accSelector.searchIn)}
-        const q = `select ${accSelector.joinSelectors()} from salesforce.account a 
-                        where recordtypeid = '${sfid}' and (${AccountSelector.likeOnNColumns(query, accSelector.searchIn)})
-                        order by name ASC`;
-
-        const { rows } = await Account.knex().raw(q);
-
-        return rows;
+        return result;
     }
 }
 
