@@ -1,6 +1,6 @@
 const BaseModel = require('./BaseModel');
 
-class RecordTypeModel extends BaseModel
+class RecordType extends BaseModel
 {
     static get tableName()
     {
@@ -9,8 +9,8 @@ class RecordTypeModel extends BaseModel
 
     static get idColumn()
     {
-        return 'guid';
+        return 'id';
     }
 }
 
-module.exports = RecordTypeModel;
+module.exports = RecordType;
