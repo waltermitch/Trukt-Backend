@@ -9,11 +9,11 @@ class AccountController extends HttpRouteController
         const res = {};
         if (!('accountId' in req.params) && this.searchQueryCriteria(req.query))
         {
-            res.body = await AccountService.searchByType(req.params.accountType, req.query.search);
+            res.body = await AccountService.searchByType(req.params.accountType, req.query);
         }
         else if (('accountId' in req.params) && uuidRegex.test(req.params.accountId))
         {
-            const result = await AccountService.searchByType(req.params.accountType, req.params.accountId);
+            const result = await AccountService.getById(req.params.accountType, req.params.accountId);
             if (result.length > 0)
             {
                 res.status = 200;
