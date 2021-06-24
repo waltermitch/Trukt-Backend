@@ -5,19 +5,30 @@ const knexfile = require('../../knexfile');
 
 const knex = Knex(knexfile());
 let picklists;
+const localPicklistPath = './picklists.json';
 
 class PicklistController extends HttpRouteController
 {
 
     async handleGet(context, req)
     {
+        // first check if the picklist is in memory
         if (!picklists)
-            await this.handlePut(context, req);
+
+            if (!fs.existsSync(localPicklistPath))
+
+                // fetch from database
+                await this.handlePut(context, req);
+            else
+
+                // fetch from file
+                picklists = fs.readFileSync(localPicklistPath, 'utf8');
 
         const res = {
             body: picklists,
             status: 200
         };
+
         return res;
     }
 
