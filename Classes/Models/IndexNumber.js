@@ -7,6 +7,10 @@ class IndexNumber extends BaseModel
         return 'rcgTms.indexNumbers';
     }
 
+    static get idColumn()
+    {
+        return 'index';
+    }
 }
 
 module.exports = IndexNumber;
