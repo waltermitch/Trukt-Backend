@@ -1,0 +1,19 @@
+{
+    "scriptFile": "../Classes/HttpControllers/IndexNumberController.js",
+    "entryPoint": "handleHttp",
+    "bindings": [
+        {
+            "authLevel": "function",
+            "type": "httpTrigger",
+            "direction": "in",
+            "name": "req",
+            "route": "index/{objectType}/number",
+            "methods": ["get"]
+        },
+        {
+            "type": "http",
+            "direction": "out",
+            "name": "res"
+        }
+    ]
+}
