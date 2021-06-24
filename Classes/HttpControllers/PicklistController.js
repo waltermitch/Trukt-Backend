@@ -19,6 +19,7 @@ class PicklistController extends HttpRouteController
 
                 // fetch from database
                 await this.handlePut(context, req);
+
             else
 
                 // fetch from file
@@ -32,6 +33,7 @@ class PicklistController extends HttpRouteController
         return res;
     }
 
+    /* eslint-disable no-unused-vars */
     async handlePut(context, req)
     {
         let res = {};
@@ -72,7 +74,6 @@ class PicklistController extends HttpRouteController
     mapOptions(queryResult, final)
     {
         let enu;
-        let options = [];
         let name = '';
         for (let i = 0; i < queryResult.rows.length; i++)
         {
@@ -81,14 +82,18 @@ class PicklistController extends HttpRouteController
             if (!(name in final))
             {
                 final[name] = {};
-                options = [enu.subtype];
-                final[name].options = options;
+                final[name].options = [this.createOptionObject(enu.subtype)];
             }
             else
             {
-                final[name].options.push(enu.subtype);
+                final[name].options.push(this.createOptionObject(enu.subtype));
             }
         }
+    }
+
+    createOptionObject(option)
+    {
+        return { label: this.capWord(option), value: option };
     }
 
     /**
@@ -102,6 +107,15 @@ class PicklistController extends HttpRouteController
         {
             return index === 0 ? word.toLowerCase() : word.toUpperCase();
         }).replace(/_/gi, '');
+    }
+
+    /**
+     * @description takes a string and capitalizes every word in the string separated by white space and followed by an opening parenthesis
+     */
+    capWord(str)
+    {
+        return str.replace(/(^\w{1})|(\W+\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase());
+
     }
 }
 
