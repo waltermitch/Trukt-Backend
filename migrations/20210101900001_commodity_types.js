@@ -31,7 +31,7 @@ exports.up = function (knex)
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
         table.increments('id', { primaryKey: true }).notNullable();
-        table.string('category', ['vehicle', 'freight']).notNullable().index();
+        table.string('category', 16).notNullable().index();
         table.string('type', 32);
         table.unique(['category', 'type']);
     }).then(() =>
