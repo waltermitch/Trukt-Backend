@@ -1,43 +1,42 @@
+const table_name = 'commodity_types';
 const commodity_type_records = [
-    { type: 'vehicle', subtype: 'coupe' },
-    { type: 'vehicle', subtype: 'convertible' },
-    { type: 'vehicle', subtype: 'sedan' },
-    { type: 'vehicle', subtype: 'SUV' },
-    { type: 'vehicle', subtype: 'minivan' },
-    { type: 'vehicle', subtype: 'pickup truck(2 door)' },
-    { type: 'vehicle', subtype: 'pickup truck(4 door)' },
-    { type: 'vehicle', subtype: 'pickup dually' },
-    { type: 'vehicle', subtype: 'motorcycle' },
-    { type: 'vehicle', subtype: 'ATV' },
-    { type: 'vehicle', subtype: 'boat' },
-    { type: 'vehicle', subtype: 'RV' },
-    { type: 'vehicle', subtype: 'trailer(5th wheel)' },
-    { type: 'vehicle', subtype: 'trailer(bumper pull)' },
-    { type: 'vehicle', subtype: 'trailer(gooseneck)' },
-    { type: 'vehicle', subtype: 'cargo van' },
-    { type: 'vehicle', subtype: 'box truck' },
-    { type: 'vehicle', subtype: 'day cab' },
-    { type: 'vehicle', subtype: 'sleeper cab' },
-    { type: 'vehicle', subtype: 'other' },
-    { type: 'freight', subtype: 'bulk' },
-    { type: 'freight', subtype: 'crushed cars' },
-    { type: 'freight', subtype: 'other' }
+    { category: 'vehicle', type: 'coupe' },
+    { category: 'vehicle', type: 'convertible' },
+    { category: 'vehicle', type: 'sedan' },
+    { category: 'vehicle', type: 'SUV' },
+    { category: 'vehicle', type: 'minivan' },
+    { category: 'vehicle', type: 'pickup truck (2 door)' },
+    { category: 'vehicle', type: 'pickup truck (4 door)' },
+    { category: 'vehicle', type: 'pickup dually' },
+    { category: 'vehicle', type: 'motorcycle' },
+    { category: 'vehicle', type: 'ATV' },
+    { category: 'vehicle', type: 'boat' },
+    { category: 'vehicle', type: 'RV' },
+    { category: 'vehicle', type: 'trailer (5th wheel)' },
+    { category: 'vehicle', type: 'trailer (bumper pull)' },
+    { category: 'vehicle', type: 'trailer (gooseneck)' },
+    { category: 'vehicle', type: 'cargo van' },
+    { category: 'vehicle', type: 'box truck' },
+    { category: 'vehicle', type: 'day cab' },
+    { category: 'vehicle', type: 'sleeper cab' },
+    { category: 'vehicle', type: 'other' },
+    { category: 'freight', type: 'bulk' },
+    { category: 'freight', type: 'crushed cars' },
+    { category: 'freight', type: 'other' }
 ];
 
-const table_name = 'commodity_types';
 
 exports.up = function (knex)
 {
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
         table.increments('id', { primaryKey: true }).notNullable();
-        table.enu('type', ['vehicle', 'freight']).notNullable().index();
-        table.string('subtype', 32);
-        table.unique(['type', 'subtype']);
+        table.string('category', ['vehicle', 'freight']).notNullable().index();
+        table.string('type', 32);
+        table.unique(['category', 'type']);
     }).then(() =>
     {
         return knex(table_name).insert(commodity_type_records);
-
     });
 };
 
