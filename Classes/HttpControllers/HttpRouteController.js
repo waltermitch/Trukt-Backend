@@ -72,15 +72,12 @@ class HttpRouteController
         finally
         {
             if (response)
-            {
-                context.res.body = {}
 
                 // conditionally assign the properties
                 // dont assign if they are falsey
                 for (const prop in response)
                     if (response[prop])
-                        context.res.body[prop] = response[prop];
-            }
+                        context.res[prop] = response[prop];
 
             // set the default Content-Type to application/json
             if (!context?.res?.headers?.['Content-Type'])
