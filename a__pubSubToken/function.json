@@ -1,0 +1,19 @@
+{
+    "scriptFile": "../Classes/HttpControllers/PubSubController.js",
+    "entryPoint": "handleHttp",
+    "bindings": [
+        {
+            "authLevel": "function",
+            "type": "httpTrigger",
+            "direction": "in",
+            "name": "req",
+            "methods": ["get"],
+            "route": "pubsub/token"
+        },
+        {
+            "type": "http",
+            "direction": "out",
+            "name": "res"
+        }
+    ]
+}
