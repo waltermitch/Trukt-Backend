@@ -22,11 +22,9 @@ class IndexNumberService
         let jobNumber;
         if (orderNumber && orderNumberRegex.test(orderNumber))
         {
-            let qnums = [];
+            const qnums = [];
             for (let i = 0; i < count; i++)
-            {
                 qnums.push('a' + i);
-            }
 
             try
             {

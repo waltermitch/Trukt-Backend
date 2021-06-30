@@ -37,13 +37,12 @@ class SFAccount extends SalesforceModel
                 modelClass: require('./RecordType'),
                 join: {
                     from: 'salesforce.account.recordtypeid',
-                    to: 'salesforce.recordtype.sfid',
+                    to: 'salesforce.recordtype.sfid'
                 }
             }
         };
     }
 
-    // eslint-disable-next-line
     static modifiers = {
         byType(query, type)
         {
@@ -57,6 +56,7 @@ class SFAccount extends SalesforceModel
     $formatJson(json)
     {
         json = super.$formatJson(json);
+
         // based on rtype
         if ('rtype' in json)
         {
@@ -75,13 +75,21 @@ class SFAccount extends SalesforceModel
                     break;
                 case 'referrer':
                     delete json.dotNumber;
-                    for (const field of ['Street', 'State', 'PostalCode', 'Longitude', 'Latitude', 'GeocodeAccuracy', 'Country', 'City'])
-                    {
+                    for (const field of [
+                        'Street',
+                        'State',
+                        'PostalCode',
+                        'Longitude',
+                        'Latitude',
+                        'GeocodeAccuracy',
+                        'Country',
+                        'City'
+                    ])
+
                         for (const type of ['billing', 'shipping'])
-                        {
+
                             delete json[type + field];
-                        }
-                    }
+
                     delete json.orderInstructions;
                     delete json.loadboardInstructions;
                     break;
@@ -110,7 +118,6 @@ class SFAccount extends SalesforceModel
 
         return json;
     }
-
 
     // keys are external field names, values are internal field names
     static mappingFromExternal = {
@@ -220,7 +227,7 @@ class SFAccount extends SalesforceModel
         autoInsuranceExpiration: 'autoInsuranceExpirationC',
         auctionId: 'auctionIdC',
         active: 'activeC',
-        accountNameDuplicate: 'accountNameDuplicateC',
+        accountNameDuplicate: 'accountNameDuplicateC'
     }
 
     static fieldsToHideFromDatabase = [
@@ -365,7 +372,7 @@ class SFAccount extends SalesforceModel
         'userRoleC',
         'usesFactoringCompanyC',
         'vendorTypeC',
-        'website',
+        'website'
     ]
 
     static fieldsToHideFromExternal = [

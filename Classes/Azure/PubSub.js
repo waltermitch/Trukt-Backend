@@ -5,7 +5,7 @@ const hubName = process.env['azure.pubsub.hub'];
 
 const service = new WebPubSubServiceClient(connectionString, hubName, { keepAliveOptions: { enable: true } });
 
-class PubSub 
+class PubSub
 {
     static async getSubToken(groupName, userId)
     {

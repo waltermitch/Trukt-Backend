@@ -9,7 +9,7 @@ exports.up = function (knex)
         IS 'Stores all of the tables and data related to transportation management system.';
     `);
 };
-
+/* eslint-disable-next-line no-unused-vars */
 exports.down = function (knex)
 {
     // do nothing because this schema has all the locks and what not for migration
