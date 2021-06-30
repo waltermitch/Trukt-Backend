@@ -1,21 +1,30 @@
 image: node:14.15.0
 
 pipelines:
+    default:
+        - step:
+              name: Jest Unit Tests
+              caches:
+                  - node
+              services:
+                  - mongo
+              script:
+                  - npm run decrypt -- local.settings.enc local.settings.json
+                  - npm install
+                  - npm test
     branches:
-        "{master,staging,dev}":
-            - parallel:
-                  - step:
-                        name: Jest Unit Tests
-                        caches:
-                            - node
-                        script:
-                            - npm run decrypt -- local.settings.enc local.settings.json
-                            - npm install
-                            - npm test
-                  - step:
-                        name: ESLint
-                        script:
-                            - npm install eslint
-                            - npx eslint .
-                        caches:
-                            - node
+        "{STS-**,admin,andrey,ilya,justin,valeriy,vlad}":
+            - step:
+                  name: ESLint
+                  caches:
+                      - node
+                  script:
+                      - npm install eslint
+                      - npx eslint .
+
+definitions:
+    services:
+        mongo:
+            image: mongo
+        postgres:
+            image: postgres
