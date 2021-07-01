@@ -52,7 +52,7 @@ class PicklistController extends HttpRouteController
      */
     async getPicklistBod()
     {
-        const template = {};
+        const picklists = {};
         const enums = await knex.raw(`
             select 
                 n.nspname as enum_schema,
@@ -71,14 +71,14 @@ class PicklistController extends HttpRouteController
         for (const row of all)
         {
             const category = this.setCamelCase(row.category);
-            if (!(category in template))
+            if (!(category in picklists))
             
-                template[category] = { options: [] };
+                picklists[category] = { options: [] };
 
-            template[category].options.push(this.createOptionObject(row.label, row.value));
+            picklists[category].options.push(this.createOptionObject(row.label, row.value));
         }
 
-        return template;
+        return picklists;
     }
 
     createOptionObject(label, value)
