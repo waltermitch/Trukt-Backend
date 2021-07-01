@@ -64,15 +64,16 @@ class PicklistController extends HttpRouteController
                 on t.oid = e.enumtypid
             join pg_catalog.pg_namespace n 
                 on n.oid = t.typnamespace`);
-        const comTypes = await knex.raw('select id as value, category as category, type as label from rcg_tms.commodity_types');
-        const all = enums.rows.concat(comTypes.rows);
+        const comTypes = await knex.raw('select \'commodityTypes\' as tableName, id as value, concat(category, \'Types\') as category, type as label from rcg_tms.commodity_types');
+        const jobTypes = await knex.raw('select \'jobTypes\' as tableName, id as value, concat(category, \'Types\') as category, type as label from rcg_tms.order_job_types');
+        const all = enums.rows.concat(comTypes.rows).concat(jobTypes.rows);
 
         for (const row of all)
         {
             if (!(row.category in final))
-            
+
                 final[row.category] = [];
-            
+
             final[row.category].push({
                 label: row.label,
                 value: row.value
@@ -81,7 +82,7 @@ class PicklistController extends HttpRouteController
 
         const finalfinal = {};
         for (const category of Object.keys(final))
-        
+
             finalfinal[this.setCamelCase(category)] = {
                 options: final[category].map(it => { return this.createOptionObject(it.label, it.value); })
             };
@@ -117,17 +118,17 @@ class PicklistController extends HttpRouteController
         });
     }
 
-    setCamelCase(string)
+    setCamelCase(String)
     {
-        return string.replace(/[ _]([A-Za-z])/g, (word, p1) =>
+        return String.replace(/[ _]([A-Za-z])/g, (word, p1) =>
         {
             return p1.toUpperCase();
         }).replace(/^\w/, (word, index) => { return word.toLowerCase(); }).replace(/\s/g, '');
     }
 
-    cleanUpWhitespace(string)
+    cleanUpWhitespace(String)
     {
-        return string.trim().replace(/\s+/g, ' ');
+        return String.trim().replace(/\s+/g, ' ');
     }
 
     /**
