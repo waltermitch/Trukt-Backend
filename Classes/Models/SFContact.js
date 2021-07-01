@@ -129,7 +129,7 @@ class SFContact extends SalesforceModel
         'title',
         'trainerC',
         'trainingDateC',
-        'trainingItemsC',
+        'trainingItemsC'
     ]
 
     static fieldsToHideFromExternal = [

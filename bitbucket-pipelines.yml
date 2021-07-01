@@ -1,21 +1,56 @@
 image: node:14.15.0
 
-pipelines:
-  branches:
-    "{master,staging,dev}":
-      - parallel:
-          - step:
+definitions:
+    services:
+        mongo:
+            image: mongo
+        postgres:
+            image: postgres
+    steps:
+        - step: &jest-test
               name: Jest Unit Tests
               caches:
-                - node
+                  - node
+              services:
+                  - mongo
               script:
-                - openssl enc -d -a -in local.settings.enc -out local.settings.json -iv $SharedIv -K $SharedKey -S $SharedSalt
-                - npm install
-                - npm test
-          - step:
+                  - npm run decrypt -- local.settings.enc local.settings.json
+                  - npm install
+                  - npm test
+        - step: &lint-test
               name: ESLint
-              script:
-                - npm install eslint
-                - npx eslint .
               caches:
-                - node
+                  - node
+              script:
+                  - npm install eslint
+                  - npx eslint .
+        - step: &db-migration
+              name: DB Migration
+              caches:
+                  - node
+              script:
+                  - npm install
+                  - npm install -g knex
+                  - npm run decrypt -- local.settings.enc local.settings.json
+                  - node ./tools/init_database.js
+                  - knex migrate:latest
+
+pipelines:
+    default:
+        - step: *jest-test
+
+    branches:
+        "{STS-**,admin,andrey,ilya,justin,valeriy,vlad}":
+            - parallel:
+                  - step: *lint-test
+                  - step: *jest-test
+        "dev":
+            - step:
+                  <<: *db-migration
+                  deployment: dev
+            - step: *jest-test
+        "staging":
+            - step:
+                  <<: *db-migration
+                  deployment: staging
+            - step: *jest-test

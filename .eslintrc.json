@@ -17,9 +17,10 @@
         "ecmaVersion": 2020,
         "sourceType": "module"
     },
+    "parser": "babel-eslint",
     "rules": {
-        "no-case-declarations": false,
-        "no-unused-vars": 2,
+        "no-case-declarations": 0,
+        "no-unused-vars": 1,
         "quotes": ["error", "single"],
         "no-fallthrough": "off",
         "lines-around-comment": [
