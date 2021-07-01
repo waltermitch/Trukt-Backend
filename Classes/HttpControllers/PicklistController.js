@@ -38,7 +38,7 @@ class PicklistController extends HttpRouteController
     {
         let res = {};
         picklists = await this.getPicklistBod();
-        fs.writeFile('picklists.json', JSON.stringify(picklists, null, '    '), err =>
+        fs.writeFile('picklists.json', JSON.stringify(picklists, null), err =>
         {
             if (err) res = err;
         });
@@ -52,7 +52,7 @@ class PicklistController extends HttpRouteController
      */
     async getPicklistBod()
     {
-        const final = {};
+        const template = {};
         const enums = await knex.raw(`
             select 
                 n.nspname as enum_schema,
@@ -70,24 +70,24 @@ class PicklistController extends HttpRouteController
 
         for (const row of all)
         {
-            if (!(row.category in final))
+            if (!(row.category in template))
 
-                final[row.category] = [];
+                template[row.category] = [];
 
-            final[row.category].push({
+            template[row.category].push({
                 label: row.label,
                 value: row.value
             });
         }
 
-        const finalfinal = {};
-        for (const category of Object.keys(final))
+        const final = {};
+        for (const category of Object.keys(template))
 
-            finalfinal[this.setCamelCase(category)] = {
-                options: final[category].map(it => { return this.createOptionObject(it.label, it.value); })
+            final[this.setCamelCase(category)] = {
+                options: template[category].map(it => { return this.createOptionObject(it.label, it.value); })
             };
 
-        return finalfinal;
+        return final;
     }
 
     createOptionObject(label, value)
@@ -110,6 +110,11 @@ class PicklistController extends HttpRouteController
         }).replace(/_/gi, '');
     }
 
+    /**
+     * 
+     * @param {*} String a string that is in camel case
+     * @returns the same string with spaces before the capital letters i.e fooBar -> foo Bar
+     */
     cleanUpCamelCase(String)
     {
         return String.replace(/(?<=[a-z])([A-Z])/g, (word, index) =>
@@ -118,6 +123,11 @@ class PicklistController extends HttpRouteController
         });
     }
 
+    /**
+     * 
+     * @param {*} String a string with words separated by spaces
+     * @returns the string in camel case form i.e foo bar => fooBar
+     */
     setCamelCase(String)
     {
         return String.replace(/[ _]([A-Za-z])/g, (word, p1) =>
@@ -126,6 +136,11 @@ class PicklistController extends HttpRouteController
         }).replace(/^\w/, (word, index) => { return word.toLowerCase(); }).replace(/\s/g, '');
     }
 
+    /**
+     * 
+     * @param {*} String a string with more than one space in the middle of the string
+     * @returns the string without trailing spaces and removed double spaces in the middle of the string
+     */
     cleanUpWhitespace(String)
     {
         return String.trim().replace(/\s+/g, ' ');
