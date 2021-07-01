@@ -38,7 +38,7 @@ class PicklistController extends HttpRouteController
     {
         let res = {};
         picklists = await this.getPicklistBod();
-        fs.writeFile('picklists.json', JSON.stringify(picklists), err =>
+        fs.writeFile('picklists.json', JSON.stringify(picklists, null, '    '), err =>
         {
             if (err) res = err;
         });
@@ -52,48 +52,48 @@ class PicklistController extends HttpRouteController
      */
     async getPicklistBod()
     {
-        const enums = await knex.raw(`select n.nspname as enum_schema,
-            t.typname as type,
-            e.enumlabel as subtype
-                from pg_type t
-                    join pg_enum e on t.oid = e.enumtypid
-                    join pg_catalog.pg_namespace n ON n.oid = t.typnamespace`);
         const final = {};
-        this.mapOptions(enums, final);
-        const comTypes = await knex.raw('select id, type, subtype from rcg_tms.commodity_types');
-        this.mapOptions(comTypes, final);
-        return final;
-    }
+        const enums = await knex.raw(`
+            select 
+                n.nspname as enum_schema,
+                t.typname as category,
+                e.enumlabel as label,
+                e.enumlabel as value
+            from pg_type t
+            join pg_enum e 
+                on t.oid = e.enumtypid
+            join pg_catalog.pg_namespace n 
+                on n.oid = t.typnamespace`);
+        const comTypes = await knex.raw('select id as value, category as category, type as label from rcg_tms.commodity_types');
+        const all = enums.rows.concat(comTypes.rows);
 
-    /**
-     *
-     * @param {*} queryResult This is a raw query result that should contain an overlying type with a subtype
-     * @param {*} final final object that will have all the values inside of it
-     * @returns returns the final object with the types and subtypes split into a more readable json object
-     */
-    mapOptions(queryResult, final)
-    {
-        let enu;
-        let name = '';
-        for (let i = 0; i < queryResult.rows.length; i++)
+        for (const row of all)
         {
-            enu = queryResult.rows[i];
-            name = this.cleanUpSnakeCase(enu.type);
-            if (!(name in final))
-            {
-                final[name] = {};
-                final[name].options = [this.createOptionObject(enu.subtype)];
-            }
-            else
-            {
-                final[name].options.push(this.createOptionObject(enu.subtype));
-            }
+            if (!(row.category in final))
+            
+                final[row.category] = [];
+            
+            final[row.category].push({
+                label: row.label,
+                value: row.value
+            });
         }
+
+        const finalfinal = {};
+        for (const category of Object.keys(final))
+        
+            finalfinal[this.setCamelCase(category)] = {
+                options: final[category].map(it => { return this.createOptionObject(it.label, it.value); })
+            };
+
+        return finalfinal;
     }
 
-    createOptionObject(option)
+    createOptionObject(label, value)
     {
-        return { label: this.capWord(option), value: option };
+        label = this.cleanUpWhitespace(this.cleanUpCamelCase(this.cleanUpSnakeCase(this.capWord(label))));
+
+        return { label, value };
     }
 
     /**
@@ -103,10 +103,31 @@ class PicklistController extends HttpRouteController
      */
     cleanUpSnakeCase(String)
     {
-        return String.replace(/(?:^[A-Z](?=[^A-Z])|_[a-z])/g, (word, index) =>
+        return String.replace(/(_[A-Za-z])/g, (word, index) =>
         {
-            return index === 0 ? word.toLowerCase() : word.toUpperCase();
+            return word.toUpperCase();
         }).replace(/_/gi, '');
+    }
+
+    cleanUpCamelCase(String)
+    {
+        return String.replace(/(?<=[a-z])([A-Z])/g, (word, index) =>
+        {
+            return ' ' + word;
+        });
+    }
+
+    setCamelCase(string)
+    {
+        return string.replace(/[ _]([A-Za-z])/g, (word, p1) =>
+        {
+            return p1.toUpperCase();
+        }).replace(/^\w/, (word, index) => { return word.toLowerCase(); }).replace(/\s/g, '');
+    }
+
+    cleanUpWhitespace(string)
+    {
+        return string.trim().replace(/\s+/g, ' ');
     }
 
     /**
