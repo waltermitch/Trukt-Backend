@@ -39,6 +39,12 @@ pipelines:
     default:
         - step: *jest-test
 
+    pull-requests:
+        "**":
+            - parallel:
+                  - step: *lint-test
+                  - step: *jest-test
+
     branches:
         "{STS-**,admin,andrey,ilya,justin,valeriy,vlad}":
             - parallel:
@@ -48,9 +54,11 @@ pipelines:
             - step:
                   <<: *db-migration
                   deployment: development
-            - step: *jest-test
         "staging":
             - step:
                   <<: *db-migration
                   deployment: staging
-            - step: *jest-test
+        "production":
+            - step:
+                  <<: *db-migration
+                  deployment: production
