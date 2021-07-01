@@ -70,24 +70,15 @@ class PicklistController extends HttpRouteController
 
         for (const row of all)
         {
-            if (!(row.category in template))
+            const category = this.setCamelCase(row.category);
+            if (!(category in template))
+            
+                template[category] = { options: [] };
 
-                template[row.category] = [];
-
-            template[row.category].push({
-                label: row.label,
-                value: row.value
-            });
+            template[category].options.push(this.createOptionObject(row.label, row.value));
         }
 
-        const final = {};
-        for (const category of Object.keys(template))
-
-            final[this.setCamelCase(category)] = {
-                options: template[category].map(it => { return this.createOptionObject(it.label, it.value); })
-            };
-
-        return final;
+        return template;
     }
 
     createOptionObject(label, value)
@@ -111,7 +102,7 @@ class PicklistController extends HttpRouteController
     }
 
     /**
-     * 
+     *
      * @param {*} String a string that is in camel case
      * @returns the same string with spaces before the capital letters i.e fooBar -> foo Bar
      */
@@ -124,7 +115,7 @@ class PicklistController extends HttpRouteController
     }
 
     /**
-     * 
+     *
      * @param {*} String a string with words separated by spaces
      * @returns the string in camel case form i.e foo bar => fooBar
      */
@@ -137,7 +128,7 @@ class PicklistController extends HttpRouteController
     }
 
     /**
-     * 
+     *
      * @param {*} String a string with more than one space in the middle of the string
      * @returns the string without trailing spaces and removed double spaces in the middle of the string
      */
