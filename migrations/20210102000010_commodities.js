@@ -47,5 +47,5 @@ exports.down = function (knex)
         .dropTableIfExists(table_name)
         .raw('DROP TYPE IF EXISTS rcg_tms.load_capacity_types CASCADE;')
         .raw('DROP TYPE IF EXISTS rcg_tms.delivery_status_types CASCADE;')
-        .raw('DROP TYPE IF EXISTS rcg_tms.ternary_types CASCADE;')
+        .raw('DROP TYPE IF EXISTS rcg_tms.ternary_types CASCADE;');
 };

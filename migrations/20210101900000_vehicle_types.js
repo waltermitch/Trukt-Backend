@@ -1,4 +1,5 @@
 const table_name = 'vehicle_types';
+
 // const vehicle_type_records = [
 //     { name: 'Coupe' },
 //     { name: 'Convertible' },

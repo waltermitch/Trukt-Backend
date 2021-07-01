@@ -25,7 +25,6 @@ const commodity_type_records = [
     { category: 'freight', type: 'other' }
 ];
 
-
 exports.up = function (knex)
 {
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>

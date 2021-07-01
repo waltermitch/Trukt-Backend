@@ -43,6 +43,7 @@ exports.down = function (knex)
             table.dropColumn('is_started');
             table.dropColumn('instructions');
         });
+
     // dont need to drop type load_capacity because it is initialized in commodities
 
 };

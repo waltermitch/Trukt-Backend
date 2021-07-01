@@ -49,5 +49,5 @@ exports.down = function (knex)
         .dropTableIfExists(order_job_notes_table)
         .dropTableIfExists(order_notes_table)
         .dropTableIfExists(table_name)
-        .raw(`DROP TYPE IF EXISTS rcg_tms.note_types;`);
+        .raw('DROP TYPE IF EXISTS rcg_tms.note_types;');
 };
