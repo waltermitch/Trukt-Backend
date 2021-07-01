@@ -16,15 +16,15 @@ exports.up = function (knex)
         table.foreign('type').references('id').inTable('rcg_tms.commodity_types');
 
         // this should be FTL (Full Truck Load) and LTL (Less-Than Full-load)
-        table.enu('capacity', ['Full TL', 'Partial TL']).notNullable();
-        table.enu('damaged', ternary_options).defaultTo('unknown').notNullable();
-        table.enu('inoperable', ternary_options).defaultTo('unknown').notNullable();
+        table.enu('capacity', ['full truck load', 'partial truck load'], { useNative: true, enumName: 'load_capacity_types' });
+        table.enu('damaged', ternary_options, { useNative: true, enumName: 'ternary_types' }).defaultTo('unknown').notNullable();
+        table.enu('inoperable', null, { useNative: true, enumName: 'ternary_types', existingType: true }).defaultTo('unknown').notNullable();
         table.enu('delivery_status', [
             'none',
             'en route',
             'picked up',
             'delivered'
-        ]).defaultTo('none').notNullable();
+        ], { useNative: true, enumName: 'delivery_status_types' }).defaultTo('none').notNullable();
 
         table.integer('length').unsigned();
         table.integer('weight').unsigned();
@@ -43,5 +43,9 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
+    return knex.schema.withSchema('rcg_tms')
+        .dropTableIfExists(table_name)
+        .raw('DROP TYPE IF EXISTS rcg_tms.load_capacity_types CASCADE;')
+        .raw('DROP TYPE IF EXISTS rcg_tms.delivery_status_types CASCADE;')
+        .raw('DROP TYPE IF EXISTS rcg_tms.ternary_types CASCADE;')
 };

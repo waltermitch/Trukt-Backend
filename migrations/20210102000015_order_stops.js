@@ -8,7 +8,8 @@ exports.up = function (knex)
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
         table.uuid('guid').unique().notNullable();
-        table.enu('stop_type', ['pickup', 'delivery']);
+        table.enu('stop_type', ['pickup', 'delivery'],
+            { useNative: true, enumName: 'stop_types' });
         const temrinalguid = 'terminal_guid';
         table.uuid(temrinalguid).notNullable();
         table.foreign(temrinalguid).references('guid').inTable('rcg_tms.terminals');
@@ -19,6 +20,7 @@ exports.up = function (knex)
             table.foreign(fieldname).references('guid').inTable('rcg_tms.contacts');
         }
 
+        let exists = false;
         for (const type of ['customer', 'vendor'])
         {
 
@@ -29,7 +31,10 @@ exports.up = function (knex)
                 'exactly',
                 'no later than',
                 'no earlier than'
-            ]);
+            ], {
+                useNative: true, enumName: 'date_schedule_types', existingType: exists
+            });
+            exists = true;
         }
 
         table.datetime('date_started').comment('this is the date the order stop was started, enroute etc.');
@@ -44,5 +49,8 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
+    return knex.schema.withSchema('rcg_tms')
+        .dropTableIfExists(table_name)
+        .raw('DROP TYPE IF EXISTS rcg_tms.date_schedule_types CASCADE;')
+        .raw('DROP TYPE IF EXISTS rcg_tms.stop_types CASCADE;');
 };
