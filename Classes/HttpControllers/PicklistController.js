@@ -114,7 +114,7 @@ class PicklistController extends HttpRouteController
      */
     capWord(str)
     {
-        return str.replace(/(^\w{1})|(\W+\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase());
+        return str.replace(/_/g, ' ').replace(/\b(\w)/g, letter => letter.toUpperCase());
 
     }
 }
