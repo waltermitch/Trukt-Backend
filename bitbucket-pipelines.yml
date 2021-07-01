@@ -24,6 +24,16 @@ definitions:
               script:
                   - npm install eslint
                   - npx eslint .
+        - step: &db-migration
+              name: DB Migration
+              caches:
+                  - node
+              script:
+                  - npm install
+                  - npm install -g knex
+                  - npm run decrypt -- local.settings.enc local.settings.json
+                  - node ./tools/init_database.js
+                  - knex migrate:latest
 
 pipelines:
     default:
@@ -34,3 +44,13 @@ pipelines:
             - parallel:
                   - step: *lint-test
                   - step: *jest-test
+        "dev":
+            - step:
+                  <<: *db-migration
+                  deployment: dev
+            - step: *jest-test
+        "staging":
+            - step:
+                  <<: *db-migration
+                  deployment: staging
+            - step: *jest-test
