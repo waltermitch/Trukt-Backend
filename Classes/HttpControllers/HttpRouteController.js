@@ -63,7 +63,8 @@ class HttpRouteController
 
             // handle generic errors here?
             const errResp = new ErrorHandler(context, err);
-            response = {
+            response =
+            {
                 status: errResp.status,
                 body: errResp.data
             };
@@ -75,14 +76,11 @@ class HttpRouteController
                 // conditionally assign the properties
                 // dont assign if they are falsey
                 for (const prop in response)
-
                     if (response[prop])
-
                         context.res[prop] = response[prop];
 
             // set the default Content-Type to application/json
-            if (!('Content-Type' in context.res.headers))
-
+            if (!context?.res?.headers?.['Content-Type'])
                 context.res.headers['Content-Type'] = 'application/json';
         }
 

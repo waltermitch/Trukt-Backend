@@ -2,42 +2,28 @@ const table_name = 'order_job_types';
 const related_table_name = 'order_jobs';
 
 const job_type_records = [
-    {
-        type: 'transport', subtype: 'transport'
-    },
-    {
-        type: 'service', subtype: 'locksmith'
-    },
-    {
-        type: 'service', subtype: 'unloading'
-    },
-    {
-        type: 'service', subtype: 'loading'
-    },
-    {
-        type: 'service', subtype: 'repair'
-    },
-    {
-        type: 'service', subtype: 'diagnostics'
-    },
-    {
-        type: 'service', subtype: 'dry run'
-    }
+    { category: 'transport', type: 'transport' },
+    { category: 'service', type: 'locksmith' },
+    { category: 'service', type: 'unloading' },
+    { category: 'service', type: 'loading' },
+    { category: 'service', type: 'repair' },
+    { category: 'service', type: 'diagnostics' },
+    { category: 'service', type: 'dry run' }
 ];
 
+const typefn = 'type_id';
 exports.up = function (knex)
 {
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
         table.increments('id', { primaryKey: true });
-        table.enu('type', ['service', 'transport']).notNullable().index();
-        table.string('subtype', 24).notNullable();
-        table.unique(['type', 'subtype']);
+        table.string('category', 16).notNullable().index();
+        table.string('type', 24).notNullable().index();
+        table.unique(['category', 'type']);
     }).then(() =>
     {
         return knex.schema.withSchema('rcg_tms').table(related_table_name, (table) =>
         {
-            const typefn = 'type_id';
             table.integer(typefn).unsigned().notNullable();
             table.foreign(typefn).references('id').inTable(`rcg_tms.${table_name}`);
 
@@ -53,7 +39,8 @@ exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms').table(related_table_name, (table) =>
     {
-        table.dropForeign('type_id');
+        table.dropForeign(typefn);
+        table.dropColumn(typefn);
     }).then(() =>
     {
         return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
