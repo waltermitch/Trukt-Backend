@@ -1,0 +1,29 @@
+{
+  "$id": "attachmentTypes",
+  "enum": [
+    "undefined",
+    "vendorInvoice",
+    "billOfLading",
+    "proofOfDelivery",
+    "lumperTicket",
+    "scaleTicket",
+    "inGateTicket",
+    "outGateTicket",
+    "miscellaneous",
+    "accessorialAgreement",
+    "rateConfirmation",
+    "loadTender",
+    "invoice",
+    "customsDocuments",
+    "invoiceWithPaperwork",
+    "detentionLoading",
+    "detentionUnloading",
+    "palletReceipt",
+    "spotApproval",
+    "truckNotUsed",
+    "exitPass",
+    "balanceDue",
+    "packingList",
+    "photo"
+  ]
+}

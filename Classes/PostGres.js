@@ -23,7 +23,7 @@ class PG
                 {
                     client: 'pg',
                     connection: opts,
-                    searchPath: ['salesforce']
+                    searchPath: ['rcg_tms', 'salesforce']
                 });
         }
 
@@ -34,28 +34,19 @@ class PG
     {
         const db = await PG.connect();
 
-        const res = await db.select('Data').from('variables').where({ Name: value });
+        const res = await db.select('data').from('variables').where({ name: value });
 
         // return the first element and the data object because it comes in a dumb format
-        return res?.[0]?.Data || {};
+        return res?.[0]?.data || {};
     }
 
     static async upsertVariable(payload)
     {
         const db = await PG.connect();
 
-        await db.insert({ 'Data': JSON.stringify(payload), 'Name': payload.name }).into('variables')
-            .onConflict('Name')
+        await db.insert({ 'data': JSON.stringify(payload), 'name': payload.name }).into('variables')
+            .onConflict('name')
             .merge();
-    }
-
-    static likeOnNColumns(value, columns)
-    {
-        const search = [];
-        for (let i = 0; i < columns.length; i++)
-            search.push(`${columns[i]} like '%${value}%'`);
-
-        return search.join(' or ');
     }
 
     static getRecordTypeId(objectName, recordTypeName)

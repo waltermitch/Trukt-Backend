@@ -1,0 +1,19 @@
+{
+    "scriptFile": "../Classes/HttpControllers/PicklistController.js",
+    "entryPoint": "handleHttp",
+    "bindings": [
+        {
+            "authLevel": "function",
+            "type": "httpTrigger",
+            "direction": "in",
+            "name": "req",
+            "methods": ["get", "put"],
+            "route": "picklist/options"
+        },
+        {
+            "type": "http",
+            "direction": "out",
+            "name": "res"
+        }
+    ]
+}
