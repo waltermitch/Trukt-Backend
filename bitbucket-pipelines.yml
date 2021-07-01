@@ -47,7 +47,7 @@ pipelines:
         "dev":
             - step:
                   <<: *db-migration
-                  deployment: dev
+                  deployment: development
             - step: *jest-test
         "staging":
             - step:
