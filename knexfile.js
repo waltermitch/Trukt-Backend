@@ -14,7 +14,7 @@ const conConfig = {
     seeds: {
         directory: process.env['knex.migration.seeds']
     },
-    ...knexSnakeCaseMappers({ underscoreBetweenUppercaseLetters: true, underscoreBeforeDigits: true })
+    ...knexSnakeCaseMappers({ underscoreBetweenUppercaseLetters: true })
 };
 
 module.exports = () =>
