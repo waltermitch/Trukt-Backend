@@ -226,5 +226,12 @@
                 ]
             }
         }
+    },
+    "Terminal": {
+        "hide": {
+            "external": {
+                "into": ["isResolved", "dateDeleted", "deletedBy"]
+            }
+        }
     }
 }
