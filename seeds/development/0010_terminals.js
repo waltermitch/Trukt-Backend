@@ -21,8 +21,8 @@ exports.seed = function (knex)
                     'port',
                     'business'
                 ]),
-                street1: faker.address.streetAddress(),
-                street2: faker.datatype.number(100) < 75 ? faker.address.secondaryAddress() : null,
+                street_1: faker.address.streetAddress(),
+                street_2: faker.datatype.number(100) < 75 ? faker.address.secondaryAddress() : null,
                 city: faker.address.city(),
                 country: faker.random.arrayElement(['USA', 'CA']),
                 state,
