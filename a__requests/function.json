@@ -1,0 +1,22 @@
+{
+  "scriptFile": "../Classes/HttpControllers/RequestController.js",
+  "entryPoint": "handleHttp",
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req",
+      "methods": [
+        "get",
+        "post"
+      ],
+      "route": "requests/{guid:required}"
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "res"
+    }
+  ]
+}
