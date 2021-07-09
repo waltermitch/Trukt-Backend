@@ -1,9 +1,9 @@
 const express = require('express');
 const session = require('express-session');
 const KnexSessionStore = require('connect-session-knex')(session);
-const BaseModel = require('./Classes/Models/BaseModel');
+const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
-const HttpErrorHandler = require('./Classes/HttpErrorHandler');
+const HttpErrorHandler = require('./src/HttpErrorHandler');
 require('./local.settings');
 
 const store = new KnexSessionStore
@@ -46,10 +46,10 @@ app.use(session(sessionConfig));
 app.use(express.json());
 
 // wanted to have a dynamic way to add routes without having to modify main.js
-const filepaths = fs.readdirSync('./Routes');
+const filepaths = fs.readdirSync('./src/Routes');
 for (const filepath of filepaths)
 {
-    const router = require(`./Routes/${filepath}`);
+    const router = require(`./src/Routes/${filepath}`);
     app.use(router);
 }
 

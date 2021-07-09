@@ -1,5 +1,5 @@
-const controller = require('../Classes/HttpControllers/AccountController');
-const { uuidRegexStr } = require('../Classes/Utils/Regexes');
+const controller = require('../HttpControllers/AccountController');
+const { uuidRegexStr } = require('../Utils/Regexes');
 const router = require('express').Router();
 
 const prefix = '/account/:accountType(client|carrier|referral|employee)';

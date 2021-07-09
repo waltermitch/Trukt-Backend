@@ -1,6 +1,6 @@
-const controller = require('../Classes/HttpControllers/TerminalController');
+const controller = require('../HttpControllers/TerminalController');
 const router = require('express').Router();
-const { uuidRegexStr } = require('../Classes/Utils/Regexes');
+const { uuidRegexStr } = require('../Utils/Regexes');
 
 const prefix = '/terminal';
 
