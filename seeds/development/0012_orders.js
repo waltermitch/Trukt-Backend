@@ -61,7 +61,7 @@ exports.seed = async function (knex)
     for (let c = 0; c < 1; c++)
     {
         const client = clients[c];
-        const createdBy = faker.datatype.uuid();
+        const createdBy = '9aaf2dc8-12a7-4f91-8ade-2e9ba7669690';
 
         const job = {
             '#id': faker.datatype.uuid(),
@@ -78,8 +78,14 @@ exports.seed = async function (knex)
         };
 
         let neworder = {
-            clientGuid: client.guid__c,
+            clientGuid: '9178da54-3646-467a-a701-be3e1908d1ec',
             instructions: faker.lorem.words(60),
+            estimatedExpense: 12,
+            estimatedRevenue: 13,
+            quotedRevenue: 13,
+            estimatedIncome: 13,
+            referenceNumber: faker.lorem.word(),
+            inspectionType: 'advanced',
             owner: createdBy,
             status: 'new',
             distance: 12,
@@ -185,32 +191,4 @@ exports.seed = async function (knex)
     }
 
     return OrderStopLink.query().insertGraph(graph, { relate: true, allowRefs: true });
-
-    // return await knex.raw('UPDATE rcg_tms.order_jobs SET \"order\" = null RETURNING guid;').then(jobs =>
-    // {
-    //     return knex(table_name).del()
-    //         .then(function ()
-    //         {
-    //             const orders = [];
-
-    //             for (let i = 0; i < 30; i++)
-    //                 orders.push({
-    //                     guid: faker.datatype.uuid(),
-    //                     number: 'number',
-    //                     client: '6e018101-51ae-4544-997d-82545156bc3d',
-    //                     instructions: 'instructions',
-    //                     owner: faker.datatype.uuid(),
-    //                     status: 'New',
-    //                     distance: 12,
-    //                     is_dummy: false,
-    //                     is_deleted: false,
-    //                     is_completed: false,
-    //                     created_by: faker.datatype.uuid()
-    //                 });
-
-    //             // Inserts seed entries
-    //             return knex(table_name).insert(orders).onConflict('number').ignore();
-    //         });
-
-    // });
 };
