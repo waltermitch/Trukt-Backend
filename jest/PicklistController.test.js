@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 /* eslint-disable padding-line-between-statements */
-const PicklistController = require('../Classes/HttpControllers/PicklistController');
+const PicklistController = require('../src/HttpControllers/PicklistController');
 
 describe('Test picklist controller functions', () =>
 {

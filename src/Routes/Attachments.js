@@ -1,4 +1,4 @@
-const controller = require('../Classes/HttpControllers/AttachmentController.js');
+const controller = require('../HttpControllers/AttachmentController.js');
 const router = require('express').Router();
 
 // TODO: add multer package and middleware

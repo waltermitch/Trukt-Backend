@@ -1,4 +1,4 @@
-const controller = require('../Classes/HttpControllers/IndexNumberController');
+const controller = require('../HttpControllers/IndexNumberController');
 const router = require('express').Router();
 
 const prefix = '/index';
