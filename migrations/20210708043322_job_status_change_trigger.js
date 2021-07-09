@@ -9,15 +9,16 @@ exports.up = function (knex)
             RETURNS trigger
             LANGUAGE 'plpgsql'
             COST 100
-        AS $BODY$
+        AS $function$
         BEGIN
-            IF (TG_OP = 'UPDATE') THEN
-                IF (NEW.status <> OLD.status) THEN
-                PERFORM pg_notify('job_status_change',row_to_json((SELECT status, guid from NEW))::text);
+                IF (TG_OP = 'UPDATE') THEN
+                    IF (NEW.status <> OLD.status) THEN
+                    PERFORM pg_notify('job_status_change',row_to_json((select d from (select new.guid, new.status) d))::text);
+                    END IF;
                 END IF;
-            END IF;
+            RETURN NEW;
         END;
-        $BODY$;
+        $function$;
 
         CREATE TRIGGER rcg_order_job_status_change
             AFTER UPDATE

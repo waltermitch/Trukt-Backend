@@ -1,10 +1,10 @@
+const EventManager = require('./EventManager')
 const PG = require('../PostGres');
 
 // list of channels to listen to
 const channels =
     [
-        'job_status_change',
-        'messages'
+        'job_status_change'
     ]
 
 let client;
@@ -26,6 +26,18 @@ class PGListener
             {
                 // handle notifications here...
                 console.log(msg)
+
+                //convert string to json
+                const jsonMsg = JSON.parse(msg.payload);
+
+                switch (msg.channel)
+                {
+                    case 'job_status_change':
+                        await EventManager.jobStatusChanged(jsonMsg);
+                        break;
+                    default:
+                        break;
+                }
             })
         }
     }
