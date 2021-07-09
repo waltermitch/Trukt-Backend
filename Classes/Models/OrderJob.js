@@ -36,16 +36,30 @@ class OrderJob extends BaseModel
                     },
                     to: 'rcgTms.orderStops.guid'
                 }
-            }
+            },
+            commodities: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./Commodity'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    through: {
+                        modelClass: require('./OrderStopLink'),
+                        from: 'rcgTms.orderStopLinks.jobGuid',
+                        to: 'rcgTms.orderStopLinks.commodityGuid',
+                        extra: ['lotNumber']
+                    },
+                    to: 'rcgTms.commodities.guid'
+                }
+            },
 
-            // loadboardPosts: {
-            //     relation: BaseModel.HasManyRelation,
-            //     modelclass: LoadboardPost,
-            //     join: {
-            //         from: 'rcgTms.orderJobs.guid',
-            //         to: 'rcgTms.loadboardPosts.job'
-            //     }
-            // }
+            loadboardPosts: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./LoadboardPost'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    to: 'rcgTms.loadboardPosts.jobGuid'
+                }
+            }
         };
     }
 }
