@@ -18,9 +18,9 @@ const r = require('./routes.json');
 console.warn = jest.fn();
 
 // List of Classes
-const Heroku = require('../Classes/HerokuPlatformAPI');
-const PG = require('../Classes/PostGres');
-const AccountService = require('../Classes/Services/AccountService');
+const Heroku = require('../src/HerokuPlatformAPI');
+const PG = require('../src/PostGres');
+const AccountService = require('../src/Services/AccountService');
 
 const spyOnDelete = jest.spyOn(moxios, 'onDelete');
 const spyOnPost = jest.spyOn(moxios, 'onPost');
