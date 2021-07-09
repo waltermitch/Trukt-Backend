@@ -2,15 +2,15 @@ const SFAccount = require('../Models/SFAccount');
 
 const addressTypes = ['billing', 'shipping'];
 const addressFields = [
-    'street',
-    'state',
-    'city',
-    'postalcode',
-    'country'
+    'Street',
+    'State',
+    'City',
+    'PostalCode',
+    'Country'
 ];
-const tableName = 'salesforce.account';
+const tableName = 'salesforce.accounts';
 
-const orderbypriority = [`${tableName}.name`, `${tableName}.dot_number__c`];
+const orderbypriority = [`${tableName}.name`, `${tableName}.dot_number`];
 
 for (const type of addressTypes)
 
@@ -33,7 +33,7 @@ class AccountService
             switch (rtype)
             {
                 case 'carrier':
-                    builder.orWhere(`${tableName}.dot_number__c`, 'ilike', `%${search}%`);
+                    builder.orWhere(`${tableName}.dot_number`, 'ilike', `%${search}%`);
                     break;
             }
 
@@ -55,7 +55,7 @@ class AccountService
     static async getById(accountType, accountId)
     {
         const rtype = accountType?.toLowerCase();
-        const qb = SFAccount.query().where('guid__c', accountId).modify('byType', rtype);
+        const qb = SFAccount.query().where('guid', accountId).modify('byType', rtype);
         switch (rtype)
         {
             case 'carrier':
