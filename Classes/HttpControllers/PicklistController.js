@@ -10,6 +10,19 @@ const localPicklistPath = './picklists.json';
 class PicklistController extends HttpRouteController
 {
 
+    static async update(req, res)
+    {
+        res.status(501);
+        res.send();
+    }
+
+    static async getAll(req, res)
+    {
+
+        res.status(501);
+        res.send();
+    }
+
     async handleGet(context, req)
     {
         // first check if the picklist is in memory
