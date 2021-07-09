@@ -35,7 +35,7 @@ exports.up = function (knex)
             table.decimal('quoted_revenue', 15, 2).unsigned().comment('This is the amount of money that was quoted for the client');
             table.decimal('estimated_income', 15, 2).unsigned().comment('This is the difference between the estimated revenue and expense');
             table.decimal('actual_revenue', 15, 2).unsigned().comment('This is the actual amount of money that the order brings into the company');
-            table.decimal('actual_expense', 15, 2).unsigned().comment('This is the actual amoutn of money that was spent on this order');
+            table.decimal('actual_expense', 15, 2).unsigned().comment('This is the actual amount of money that was spent on this order');
             table.decimal('actual_income', 15, 2).comment('This the the actual income / profit made on the order');
 
             // date time fields

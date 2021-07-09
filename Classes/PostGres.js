@@ -1,5 +1,4 @@
-const urlParser = require('pg-connection-string').parse;
-const Heroku = require('./HerokuPlatformAPI');
+const knexfile = require('../knexfile');
 const Knex = require('knex');
 
 let db;
@@ -11,23 +10,16 @@ class PG
     static async connect()
     {
         if (!db)
-        {
-            // get url
-            const res = await Heroku.getConfig();
+            db = await Knex(knexfile());
 
-            // parse url and no ssl
-            const opts = Object.assign({ ssl: { rejectUnauthorized: false } }, urlParser(res.DATABASE_URL));
+        return db
+    }
 
-            // connect
-            db = await Knex(
-                {
-                    client: 'pg',
-                    connection: opts,
-                    searchPath: ['rcg_tms', 'salesforce']
-                });
-        }
+    static async getRawConnection()
+    {
+        const db = await PG.connect();
 
-        return db;
+        return db.client.acquireRawConnection();
     }
 
     static async getVariable(value)
