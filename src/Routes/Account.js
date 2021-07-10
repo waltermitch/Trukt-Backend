@@ -2,7 +2,7 @@ const controller = require('../HttpControllers/AccountController');
 const { uuidRegexStr } = require('../Utils/Regexes');
 const router = require('express').Router();
 
-const prefix = '/node/express/account/:accountType(client|carrier|referral|employee)';
+const prefix = '/account/:accountType(client|carrier|referral|employee)';
 
 router
     .get(`${prefix}/:accountId(${uuidRegexStr})`, controller.constructor.getAccount)

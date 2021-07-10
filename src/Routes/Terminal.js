@@ -2,7 +2,7 @@ const controller = require('../HttpControllers/TerminalController');
 const router = require('express').Router();
 const { uuidRegexStr } = require('../Utils/Regexes');
 
-const prefix = '/node/express/terminal';
+const prefix = '/terminal';
 
 router
     .get(`${prefix}/:terminalGuid(${uuidRegexStr})`, controller.constructor.getByGuid)
