@@ -1,7 +1,7 @@
 const controller = require('../HttpControllers/IndexNumberController');
 const router = require('express').Router();
 
-const prefix = '/node/express/index';
+const prefix = '/index';
 
 router
     .get(`${prefix}/order/number`, controller.constructor.nextOrderNumber)
