@@ -7,7 +7,7 @@ exports.up = function (knex)
     return Promise.all([
         knex.schema.withSchema('rcg_tms').createTable(table_name, table =>
         {
-            table.comment('The information about the customer order');
+            table.comment('The information about the client order');
             table.uuid('guid').primary().notNullable().unique();
             table.string('number', 8).unique().comment('the order number will be generated from a trigger stored in the index numbers table ');
             const clientfieldname = 'client_guid';
@@ -16,8 +16,8 @@ exports.up = function (knex)
             const contactfieldname = 'contact_guid';
             table.string(contactfieldname, 100).unsigned();
             table.foreign(contactfieldname).references('guid__c').inTable('salesforce.contact');
-            table.text('instructions');
-            table.uuid('owner').comment('This is the person in charge of making sure the order is full-filled. Either dispatcher or other actor.');
+            table.text('instructions').comment('These are the instructions from the client');
+            table.uuid('owner').comment('This is the person in charge of making sure the order is full-filled. Either a dispatcher or other actor.');
             table.uuid('referrer').comment('This is the person who referred this order');
 
             // status fields and statistics

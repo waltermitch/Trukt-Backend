@@ -20,8 +20,8 @@ exports.up = function (knex)
             useNative: true, enumName: 'location_types'
         });
 
-        table.string('street1', 64);
-        table.string('street2', 64);
+        table.string('street_1', 64);
+        table.string('street_2', 64);
 
         // this will not be an enum because if we ship internationally want to include other countries states/provinces
         table.string('state', 100);
@@ -45,5 +45,7 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name).raw('DROP TYPE IF EXISTS rcg_tms.location_types');
+    return knex.schema.withSchema('rcg_tms')
+        .dropTableIfExists(table_name)
+        .raw('DROP TYPE IF EXISTS rcg_tms.location_types');
 };

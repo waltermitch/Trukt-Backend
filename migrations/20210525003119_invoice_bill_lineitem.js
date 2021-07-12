@@ -1,5 +1,3 @@
-const migration_tools = require('../tools/migration');
-
 const table_name = 'invoice_bill_lineitems';
 exports.up = function (knex)
 {
