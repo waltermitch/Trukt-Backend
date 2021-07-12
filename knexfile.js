@@ -1,5 +1,5 @@
 const urlParser = require('pg-connection-string').parse;
-const Heroku = require('./Classes/HerokuPlatformAPI');
+const Heroku = require('./src/HerokuPlatformAPI');
 const { knexSnakeCaseMappers } = require('objection');
 
 require('./local.settings.js');

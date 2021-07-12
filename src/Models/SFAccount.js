@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const { raw } = require('objection');
 
 class SFAccount extends BaseModel
 {
@@ -46,7 +47,24 @@ class SFAccount extends BaseModel
     static modifiers = {
         byType(query, type)
         {
-            query.select('rectype.name as rtype', 'salesforce.accounts.*').leftJoinRelated('rectype').where('rectype.name', 'ilike', type);
+            const qb = query.leftJoinRelated('rectype');
+
+            if (type === 'client')
+            {
+                qb.select(raw('\'client\' as rtype'), 'salesforce.accounts.*');
+                qb.where(builder =>
+                {
+                    builder.orWhere('rectype.name', 'ilike', 'client');
+                    builder.orWhere('rectype.name', 'ilike', 'person account');
+                });
+            }
+            else
+            {
+                qb.select('rectype.name as rtype', 'salesforce.accounts.*');
+                qb.where('rectype.name', 'ilike', type);
+            }
+
+            return qb;
         }
     }
 
