@@ -1,4 +1,3 @@
-
 // get the logged in user, that is going ot be the authority
 
 (async function ()

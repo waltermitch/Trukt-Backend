@@ -4,12 +4,12 @@ class VariableController extends HttpRouteController
 {
     async handleGet(context, req)
     {
-
+        context.log(req?.body);
     }
 
     async handlePost(context, req)
     {
-
+        context.log(req?.body);
     }
 }
 
