@@ -1,6 +1,5 @@
-
-const function_name = 'job_status_change_trigger'
-const table_name = 'order_jobs'
+const function_name = 'job_status_change_trigger';
+const table_name = 'order_jobs';
 
 exports.up = function (knex)
 {

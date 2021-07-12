@@ -12,7 +12,7 @@ class PG
         if (!db)
             db = await Knex(knexfile());
 
-        return db
+        return db;
     }
 
     static async getRawConnection()
