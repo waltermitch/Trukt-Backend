@@ -1,6 +1,5 @@
 const Attachment = require('../Models/Attachment');
 const AzureStorage = require('../Azure/Storage');
-const multipart = require('parse-multipart');
 const uuid = require('uuid');
 
 const baseURL = AzureStorage.getBaseUrl();
@@ -27,6 +26,7 @@ class AttachmentService
 
     static async insert(body, headers, opts)
     {
+        console.log(body);
         if (['job'].includes(opts.parentType))
             return { 'status': 400, 'data': 'Not An Allowed parentType' };
 
