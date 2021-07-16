@@ -11,9 +11,11 @@ exports.up = function (knex)
     AS $BODY$
     BEGIN
         IF (TG_OP = 'INSERT') THEN
-            NEW.number = rcg_tms.rcg_next_order_number();
+            IF (NEW.number IS NULL) THEN
+                NEW.number = rcg_tms.rcg_next_order_number();
+            END IF;
         ELSEIF (TG_OP = 'UPDATE') THEN
-        -- do not allow users to change the guid once it is assigned
+        -- do not allow users to change the order number once it is assigned
             IF (NEW.number <> OLD.number ) THEN
                 NEW.number = OLD.number;
             END IF;

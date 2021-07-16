@@ -5,7 +5,7 @@ const knexfile = require('../../knexfile');
 
 const knex = Knex(knexfile());
 let picklists;
-const localPicklistPath = './picklists.json';
+const localPicklistPath = './localdata/picklists.json';
 
 class PicklistController extends HttpRouteController
 {

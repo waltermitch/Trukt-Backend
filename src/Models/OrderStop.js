@@ -19,8 +19,8 @@ class OrderStop extends BaseModel
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: require('./Terminal'),
                 join: {
-                    from: 'rcgTms.orderStop.guid',
-                    to: 'rcgTms.terminals.terminalGuid'
+                    from: 'rcgTms.orderStops.terminalGuid',
+                    to: 'rcgTms.terminals.guid'
                 }
             },
             primaryContact: {

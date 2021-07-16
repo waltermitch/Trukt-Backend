@@ -63,3 +63,4 @@ file.js
 test.js
 *.data
 /secrets
+/localdata

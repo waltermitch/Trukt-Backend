@@ -16,11 +16,13 @@ exports.up = function (knex)
             table.enu('type', ['lead', 'flag', 'update'], {
                 useNative: true, enumName: 'note_types'
             }).notNullable();
-            migration_tools.timestamps(knex, table);
+            migration_tools.timestamps(table);
+            migration_tools.authors(table);
 
         })
         .raw(migration_tools.guid_function(table_name))
         .raw(migration_tools.timestamps_trigger(table_name))
+        .raw(migration_tools.authors_trigger(table_name))
         .createTable(order_notes_table, (table) =>
         {
             const primaryKey = ['order_guid', 'note_guid'];

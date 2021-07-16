@@ -29,8 +29,11 @@ exports.up = function (knex)
             stopfn,
             commodityfn
         ]);
-        migration_tools.timestamps(knex, table);
-    }).raw(migration_tools.timestamps_trigger(table_name));
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
+    })
+        .raw(migration_tools.timestamps_trigger(table_name))
+        .raw(migration_tools.authors_trigger(table_name));
 };
 
 exports.down = function (knex)

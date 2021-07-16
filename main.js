@@ -1,5 +1,7 @@
+/* eslint-disable no-console */
 const express = require('express');
 const session = require('express-session');
+const domain = require('./src/Domain');
 const KnexSessionStore = require('connect-session-knex')(session);
 const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
@@ -11,8 +13,6 @@ const store = new KnexSessionStore
         knex: BaseModel.knex(),
         tableName: 'sessions'
     });
-
-const app = express();
 
 const sessionConfig = {
     secret: process.env['node.secret'],
@@ -42,8 +42,21 @@ switch (process.env.ENV)
         sessionConfig.cookie.secure = false;
 }
 
+const app = express();
+app.use(domain);
 app.use(session(sessionConfig));
 app.use(express.json());
+
+// TODO: temp solution for created-by requirement
+// grabs the user id and adds it to the session
+app.use((req, res, next) =>
+{
+    if ('x-test-user' in req.headers && !req.session?.userGuid)
+
+        req.session.userGuid = req.headers['x-test-user'];
+
+    next();
+});
 
 // wanted to have a dynamic way to add routes without having to modify main.js
 const filepaths = fs.readdirSync('./src/Routes');
