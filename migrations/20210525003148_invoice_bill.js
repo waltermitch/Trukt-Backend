@@ -6,17 +6,22 @@ exports.up = function (knex)
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
         table.uuid('guid').primary().notNullable().unique();
+        table.string('reference_number', 64).comment('reference number for this invoice as used by our internal systems');
         const expartyfn = 'external_party_guid';
-        table.string(expartyfn, 100).notNullable();
+        table.string(expartyfn, 100).notNullable().comment('this is the vendor or client salesforce ids');
         table.foreign(expartyfn).references('guid__c').inTable('salesforce.account');
-        const orderguid = 'order_guid';
-        table.uuid(orderguid);
-        table.foreign(orderguid).references('guid').inTable('rcg_tms.orders');
 
-        migration_tools.timestamps(knex, table);
+        table.string('external_source', 32).comment('the external accounting software source name. i.e. quickbooks online');
+        table.string('external_source_guid', 64).comment('the external accounting software\'s invoice guid');
+        table.json('external_source_data').comment('store anything in here that is from the external accounting software');
+        table.boolean('is_synced_external_source').notNullable().defaultTo(false);
+        table.datetime('date_synced_external_source').comment('the datetime that this invoice was generated or sent to the external accounting software');
+
         table.datetime('date_filed');
         table.datetime('date_due');
         table.datetime('date_paid');
+        table.datetime('date_invoiced');
+        table.datetime('date_closed');
 
         table.decimal('total', 15, 2).comment('This is calculated, please do not modify manually');
 
@@ -27,8 +32,13 @@ exports.up = function (knex)
         table.boolean('is_generated').notNullable().defaultTo(false).comment('This is set to true when a user generates the invoice or bill in the system');
         table.boolean('is_paid').notNullable().defaultTo(false);
         table.boolean('is_invoice').notNullable().comment('true value is invoice, false value is bill');
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
 
-    }).raw(migration_tools.guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
+    })
+        .raw(migration_tools.guid_function(table_name))
+        .raw(migration_tools.timestamps_trigger(table_name))
+        .raw(migration_tools.authors_trigger(table_name));
 };
 
 exports.down = function (knex)

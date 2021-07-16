@@ -15,9 +15,13 @@ exports.up = function (knex)
         table.string('phone_number', 32);
         table.string('mobile_number', 32);
         table.string('email');
-        migration_tools.timestamps(knex, table);
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
 
-    }).raw(guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
+    })
+        .raw(guid_function(table_name))
+        .raw(migration_tools.timestamps_trigger(table_name))
+        .raw(migration_tools.authors_trigger(table_name));
 };
 
 exports.down = function (knex)

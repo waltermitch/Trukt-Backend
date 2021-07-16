@@ -29,62 +29,62 @@ class HttpRouteController
     }
 
     /* eslint-enable */
-    async handleHttp(context, request)
-    {
-        // we get no JS access in the function.json so have to do introspection
-        let response = undefined;
+    // async handleHttp(context, request)
+    // {
+    //     // we get no JS access in the function.json so have to do introspection
+    //     let response = undefined;
 
-        // response should mimic the http response at the top level
-        // setting the status, body and headers etc.
-        try
-        {
-            switch (request.method)
-            {
-                case 'GET':
-                    response = await this.handleGet(context, request);
-                    break;
-                case 'POST':
-                    response = await this.handlePost(context, request);
-                    break;
-                case 'PUT':
-                    response = await this.handlePut(context, request);
-                    break;
-                case 'PATCH':
-                    response = await this.handlePatch(context, request);
-                    break;
-                case 'DELETE':
-                    response = await this.handleDelete(context, request);
-                    break;
-            }
-        }
-        catch (err)
-        {
-            context.log(err);
+    //     // response should mimic the http response at the top level
+    //     // setting the status, body and headers etc.
+    //     try
+    //     {
+    //         switch (request.method)
+    //         {
+    //             case 'GET':
+    //                 response = await this.handleGet(context, request);
+    //                 break;
+    //             case 'POST':
+    //                 response = await this.handlePost(context, request);
+    //                 break;
+    //             case 'PUT':
+    //                 response = await this.handlePut(context, request);
+    //                 break;
+    //             case 'PATCH':
+    //                 response = await this.handlePatch(context, request);
+    //                 break;
+    //             case 'DELETE':
+    //                 response = await this.handleDelete(context, request);
+    //                 break;
+    //         }
+    //     }
+    //     catch (err)
+    //     {
+    //         context.log(err);
 
-            // handle generic errors here?
-            const errResp = new ErrorHandler(context, err);
-            response =
-            {
-                status: errResp.status,
-                body: errResp.data
-            };
-        }
-        finally
-        {
-            if (response)
+    //         // handle generic errors here?
+    //         const errResp = new ErrorHandler(context, err);
+    //         response =
+    //         {
+    //             status: errResp.status,
+    //             body: errResp.data
+    //         };
+    //     }
+    //     finally
+    //     {
+    //         if (response)
 
-                // conditionally assign the properties
-                // dont assign if they are falsey
-                for (const prop in response)
-                    if (response[prop])
-                        context.res[prop] = response[prop];
+    //             // conditionally assign the properties
+    //             // dont assign if they are falsey
+    //             for (const prop in response)
+    //                 if (response[prop])
+    //                     context.res[prop] = response[prop];
 
-            // set the default Content-Type to application/json
-            if (!context?.res?.headers?.['Content-Type'])
-                context.res.headers['Content-Type'] = 'application/json';
-        }
+    //         // set the default Content-Type to application/json
+    //         if (!context?.res?.headers?.['Content-Type'])
+    //             context.res.headers['Content-Type'] = 'application/json';
+    //     }
 
-    }
+    // }
 
     static async next(context, func, params)
     {

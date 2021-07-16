@@ -22,8 +22,8 @@ definitions:
               caches:
                   - node
               script:
-                  - npm install eslint
-                  - npx eslint .
+                  - npm install -g eslint
+                  - eslint $BITBUCKET_CLONE_DIR
         - step: &db-migration
               name: DB Migration
               caches:
@@ -41,15 +41,11 @@ pipelines:
 
     pull-requests:
         "**":
-            - parallel:
-                  - step: *lint-test
-                  - step: *jest-test
+            - step: *jest-test
 
     branches:
         "{STS-**,admin,andrey,ilya,justin,valeriy,vlad}":
-            - parallel:
-                  - step: *lint-test
-                  - step: *jest-test
+            - step: *jest-test
         "dev":
             - step:
                   <<: *db-migration

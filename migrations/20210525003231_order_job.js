@@ -20,14 +20,12 @@ exports.up = function (knex)
         table.string(vendorcontguid, 100).comment('The vendor\'s primary contact');
         table.foreign(vendorcontguid).references('guid__c').inTable('salesforce.contact');
 
-        migration_tools.timestamps(knex, table);
         table.uuid('owner_guid').comment('This is the person in charge of making sure the job is full-filled. Either dispatcher or other actor.');
 
         table.string('status').comment('This is purley for display for user, do not change this status manually');
         table.decimal('distance', 8, 1).unsigned().comment('The maximum truck-route distance between all the order stops sorted by the sequence in miles');
 
         table.boolean('is_dummy').defaultTo(false);
-        table.boolean('is_deleted').defaultTo(false);
         table.boolean('is_completed').defaultTo(false);
         table.boolean('is_transport').notNullable();
 
@@ -41,17 +39,23 @@ exports.up = function (knex)
 
         table.datetime('date_started').comment('The date that the job was started');
         table.datetime('date_completed').comment('The date that the job was completed and all commodities delivered');
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
 
-    }).raw(migration_tools.guid_function(table_name)).raw(`
-        CREATE TRIGGER rcg_order_job_number_assignment
-            BEFORE INSERT OR UPDATE
-            ON rcg_tms.${table_name}
-            FOR EACH ROW
-            EXECUTE FUNCTION rcg_tms.rcg_order_job_number_assign();
+    })
+        .raw(migration_tools.guid_function(table_name))
+        .raw(migration_tools.timestamps_trigger(table_name))
+        .raw(migration_tools.authors_trigger(table_name))
+        .raw(`
+            CREATE TRIGGER rcg_order_job_number_assignment
+                BEFORE INSERT OR UPDATE
+                ON rcg_tms.${table_name}
+                FOR EACH ROW
+                EXECUTE FUNCTION rcg_tms.rcg_order_job_number_assign();
 
-        COMMENT ON TRIGGER rcg_order_job_number_assignment ON rcg_tms.${table_name}
-            IS 'Assigns the order job number and prevents users from changing it willy nilly';
-    `).raw(migration_tools.timestamps_trigger(table_name));
+            COMMENT ON TRIGGER rcg_order_job_number_assignment ON rcg_tms.${table_name}
+                IS 'Assigns the order job number and prevents users from changing it willy nilly';
+            `);
 };
 
 exports.down = function (knex)

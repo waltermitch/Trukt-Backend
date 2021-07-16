@@ -56,7 +56,6 @@
                 }
             }
         ],
-        "no-console": ["warn"],
         "brace-style": [
             "error",
             "allman",
