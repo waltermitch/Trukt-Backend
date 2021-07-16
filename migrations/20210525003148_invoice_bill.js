@@ -27,8 +27,13 @@ exports.up = function (knex)
         table.boolean('is_generated').notNullable().defaultTo(false).comment('This is set to true when a user generates the invoice or bill in the system');
         table.boolean('is_paid').notNullable().defaultTo(false);
         table.boolean('is_invoice').notNullable().comment('true value is invoice, false value is bill');
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
 
-    }).raw(migration_tools.guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
+    })
+        .raw(migration_tools.guid_function(table_name))
+        .raw(migration_tools.timestamps_trigger(table_name))
+        .raw(migration_tools.authors_trigger(table_name));
 };
 
 exports.down = function (knex)

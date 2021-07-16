@@ -37,10 +37,14 @@ exports.up = function (knex)
             table.foreign(fieldname).references('guid').inTable('rcg_tms.contacts');
         }
         table.boolean('is_resolved').notNullable().defaultsTo(false).comment('this is set to true only and only when the address is verified and proper geo-coords are stored');
-        migration_tools.timestamps(knex, table);
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
         table.unique(['latitude', 'longitude']);
 
-    }).raw(guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
+    })
+        .raw(guid_function(table_name))
+        .raw(migration_tools.timestamps_trigger(table_name))
+        .raw(migration_tools.authors_trigger(table_name));
 };
 
 exports.down = function (knex)
