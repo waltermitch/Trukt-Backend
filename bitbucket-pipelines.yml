@@ -29,11 +29,11 @@ definitions:
               caches:
                   - node
               script:
-                  - npm install
+                  - cd $BITBUCKET_CLONE_DIR && npm install
                   - npm install -g knex
                   - npm run decrypt -- local.settings.enc local.settings.json
-                  - node ./tools/init_database.js
-                  - knex migrate:latest
+                  - node ./tools/migrator.js init
+                  - node ./tools/migrator.js up --all
 
 pipelines:
     default:
