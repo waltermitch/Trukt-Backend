@@ -1,4 +1,4 @@
-const documentTypes = require('../Classes/Schemas/attachmentTypes.json').enum;
+const documentTypes = require('../src/Schemas/attachmentTypes.json').enum;
 
 const table_name = 'attachments';
 

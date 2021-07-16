@@ -21,9 +21,9 @@ class BaseModel extends Model
     {
         json = super.$formatJson(json);
         for (const field of fieldMappings?.[this.constructor.name]?.hide?.external?.into || [])
-        
+
             delete json[field];
-        
+
         return json;
     }
 
@@ -49,9 +49,9 @@ class BaseModel extends Model
         json = super.$parseDatabaseJson(json);
 
         for (const field of fieldMappings?.[this.constructor.name]?.hide?.database?.outa || [])
-        
+
             delete json[field];
-        
+
         return json;
     }
 
@@ -62,9 +62,9 @@ class BaseModel extends Model
     {
         json = super.$formatDatabaseJson(json);
         for (const field of fieldMappings?.[this.constructor.name]?.hide?.database?.into || [])
-        
+
             delete json[field];
-        
+
         return json;
     }
 }
