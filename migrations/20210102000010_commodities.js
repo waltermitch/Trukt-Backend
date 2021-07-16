@@ -12,8 +12,8 @@ exports.up = function (knex)
         table.string('name').notNullable();
         table.uuid('guid').unique().notNullable();
 
-        table.integer('type').unsigned();
-        table.foreign('type').references('id').inTable('rcg_tms.commodity_types');
+        table.integer('type_id').unsigned();
+        table.foreign('type_id').references('id').inTable('rcg_tms.commodity_types');
 
         // this should be FTL (Full Truck Load) and LTL (Less-Than Full-load)
         table.enu('capacity', ['full truck load', 'partial truck load'], { useNative: true, enumName: 'load_capacity_types' });
