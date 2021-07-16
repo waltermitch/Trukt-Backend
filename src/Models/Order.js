@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const RecordAuthors = require('./Mixins/RecordAuthors');
 
 class Order extends BaseModel
 {
@@ -14,6 +15,7 @@ class Order extends BaseModel
 
     static get relationMappings()
     {
+        const SFAccount = require('./SFAccount');
         return {
             jobs: {
                 relation: BaseModel.HasManyRelation,
@@ -56,6 +58,22 @@ class Order extends BaseModel
                     from: 'rcgTms.orders.guid',
                     to: 'rcgTms.orderStopLinks.orderGuid'
                 }
+            },
+            client: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFAccount,
+                join: {
+                    from: 'rcgTms.orders.clientGuid',
+                    to: 'salesforce.account.guid'
+                }
+            },
+            cosignee: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFAccount,
+                join: {
+                    from: 'rcgTms.orders.cosigneeGuid',
+                    to: 'salesforce.account.guid'
+                }
             }
 
             // invoices: {
@@ -70,4 +88,5 @@ class Order extends BaseModel
     }
 }
 
+Object.assign(Order.prototype, RecordAuthors);
 module.exports = Order;
