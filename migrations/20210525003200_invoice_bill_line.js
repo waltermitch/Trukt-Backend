@@ -10,6 +10,11 @@ exports.up = function (knex)
         table.uuid(invoiceguid).notNullable();
         table.foreign(invoiceguid).references('guid').inTable('rcg_tms.invoice_bills');
         table.decimal('amount', 15, 2).notNullable();
+        table.integer('item_id').unsigned().notNullable();
+        table.foreign('item_id').references('id').inTable('rcg_tms.invoice_bill_line_items');
+        const commodityguid = 'commodity_guid';
+        table.uuid(commodityguid);
+        table.foreign(commodityguid).references('guid').inTable('rcg_tms.commodities');
         migration_tools.timestamps(table);
         migration_tools.authors(table);
 
