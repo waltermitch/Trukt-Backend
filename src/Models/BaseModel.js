@@ -67,6 +67,20 @@ class BaseModel extends Model
 
         return json;
     }
+
+    async $beforeInsert(context)
+    {
+        await super.$beforeInsert(context);
+        if (typeof this.setCreatedBy === 'function')
+            this.setCreatedBy();
+    }
+
+    async $beforeUpdate(options, context)
+    {
+        await super.$beforeUpdate(options, context);
+        if (typeof this.setUpdatedBy === 'function')
+            this.setUpdatedBy();
+    }
 }
 
 module.exports = BaseModel;
