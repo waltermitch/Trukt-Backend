@@ -14,7 +14,7 @@ exports.up = function (knex)
     BEGIN
         IF (TG_OP = 'INSERT') THEN
             IF (NEW.number IS NULL) THEN 
-                SELECT number INTO order_number FROM orders WHERE orders.guid = NEW.order_guid;
+                SELECT number INTO order_number FROM rcg_tms.orders WHERE orders.guid = NEW.order_guid;
                 NEW.number = rcg_tms.rcg_next_order_job_number(order_number);
             END IF;
         ELSEIF (TG_OP = 'UPDATE') THEN
