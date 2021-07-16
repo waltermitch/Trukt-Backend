@@ -1,5 +1,6 @@
 const faker = require('faker');
 
+const test_user = '00000000-0000-0000-0000-000000000000';
 const table_name = 'terminals';
 exports.seed = function (knex)
 {
@@ -30,7 +31,7 @@ exports.seed = function (knex)
                 latitude: faker.address.latitude(),
                 longitude: faker.address.longitude(),
                 is_resolved: true,
-                created_by: faker.datatype.uuid()
+                created_by_guid: test_user
             });
         }
 
