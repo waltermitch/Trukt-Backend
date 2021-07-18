@@ -44,7 +44,6 @@ catch (err)
     console.log(err.stdout.toString());
     exit(1);
 }
-
 // try reading the existing file
 let jsonSettings;
 try

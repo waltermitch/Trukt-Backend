@@ -4,7 +4,7 @@ const Terminal = require('../../Classes/Models/Terminal');
 const migration_tools = require('../../tools/migration');
 const { DateTime } = require('luxon');
 
-const capacity_types = ['Full TL', 'Partial TL'];
+const capacity_types = ['full truck load', 'partial truck load'];
 const ternary_options = migration_tools.ternary_options;
 const date_types = [
     'estimated',
@@ -71,13 +71,15 @@ exports.seed = async function (knex)
             estimatedRevenue: 13,
             quotedRevenue: 13,
             estimatedIncome: 13,
-            createdBy: faker.datatype.uuid(),
+            instructions: faker.lorem.words(60),
+            createdBy: createdBy,
+            loadType: faker.random.arrayElement(capacity_types),
             typeId: 1
         };
 
         let neworder = {
             clientGuid: client.guid__c,
-            instructions: faker.lorem.words(100),
+            instructions: faker.lorem.words(60),
             owner: createdBy,
             status: 'new',
             distance: 12,
@@ -87,17 +89,25 @@ exports.seed = async function (knex)
             jobs: [job]
         };
 
+        const pickupTerm = faker.random.arrayElement(terminals);
+        const deliveryTerm = faker.random.arrayElement(terminals);
         let pickup = {
-            terminalGuid: faker.random.arrayElement(terminals).guid,
+            terminalGuid: pickupTerm.guid,
+            primaryContactGuid: pickupTerm.primaryContactGuid,
+            alternativeContactGuid: pickupTerm.alternativeContactGuid,
             '#id': faker.datatype.uuid(),
             stopType: 'pickup',
+            sequence: 1,
             createdBy: createdBy
         };
 
         let delivery = {
-            terminalGuid: faker.random.arrayElement(terminals).guid,
+            terminalGuid: deliveryTerm.guid,
+            primaryContactGuid: deliveryTerm.primaryContactGuid,
+            alternativeContactGuid: deliveryTerm.alternativeContactGuid,
             '#id': faker.datatype.uuid(),
             stopType: 'delivery',
+            sequence: 2,
             createdBy: createdBy
         };
 
@@ -128,7 +138,7 @@ exports.seed = async function (knex)
                 commodity: comm,
                 stop: pickup,
                 order: neworder,
-                createdBy: faker.datatype.uuid()
+                createdBy: createdBy
             });
             if ('#id' in neworder)
 
@@ -142,7 +152,7 @@ exports.seed = async function (knex)
                 },
                 stop: delivery,
                 order: neworder,
-                createdBy: faker.datatype.uuid()
+                createdBy: createdBy
             });
 
             if ('#id' in pickup)
@@ -160,7 +170,7 @@ exports.seed = async function (knex)
                 stop: pickup,
                 order: neworder,
                 job: { '#ref': job['#id'] },
-                createdBy: faker.datatype.uuid()
+                createdBy: createdBy
             });
             graph.push({
                 commodity: {
@@ -169,7 +179,7 @@ exports.seed = async function (knex)
                 stop: delivery,
                 order: neworder,
                 job: { '#ref': job['#id'] },
-                createdBy: faker.datatype.uuid()
+                createdBy: createdBy
             });
         }
     }
