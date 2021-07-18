@@ -1,5 +1,6 @@
 const faker = require('faker');
 
+const test_user = '00000000-0000-0000-0000-000000000000';
 const table_name = 'terminals';
 exports.seed = function (knex)
 {
@@ -21,8 +22,8 @@ exports.seed = function (knex)
                     'port',
                     'business'
                 ]),
-                street_1: faker.address.streetAddress(),
-                street_2: faker.datatype.number(100) < 75 ? faker.address.secondaryAddress() : null,
+                street1: faker.address.streetAddress(),
+                street2: faker.datatype.number(100) < 75 ? faker.address.secondaryAddress() : null,
                 city: faker.address.city(),
                 country: faker.random.arrayElement(['USA', 'CA']),
                 state,
@@ -30,7 +31,7 @@ exports.seed = function (knex)
                 latitude: faker.address.latitude(),
                 longitude: faker.address.longitude(),
                 is_resolved: true,
-                created_by: faker.datatype.uuid()
+                created_by_guid: test_user
             });
         }
 
