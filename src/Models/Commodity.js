@@ -30,6 +30,16 @@ class Commodity extends BaseModel
         };
     }
 
+    static get modifiers()
+    {
+        return {
+            filterDistinct(builder)
+            {
+                // use distinctOn because we are using pg
+                builder.distinctOn('guid');
+            }
+        };
+    }
 }
 
 module.exports = Commodity;

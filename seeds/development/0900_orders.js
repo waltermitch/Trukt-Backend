@@ -1,8 +1,9 @@
 const faker = require('faker');
-const OrderStopLink = require('../../Classes/Models/OrderStopLink');
-const Terminal = require('../../Classes/Models/Terminal');
+const OrderStopLink = require('../../src/Models/OrderStopLink');
+const Terminal = require('../../src/Models/Terminal');
 const migration_tools = require('../../tools/migration');
 const { DateTime } = require('luxon');
+const SFAccount = require('../../src/Models/SFAccount');
 
 const capacity_types = ['full truck load', 'partial truck load'];
 const ternary_options = migration_tools.ternary_options;
@@ -54,14 +55,14 @@ exports.seed = async function (knex)
     const vehicles = await knex.select('id', 'year', 'make', 'model').from('rcg_tms.vehicles');
     const vehicleTypes = await knex.select('id').from('rcg_tms.commodity_types');
     const terminals = await Terminal.query();
-    let clients = await knex.raw('select a.name, a.guid__c from salesforce.account a, salesforce.recordtype r where r.name = ? and a.recordtypeid = r.sfid', ['Client']);
-    clients = clients.rows;
+    const clients = await SFAccount.query().modify('byType', 'client').limit(1);
+
     const graph = [];
 
     for (let c = 0; c < 1; c++)
     {
         const client = clients[c];
-        const createdBy = faker.datatype.uuid();
+        const createdBy = '00000000-0000-0000-0000-000000000000';
 
         const job = {
             '#id': faker.datatype.uuid(),
@@ -72,19 +73,25 @@ exports.seed = async function (knex)
             quotedRevenue: 13,
             estimatedIncome: 13,
             instructions: faker.lorem.words(60),
-            createdBy: createdBy,
+            createdByGuid: createdBy,
             loadType: faker.random.arrayElement(capacity_types),
             typeId: 1
         };
 
         let neworder = {
-            clientGuid: client.guid__c,
+            clientGuid: '9178da54-3646-467a-a701-be3e1908d1ec',
             instructions: faker.lorem.words(60),
-            owner: createdBy,
+            estimatedExpense: 12,
+            estimatedRevenue: 13,
+            quotedRevenue: 13,
+            estimatedIncome: 13,
+            referenceNumber: faker.lorem.word(),
+            inspectionType: 'advanced',
+            ownerGuid: createdBy,
             status: 'new',
             distance: 12,
             isDummy: false,
-            createdBy: createdBy,
+            createdByGuid: createdBy,
             '#id': faker.datatype.uuid(),
             jobs: [job]
         };
@@ -98,7 +105,8 @@ exports.seed = async function (knex)
             '#id': faker.datatype.uuid(),
             stopType: 'pickup',
             sequence: 1,
-            createdBy: createdBy
+            notes: faker.lorem.sentence(),
+            createdByGuid: createdBy
         };
 
         let delivery = {
@@ -108,7 +116,8 @@ exports.seed = async function (knex)
             '#id': faker.datatype.uuid(),
             stopType: 'delivery',
             sequence: 2,
-            createdBy: createdBy
+            notes: faker.lorem.sentence(),
+            createdByGuid: createdBy
         };
 
         setDateInfo(pickup, delivery);
@@ -119,17 +128,17 @@ exports.seed = async function (knex)
             const vehicle = faker.random.arrayElement(vehicles);
             const comm = {
                 name: vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model,
-                type: faker.random.arrayElement(vehicleTypes).id,
+                typeId: faker.random.arrayElement(vehicleTypes).id,
                 identifier: faker.vehicle.vin(),
                 vehicleId: vehicle.id,
                 capacity: faker.random.arrayElement(capacity_types),
-                delivery_status: 'none',
+                deliveryStatus: 'none',
                 length: faker.datatype.number(12),
                 weight: faker.datatype.number(3000),
                 quantity: 1,
                 damaged: faker.random.arrayElement(ternary_options),
                 inoperable: faker.random.arrayElement(ternary_options),
-                created_by: createdBy,
+                createdByGuid: createdBy,
                 description: faker.lorem.words(),
                 '#id': faker.datatype.uuid()
 
@@ -138,7 +147,7 @@ exports.seed = async function (knex)
                 commodity: comm,
                 stop: pickup,
                 order: neworder,
-                createdBy: createdBy
+                createdByGuid: createdBy
             });
             if ('#id' in neworder)
 
@@ -152,7 +161,7 @@ exports.seed = async function (knex)
                 },
                 stop: delivery,
                 order: neworder,
-                createdBy: createdBy
+                createdByGuid: createdBy
             });
 
             if ('#id' in pickup)
@@ -170,7 +179,7 @@ exports.seed = async function (knex)
                 stop: pickup,
                 order: neworder,
                 job: { '#ref': job['#id'] },
-                createdBy: createdBy
+                createdByGuid: createdBy
             });
             graph.push({
                 commodity: {
@@ -179,38 +188,10 @@ exports.seed = async function (knex)
                 stop: delivery,
                 order: neworder,
                 job: { '#ref': job['#id'] },
-                createdBy: createdBy
+                createdByGuid: createdBy
             });
         }
     }
 
     return OrderStopLink.query().insertGraph(graph, { relate: true, allowRefs: true });
-
-    // return await knex.raw('UPDATE rcg_tms.order_jobs SET \"order\" = null RETURNING guid;').then(jobs =>
-    // {
-    //     return knex(table_name).del()
-    //         .then(function ()
-    //         {
-    //             const orders = [];
-
-    //             for (let i = 0; i < 30; i++)
-    //                 orders.push({
-    //                     guid: faker.datatype.uuid(),
-    //                     number: 'number',
-    //                     client: '6e018101-51ae-4544-997d-82545156bc3d',
-    //                     instructions: 'instructions',
-    //                     owner: faker.datatype.uuid(),
-    //                     status: 'New',
-    //                     distance: 12,
-    //                     is_dummy: false,
-    //                     is_deleted: false,
-    //                     is_completed: false,
-    //                     created_by: faker.datatype.uuid()
-    //                 });
-
-    //             // Inserts seed entries
-    //             return knex(table_name).insert(orders).onConflict('number').ignore();
-    //         });
-
-    // });
 };
