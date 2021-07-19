@@ -3,6 +3,7 @@ const OrderStopLink = require('../../src/Models/OrderStopLink');
 const Terminal = require('../../src/Models/Terminal');
 const migration_tools = require('../../tools/migration');
 const { DateTime } = require('luxon');
+const SFAccount = require('../../src/Models/SFAccount');
 
 const capacity_types = ['full truck load', 'partial truck load'];
 const ternary_options = migration_tools.ternary_options;
@@ -54,14 +55,14 @@ exports.seed = async function (knex)
     const vehicles = await knex.select('id', 'year', 'make', 'model').from('rcg_tms.vehicles');
     const vehicleTypes = await knex.select('id').from('rcg_tms.commodity_types');
     const terminals = await Terminal.query();
-    let clients = await knex.raw('select a.name, a.guid__c from salesforce.account a, salesforce.recordtype r where r.name = ? and a.recordtypeid = r.sfid and a.sdguid <> null', ['Client']);
-    clients = clients.rows;
+    const clients = await SFAccount.query().modify('byType', 'client').limit(1);
+
     const graph = [];
 
     for (let c = 0; c < 1; c++)
     {
         const client = clients[c];
-        const createdBy = '9aaf2dc8-12a7-4f91-8ade-2e9ba7669690';
+        const createdBy = '00000000-0000-0000-0000-000000000000';
 
         const job = {
             '#id': faker.datatype.uuid(),
@@ -72,7 +73,7 @@ exports.seed = async function (knex)
             quotedRevenue: 13,
             estimatedIncome: 13,
             instructions: faker.lorem.words(60),
-            createdBy: createdBy,
+            createdByGuid: createdBy,
             loadType: faker.random.arrayElement(capacity_types),
             typeId: 1
         };
@@ -86,11 +87,11 @@ exports.seed = async function (knex)
             estimatedIncome: 13,
             referenceNumber: faker.lorem.word(),
             inspectionType: 'advanced',
-            owner: createdBy,
+            ownerGuid: createdBy,
             status: 'new',
             distance: 12,
             isDummy: false,
-            createdBy: createdBy,
+            createdByGuid: createdBy,
             '#id': faker.datatype.uuid(),
             jobs: [job]
         };
@@ -105,7 +106,7 @@ exports.seed = async function (knex)
             stopType: 'pickup',
             sequence: 1,
             notes: faker.lorem.sentence(),
-            createdBy: createdBy
+            createdByGuid: createdBy
         };
 
         let delivery = {
@@ -116,7 +117,7 @@ exports.seed = async function (knex)
             stopType: 'delivery',
             sequence: 2,
             notes: faker.lorem.sentence(),
-            createdBy: createdBy
+            createdByGuid: createdBy
         };
 
         setDateInfo(pickup, delivery);
@@ -127,17 +128,17 @@ exports.seed = async function (knex)
             const vehicle = faker.random.arrayElement(vehicles);
             const comm = {
                 name: vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model,
-                type: faker.random.arrayElement(vehicleTypes).id,
+                typeId: faker.random.arrayElement(vehicleTypes).id,
                 identifier: faker.vehicle.vin(),
                 vehicleId: vehicle.id,
                 capacity: faker.random.arrayElement(capacity_types),
-                delivery_status: 'none',
+                deliveryStatus: 'none',
                 length: faker.datatype.number(12),
                 weight: faker.datatype.number(3000),
                 quantity: 1,
                 damaged: faker.random.arrayElement(ternary_options),
                 inoperable: faker.random.arrayElement(ternary_options),
-                created_by: createdBy,
+                createdByGuid: createdBy,
                 description: faker.lorem.words(),
                 '#id': faker.datatype.uuid()
 
@@ -146,7 +147,7 @@ exports.seed = async function (knex)
                 commodity: comm,
                 stop: pickup,
                 order: neworder,
-                createdBy: createdBy
+                createdByGuid: createdBy
             });
             if ('#id' in neworder)
 
@@ -160,7 +161,7 @@ exports.seed = async function (knex)
                 },
                 stop: delivery,
                 order: neworder,
-                createdBy: createdBy
+                createdByGuid: createdBy
             });
 
             if ('#id' in pickup)
@@ -178,7 +179,7 @@ exports.seed = async function (knex)
                 stop: pickup,
                 order: neworder,
                 job: { '#ref': job['#id'] },
-                createdBy: createdBy
+                createdByGuid: createdBy
             });
             graph.push({
                 commodity: {
@@ -187,7 +188,7 @@ exports.seed = async function (knex)
                 stop: delivery,
                 order: neworder,
                 job: { '#ref': job['#id'] },
-                createdBy: createdBy
+                createdByGuid: createdBy
             });
         }
     }
