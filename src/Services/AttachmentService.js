@@ -1,6 +1,5 @@
 const Attachment = require('../Models/Attachment');
 const AzureStorage = require('../Azure/Storage');
-const multipart = require('parse-multipart');
 const uuid = require('uuid');
 
 const baseURL = AzureStorage.getBaseUrl();
@@ -25,13 +24,10 @@ class AttachmentService
         return attachments;
     }
 
-    static async insert(body, headers, opts)
+    static async insert(files, headers, opts)
     {
         if (['job'].includes(opts.parentType))
             return { 'status': 400, 'data': 'Not An Allowed parentType' };
-
-        // parse form data into buffer
-        const files = AttachmentService.parse(body, headers);
 
         // get sas
         const sas = AzureStorage.getSAS();
@@ -50,9 +46,9 @@ class AttachmentService
             {
                 'guid': guid,
                 'type': opts.attachmentType,
-                'url': `${baseURL}/${path}/${guid}/${files[i].filename}`,
-                'extension': files[i].type,
-                'name': files[i].filename,
+                'url': `${baseURL}/${path}/${guid}/${files[i].originalname}`,
+                'extension': files[i].mimetype,
+                'name': files[i].originalname,
                 'parent': opts.parent,
                 'parent_table': opts.parentType
             };
@@ -60,26 +56,12 @@ class AttachmentService
             // compose full path of file
             const fullPath = `${path}/${guid}/${file.name}`;
 
-            await Promise.all([AzureStorage.storeBlob(fullPath, files[i].data), Attachment.query().insert(file)]);
+            await Promise.all([AzureStorage.storeBlob(fullPath, files[i].buffer), Attachment.query().insert(file)]);
 
             urls.push({ 'url': file.url + sas, 'name': file.name, 'guid': guid });
         }
 
         return urls;
-    }
-
-    static parse(body, headers)
-    {
-        // get boundary from headers
-        const boundary = multipart.getBoundary(headers['content-type']);
-
-        // convert to buffer
-        const parsedBody = Buffer.from(body);
-
-        // break down buffer
-        const arr = multipart.Parse(parsedBody, boundary);
-
-        return arr;
     }
 }
 

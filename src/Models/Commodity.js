@@ -11,7 +11,6 @@ class Commodity extends BaseModel
     {
         return 'guid';
     }
-
     static get relationMappings()
     {
         return {
@@ -27,36 +26,10 @@ class Commodity extends BaseModel
                     },
                     to: 'rcgTms.orderStops.guid'
                 }
-            },
-            vehicle: {
-                relation: BaseModel.BelongsToOneRelation,
-                modelClass: require('./Vehicle'),
-                join: {
-                    from: 'rcgTms.commodities.vehicleId',
-                    to: 'rcgTms.vehicles.id'
-                }
-            },
-            vehicleType: {
-                relation: BaseModel.BelongsToOneRelation,
-                modelClass: require('./CommodityType'),
-                join: {
-                    from: 'rcgTms.commodities.type',
-                    to: 'rcgTms.commodityTypes.id'
-                }
             }
         };
     }
 
-    static get modifiers()
-    {
-        return {
-            filterDistinct(builder)
-            {
-                // use distinctOn because we are using pg
-                builder.distinctOn('guid');
-            }
-        };
-    }
 }
 
 module.exports = Commodity;

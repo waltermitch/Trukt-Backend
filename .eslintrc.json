@@ -56,7 +56,6 @@
                 }
             }
         ],
-        "no-console": ["warn"],
         "brace-style": [
             "error",
             "allman",
@@ -125,7 +124,6 @@
                 "minItems": 4
             }
         ],
-        "curly": ["error", "multi", "consistent"],
         "block-spacing": "error",
         "no-floating-decimal": "error",
         "no-lone-blocks": "error",

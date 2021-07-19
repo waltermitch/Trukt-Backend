@@ -20,8 +20,8 @@ exports.up = function (knex)
             useNative: true, enumName: 'location_types'
         });
 
-        table.string('street_1', 64);
-        table.string('street_2', 64);
+        table.string('street1', 64);
+        table.string('street2', 64);
 
         // this will not be an enum because if we ship internationally want to include other countries states/provinces
         table.string('state', 100);
@@ -37,10 +37,14 @@ exports.up = function (knex)
             table.foreign(fieldname).references('guid').inTable('rcg_tms.contacts');
         }
         table.boolean('is_resolved').notNullable().defaultsTo(false).comment('this is set to true only and only when the address is verified and proper geo-coords are stored');
-        migration_tools.timestamps(knex, table);
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
         table.unique(['latitude', 'longitude']);
 
-    }).raw(guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
+    })
+        .raw(guid_function(table_name))
+        .raw(migration_tools.timestamps_trigger(table_name))
+        .raw(migration_tools.authors_trigger(table_name));
 };
 
 exports.down = function (knex)

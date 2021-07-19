@@ -5,7 +5,7 @@ const knexfile = require('../../knexfile');
 
 const knex = Knex(knexfile());
 let picklists;
-const localPicklistPath = './picklists.json';
+const localPicklistPath = './localdata/picklists.json';
 
 class PicklistController extends HttpRouteController
 {
@@ -85,7 +85,7 @@ class PicklistController extends HttpRouteController
         {
             const category = this.setCamelCase(row.category);
             if (!(category in picklists))
-            
+
                 picklists[category] = { options: [] };
 
             picklists[category].options.push(this.createOptionObject(row.label, row.value));

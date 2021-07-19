@@ -42,9 +42,13 @@ exports.up = function (knex)
         table.integer('sequence').comment('describes the order the stops need to be visited in');
 
         table.string('status', 24).comment('do not modify this status field, it is purely for displaying to users');
-        migration_tools.timestamps(knex, table);
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
 
-    }).raw(guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
+    })
+        .raw(guid_function(table_name))
+        .raw(migration_tools.timestamps_trigger(table_name))
+        .raw(migration_tools.authors_trigger(table_name));
 };
 
 exports.down = function (knex)

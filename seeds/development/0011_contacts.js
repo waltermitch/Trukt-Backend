@@ -1,5 +1,6 @@
 const faker = require('faker');
 
+const test_user = '00000000-0000-0000-0000-000000000000';
 const table_name = 'rcg_tms.contacts';
 exports.seed = async function (knex)
 {
@@ -22,7 +23,7 @@ exports.seed = async function (knex)
                         mobile_number: faker.phone.phoneNumber(),
                         email: faker.internet.email(),
                         terminal_guid: terminal.guid,
-                        created_by: faker.datatype.uuid()
+                        created_by_guid: test_user
                     });
 
             return knex.batchInsert(table_name, contacts, 200).then(() =>
@@ -47,6 +48,7 @@ exports.seed = async function (knex)
                         const term_conts = mapped[terminal.guid];
                         terminal.primaryContactGuid = term_conts[0].guid;
                         terminal.alternativeContactGuid = term_conts[1].guid;
+                        terminal.updatedByGuid = test_user;
                         const tid = terminal.guid;
                         delete terminal.guid;
                         proms.push(knex('rcg_tms.terminals').update(Object.assign({}, terminal)).where('guid', tid));

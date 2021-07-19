@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 /**
  *  use case:
  *      npm run update-settings
@@ -16,18 +18,18 @@ const force = process.argv.includes('-f');
 function recursiveMerge(a, b)
 {
     if (b != null && typeof b === 'object')
-    
+
         for (const prop of Object.keys(b))
-        
+
             if (typeof b[prop] === 'object')
-            
+
                 recursiveMerge(a[prop], b[prop]);
-             else if (!(prop in a) || force)
-            
+            else if (!(prop in a) || force)
+
                 if (b[prop] != undefined && b[prop] != '')
-                
+
                     a[prop] = b[prop];
-    
+
 }
 
 // decrypt the file
@@ -36,7 +38,7 @@ try
     execSync(`bash ./tools/decrypt.sh '${filename}.enc' '${filename}.temp' `);
 
 }
- catch (err)
+catch (err)
 {
     console.log(err.stderr.toString());
     console.log(err.stdout.toString());
@@ -49,7 +51,7 @@ try
     jsonSettings = JSON.parse(fs.readFileSync(`${filename}.json`, { encoding: 'utf8' }));
 
 }
- catch
+catch
 {
     // file doesnt exist, do nothing
 }
@@ -64,7 +66,7 @@ if (jsonSettings)
     recursiveMerge(jsonSettings, tempSettings);
 
 }
- else
+else
 {
     jsonSettings = JSON.parse(fs.readFileSync(`${filename}.temp`));
 }
