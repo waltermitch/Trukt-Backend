@@ -1,6 +1,6 @@
 const faker = require('faker');
-const OrderStopLink = require('../../Classes/Models/OrderStopLink');
-const Terminal = require('../../Classes/Models/Terminal');
+const OrderStopLink = require('../../src/Models/OrderStopLink');
+const Terminal = require('../../src/Models/Terminal');
 const migration_tools = require('../../tools/migration');
 const { DateTime } = require('luxon');
 
@@ -54,7 +54,7 @@ exports.seed = async function (knex)
     const vehicles = await knex.select('id', 'year', 'make', 'model').from('rcg_tms.vehicles');
     const vehicleTypes = await knex.select('id').from('rcg_tms.commodity_types');
     const terminals = await Terminal.query();
-    let clients = await knex.raw('select a.name, a.guid__c from salesforce.account a, salesforce.recordtype r where r.name = ? and a.recordtypeid = r.sfid', ['Client']);
+    let clients = await knex.raw('select a.name, a.guid__c from salesforce.account a, salesforce.recordtype r where r.name = ? and a.recordtypeid = r.sfid and a.sdguid <> null', ['Client']);
     clients = clients.rows;
     const graph = [];
 
@@ -104,6 +104,7 @@ exports.seed = async function (knex)
             '#id': faker.datatype.uuid(),
             stopType: 'pickup',
             sequence: 1,
+            notes: faker.lorem.sentence(),
             createdBy: createdBy
         };
 
@@ -114,6 +115,7 @@ exports.seed = async function (knex)
             '#id': faker.datatype.uuid(),
             stopType: 'delivery',
             sequence: 2,
+            notes: faker.lorem.sentence(),
             createdBy: createdBy
         };
 
