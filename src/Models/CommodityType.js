@@ -14,6 +14,18 @@ class CommodityType extends BaseModel
         return 'id';
     }
 
+    static get relationMappings()
+    {
+        return {
+            relation: BaseModel.HasManyRelation,
+            modeClass: require('./Commodity'),
+            join: {
+                from: 'rcgTms.commodityTypes.id',
+                to: 'rcgTms.commodities.type'
+            }
+        };
+    }
+
     static async types()
     {
         if (!commTypes)

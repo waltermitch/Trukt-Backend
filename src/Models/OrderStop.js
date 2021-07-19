@@ -38,6 +38,30 @@ class OrderStop extends BaseModel
                     from: 'rcgTms.orderStops.alternativeContactGuid',
                     to: 'rcgTms.contacts.guid'
                 }
+            },
+            commodities: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./Commodity'),
+                join: {
+                    from: 'rcgTms.orderStops.guid',
+                    through: {
+                        modelClass: require('./OrderStopLink'),
+                        from: 'rcgTms.orderStopLinks.stopGuid',
+                        to: 'rcgTms.orderStopLinks.commodityGuid'
+                    },
+                    to: 'rcgTms.commodities.guid'
+                }
+            }
+        };
+    }
+
+    static get modifiers()
+    {
+        return {
+            filterDistinct(builder)
+            {
+                // use distinctOn because we are using pg
+                builder.distinctOn('guid');
             }
         };
     }

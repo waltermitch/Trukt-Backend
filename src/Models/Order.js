@@ -17,6 +17,14 @@ class Order extends BaseModel
     {
         const SFAccount = require('./SFAccount');
         return {
+            client: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./SFAccount'),
+                join: {
+                    from: 'rcgTms.orders.clientGuid',
+                    to: 'salesforce.accounts.guid'
+                }
+            },
             jobs: {
                 relation: BaseModel.HasManyRelation,
                 modelClass: require('./OrderJob'),
@@ -33,7 +41,7 @@ class Order extends BaseModel
                     through: {
                         modelClass: require('./OrderStopLink'),
                         from: 'rcgTms.orderStopLinks.orderGuid',
-                        extra: ['stops'],
+                        extra: ['lotNumber', 'stops'],
                         to: 'rcgTms.orderStopLinks.commodityGuid'
                     },
                     to: 'rcgTms.commodities.guid'
@@ -76,7 +84,7 @@ class Order extends BaseModel
                 }
             }
 
-            // invoices: {
+            // invoiceBills: {
             //     relation: BaseModel.HasManyRelation,
             //     modelClass: InvoiceBill,
             //     join: {

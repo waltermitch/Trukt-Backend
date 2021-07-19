@@ -85,7 +85,7 @@ class PicklistController extends HttpRouteController
         {
             const category = this.setCamelCase(row.category);
             if (!(category in picklists))
-            
+
                 picklists[category] = { options: [] };
 
             picklists[category].options.push(this.createOptionObject(row.label, row.value));

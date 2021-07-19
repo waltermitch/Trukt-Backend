@@ -118,7 +118,6 @@
                     "requiresAttention",
                     "salesAccountManager",
                     "salutation",
-                    "sdGuid",
                     "searchAddress",
                     "shippingGeocodeAccuracy",
                     "sic",
@@ -151,6 +150,7 @@
             "external": {
                 "outa": [],
                 "into": [
+                    "sdGuid",
                     "sfId",
                     "isDeleted",
                     "id",

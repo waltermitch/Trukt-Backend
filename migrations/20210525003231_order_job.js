@@ -37,7 +37,7 @@ exports.up = function (knex)
         table.decimal('actual_expense', 15, 2).unsigned().comment('This is the actual amoutn of money that was spent on this order');
         table.decimal('actual_income', 15, 2).comment('This the the actual income / profit made on the order');
 
-        table.datetime('date_started').comment('The date that the job was started');
+        table.datetime('date_started').comment('The date that the job was started i.e when the job was dispatched');
         table.datetime('date_completed').comment('The date that the job was completed and all commodities delivered');
         migration_tools.timestamps(table);
         migration_tools.authors(table);
