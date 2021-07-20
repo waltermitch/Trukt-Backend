@@ -6,12 +6,6 @@
 const yargs = require('yargs/yargs');
 const fs = require('fs');
 const Knex = require('knex');
-const { exit } = require('yargs');
-const knex = Knex(require('../knexfile')());
-const input = require('readline').createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
 
 console.log(colorme('yellow'), '\nCURRENT NODE_ENV: ' + process.env.NODE_ENV + '\n');
 yargs(process.argv.slice(2))
@@ -24,12 +18,7 @@ yargs(process.argv.slice(2))
     })
     .command({
         command: 'refresh [filenames]',
-        aliases: [
-            'r',
-            'ref',
-            'rebuild',
-            'updown'
-        ],
+        aliases: ['r', 'rebuild', 'updown'],
         desc: 'runs migrate down then up on list of csv filenames inside of migration folder without the timestamps',
         builder: (yargs) => { yargs.default('all', false); yargs.default('but', ''); yargs.default('filenames', ''); },
         handler: refreshHandler
@@ -66,14 +55,7 @@ yargs(process.argv.slice(2))
     })
     .command({
         command: 'teardown',
-        aliases: [
-            'td',
-            'delete',
-            'del',
-            'truncate',
-            'drop',
-            'byebye'
-        ],
+        aliases: ['td', 'delete', 'del'],
         desc: 'deletes the rcg_tms schema in the database',
         handler: teardownHandler
     })
@@ -90,10 +72,20 @@ yargs(process.argv.slice(2))
         type: 'string'
     })
     .demandCommand(1, 'a command is required')
-    .coerce('filenames', (arg) => arg.split(',').filter(it => it))
-    .coerce('but', (arg) => arg.split(',').filter(it => it))
+    .coerce('filenames', cleanArg)
+    .coerce('but', cleanArg)
+    .strict(true)
     .help()
     .parse();
+
+function cleanArg(arg)
+{
+    if (arg)
+    {
+        return arg.split(',').filter(it => it);
+    }
+    return [];
+}
 
 function cleanName(filename)
 {
@@ -117,6 +109,7 @@ function colorme(color)
 
 async function statusHandler(argv)
 {
+    const knex = Knex(require('../knexfile')());
     const cyan = colorme('cyan');
     const res = await knex.migrate.list();
     if (res[0].length > 0)
@@ -142,8 +135,7 @@ async function statusHandler(argv)
     {
         console.log(colorme('red'), 'No pending Migration files');
     }
-
-    exit();
+    knex.destroy();
 }
 
 async function installHandler(argv)
@@ -153,11 +145,11 @@ async function installHandler(argv)
     console.log('\talias mig=\'node ./tools/migrator.js\'\n\n');
     console.log('2) then run:\n');
     console.log('\tsource ~/.bashrc\n\n');
-    exit();
 }
 
 async function refreshMigrations(filenames)
 {
+    const knex = Knex(require('../knexfile')());
     await knex.transaction(async function (trx)
     {
         const migrateList = await trx.migrate.list();
@@ -193,6 +185,7 @@ async function refreshMigrations(filenames)
         // demands that a promise is returned
         return trx.raw('SELECT 1');
     });
+    knex.destroy();
 }
 
 function mapFilenames()
@@ -215,7 +208,7 @@ function prepareFilenames(argv)
     if (!argv.filenames && !argv.all)
     {
         console.log('did nothing');
-        exit();
+
     }
 
     const mapped = mapFilenames();
@@ -239,6 +232,7 @@ function prepareFilenames(argv)
 
 async function refreshHandler(argv)
 {
+    const knex = Knex(require('../knexfile')());
     if (argv.all && argv.but.length == 0 && argv.filenames.length == 0)
     {
         await knex.transaction(async (trx) =>
@@ -267,11 +261,12 @@ async function refreshHandler(argv)
     {
         console.log('did nothing');
     }
-    exit();
+    knex.destroy();
 }
 
 async function upHandler(argv)
 {
+    const knex = Knex(require('../knexfile')());
     const filenames = prepareFilenames(argv);
     filenames.sort();
     if (filenames.length > 0)
@@ -308,11 +303,12 @@ async function upHandler(argv)
 
         console.log('did nothing');
 
-    exit();
+    knex.destroy();
 }
 
 async function downHandler(argv)
 {
+    const knex = Knex(require('../knexfile')());
     const filenames = prepareFilenames(argv);
     filenames.sort().reverse();
     if (filenames.length > 0)
@@ -349,11 +345,12 @@ async function downHandler(argv)
 
         console.log('did nothing');
 
-    exit();
+    knex.destroy();
 }
 
 async function initHandler(argv)
 {
+    const knex = Knex(require('../knexfile')());
     let user;
     if (knex.client.config.connection instanceof Function)
     {
@@ -377,7 +374,7 @@ async function initHandler(argv)
         console.log(err);
     }
 
-    exit();
+    knex.destroy();
 }
 
 async function teardownHandler(argv)
@@ -385,11 +382,15 @@ async function teardownHandler(argv)
     if (process.env.NODE_ENV.includes('prod'))
     {
         console.log(colorme('red'), 'No you cant do that sorry =(');
-        exit();
+        return;
     }
 
     try
     {
+        const input = require('readline').createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
         input.question('Are you sure you want to drop the most important schema? ',
             async function (result)
             {
@@ -399,31 +400,30 @@ async function teardownHandler(argv)
                     {
                         if (result === 'yes')
                         {
+                            const knex = Knex(require('../knexfile')());
                             await knex.raw('DROP SCHEMA IF EXISTS rcg_tms CASCADE');
+                            knex.destroy();
                             console.log(colorme('red'), 'dropped rcg_tms schema');
                             console.log('What have you done?!');
                         }
                         else
                         {
-                            console.log('Yea probably shouldn\'t do that.');
+                            console.log(result + ' ??? I don\'t know what that means!');
 
                         }
                         input.close();
-                        exit();
                     });
                 }
                 else
                 {
                     console.log('That is the smart choice.');
                     input.close();
-                    exit();
                 }
             });
     }
     catch (err)
     {
         console.log(err);
-        exit();
     }
 }
 
@@ -445,7 +445,7 @@ async function seedHandler(argv)
 
             console.log(colorme('cyan'), `- ${filename}`);
 
-        exit();
+        return;
     }
 
     // filter out the clean names that will be used
@@ -456,6 +456,7 @@ async function seedHandler(argv)
 
     if (workfiles.length > 0)
     {
+        const knex = Knex(require('../knexfile')());
         console.log(colorme('green'), 'seeding database...');
         await knex.transaction(async (trx) =>
         {
@@ -481,11 +482,10 @@ async function seedHandler(argv)
             return trx.raw('SELECT 1');
 
         });
-
+        knex.destroy();
     }
     else
     {
         console.log('did nothing');
     }
-    exit();
 }
