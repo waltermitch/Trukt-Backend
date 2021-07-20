@@ -1,5 +1,4 @@
 const BaseModel = require('./BaseModel');
-const Order = require('./Order');
 
 class OrderJob extends BaseModel
 {
@@ -15,6 +14,8 @@ class OrderJob extends BaseModel
 
     static get relationMappings()
     {
+        const OrderStopLink = require('./OrderStopLink');
+        const Order = require('./Order');
         return {
             order: {
                 relation: BaseModel.BelongsToOneRelation,
@@ -30,7 +31,7 @@ class OrderJob extends BaseModel
                 join: {
                     from: 'rcgTms.orderJobs.guid',
                     through: {
-                        modelClass: require('./OrderStopLink'),
+                        modelClass: OrderStopLink,
                         from: 'rcgTms.orderStopLinks.jobGuid',
                         to: 'rcgTms.orderStopLinks.stopGuid'
                     },
@@ -43,15 +44,14 @@ class OrderJob extends BaseModel
                 join: {
                     from: 'rcgTms.orderJobs.guid',
                     through: {
-                        modelClass: require('./OrderStopLink'),
+                        modelClass: OrderStopLink,
                         from: 'rcgTms.orderStopLinks.jobGuid',
                         to: 'rcgTms.orderStopLinks.commodityGuid',
-                        extra: ['lotNumber']
+                        extra: ['lotNumber', 'stopGuid']
                     },
                     to: 'rcgTms.commodities.guid'
                 }
             },
-
             loadboardPosts: {
                 relation: BaseModel.HasManyRelation,
                 modelClass: require('./LoadboardPost'),
