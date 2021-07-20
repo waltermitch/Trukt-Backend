@@ -55,6 +55,17 @@ class Commodity extends BaseModel
         return relationships;
     }
 
+    static get modifiers()
+    {
+        return {
+            distinct(query)
+            {
+                // use distinctOn because we are using pg
+                query.distinctOn('guid');
+            }
+        };
+    }
+
     isVehicle()
     {
         return this.commType?.category === 'vehicle' || this.vehicle != undefined || this.vehicleId != undefined;
