@@ -1,5 +1,6 @@
 const BaseModel = require('./BaseModel');
 const Contact = require('./Contact');
+const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 
 class Terminal extends BaseModel
 {
@@ -45,6 +46,19 @@ class Terminal extends BaseModel
             }
         };
     }
+
+    hasId()
+    {
+        return 'guid' in this;
+    }
+
+    findIdValue()
+    {
+        return { field: 'guid', id: this.id };
+    }
+
+    static uniqueColumns = ['latitude', 'longitude']
 }
 
+Object.assign(Terminal.prototype, FindOrCreateMixin);
 module.exports = Terminal;
