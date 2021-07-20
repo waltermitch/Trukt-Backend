@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 
 class Vehicle extends BaseModel
 {
@@ -25,6 +26,25 @@ class Vehicle extends BaseModel
             }
         };
     }
+
+    hasId()
+    {
+        return 'id' in this;
+    }
+
+    findIdValue()
+    {
+        return { field: 'id', id: this.id };
+    }
+
+    static uniqueColumns =
+        [
+            'year',
+            'make',
+            'model',
+            'trim'
+        ]
 }
 
+Object.assign(Vehicle.prototype, FindOrCreateMixin);
 module.exports = Vehicle;

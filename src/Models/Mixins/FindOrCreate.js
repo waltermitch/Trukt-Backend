@@ -54,7 +54,7 @@ const mixin =
                     return obj;
                 }, {});
 
-                const idCols = model.constructor.idColumns;
+                const idCols = model.constructor?.idColumns || [model.constructor?.idColumn];
                 for (const field of idCols)
 
                     delete record[field];
