@@ -9,7 +9,6 @@ exports.up = function (knex)
 
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
-        table.string('name').notNullable();
         table.uuid('guid').unique().notNullable();
 
         table.integer('type_id').unsigned();
