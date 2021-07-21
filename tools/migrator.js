@@ -8,6 +8,7 @@ const fs = require('fs');
 const Knex = require('knex');
 
 console.log(colorme('yellow'), '\nCURRENT NODE_ENV: ' + process.env.NODE_ENV + '\n');
+
 yargs(process.argv.slice(2))
     .scriptName('mig')
     .command({
@@ -23,23 +24,25 @@ yargs(process.argv.slice(2))
         builder: (yargs) => { yargs.default('all', false); yargs.default('but', ''); yargs.default('filenames', ''); },
         handler: refreshHandler
     })
-    .command(
-        {
-            command: 'up [filenames]',
-            aliases: ['u'],
-            desc: 'runs migrate up on list of csv filenames inside of the migration folder without the timestamps',
-            builder: (yargs) => { yargs.default('all', false); yargs.default('but', ''); yargs.default('filenames', ''); },
-            handler: upHandler
-        }
-    ).command(
-        {
-            command: 'down [filenames]',
-            aliases: ['d'],
-            desc: 'runs migrate down on list of csv filenames inside of the migration folder without the timestamps',
-            builder: (yargs) => { yargs.default('all', false); yargs.default('but', ''); yargs.default('filenames', ''); },
-            handler: downHandler
-        }
-    )
+    .command({
+        command: 'up [filenames]',
+        aliases: ['u'],
+        desc: 'runs migrate up on list of csv filenames inside of the migration folder without the timestamps',
+        builder: (yargs) => { yargs.default('all', false); yargs.default('but', ''); yargs.default('filenames', ''); },
+        handler: upHandler
+    }).command({
+        command: 'down [filenames]',
+        aliases: ['d'],
+        desc: 'runs migrate down on list of csv filenames inside of the migration folder without the timestamps',
+        builder: (yargs) => { yargs.default('all', false); yargs.default('but', ''); yargs.default('filenames', ''); },
+        handler: downHandler
+    })
+    .command({
+        command: 'clean [filenames]',
+        aliases: ['c'],
+        desc: 'cleans out the migration records in the database',
+        handler: cleanHandler
+    })
     .command({
         command: 'seed [filenames]',
         aliases: ['s'],
@@ -66,10 +69,19 @@ yargs(process.argv.slice(2))
         handler: installHandler
     })
     .option('all', {
-        type: 'boolean'
+        type: 'boolean',
+        alias: 'a',
+        describe: 'use all the files'
     })
     .option('but', {
-        type: 'string'
+        type: 'string',
+        alias: 'b',
+        describe: 'dont use the listed files'
+    })
+    .option('force', {
+        type: 'boolean',
+        alias: 'f',
+        describe: 'dont stop when something fails'
     })
     .demandCommand(1, 'a command is required')
     .coerce('filenames', cleanArg)
@@ -111,25 +123,30 @@ async function statusHandler(argv)
 {
     const knex = Knex(require('../knexfile')());
     const cyan = colorme('cyan');
-    const res = await knex.migrate.list();
-    if (res[0].length > 0)
+    const green = colorme('green');
+    const red = colorme('red');
+    const yellow = colorme('yellow');
+    const [completed, pending] = await knex.migrate.list();
+    if (completed.length > 0)
     {
-        console.log(colorme('green'), `Found < ${res[0].length} > completed Migration file(s)`);
-        for (const filename of res[0])
-
-            console.log(cyan, `- ${cleanName(filename)}`);
+        console.log(green, `Found < ${completed.length} > completed Migration file(s)`);
+        for (const filename of completed)
+        {
+            console.log(cyan, listStyle(cleanName(filename)));
+        }
     }
     else
     {
-        console.log(colorme('red'), 'No completed Migration files');
+        console.log(red, 'No completed Migration files');
     }
-    if (res[1].length > 0)
+
+    if (pending.length > 0)
     {
-        console.log(colorme('yellow'), `Found < ${res[1].length} > pending Migration file(s)`);
-
-        for (const resobj of res[1])
-
-            console.log(cyan, `- ${cleanName(resobj.file)}`);
+        console.log(yellow, `Found < ${pending.length} > pending Migration file(s)`);
+        for (const resobj of pending)
+        {
+            console.log(cyan, listStyle(cleanName(resobj.file)));
+        }
     }
     else
     {
@@ -140,7 +157,7 @@ async function statusHandler(argv)
 
 async function installHandler(argv)
 {
-    console.log('how to install mig:');
+    console.log('how to install mig (on bash):');
     console.log('1) add this alias to your ~/.bashrc file\n');
     console.log('\talias mig=\'node ./tools/migrator.js\'\n\n');
     console.log('2) then run:\n');
@@ -166,13 +183,13 @@ async function refreshMigrations(filenames)
 
                 if (filename in completed)
                 {
-                    console.log(`migration: down ${cleanName(filename)}`);
+                    console.log(listStyle(`migration: down ${cleanName(filename)}`));
                     await trx.migrate.down({ name: filename });
                 }
 
             for (const filename of filenames.reverse())
             {
-                console.log(`migration: up   ${cleanName(filename)}`);
+                console.log(listStyle(`migration: up   ${cleanName(filename)}`));
                 await trx.migrate.up({ name: filename });
             }
         }
@@ -182,8 +199,6 @@ async function refreshMigrations(filenames)
             console.log(err);
         }
 
-        // demands that a promise is returned
-        return trx.raw('SELECT 1');
     });
     knex.destroy();
 }
@@ -207,7 +222,7 @@ function prepareFilenames(argv)
 {
     if (!argv.filenames && !argv.all)
     {
-        console.log('did nothing');
+        didNothing();
 
     }
 
@@ -239,9 +254,9 @@ async function refreshHandler(argv)
         {
             try
             {
-                console.log('migration: rollback all');
+                console.log(listStyle('migration: rollback all'));
                 await knex.migrate.rollback(true);
-                console.log('migration: latest');
+                console.log(listStyle('migration: latest'));
                 await knex.migrate.latest();
             }
             catch (err)
@@ -259,18 +274,19 @@ async function refreshHandler(argv)
     }
     else
     {
-        console.log('did nothing');
+        didNothing();
     }
     knex.destroy();
 }
 
 async function upHandler(argv)
 {
+    const yellow = colorme('yellow');
     const knex = Knex(require('../knexfile')());
     const filenames = prepareFilenames(argv);
     filenames.sort();
     if (filenames.length > 0)
-
+    {
         await knex.transaction(async function (trx)
         {
             const status = await trx.migrate.list();
@@ -280,14 +296,13 @@ async function upHandler(argv)
 
                     if (status[0].includes(filename))
                     {
-                        console.log(colorme('yellow'), 'already up: ' + cleanName(filename));
+                        console.log(yellow, listStyle('already up: ' + cleanName(filename)));
                     }
                     else
                     {
-                        console.log('migration: up ' + cleanName(filename));
+                        console.log(listStyle('migration: up ' + cleanName(filename)));
                         await trx.migrate.up({ name: filename });
                     }
-
             }
             catch (err)
             {
@@ -295,41 +310,41 @@ async function upHandler(argv)
                 console.log(err);
             }
 
-            // demands that a promise is returned
-            return trx.raw('SELECT 1');
         });
-
+    }
     else
-
-        console.log('did nothing');
+    {
+        didNothing();
+    }
 
     knex.destroy();
 }
 
 async function downHandler(argv)
 {
+    const yellow = colorme('yellow');
     const knex = Knex(require('../knexfile')());
     const filenames = prepareFilenames(argv);
     filenames.sort().reverse();
     if (filenames.length > 0)
-
+    {
         await knex.transaction(async function (trx)
         {
             const status = await trx.migrate.list();
             try
             {
                 for (const filename of filenames)
-
+                {
                     if (status[0].includes(filename))
                     {
-                        console.log('migration: down ' + cleanName(filename));
+                        console.log(listStyle('migration: down ' + cleanName(filename)));
                         await trx.migrate.down({ name: filename });
                     }
                     else
                     {
-                        console.log(colorme('yellow'), 'already down: ' + cleanName(filename));
+                        console.log(yellow, listStyle('already down: ' + cleanName(filename)));
                     }
-
+                }
             }
             catch (err)
             {
@@ -337,19 +352,19 @@ async function downHandler(argv)
                 console.log(err);
             }
 
-            // demands that a promise is returned
-            return trx.raw('SELECT 1');
         });
-
+    }
     else
-
-        console.log('did nothing');
+    {
+        didNothing();
+    }
 
     knex.destroy();
 }
 
 async function initHandler(argv)
 {
+    const green = colorme('green');
     const knex = Knex(require('../knexfile')());
     let user;
     if (knex.client.config.connection instanceof Function)
@@ -364,10 +379,8 @@ async function initHandler(argv)
 
     try
     {
-        await knex.raw(`
-            CREATE SCHEMA IF NOT EXISTS rcg_tms AUTHORIZATION ${user};
-        `);
-        console.log('successfully initalized the database');
+        await knex.raw(`CREATE SCHEMA IF NOT EXISTS rcg_tms AUTHORIZATION ${user};`);
+        console.log(green, listStyle('added rcg_tms schema to database'));
     }
     catch (err)
     {
@@ -379,9 +392,10 @@ async function initHandler(argv)
 
 async function teardownHandler(argv)
 {
+    const red = colorme('red');
     if (process.env.NODE_ENV.includes('prod'))
     {
-        console.log(colorme('red'), 'No you cant do that sorry =(');
+        console.log(red, 'No you cant do that sorry =(');
         return;
     }
 
@@ -403,7 +417,7 @@ async function teardownHandler(argv)
                             const knex = Knex(require('../knexfile')());
                             await knex.raw('DROP SCHEMA IF EXISTS rcg_tms CASCADE');
                             knex.destroy();
-                            console.log(colorme('red'), 'dropped rcg_tms schema');
+                            console.log(red, listStyle('dropped rcg_tms schema'));
                             console.log('What have you done?!');
                         }
                         else
@@ -416,10 +430,11 @@ async function teardownHandler(argv)
                 }
                 else
                 {
-                    console.log('That is the smart choice.');
+                    console.log('No? That is the smart choice.');
                     input.close();
                 }
-            });
+            }
+        );
     }
     catch (err)
     {
@@ -429,6 +444,10 @@ async function teardownHandler(argv)
 
 async function seedHandler(argv)
 {
+    const yellow = colorme('yellow');
+    const cyan = colorme('cyan');
+    const green = colorme('green');
+
     // first get all the filenames and map them to the clean names
     const mapped = fs.readdirSync('./seeds/development')
         .reduce((m, c) =>
@@ -440,11 +459,11 @@ async function seedHandler(argv)
     let workfiles = argv.filenames.length == 0 ? Object.keys(mapped) : argv.filenames;
     if (!argv.all && argv.filenames.length == 0)
     {
-        console.log(colorme('yellow'), `Found < ${workfiles.length} > seed files`);
+        console.log(yellow, `Found < ${workfiles.length} > seed files`);
         for (const filename of workfiles)
-
-            console.log(colorme('cyan'), `- ${filename}`);
-
+        {
+            console.log(cyan, listStyle(filename));
+        }
         return;
     }
 
@@ -457,20 +476,20 @@ async function seedHandler(argv)
     if (workfiles.length > 0)
     {
         const knex = Knex(require('../knexfile')());
-        console.log(colorme('green'), 'seeding database...');
+        console.log(green, 'seeding database...');
         await knex.transaction(async (trx) =>
         {
             try
             {
                 for (const filename of workfiles)
                 {
-                    console.log('seed: ' + cleanName(filename));
+                    console.log(listStyle('seed: ' + cleanName(filename)));
                     await trx.seed.run({
                         directory: './seeds/development',
                         specific: filename
                     });
                 }
-                console.log(colorme('green'), '...done!');
+                console.log(green, '...done!');
             }
             catch (err)
             {
@@ -478,14 +497,72 @@ async function seedHandler(argv)
                 console.log(err);
             }
 
-            // the gods demand a sacrifice
-            return trx.raw('SELECT 1');
-
         });
-        knex.destroy();
+        await knex.destroy();
     }
     else
     {
-        console.log('did nothing');
+        didNothing();
     }
+}
+
+async function cleanHandler(argv)
+{
+    const red = colorme('red');
+    const knex = Knex(require('../knexfile')());
+    await knex.transaction(async (trx) =>
+    {
+        if (argv.filenames.length > 0)
+        {
+            const migrations = await trx('knex_migrations');
+            const mignames = migrations.reduce((a, c) =>
+            {
+                const cname = cleanName(c.name);
+                a[cname] = c;
+                return a;
+            }, {});
+
+            const dumpids = [];
+            const dumpnames = [];
+            for (const filename of argv.filenames)
+            {
+                if (filename in mignames)
+                {
+                    const mig = mignames[filename];
+                    dumpnames.push(filename);
+                    dumpids.push(mig.id);
+                }
+
+            }
+            if (dumpids.length > 0)
+            {
+                const results = await trx('knex_migrations').whereIn('id', dumpids).delete();
+                console.log(results);
+                console.log(red, 'Deleted records from rcg_tms.knex_migrations');
+                for (const name of dumpnames)
+                {
+                    console.log(red, listStyle('removed ' + name));
+                }
+            }
+            else
+            {
+                didNothing();
+            }
+        }
+        else
+        {
+            didNothing();
+        }
+    });
+    knex.destroy();
+}
+
+function didNothing()
+{
+    console.log(listStyle('did nothing'));
+}
+
+function listStyle(message)
+{
+    return `- ${message} `;
 }
