@@ -41,7 +41,7 @@ class Order extends BaseModel
                     through: {
                         modelClass: require('./OrderStopLink'),
                         from: 'rcgTms.orderStopLinks.orderGuid',
-                        extra: ['lotNumber', 'stops'],
+                        extra: ['lotNumber'],
                         to: 'rcgTms.orderStopLinks.commodityGuid'
                     },
                     to: 'rcgTms.commodities.guid'
