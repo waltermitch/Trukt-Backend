@@ -75,6 +75,16 @@ class Commodity extends BaseModel
         return this.commType?.category === 'freight' || this.vehicle == undefined && this.vehicleId == undefined;
     }
 
+    setType(commType)
+    {
+        if (!commType)
+        {
+            throw new Error('invalid commodity type provided');
+        }
+        this.commType = commType;
+        this.typeId = commType.id;
+    }
+
     $parseJson(json)
     {
         json = super.$parseJson(json);
