@@ -72,7 +72,7 @@ class Order extends BaseModel
                 modelClass: SFAccount,
                 join: {
                     from: 'rcgTms.orders.cosigneeGuid',
-                    to: 'salesforce.account.guid'
+                    to: 'salesforce.accounts.guid'
                 }
             },
             invoices: {

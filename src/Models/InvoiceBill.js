@@ -19,6 +19,8 @@ class InvoiceBill extends BaseModel
     static get relationMappings()
     {
         const SFAccount = require('./SFAccount');
+        const Order = require('./Order');
+        const OrderJob = require('./OrderJob');
         return {
             lines: {
                 relation: BaseModel.HasManyRelation,
@@ -42,6 +44,30 @@ class InvoiceBill extends BaseModel
                 join: {
                     from: 'rcgTms.invoiceBills.externalPartyGuid',
                     to: 'salesforce.accounts.guid'
+                }
+            },
+            order: {
+                relation: BaseModel.HasOneThroughRelation,
+                modelClass: Order,
+                join: {
+                    from: 'rcgTms.invoiceBills.guid',
+                    through: {
+                        from: 'rcgTms.invoices.invoiceGuid',
+                        to: 'rcgTms.invoices.orderGuid'
+                    },
+                    to: 'rcgTms.orders.guid'
+                }
+            },
+            job: {
+                relation: BaseModel.HasOneThroughRelation,
+                modelClass: OrderJob,
+                join: {
+                    from: 'rcgTms.invoiceBills.guid',
+                    through: {
+                        from: 'rcgTms.bills.billGuid',
+                        to: 'rcgTms.bills.jobGuid'
+                    },
+                    to: 'rcgTms.orderJobs.guid'
                 }
             }
         };
