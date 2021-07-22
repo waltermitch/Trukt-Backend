@@ -19,7 +19,7 @@ class Order extends BaseModel
         return {
             client: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: require('./SFAccount'),
+                modelClass: SFAccount,
                 join: {
                     from: 'rcgTms.orders.clientGuid',
                     to: 'salesforce.accounts.guid'
@@ -41,7 +41,7 @@ class Order extends BaseModel
                     through: {
                         modelClass: require('./OrderStopLink'),
                         from: 'rcgTms.orderStopLinks.orderGuid',
-                        extra: ['lotNumber', 'stops'],
+                        extra: ['lotNumber'],
                         to: 'rcgTms.orderStopLinks.commodityGuid'
                     },
                     to: 'rcgTms.commodities.guid'
@@ -67,14 +67,6 @@ class Order extends BaseModel
                     to: 'rcgTms.orderStopLinks.orderGuid'
                 }
             },
-            client: {
-                relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
-                join: {
-                    from: 'rcgTms.orders.clientGuid',
-                    to: 'salesforce.account.guid'
-                }
-            },
             cosignee: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: SFAccount,
@@ -82,16 +74,19 @@ class Order extends BaseModel
                     from: 'rcgTms.orders.cosigneeGuid',
                     to: 'salesforce.account.guid'
                 }
+            },
+            invoices: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./InvoiceBill'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    through: {
+                        from: 'rcgTms.invoices.orderGuid',
+                        to: 'rcgTms.invoices.invoiceGuid'
+                    },
+                    to: 'rcgTms.invoiceBills.order'
+                }
             }
-
-            // invoiceBills: {
-            //     relation: BaseModel.HasManyRelation,
-            //     modelClass: InvoiceBill,
-            //     join: {
-            //         from: 'rcgTms.orders.guid',
-            //         to: 'rcgTms.invoiceBills.order'
-            //     }
-            // }
         };
     }
 }
