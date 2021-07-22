@@ -85,6 +85,16 @@ class Commodity extends BaseModel
         this.typeId = commType.id;
     }
 
+    setVehicle(vehicle)
+    {
+        if (!vehicle)
+        {
+            throw new Error('invalid commodity vehicle provided');
+        }
+        this.vehicle = vehicle;
+        this.vehicleId = vehicle.id;
+    }
+
     $parseJson(json)
     {
         json = super.$parseJson(json);
