@@ -1,197 +1,146 @@
-const faker = require('faker');
+const Order = require('../../src/Models/Order');
+const OrderJob = require('../../src/Models/OrderJob');
+const OrderJobType = require('../../src/Models/OrderJobType');
+const OrderStop = require('../../src/Models/OrderStop');
 const OrderStopLink = require('../../src/Models/OrderStopLink');
 const Terminal = require('../../src/Models/Terminal');
-const migration_tools = require('../../tools/migration');
-const { DateTime } = require('luxon');
+const Vehicle = require('../../src/Models/Vehicle');
+const Commodity = require('../../src/Models/Commodity');
 const SFAccount = require('../../src/Models/SFAccount');
+const migration_tools = require('../../tools/migration');
+const faker = require('faker');
+const Enums = require('../../src/Models/Enums');
+const { DateTime } = require('luxon');
 
-const capacity_types = ['full truck load', 'partial truck load'];
-const ternary_options = migration_tools.ternary_options;
-const date_types = [
-    'estimated',
-    'exactly',
-    'no later than',
-    'no earlier than'
-];
-const now = DateTime.now();
-const current_year = now.year;
-
-const daysInMonth = (month, year) =>
+function stopsDates()
 {
-    return new Date(year, month, 0).getDate();
-};
-
-const getRandomNumber = (max) =>
-{
-    return Math.floor(Math.random() * max);
-};
-
-const getRandomArbitrary = (min, max) =>
-{
-    return Math.floor(Math.random() * (max - min) + min);
-};
-
-const setDateInfo = (pickup, delivery) =>
-{
-    const randMonth = getRandomArbitrary(now.month, 13);
-    const randDay = getRandomArbitrary(now.day, (daysInMonth(randMonth, current_year) + 1));
-    const randomHour = getRandomNumber(24);
-    const randomMinute = getRandomNumber(60);
-
-    pickup.customer_date_type = faker.random.arrayElement(date_types);
-    const luxonDate = DateTime.local(current_year, randMonth, randDay, randomHour, randomMinute);
-    pickup.date_scheduled_start_customer = luxonDate.toString();
-    if (pickup.customer_date_type === 'estimated')
-        pickup.date_scheduled_end_customer = luxonDate.plus({ days: 4, hours: 3 }).toString();
-
-    delivery.customer_date_type = faker.random.arrayElement(date_types);
-    delivery.date_scheduled_start_customer = luxonDate.plus({ days: getRandomNumber(14) }).toString();
-    if (delivery.customer_date_type === 'estimated')
-        delivery.date_scheduled_end_customer = luxonDate.plus({ days: 4, hours: 3 }).toString();
-};
+    const now = DateTime.now();
+    const dates = {
+        pickup: {},
+        delivery: {}
+    };
+    dates.pickup.start = DateTime.local(now.year, now.month + 1, faker.datatype.number(27) + 1, faker.datatype.number(23), faker.datatype.number(59));
+    dates.delivery.start = dates.pickup.start.plus({ days: faker.datatype.number(7) + 14 });
+    dates.pickup.end = dates.pickup.start.plus({ days: faker.datatype.number(3) + 2 });
+    dates.delivery.end = dates.delivery.start.plus({ days: faker.datatype.number(3) + 2 });
+    return dates;
+}
 
 exports.seed = async function (knex)
 {
-    const vehicles = await knex.select('id', 'year', 'make', 'model').from('rcg_tms.vehicles');
-    const vehicleTypes = await knex.select('id').from('rcg_tms.commodity_types');
-    const terminals = await Terminal.query();
-    const clients = await SFAccount.query().modify('byType', 'client').limit(1);
-
-    const graph = [];
-
-    for (let c = 0; c < 1; c++)
+    return knex.transaction(async (trx) =>
     {
-        const client = clients[c];
         const createdBy = '00000000-0000-0000-0000-000000000000';
+        const capacityTypes = await new Enums(trx).select('load_capacity_types');
+        const dateTypes = await new Enums(trx).select('date_schedule_types');
+        const ternaryOptions = migration_tools.ternary_options;
+        const vehicles = await Vehicle.query(trx).limit(10);
+        const vehicleTypes = await trx.select('id').from('rcg_tms.commodity_types');
+        const transportJobType = await OrderJobType.query(trx).findOne('category', 'transport');
+        const terminals = await Terminal.query(trx);
+        const clients = await SFAccount.query(trx).modify('byType', 'client').limit(1);
 
-        const job = {
-            '#id': faker.datatype.uuid(),
-            isDummy: Math.floor(Math.random() * 2) == 0,
-            isTransport: true,
-            estimatedExpense: 12,
-            estimatedRevenue: 13,
-            quotedRevenue: 13,
-            estimatedIncome: 13,
-            instructions: faker.lorem.words(60),
-            createdByGuid: createdBy,
-            loadType: faker.random.arrayElement(capacity_types),
-            typeId: 1
-        };
+        const carrierPay = 1000;
+        const tariff = 1200;
 
-        let neworder = {
-            clientGuid: '9178da54-3646-467a-a701-be3e1908d1ec',
+        const client = clients[0];
+        const order = await Order.query(trx).insertAndFetch({
+            status: 'new',
+            clientGuid: client.guid,
+            isDummy: false,
             instructions: faker.lorem.words(60),
-            estimatedExpense: 12,
-            estimatedRevenue: 13,
-            quotedRevenue: 13,
-            estimatedIncome: 13,
-            referenceNumber: faker.lorem.word(),
+            estimatedExpense: carrierPay,
+            estimatedRevenue: tariff,
+            referenceNumber: faker.lorem.word().toUpperCase().substring(0, 5).padEnd(5, '0') + (faker.datatype.number(9999) + 1000),
             inspectionType: 'advanced',
             ownerGuid: createdBy,
+            createdByGuid: createdBy
+        });
+
+        const job = await OrderJob.query(trx).insertAndFetch({
             status: 'new',
-            distance: 12,
+            orderGuid: order.guid,
             isDummy: false,
-            createdByGuid: createdBy,
-            '#id': faker.datatype.uuid(),
-            jobs: [job]
-        };
-
-        const pickupTerm = faker.random.arrayElement(terminals);
-        const deliveryTerm = faker.random.arrayElement(terminals);
-        let pickup = {
-            terminalGuid: pickupTerm.guid,
-            primaryContactGuid: pickupTerm.primaryContactGuid,
-            alternativeContactGuid: pickupTerm.alternativeContactGuid,
-            '#id': faker.datatype.uuid(),
-            stopType: 'pickup',
-            sequence: 1,
-            notes: faker.lorem.sentence(),
+            isTransport: true,
+            instructions: faker.lorem.words(60),
+            estimatedExpense: carrierPay,
+            estimatedRevenue: tariff,
+            loadboardInstructions: faker.lorem.words(5),
+            loadType: faker.random.arrayElement(capacityTypes),
+            typeId: transportJobType.id,
             createdByGuid: createdBy
-        };
+        });
 
-        let delivery = {
-            terminalGuid: deliveryTerm.guid,
-            primaryContactGuid: deliveryTerm.primaryContactGuid,
-            alternativeContactGuid: deliveryTerm.alternativeContactGuid,
-            '#id': faker.datatype.uuid(),
-            stopType: 'delivery',
-            sequence: 2,
-            notes: faker.lorem.sentence(),
-            createdByGuid: createdBy
-        };
+        const stopDates = stopsDates();
+        let stops = [];
+        for (const type of ['pickup', 'delivery'])
+        {
+            const terminal = terminals.shift();
+            const stop = {
+                terminalGuid: terminal.guid,
+                primaryContactGuid: terminal.primaryContactGuid,
+                alternativeContactGuid: terminal.alternativeContactGuid,
+                stopType: type,
+                sequence: stops.length,
+                notes: faker.lorem.sentence(),
+                dateScheduledType: faker.random.arrayElement(dateTypes),
+                createdByGuid: createdBy
+            };
 
-        setDateInfo(pickup, delivery);
-        const numCommodities = Math.floor(Math.random() * 10) + 1;
+            stop.dateScheduledStart = stopDates[type].start;
+            stop.dateScheduledEnd = stopDates[type].end;
+            stops.push(stop);
+        }
+        stops = await OrderStop.query(trx).insertAndFetch(stops);
 
-        for (let i = 0; i < numCommodities; i++)
+        let commodities = [];
+        const numComs = faker.datatype.number(9) + 1;
+        for (let i = 0; i < numComs; i++)
         {
             const vehicle = faker.random.arrayElement(vehicles);
-            const comm = {
-                name: vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model,
+            const comm = Commodity.fromJson({
                 typeId: faker.random.arrayElement(vehicleTypes).id,
                 identifier: faker.vehicle.vin(),
                 vehicleId: vehicle.id,
-                capacity: faker.random.arrayElement(capacity_types),
+                capacity: faker.random.arrayElement(capacityTypes),
                 deliveryStatus: 'none',
-                length: faker.datatype.number(12),
-                weight: faker.datatype.number(3000),
+                length: faker.datatype.number(3) + 12,
+                weight: faker.datatype.number(1000) + 2500,
                 quantity: 1,
-                damaged: faker.random.arrayElement(ternary_options),
-                inoperable: faker.random.arrayElement(ternary_options),
+                damaged: faker.random.arrayElement(ternaryOptions),
+                inoperable: faker.random.arrayElement(ternaryOptions),
                 createdByGuid: createdBy,
-                description: faker.lorem.words(),
-                '#id': faker.datatype.uuid()
-
-            };
-            graph.push({
-                commodity: comm,
-                stop: pickup,
-                order: neworder,
-                createdByGuid: createdBy
+                description: faker.lorem.words()
             });
-            if ('#id' in neworder)
-
-                neworder = {
-                    '#ref': neworder['#id']
-                };
-
-            graph.push({
-                commodity: {
-                    '#ref': comm['#id']
-                },
-                stop: delivery,
-                order: neworder,
-                createdByGuid: createdBy
-            });
-
-            if ('#id' in pickup)
-                pickup = {
-                    '#ref': pickup['#id']
-                };
-            if ('#id' in delivery)
-                delivery = {
-                    '#ref': delivery['#id']
-                };
-            graph.push({
-                commodity: {
-                    '#ref': comm['#id']
-                },
-                stop: pickup,
-                order: neworder,
-                job: { '#ref': job['#id'] },
-                createdByGuid: createdBy
-            });
-            graph.push({
-                commodity: {
-                    '#ref': comm['#id']
-                },
-                stop: delivery,
-                order: neworder,
-                job: { '#ref': job['#id'] },
-                createdByGuid: createdBy
-            });
+            commodities.push(comm);
         }
-    }
 
-    return OrderStopLink.query().insertGraph(graph, { relate: true, allowRefs: true });
+        commodities = await Commodity.query(trx).insertAndFetch(commodities);
+
+        let stopLinks = [];
+        for (const comm of commodities)
+        {
+            for (const stop of stops)
+            {
+                // one for order
+                stopLinks.push({
+                    commodityGuid: comm.guid,
+                    stopGuid: stop.guid,
+                    orderGuid: order.guid,
+                    createdByGuid: createdBy
+                });
+
+                // one for job
+                stopLinks.push({
+                    commodityGuid: comm.guid,
+                    stopGuid: stop.guid,
+                    orderGuid: order.guid,
+                    jobGuid: job.guid,
+                    createdByGuid: createdBy
+                });
+            }
+        }
+
+        stopLinks = await OrderStopLink.query(trx).insertAndFetch(stopLinks);
+    });
 };
