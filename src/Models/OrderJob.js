@@ -16,7 +16,17 @@ class OrderJob extends BaseModel
     {
         const OrderStopLink = require('./OrderStopLink');
         const Order = require('./Order');
+        const SFAccount = require('./SFAccount');
+
         return {
+            vendor: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFAccount,
+                join: {
+                    from: 'rcgTms.orderJobs.vendorGuid',
+                    to: 'salesforce.accounts.guid'
+                }
+            },
             order: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Order,
