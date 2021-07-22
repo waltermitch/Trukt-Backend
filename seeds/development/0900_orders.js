@@ -7,6 +7,7 @@ const Terminal = require('../../src/Models/Terminal');
 const Vehicle = require('../../src/Models/Vehicle');
 const Commodity = require('../../src/Models/Commodity');
 const SFAccount = require('../../src/Models/SFAccount');
+const User = require('../../src/Models/User');
 const migration_tools = require('../../tools/migration');
 const faker = require('faker');
 const Enums = require('../../src/Models/Enums');
@@ -30,20 +31,23 @@ exports.seed = async function (knex)
 {
     return knex.transaction(async (trx) =>
     {
-        const createdBy = '00000000-0000-0000-0000-000000000000';
         const capacityTypes = await new Enums(trx).select('load_capacity_types');
         const dateTypes = await new Enums(trx).select('date_schedule_types');
         const ternaryOptions = migration_tools.ternary_options;
+        const createdBy = await User.query(trx).findOne('name', 'ilike', '%');
         const vehicles = await Vehicle.query(trx).limit(10);
         const vehicleTypes = await trx.select('id').from('rcg_tms.commodity_types');
         const transportJobType = await OrderJobType.query(trx).findOne('category', 'transport');
         const terminals = await Terminal.query(trx);
-        const clients = await SFAccount.query(trx).modify('byType', 'client').limit(1);
+        const clients = await SFAccount.query(trx).modify('byType', 'client').limit(100);
+        const vendors = await SFAccount.query(trx).modify('byType', 'carrier').limit(100);
 
-        const carrierPay = 1000;
-        const tariff = 1200;
+        const numComs = faker.datatype.number(9) + 1;
+        const carrierPay = (250 + faker.datatype.number(400)) * numComs;
+        const tariff = carrierPay * 1.20;
 
-        const client = clients[0];
+        const client = faker.random.arrayElement(clients);
+        const vendor = faker.random.arrayElement(vendors);
         const order = await Order.query(trx).insertAndFetch({
             status: 'new',
             clientGuid: client.guid,
@@ -53,13 +57,14 @@ exports.seed = async function (knex)
             estimatedRevenue: tariff,
             referenceNumber: faker.lorem.word().toUpperCase().substring(0, 5).padEnd(5, '0') + (faker.datatype.number(9999) + 1000),
             inspectionType: 'advanced',
-            ownerGuid: createdBy,
-            createdByGuid: createdBy
+            ownerGuid: createdBy.guid,
+            createdByGuid: createdBy.guid
         });
 
         const job = await OrderJob.query(trx).insertAndFetch({
             status: 'new',
             orderGuid: order.guid,
+            vendorGuid: vendor.guid,
             isDummy: false,
             isTransport: true,
             instructions: faker.lorem.words(60),
@@ -68,7 +73,7 @@ exports.seed = async function (knex)
             loadboardInstructions: faker.lorem.words(5),
             loadType: faker.random.arrayElement(capacityTypes),
             typeId: transportJobType.id,
-            createdByGuid: createdBy
+            createdByGuid: createdBy.guid
         });
 
         const stopDates = stopsDates();
@@ -84,7 +89,7 @@ exports.seed = async function (knex)
                 sequence: stops.length,
                 notes: faker.lorem.sentence(),
                 dateScheduledType: faker.random.arrayElement(dateTypes),
-                createdByGuid: createdBy
+                createdByGuid: createdBy.guid
             };
 
             stop.dateScheduledStart = stopDates[type].start;
@@ -94,7 +99,6 @@ exports.seed = async function (knex)
         stops = await OrderStop.query(trx).insertAndFetch(stops);
 
         let commodities = [];
-        const numComs = faker.datatype.number(9) + 1;
         for (let i = 0; i < numComs; i++)
         {
             const vehicle = faker.random.arrayElement(vehicles);
@@ -109,7 +113,7 @@ exports.seed = async function (knex)
                 quantity: 1,
                 damaged: faker.random.arrayElement(ternaryOptions),
                 inoperable: faker.random.arrayElement(ternaryOptions),
-                createdByGuid: createdBy,
+                createdByGuid: createdBy.guid,
                 description: faker.lorem.words()
             });
             commodities.push(comm);
@@ -117,7 +121,7 @@ exports.seed = async function (knex)
 
         commodities = await Commodity.query(trx).insertAndFetch(commodities);
 
-        let stopLinks = [];
+        const stopLinks = [];
         for (const comm of commodities)
         {
             for (const stop of stops)
@@ -127,7 +131,7 @@ exports.seed = async function (knex)
                     commodityGuid: comm.guid,
                     stopGuid: stop.guid,
                     orderGuid: order.guid,
-                    createdByGuid: createdBy
+                    createdByGuid: createdBy.guid
                 });
 
                 // one for job
@@ -136,11 +140,11 @@ exports.seed = async function (knex)
                     stopGuid: stop.guid,
                     orderGuid: order.guid,
                     jobGuid: job.guid,
-                    createdByGuid: createdBy
+                    createdByGuid: createdBy.guid
                 });
             }
         }
 
-        stopLinks = await OrderStopLink.query(trx).insertAndFetch(stopLinks);
+        await OrderStopLink.query(trx).insertAndFetch(stopLinks);
     });
 };
