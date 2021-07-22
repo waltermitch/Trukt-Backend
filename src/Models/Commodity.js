@@ -1,5 +1,4 @@
 const BaseModel = require('./BaseModel');
-const CommodityType = require('./CommodityType');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 
@@ -76,93 +75,8 @@ class Commodity extends BaseModel
         return this.commType?.category === 'freight' || this.vehicle == undefined && this.vehicleId == undefined;
     }
 
-    /**
-     * Sets the commodity type id on this commodity
-     */
-    async setCommTypeId()
-    {
-        const commType = await this.getCommType();
-        if (!this.typeId)
-        {
-            this.typeId = commType.id;
-        }
-    }
-
-    async getCommType()
-    {
-        const commTypes = await CommodityType.types();
-        let found = undefined;
-        const category = this.commType?.category;
-        const type = this.commType?.type;
-
-        if (this.typeId)
-        {
-            found = commTypes.find(it => it.id == this.typeId);
-        }
-        else
-        {
-            found = commTypes.find(it => it.category === category && it.type === type);
-        }
-
-        if (!found)
-        {
-            throw new Error('Invalid commodity type provided: ' + (this.typeId || `${category} ${type}`));
-        }
-
-        return found;
-    }
-
-    /**
-     * Sets the commodity name field
-     * automatically generates the name if the user didn't supply a name
-     */
-    async setName()
-    {
-        const commType = this.commType || await this.getCommType();
-        if (!this.name)
-        {
-            let names = [];
-            switch (commType.category)
-            {
-                case 'vehicle':
-                    for (const fname of ['year', 'make', 'model'])
-                        if (this.vehicle?.[fname])
-                            names.push(this.vehicle[fname]);
-                    break;
-                case 'freight':
-                    names = [this.quantity, commType.type];
-                    if (this.weight)
-                        names.push(this.weight + ' lbs');
-                    break;
-                default:
-                    names = [this.quantity, commType.category];
-            }
-            this.name = names.join(' ').trim();
-        }
-        if (!this.name)
-        {
-            const category = this.quantity > 1 && commType.category === 'vehicle' ? 'vehicles' : commType.category;
-            this.name = [this.quantity > 1 ? this.quantity : '', category, commType.type].join(' ');
-        }
-        this.name = this.name.replace(/\s+/g, ' ').trim();
-    }
-
-    async setDescription()
-    {
-        if (!this.description)
-        {
-            await this.setName();
-            this.description = this.name;
-            if (!this.description)
-            {
-                this.description = 'no description provided';
-            }
-        }
-    }
-
     $parseJson(json)
     {
-        console.log(json);
         json = super.$parseJson(json);
 
         if (!(json?.typeId) && 'category' in json && 'type' in json)
@@ -186,9 +100,6 @@ class Commodity extends BaseModel
     async $beforeInsert(queryContext)
     {
         await super.$beforeInsert(queryContext);
-        await this.setCommTypeId();
-        await this.setName();
-        await this.setDescription();
 
         // only keep the id
         delete this.commType;
@@ -200,9 +111,6 @@ class Commodity extends BaseModel
     async $beforeUpdate(options, context)
     {
         await super.$beforeUpdate(options, context);
-        await this.setCommTypeId();
-        await this.setName();
-        await this.setDescription();
 
         // only keep the id
         delete this.commType;
