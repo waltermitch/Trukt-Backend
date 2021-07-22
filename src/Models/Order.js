@@ -86,6 +86,14 @@ class Order extends BaseModel
                     },
                     to: 'rcgTms.invoiceBills.order'
                 }
+            },
+            owner: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFAccount,
+                join: {
+                    from: 'rcgTms.orders.ownerGuid',
+                    to: 'salesforce.accounts.guid'
+                }
             }
         };
     }
