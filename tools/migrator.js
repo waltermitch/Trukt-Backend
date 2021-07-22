@@ -473,9 +473,9 @@ async function seedHandler(argv)
     // now filter out the long filenames that we will work with
     workfiles = workfiles.filter(it => it in mapped).map(it => mapped[it]).sort();
 
+    const knex = Knex(require('../knexfile')());
     if (workfiles.length > 0)
     {
-        const knex = Knex(require('../knexfile')());
         console.log(green, 'seeding database...');
         await knex.transaction(async (trx) =>
         {
@@ -498,12 +498,12 @@ async function seedHandler(argv)
             }
 
         });
-        await knex.destroy();
     }
     else
     {
         didNothing();
     }
+    knex.destroy();
 }
 
 async function cleanHandler(argv)
