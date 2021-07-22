@@ -18,7 +18,6 @@ exports.seed = function (knex)
                 {
                     const vehicle = vehicles[i];
                     commodities.push({
-                        name: vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model,
                         type_id: faker.random.arrayElement(types).id,
                         identifier: faker.vehicle.vin(),
                         vehicle_id: vehicle.id,
