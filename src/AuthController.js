@@ -20,6 +20,11 @@ class HTTPController
 
     async getSecret(query)
     {
+        return await HTTPController.getSecret(query);
+    }
+
+    static async getSecret(query)
+    {
         return await DB.getSecret(query);
     }
 
