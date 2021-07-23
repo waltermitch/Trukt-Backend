@@ -75,41 +75,6 @@ class PicklistController extends HttpRouteController
         });
     }
 
-    async handleGet(context, req)
-    {
-        // first check if the picklist is in memory
-        if (!picklists)
-
-            if (!fs.existsSync(localPicklistPath))
-
-                // fetch from database
-                await this.handlePut(context, req);
-
-            else
-
-                // fetch from file
-                picklists = fs.readFileSync(localPicklistPath, 'utf8');
-
-        const res = {
-            body: picklists,
-            status: 200
-        };
-
-        return res;
-    }
-
-    /* eslint-disable no-unused-vars */
-    async handlePut(context, req)
-    {
-        let res = {};
-        picklists = await this.getPicklistBod();
-        fs.writeFile('picklists.json', JSON.stringify(picklists, null), err =>
-        {
-            if (err) res = err;
-        });
-        return res;
-    }
-
     /**
      *
      * @returns queries the database for all the enum types and any other lookup tables and
