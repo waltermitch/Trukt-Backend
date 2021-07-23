@@ -12,7 +12,7 @@ exports.up = function (knex)
         const clientfieldname = 'client_guid';
         table.string(clientfieldname, 100).notNullable();
         table.foreign(clientfieldname).references('guid__c').inTable('salesforce.account');
-        const contactfieldname = 'contact_guid';
+        const contactfieldname = 'client_contact_guid';
         table.string(contactfieldname, 100).unsigned();
         table.foreign(contactfieldname).references('guid__c').inTable('salesforce.contact');
         table.text('instructions').comment('These are the instructions from the client');
