@@ -16,6 +16,7 @@ class Order extends BaseModel
     static get relationMappings()
     {
         const SFAccount = require('./SFAccount');
+        const User = require('./User');
         return {
             client: {
                 relation: BaseModel.BelongsToOneRelation,
@@ -23,6 +24,14 @@ class Order extends BaseModel
                 join: {
                     from: 'rcgTms.orders.clientGuid',
                     to: 'salesforce.accounts.guid'
+                }
+            },
+            owner: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: User,
+                join: {
+                    from: 'rcgTms.orders.ownerGuid',
+                    to: 'rcgTms.tmsUsers.guid'
                 }
             },
             jobs: {
