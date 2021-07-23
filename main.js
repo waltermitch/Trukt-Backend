@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+
+require('./local.settings');
 const express = require('express');
 const session = require('express-session');
 const domain = require('./src/Domain');
@@ -6,9 +8,7 @@ const KnexSessionStore = require('connect-session-knex')(session);
 const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
 const HttpErrorHandler = require('./src/HttpErrorHandler');
-const EventListener = require('./src/EventManager/PGListener');
 const PGListener = require('./src/EventManager/PGListener');
-require('./local.settings');
 
 const store = new KnexSessionStore
     ({
