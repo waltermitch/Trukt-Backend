@@ -1,26 +1,78 @@
 const HttpRouteController = require('./HttpRouteController');
 const fs = require('fs');
-const Knex = require('knex');
-const knexfile = require('../../knexfile');
+const BaseModel = require('../Models/BaseModel');
+const https = require('https');
 
-const knex = Knex(knexfile());
+const knex = BaseModel.knex();
+
+// creating an axios connection directly because this will not be reused
+// as far as we can tell for now
+const opts = {
+    httpsAgent: new https.Agent({ keepAlive: true }),
+    baseURL: process.env['azure.loadboard.baseurl'],
+    headers: {
+        'x-functions-key': process.env['azure.loadboard.funcCode']
+    }
+};
+const lbConn = require('axios').create(opts);
+
 let picklists;
 const localPicklistPath = './localdata/picklists.json';
 
 class PicklistController extends HttpRouteController
 {
+    static async getAll(req, res)
+    {
+        // first check if the picklist is in memory
+        if (!picklists)
+        {
+            if (!fs.existsSync(localPicklistPath))
+            {
+                // fetch from database
+                // await PicklistController.update(req, res);
+                await PicklistController.updatePicklists();
+            }
+            else
+            {
+                // fetch from file
+                picklists = JSON.parse(fs.readFileSync(localPicklistPath, 'utf8'));
+            }
+        }
+
+        const finalBody = {
+            body: picklists,
+            status: 200
+        };
+
+        res.status(200).json(finalBody);
+    }
 
     static async update(req, res)
     {
-        res.status(501);
-        res.send();
+        try
+        {
+            await PicklistController.updatePicklists();
+            res.status(201).send();
+        }
+        catch (err)
+        {
+            res.status(500).json(err);
+        }
     }
 
-    static async getAll(req, res)
+    static async updatePicklists()
     {
-
-        res.status(501);
-        res.send();
+        picklists = await PicklistController.getPicklistBod();
+        const lbs = await lbConn.get('/equipmenttypes');
+        Object.assign(picklists, lbs.data);
+        if (!fs.existsSync('./localdata'))
+        {
+            fs.mkdirSync('./localdata');
+        }
+        fs.writeFile(localPicklistPath, JSON.stringify(picklists, null), err =>
+        {
+            if (err) throw err;
+        });
     }
 
     async handleGet(context, req)
@@ -63,7 +115,7 @@ class PicklistController extends HttpRouteController
      * @returns queries the database for all the enum types and any other lookup tables and
      * constructs a more readable json object
      */
-    async getPicklistBod()
+    static async getPicklistBod()
     {
         const picklists = {};
         const enums = await knex.raw(`
@@ -94,9 +146,9 @@ class PicklistController extends HttpRouteController
         return picklists;
     }
 
-    createOptionObject(label, value)
+    static createOptionObject(label, value)
     {
-        label = this.cleanUpWhitespace(this.cleanUpCamelCase(this.cleanUpSnakeCase(this.capWord(label))));
+        label = PicklistController.cleanUpWhitespace(PicklistController.cleanUpCamelCase(PicklistController.cleanUpSnakeCase(PicklistController.capWord(label))));
 
         return { label, value };
     }
@@ -106,7 +158,7 @@ class PicklistController extends HttpRouteController
      * @param {*} String a string that is in snake case
      * @returns returns the string in camel case
      */
-    cleanUpSnakeCase(String)
+    static cleanUpSnakeCase(String)
     {
         return String.replace(/(_[A-Za-z])/g, (word, index) =>
         {
@@ -119,7 +171,7 @@ class PicklistController extends HttpRouteController
      * @param {*} String a string that is in camel case
      * @returns the same string with spaces before the capital letters i.e fooBar -> foo Bar
      */
-    cleanUpCamelCase(String)
+    static cleanUpCamelCase(String)
     {
         return String.replace(/(?<=[a-z])([A-Z])/g, (word, index) =>
         {
@@ -132,7 +184,7 @@ class PicklistController extends HttpRouteController
      * @param {*} String a string with words separated by spaces
      * @returns the string in camel case form i.e foo bar => fooBar
      */
-    setCamelCase(String)
+    static setCamelCase(String)
     {
         return String.replace(/[ _]([A-Za-z])/g, (word, p1) =>
         {
@@ -145,7 +197,7 @@ class PicklistController extends HttpRouteController
      * @param {*} String a string with more than one space in the middle of the string
      * @returns the string without trailing spaces and removed double spaces in the middle of the string
      */
-    cleanUpWhitespace(String)
+    static cleanUpWhitespace(String)
     {
         return String.trim().replace(/\s+/g, ' ');
     }
@@ -153,7 +205,7 @@ class PicklistController extends HttpRouteController
     /**
      * @description takes a string and capitalizes every word in the string separated by white space and followed by an opening parenthesis
      */
-    capWord(str)
+    static capWord(str)
     {
         return str.replace(/_/g, ' ').replace(/\b(\w)/g, letter => letter.toUpperCase());
 
