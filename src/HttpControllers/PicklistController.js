@@ -62,6 +62,10 @@ class PicklistController extends HttpRouteController
     static async updatePicklists()
     {
         picklists = await PicklistController.getPicklistBod();
+
+        // this api endpoint calls the loadboards function app that
+        // gathers loadboard picklist information and sends it back
+        // as a response.
         const lbs = await lbConn.get('/equipmenttypes');
         Object.assign(picklists, lbs.data);
 
