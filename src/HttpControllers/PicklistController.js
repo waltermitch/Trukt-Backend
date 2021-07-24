@@ -65,14 +65,6 @@ class PicklistController extends HttpRouteController
         const lbs = await lbConn.get('/equipmenttypes');
         Object.assign(picklists, lbs.data);
 
-        // const payment_terms = await knex('rcgTms.invoice_bill_payment_terms').select('*');
-        // const payment_methods = await knex('rcgTms.invoice_bill_payment_methods').select('*');
-        // const equipment_types = await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true });
-
-        // const paymentTerms = PicklistController.createPicklistObject(payment_terms);
-        // const paymentMethods = PicklistController.createPicklistObject(payment_methods);
-        // const equipmentTypes = PicklistController.createPicklistObject(equipment_types);
-
         const paymentTerms = PicklistController.createPicklistObject(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
         const paymentMethods = PicklistController.createPicklistObject(await knex('rcgTms.invoice_bill_payment_methods').select('*'));
         const equipmentTypes = PicklistController.createPicklistObject(await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true }));
