@@ -29,7 +29,6 @@ class PicklistController extends HttpRouteController
             if (!fs.existsSync(localPicklistPath))
             {
                 // fetch from database
-                // await PicklistController.update(req, res);
                 await PicklistController.updatePicklists();
             }
             else
@@ -56,7 +55,7 @@ class PicklistController extends HttpRouteController
         }
         catch (err)
         {
-            res.status(500).json(err);
+            res.status(500).send(err);
         }
     }
 
@@ -65,10 +64,29 @@ class PicklistController extends HttpRouteController
         picklists = await PicklistController.getPicklistBod();
         const lbs = await lbConn.get('/equipmenttypes');
         Object.assign(picklists, lbs.data);
+
+        // const payment_terms = await knex('rcgTms.invoice_bill_payment_terms').select('*');
+        // const payment_methods = await knex('rcgTms.invoice_bill_payment_methods').select('*');
+        // const equipment_types = await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true });
+
+        // const paymentTerms = PicklistController.createPicklistObject(payment_terms);
+        // const paymentMethods = PicklistController.createPicklistObject(payment_methods);
+        // const equipmentTypes = PicklistController.createPicklistObject(equipment_types);
+
+        const paymentTerms = PicklistController.createPicklistObject(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
+        const paymentMethods = PicklistController.createPicklistObject(await knex('rcgTms.invoice_bill_payment_methods').select('*'));
+        const equipmentTypes = PicklistController.createPicklistObject(await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true }));
+
+        Object.assign(picklists, { paymentMethods, paymentTerms, equipmentTypes });
+
+        // since the localdata folder does not get tracked in git and not get pushed to the server,
+        // check if the folder exists first; create it if it does not exist.
         if (!fs.existsSync('./localdata'))
         {
             fs.mkdirSync('./localdata');
         }
+
+        // at this point the folder should definately exist, so it is safe to write to the file.
         fs.writeFile(localPicklistPath, JSON.stringify(picklists, null), err =>
         {
             if (err) throw err;
@@ -96,19 +114,37 @@ class PicklistController extends HttpRouteController
                 on n.oid = t.typnamespace`);
         const comTypes = await knex.raw('select \'commodityTypes\' as tableName, id as value, concat(category, \'Types\') as category, type as label from rcg_tms.commodity_types');
         const jobTypes = await knex.raw('select \'jobTypes\' as tableName, id as value, concat(category, \'Types\') as category, type as label from rcg_tms.order_job_types');
-        const all = enums.rows.concat(comTypes.rows).concat(jobTypes.rows);
+
+        // this lookup table needed a different category compared to the others because there is already an enum type called expense_types, which conflicts with the results
+        // from this query, so the solution was to make this category unique so it does not conflict anymore
+        const lineItems = await knex.raw('select \'lineItems\' as tableName, id as value, concat(type, \'LookupTypes\') as category, name as label from rcg_tms.invoice_bill_line_items where is_deprecated is false');
+
+        const all = enums.rows.concat(comTypes.rows).concat(jobTypes.rows).concat(lineItems.rows);
 
         for (const row of all)
         {
             const category = this.setCamelCase(row.category);
             if (!(category in picklists))
-
+            {
                 picklists[category] = { options: [] };
-
+            }
             picklists[category].options.push(this.createOptionObject(row.label, row.value));
         }
 
         return picklists;
+    }
+
+    /**
+     * gets a list of raw query data and transforms it into an object
+     */
+    static createPicklistObject(queryData)
+    {
+        return {
+            options: queryData.map((option) =>
+            {
+                return this.createOptionObject(option.name, option.id);
+            })
+        };
     }
 
     static createOptionObject(label, value)
