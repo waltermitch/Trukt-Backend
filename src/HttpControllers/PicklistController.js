@@ -5,26 +5,6 @@ const fs = require('fs');
 const localPicklistPath = './localdata/picklists.json';
 let picklists;
 
-// const fs = require('fs');
-// const BaseModel = require('../Models/BaseModel');
-// const https = require('https');
-
-// const knex = BaseModel.knex();
-
-// // creating an axios connection directly because this will not be reused
-// // as far as we can tell for now
-// const opts = {
-//     httpsAgent: new https.Agent({ keepAlive: true }),
-//     baseURL: process.env['azure.loadboard.baseurl'],
-//     headers: {
-//         'x-functions-key': process.env['azure.loadboard.funcCode']
-//     }
-// };
-// const lbConn = require('axios').create(opts);
-
-// let picklists;
-// const localPicklistPath = './localdata/picklists.json';
-
 class PicklistController extends HttpRouteController
 {
     static async getAll(req, res)
