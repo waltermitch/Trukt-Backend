@@ -2,16 +2,16 @@ const Variable = require('../Models/Variable');
 
 class VariableService
 {
-    static async getVariable(query)
+    static async get(query)
     {
         const search = query.replace(/%/g, '');
 
         const res = await Variable.query().findOne({ name: search });
 
-        return res;
+        return res?.data || res;
     }
 
-    static async updateVariable(name, data)
+    static async update(name, data)
     {
         name = name.replace(/%/g, '');
 

@@ -7,7 +7,7 @@ class VariableController extends HttpRouteController
     {
         const q = req.params.name;
 
-        const result = await VariableService.getVariable(q);
+        const result = await VariableService.get(q);
 
         res.status(200);
         res.json(result);
@@ -15,7 +15,7 @@ class VariableController extends HttpRouteController
 
     static async put(req, res)
     {
-        await VariableService.updateVariable(req.body.name, req.body.value);
+        await VariableService.update(req.body.name, req.body.value);
 
         res.status(200).send();
     }
