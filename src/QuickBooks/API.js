@@ -1,10 +1,14 @@
+const VariableService = require('../Services/VariableService');
 const SFAccount = require('../Models/SFAccount');
 const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
 const Vendor = require('./Vendor');
 const Client = require('./Client');
 const Mongo = require('../Mongo');
+const axios = require('axios');
 
+const authConfig = { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': process.env['quickbooks.basicAuth'] } };
+const authUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const tokenName = process.env['quickbooks.tokenName'];
 const url = process.env['quickbooks.apiUrl'];
 
@@ -187,6 +191,33 @@ class QBO
         cache.set('clientTypes', obj);
 
         return obj;
+    }
+
+    static async refreshToken()
+    {
+        // get refrsh token
+        const refreshToken = await HTTPS.getSecret({ 'name': 'qb_refresh_token' });
+
+        const payload = `grant_type=refresh_token&refresh_token=Bearer%20${refreshToken.value}`;
+
+        // ask for new stuff
+        const res = await axios.post(authUrl, payload, authConfig);
+
+        // update old access tkn and refresh tokn
+        const ATData =
+        {
+            'name': 'qb_access_token',
+            'value': res.data.access_token,
+            'exp': HTTPS.setExpTime(30)
+        };
+
+        const RTData =
+        {
+            'name': 'qb_refresh_token',
+            'value': res.data.refresh_token
+        };
+
+        await Promise.all([VariableService.update(ATData.name, ATData), VariableService.update(RTData.name, RTData)]);
     }
 }
 

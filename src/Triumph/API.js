@@ -72,7 +72,7 @@ class Triumph
         {
             name: 'triumph_access_token',
             value: res.data.access_token,
-            exp: HTTPS.getUTC()
+            exp: HTTPS.setExpTime(60 * 60 * 24)
         };
 
         // save token to pg
