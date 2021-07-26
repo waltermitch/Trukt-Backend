@@ -1,18 +1,25 @@
 const HttpRouteController = require('./HttpRouteController');
+const VariableService = require('../Services/VariableService');
 
 class VariableController extends HttpRouteController
 {
-    async handleGet(context, req)
+    static async get(req, res)
     {
-        context.log(req?.body);
+        const q = req.params.name;
+
+        const result = await VariableService.getVariable(q);
+
+        res.status(200);
+        res.json(result);
     }
 
-    async handlePost(context, req)
+    static async put(req, res)
     {
-        context.log(req?.body);
+        await VariableService.updateVariable(req.body.name, req.body.value);
+
+        res.status(200).send();
     }
 }
 
 const controller = new VariableController();
-
 module.exports = controller;
