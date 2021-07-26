@@ -1,15 +1,15 @@
 const SFAccount = require('../Models/SFAccount');
 const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
-const Mongo = require('../Mongo');
 const Vendor = require('./Vendor');
 const Client = require('./Client');
+const Mongo = require('../Mongo');
 
 const tokenName = process.env['quickbooks.tokenName'];
 const url = process.env['quickbooks.apiUrl'];
 
-//storing dynamic values in this one
-const cache = new NodeCache({ deleteOnExpire: false, stdTTL: 60 * 60 * 24 })
+// storing dynamic values in this one
+const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 60 * 60 * 24, arrayValueSize: 20 });
 
 let qb;
 
@@ -19,9 +19,11 @@ class QBO
     {
         if (!qb?.expCheck())
         {
-            const opts = { url, tokenName };
+            const opts = { url, tokenName: 'qb_access_token' };
 
             const token = await Mongo.getSecret({ 'name': tokenName });
+
+            qb.exp = token.exp;
 
             if (!qb?.instance)
             {
@@ -76,13 +78,19 @@ class QBO
 
         const api = await QBO.connect();
 
+        // get client types
+        const clientTypes = await QBO.getClientTypes();
+
+        // set client type
+        client.setBusinessType(data.businessType, clientTypes);
+
         if (!data.qbId)
         {
             // create
             const res = await api.post('/client', client);
 
             // save qbid in database
-            await SFAccount.query().patch({ qbId: res.data.Client.Id }).where('sfId', data?.sfId);
+            await SFAccount.query().patch({ qbId: res.data.Client.Id }).where('guid', data?.guid);
         }
         else
         {
@@ -133,7 +141,52 @@ class QBO
 
     static async getItemTypes()
     {
-        if (!api)
+        const items = cache.get('itemTypes');
+
+        if (items)
+            return items;
+
+        const api = await QBO.connect();
+
+        // get items
+        const res = await api.get('/query?query=Select * from Item');
+
+        const arr = res.data.QueryResponse.Item;
+
+        const obj = {};
+
+        for (let i = 0; i < arr.length; i++)
+            obj[`${arr[i].Name}`] = arr[i];
+
+        // add to cache
+        cache.set('itemTypes', obj);
+
+        return obj;
+    }
+
+    static async getClientTypes()
+    {
+        const clientTypes = cache.get('clientTypes');
+
+        if (clientTypes)
+            return clientTypes;
+
+        const api = await QBO.connect();
+
+        // get customer type
+        const res = await api.get('/query?query=Select * from CustomerType');
+
+        const arr = res.data.QueryResponse.CustomerType;
+
+        const obj = {};
+
+        for (let i = 0; i < arr.length; i++)
+            obj[`${arr[i].Name}`] = arr[i];
+
+        // add to cache
+        cache.set('clientTypes', obj);
+
+        return obj;
     }
 }
 

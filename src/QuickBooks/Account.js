@@ -30,7 +30,6 @@ class Account
     setContact(arr = [])
     {
         for (let i = 0; i < arr.length; i++)
-        {
             if (arr[i].Accounting_Contact__c)
             {
                 this.GivenName = arr[i].FirstName;
@@ -38,7 +37,6 @@ class Account
                 this.PrimaryPhone.FreeFormNumber = arr[i].Phone;
                 break;
             }
-        }
     }
 }
 
