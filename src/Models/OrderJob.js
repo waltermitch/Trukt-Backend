@@ -69,6 +69,14 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.guid',
                     to: 'rcgTms.loadboardPosts.jobGuid'
                 }
+            },
+            equipmentType: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./EquipmentType'),
+                join: {
+                    from: 'rcgTms.orderJobs.equipmentTypeId',
+                    to: 'rcgTms.equipmentTypes.id'
+                }
             }
         };
     }
