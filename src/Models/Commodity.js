@@ -2,6 +2,14 @@ const BaseModel = require('./BaseModel');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 
+// used for flattening the commodity in/out api
+const vehicleFields = [
+    'year',
+    'make',
+    'model',
+    'trim'
+];
+
 class Commodity extends BaseModel
 {
     static get tableName()
@@ -104,6 +112,56 @@ class Commodity extends BaseModel
             json.commType = { category: json.category, type: json.type };
             delete json.category;
             delete json.type;
+        }
+
+        if (!(json?.vehicle))
+        {
+            // vehicle is flat from api so unflatten it
+            const vehicle = vehicleFields.reduce((vehicle, field) =>
+            {
+                if (field in json)
+                {
+                    vehicle[field] = json[field];
+                    delete json[field];
+                }
+                return vehicle;
+            }, {});
+
+            if (json.vehicleId)
+            {
+                vehicle.id = json.vehicleId;
+                delete json.vehicleId;
+            }
+
+            if (Object.keys(vehicle).length > 0)
+            {
+                json.vehicle = vehicle;
+            }
+            else
+            {
+                json.vehicle = null;
+            }
+        }
+
+        if ('index' in json)
+        {
+            json['#id'] = json.index;
+            delete json.index;
+        }
+
+        return json;
+    }
+
+    $formatJson(json)
+    {
+        json = super.$formatJson(json);
+
+        // flatten the vehicle when sending out to api
+        if (json?.vehicle)
+        {
+            delete json.vehicle.id;
+            Object.assign(json, json.vehicle);
+            delete json.vehicle;
         }
 
         return json;
