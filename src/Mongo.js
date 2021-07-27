@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
 
-const dbUrl = process.env.dbUri;
-const dbName = process.env.dbName;
+const dbUrl = process.env['mongo.connection.uri'];
+const dbName = process.env['mongo.database'];
 
 const dbOptions =
 {
