@@ -185,16 +185,16 @@ class Commodity extends BaseModel
         {
             delete json.vehicle.id;
             Object.assign(json, json.vehicle);
-            delete json.vehicle;
         }
+        delete json.vehicle;
 
         // flatten the commType when sending out to api
         if (json?.commType)
         {
             delete json.commType.id;
             Object.assign(json, json.commType);
-            delete json.commType;
         }
+        delete json.commType;
 
         return json;
     }
