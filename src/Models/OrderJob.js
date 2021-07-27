@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 class OrderJob extends BaseModel
 {
@@ -74,4 +75,5 @@ class OrderJob extends BaseModel
     }
 }
 
+Object.assign(OrderJob.prototype, RecordAuthorMixin);
 module.exports = OrderJob;
