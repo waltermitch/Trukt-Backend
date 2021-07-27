@@ -1,6 +1,7 @@
 const BaseModel = require('./BaseModel');
 const Contact = require('./Contact');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 class Terminal extends BaseModel
 {
@@ -60,5 +61,6 @@ class Terminal extends BaseModel
     static uniqueColumns = ['latitude', 'longitude']
 }
 
+Object.assign(Terminal.prototype, RecordAuthorMixin);
 Object.assign(Terminal.prototype, FindOrCreateMixin);
 module.exports = Terminal;
