@@ -19,7 +19,7 @@ class Handler
 
         console.log(res);
 
-        const recordType = res.recType.name;
+        const recordType = res.rectype.name;
 
         // build generic payload
         const payload =
@@ -34,10 +34,12 @@ class Handler
             email: res.email,
             fax: res.fax,
             firstName: res.name,
+            guid: res.guid,
             mcNumber: res.mcNumber,
             name: res.name,
             phone: res.phone,
             qbId: res.qbId,
+            sdGuid: res.sdGuid,
             sfId: res.sfId,
             shippingCity: res.shippingCity,
             shippingStreet: res.shippingStreet,
@@ -54,9 +56,11 @@ class Handler
                 payload.orderInstructions = res.orderInstructions;
                 payload.internalNotes = res.internalNotes;
                 payload.businessType = res.businessType;
+                payload.notes = res.notes;
 
                 await Promise.all([QB.upsertClient(payload), Super.upsertClient(payload)]);
                 break;
+
             case 'Carrier':
                 payload.bankRoutingNumber = res.bankRoutingNumber;
                 payload.bankAccountNumber = res.bankAccountNumber;
@@ -66,9 +70,11 @@ class Handler
 
                 await Promise.all([QB.upsertCarrier(payload), Triumph.createProfile(payload), Super.updateCarrier(payload)]);
                 break;
+
             case 'Vendor':
                 await QB.upsertCarrier(payload);
                 break;
+
             default:
                 return;
         }
