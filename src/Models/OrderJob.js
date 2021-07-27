@@ -1,6 +1,8 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
+const jobTypeFields = ['category', 'type'];
+
 class OrderJob extends BaseModel
 {
     static get tableName()
@@ -112,6 +114,63 @@ class OrderJob extends BaseModel
                 }
             }
         };
+    }
+
+    $parseJson(json)
+    {
+        json = super.$parseJson(json);
+
+        // inflate the jobType
+        // TODO: create flatten method on BaseModel class
+        if (!(json?.jobType))
+        {
+            const jobType = jobTypeFields.reduce((jobType, field) =>
+            {
+                if (field in json)
+                {
+                    jobType[field] = json[field];
+                    delete json[field];
+                }
+
+                return jobType;
+            }, {});
+
+            if (json.typeId)
+            {
+                jobType.id = json.typeId;
+                delete json.typeId;
+            }
+
+            if (Object.keys(jobType).length > 0)
+            {
+                json.jobType = jobType;
+            }
+            else
+            {
+                json.jobType = null;
+            }
+        }
+
+        if (json.jobType?.category === 'transport')
+        {
+            json.isTransport = true;
+        }
+
+        return json;
+    }
+
+    $formatJson(json)
+    {
+        json = super.$parseJson(json);
+
+        if (json?.jobType)
+        {
+            delete json.jobType.id;
+            Object.assign(json, json.jobType);
+            delete json.jobType;
+        }
+
+        return json;
     }
 }
 
