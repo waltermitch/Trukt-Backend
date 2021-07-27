@@ -18,7 +18,7 @@ class OrderJob extends BaseModel
         const OrderStopLink = require('./OrderStopLink');
         const Order = require('./Order');
         const SFAccount = require('./SFAccount');
-
+        const SFContact = require('./SFContact');
         return {
             vendor: {
                 relation: BaseModel.BelongsToOneRelation,
@@ -28,12 +28,28 @@ class OrderJob extends BaseModel
                     to: 'salesforce.accounts.guid'
                 }
             },
+            vendorContact: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFContact,
+                join: {
+                    from: 'rcgTms.orderJobs.vendorContactGuid',
+                    to: 'salesforce.contacts.guid'
+                }
+            },
             order: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Order,
                 join: {
                     from: 'rcgTms.orderJobs.orderGuid',
                     to: 'rcgTms.orders.guid'
+                }
+            },
+            stopLinks: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./OrderStopLink'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    to: 'rcgTms.orderStopLinks.orderGuid'
                 }
             },
             stops: {
@@ -69,6 +85,30 @@ class OrderJob extends BaseModel
                 join: {
                     from: 'rcgTms.orderJobs.guid',
                     to: 'rcgTms.loadboardPosts.jobGuid'
+                }
+            },
+            jobType: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./OrderJobType'),
+                join: {
+                    from: 'rcgTms.orderJobs.typeId',
+                    to: 'rcgTms.orderJobTypes.id'
+                }
+            },
+            vendorAgent: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFContact,
+                join: {
+                    from: 'rcgTms.orderJobs.vendorAgentGuid',
+                    to: 'salesforce.contacts.guid'
+                }
+            },
+            driver: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFContact,
+                join: {
+                    from: 'rcgTms.orderJobs.vendorAgentGuid',
+                    to: 'salesforce.contacts.guid'
                 }
             }
         };
