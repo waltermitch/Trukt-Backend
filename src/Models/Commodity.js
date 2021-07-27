@@ -10,6 +10,8 @@ const vehicleFields = [
     'trim'
 ];
 
+const commTypeFields = ['category', 'type'];
+
 class Commodity extends BaseModel
 {
     static get tableName()
@@ -107,11 +109,33 @@ class Commodity extends BaseModel
     {
         json = super.$parseJson(json);
 
-        if (!(json?.typeId) && 'category' in json && 'type' in json)
+        if (!(json?.commType))
         {
-            json.commType = { category: json.category, type: json.type };
-            delete json.category;
-            delete json.type;
+            // inflate the commodity from api
+            const commType = commTypeFields.reduce((commType, field) =>
+            {
+                if (field in json)
+                {
+                    commType[field] = json[field];
+                    delete json[field];
+                }
+                return commType;
+            }, {});
+
+            if (json.typeId)
+            {
+                commType.id = json.typeId;
+                delete json.typeId;
+            }
+
+            if (Object.keys(commType).length > 0)
+            {
+                json.commType = commType;
+            }
+            else
+            {
+                json.commType = null;
+            }
         }
 
         if (!(json?.vehicle))
