@@ -29,7 +29,6 @@ class PicklistService
         // as a response.
         const lbs = await lbConn.get('/equipmenttypes');
         Object.assign(picklists, lbs.data);
-        console.log(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
         const paymentTerms = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
         const paymentMethods = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_methods').select('*'));
         const equipmentTypes = PicklistService.createPicklistObject(await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true }));
