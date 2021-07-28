@@ -2,7 +2,7 @@ class Invoice
 {
     constructor(data)
     {
-        this.AccountId = data.AccountId;
+        this.AccountId = data.clientId;
         this.orderNumber = data.order_number;
         this.poNumber = data.po_number;
         this.setLineItems(data);

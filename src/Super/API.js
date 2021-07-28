@@ -207,6 +207,15 @@ class Super
             await Super.updateCarrier(data.sdGuid, data);
         }
     }
+
+    static async retryCarrierUpdates()
+    {
+        // get carriers accounts that are not synced
+        const res = await SFAccount.query().where('is_synced_in_super', '=', false);
+
+        for (let i = 0; i < res.length; i++)
+            await Super.upsertCarrier(res[i]);
+    }
 }
 
 module.exports = Super;

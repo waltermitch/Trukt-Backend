@@ -2,7 +2,7 @@ class Payment
 {
     constructor(data)
     {
-        this.AccountId = data.AccountId;
+        this.AccountId = data.vendorId;
         this.orderNumber = data.order_number;
         this.setLineItems(data);
     }
