@@ -8,7 +8,7 @@ exports.up = function (knex)
         table.uuid('guid').primary().notNullable().unique();
         table.string('reference_number', 64).comment('reference number for this invoice as used by our internal systems');
         const expartyfn = 'external_party_guid';
-        table.string(expartyfn, 100).notNullable().comment('this is the vendor or client salesforce ids');
+        table.string(expartyfn, 100).comment('this is the salesforce account vendor or client guid');
         table.foreign(expartyfn).references('guid__c').inTable('salesforce.account');
 
         table.string('external_source', 32).comment('the external accounting software source name. i.e. quickbooks online');
