@@ -1,6 +1,7 @@
 const { DateTime } = require('luxon');
 
 const EDI_DATE_FORMAT = 'yyyyLLdd';
+const SCAC_CODE = 'RCGQ';
 
 const reasons =
     [
@@ -50,6 +51,7 @@ class EDIController
             'actionCode': 'D',
             'reason': rs,
             'partner': partner,
+            'scac': SCAC_CODE,
             'bol': bol,
             'date': ediDate
         });
@@ -79,6 +81,7 @@ class EDIController
         res.json({
             'actionCode': 'A',
             'partner': partner,
+            'scac': SCAC_CODE,
             'bol': bol,
             'date': ediDate
         });
