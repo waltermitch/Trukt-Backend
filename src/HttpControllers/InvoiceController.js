@@ -8,7 +8,7 @@ class InvoiceController extends HttpRouteController
 
     }
 
-    static async createInvoice(req, res)
+    static async createInvoices(req, res)
     {
 
     }

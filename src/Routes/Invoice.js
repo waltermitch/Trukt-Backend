@@ -6,6 +6,6 @@ const prefix = '/invoice';
 
 router
     .get(`${prefix}/:invoiceId(${uuidRegex})`, controller.constructor.getInvoice)
-    .post(`${prefix}`, controller.constructor.createInvoice);
+    .post(`${prefix}`, controller.constructor.createInvoices);
 
 module.exports = router;

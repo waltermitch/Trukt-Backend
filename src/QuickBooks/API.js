@@ -1,19 +1,23 @@
 const VariableService = require('../Services/VariableService');
 const SFAccount = require('../Models/SFAccount');
 const HTTPS = require('../AuthController');
+
+const LineItemMdl = require('../Models/InvoiceLineItem');
 const NodeCache = require('node-cache');
+const Invoice = require('./Invoice');
 const Vendor = require('./Vendor');
 const Client = require('./Client');
 const Mongo = require('../Mongo');
 const axios = require('axios');
+const Bill = require('./Bill');
 
 const authConfig = { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': process.env['quickbooks.basicAuth'] } };
 const authUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const tokenName = process.env['quickbooks.tokenName'];
 const url = process.env['quickbooks.apiUrl'];
 
-// storing dynamic values in this one
-const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 60 * 60 * 24, arrayValueSize: 20 });
+// store client types (for now)
+const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 60 * 60 * 24 });
 
 let qb;
 
@@ -40,6 +44,60 @@ class QBO
         }
 
         return qb.instance;
+    }
+
+    static async createInvoices(array)
+    {
+        // this way we take in arrays and singular objects
+        if (!Array.isArray(array))
+            array = [array];
+
+        const invoices = [];
+
+        for (const e of array)
+        {
+            const invoice = new Invoice(e);
+
+            const payload =
+            {
+                'bId': e.guid,
+                'operation': 'create',
+                'Invoice': invoice
+            };
+
+            invoices.push(payload);
+        }
+
+        const res = await QBO.batch(invoices);
+
+        return res;
+    }
+
+    static async batchBills(array)
+    {
+        // this way we take in arrays and singular objects
+        if (!Array.isArray(array))
+            array = [array];
+
+        const bills = [];
+
+        for (const e of array)
+        {
+            const bill = new Bill(e);
+
+            const payload =
+            {
+                'bId': e.guid,
+                'operation': 'create',
+                'Bill': bill
+            };
+
+            bills.push(payload);
+        }
+
+        const res = await QBO.batch(bills);
+
+        return res;
     }
 
     static async batch(arr)
@@ -136,36 +194,39 @@ class QBO
 
     static async getSyncToken(objectName, objectId)
     {
+        const { SyncToken } = await QBO.get(objectName, objectId);
+
+        return SyncToken;
+    }
+
+    static async get(objectName, objectId)
+    {
+        if (!objectName || !objectId)
+            throw { 'status': 400, 'error': 'Missing Object Name/Id' };
+
         const api = await QBO.connect();
 
         const res = await api.get(`/${objectName?.toLowerCase()}/${objectId}`);
 
-        return res.data[`${objectName}`].SyncToken;
+        return res.data[`${objectName}`];
+    }
+
+    static async syncItemTypes()
+    {
+        const items = await QBO.getItemTypes();
+
+        for (let i = 0; i < items.length; i++)
+            await LineItemMdl.query().patch({ name: items[i].Name, type: items[i].Type, isAccessorial: false, isDeprecated: false }).where('id', items[i].Id);
     }
 
     static async getItemTypes()
     {
-        const items = cache.get('itemTypes');
-
-        if (items)
-            return items;
-
         const api = await QBO.connect();
 
         // get items
         const res = await api.get('/query?query=Select * from Item');
 
-        const arr = res.data.QueryResponse.Item;
-
-        const obj = {};
-
-        for (let i = 0; i < arr.length; i++)
-            obj[`${arr[i].Name}`] = arr[i];
-
-        // add to cache
-        cache.set('itemTypes', obj);
-
-        return obj;
+        return res.data.QueryResponse.Item;
     }
 
     static async getClientTypes()
@@ -219,6 +280,7 @@ class QBO
 
         await Promise.all([VariableService.update(ATData.name, ATData), VariableService.update(RTData.name, RTData)]);
     }
+
 }
 
 module.exports = QBO;
