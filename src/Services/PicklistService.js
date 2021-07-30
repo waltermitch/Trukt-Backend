@@ -1,5 +1,6 @@
 const fs = require('fs');
 const BaseModel = require('../Models/BaseModel');
+const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const https = require('https');
 
 const knex = BaseModel.knex();
@@ -18,23 +19,29 @@ const lbConn = require('axios').create(opts);
 let picklists;
 const localPicklistPath = './localdata/picklists.json';
 
+// this exists to filter out invoice bill line items that are also locksmith
+// job types and to create a new picklist with locksmith job types from invoice line items
+const locksmithJobNames = [
+    'duplicate car keys',
+    'laser-cut transponder key',
+    'mechanical key',
+    'program car remotes',
+    'program keys',
+    'proximity fob w/last cut key override',
+    'remote/key combo',
+    'replace car fobs',
+    'replace car remotes',
+    'self programmable remote',
+    'sell car remotes',
+    'tibbe key',
+    'transponder key'
+];
+
 class PicklistService
 {
     static async updatePicklists()
     {
         picklists = await PicklistService.getPicklistBod();
-
-        // this api endpoint calls the loadboards function app that
-        // gathers loadboard picklist information and sends it back
-        // as a response.
-        const lbs = await lbConn.get('/equipmenttypes');
-        Object.assign(picklists, lbs.data);
-        console.log(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
-        const paymentTerms = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
-        const paymentMethods = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_methods').select('*'));
-        const equipmentTypes = PicklistService.createPicklistObject(await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true }));
-
-        Object.assign(picklists, { paymentMethods, paymentTerms, equipmentTypes });
 
         // since the localdata folder does not get tracked in git and not get pushed to the server,
         // check if the folder exists first; create it if it does not exist.
@@ -78,6 +85,17 @@ class PicklistService
         // from this query, so the solution was to make this category unique so it does not conflict anymore
         const lineItems = await knex.raw('select \'lineItems\' as tableName, id as value, concat(type, \'LookupTypes\') as category, name as label from rcg_tms.invoice_bill_line_items where is_deprecated is false');
 
+        // this api endpoint calls the loadboards function app that
+        // gathers loadboard picklist information and sends it back
+        // as a response.
+        const loadboardData = (await lbConn.get('/equipmenttypes')).data;
+
+        // Object.assign(picklists, loadboardData.data);
+        const paymentTerms = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
+        const paymentMethods = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_methods').select('*'));
+        const equipmentTypes = PicklistService.createPicklistObject(await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true }));
+        const locksmithJobTypes = PicklistService.createPicklistObject(await InvoiceLineItem.query().whereIn('name', locksmithJobNames));
+
         const all = enums.rows.concat(comTypes.rows).concat(jobTypes.rows).concat(lineItems.rows);
 
         for (const row of all)
@@ -90,6 +108,13 @@ class PicklistService
             picklists[category].options.push(this.createOptionObject(row.label, row.value));
         }
 
+        Object.assign(picklists, {
+            paymentMethods,
+            paymentTerms,
+            equipmentTypes,
+            locksmithJobTypes,
+            loadboardData
+        });
         return picklists;
     }
 
@@ -120,7 +145,7 @@ class PicklistService
      */
     static cleanUpSnakeCase(String)
     {
-        return String.replace(/(_[A-Za-z])/g, (word, index) =>
+        return String.replace(/(_[A-Za-z])/g, (word) =>
         {
             return word.toUpperCase();
         }).replace(/_/gi, '');
@@ -133,7 +158,7 @@ class PicklistService
      */
     static cleanUpCamelCase(String)
     {
-        return String.replace(/(?<=[a-z])([A-Z])/g, (word, index) =>
+        return String.replace(/(?<=[a-z])([A-Z])/g, (word) =>
         {
             return ' ' + word;
         });
@@ -149,7 +174,7 @@ class PicklistService
         return String.replace(/[ _]([A-Za-z])/g, (word, p1) =>
         {
             return p1.toUpperCase();
-        }).replace(/^\w/, (word, index) => { return word.toLowerCase(); }).replace(/\s/g, '');
+        }).replace(/^\w/, (word) => { return word.toLowerCase(); }).replace(/\s/g, '');
     }
 
     /**
