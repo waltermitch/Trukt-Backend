@@ -2,6 +2,7 @@ const VariableService = require('../Services/VariableService');
 const CarrierBankAccount = require('./CarrierBankAccount');
 const HTTPS = require('../AuthController');
 const Carrier = require('./Carrier');
+const Bill = require('./Bill');
 
 let triumph;
 
@@ -77,6 +78,17 @@ class Triumph
 
         // save token to pg
         await VariableService.update(data.name, data);
+    }
+
+    static async upsertBill(data)
+    {
+        const api = await Triumph.connect();
+
+        const bill = new Bill(data);
+
+        const res = await api.post('/APISubmitPayor/Invoice', bill);
+
+        return res.data;
     }
 }
 
