@@ -84,6 +84,11 @@ class SFContact extends BaseModel
         this.accountId = sfaccount.sfId;
     }
 
+    linkRecordType(recType)
+    {
+        this.recordTypeId = recType.sfId;
+    }
+
     hasId()
     {
         const fields = SFContact.idColumns;

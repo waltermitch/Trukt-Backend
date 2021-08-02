@@ -1,5 +1,5 @@
 const BaseModel = require('./BaseModel');
-const RecordAuthors = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 class Order extends BaseModel
 {
@@ -16,6 +16,8 @@ class Order extends BaseModel
     static get relationMappings()
     {
         const SFAccount = require('./SFAccount');
+        const SFContact = require('./SFContact');
+        const User = require('./User');
         return {
             client: {
                 relation: BaseModel.BelongsToOneRelation,
@@ -23,6 +25,22 @@ class Order extends BaseModel
                 join: {
                     from: 'rcgTms.orders.clientGuid',
                     to: 'salesforce.accounts.guid'
+                }
+            },
+            clientContact: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFContact,
+                join: {
+                    from: 'rcgTms.orders.clientContactGuid',
+                    to: 'salesforce.contacts.guid'
+                }
+            },
+            owner: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: User,
+                join: {
+                    from: 'rcgTms.orders.ownerGuid',
+                    to: 'rcgTms.tmsUsers.guid'
                 }
             },
             jobs: {
@@ -86,10 +104,26 @@ class Order extends BaseModel
                     },
                     to: 'rcgTms.invoiceBills.order'
                 }
+            },
+            referrer: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFAccount,
+                join: {
+                    from: 'rcgTms.orders.referrerGuid',
+                    to: 'salesforce.accounts.guid'
+                }
+            },
+            salesperson: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFAccount,
+                join: {
+                    from: 'rcgTms.orders.salespersonGuid',
+                    to: 'salesforce.accounts.guid'
+                }
             }
         };
     }
 }
 
-Object.assign(Order.prototype, RecordAuthors);
+Object.assign(Order.prototype, RecordAuthorMixin);
 module.exports = Order;

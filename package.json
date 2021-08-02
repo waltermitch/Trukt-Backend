@@ -10,7 +10,7 @@
         "decrypt": "bash ./tools/decrypt.sh",
         "setup": "bash ./tools/git_setup.sh && bash ./tools/decrypt.sh './local.settings.enc' './local.settings.json'",
         "merge-settings": "node ./tools/merge_settings.js",
-        "knex-debug": "set DEBUG=knex* && func start"
+        "knex-debug": "set DEBUG=knex* && node main.js"
     },
     "author": "",
     "license": "ISC",

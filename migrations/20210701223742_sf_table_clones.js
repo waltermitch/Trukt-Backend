@@ -242,7 +242,8 @@ exports.up = function (knex)
             isactive as is_active,
             description as description,
             sfid as sf_id,
-            id as id
+            id as id,
+            sobjecttype as object_type
         FROM salesforce.recordtype;
     `);
 };
