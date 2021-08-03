@@ -11,6 +11,17 @@ class RecordType extends BaseModel
     {
         return 'id';
     }
+
+    static modifiers = {
+        byType(query, type)
+        {
+            query.where('object_type', 'ilike', type);
+        },
+        byName(query, name)
+        {
+            query.findOne('name', 'ilike', name);
+        }
+    }
 }
 
 module.exports = RecordType;
