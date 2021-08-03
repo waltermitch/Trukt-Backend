@@ -38,6 +38,23 @@ const locksmithJobNames = [
     'transponder key'
 ];
 
+const conditionTypes = {
+    options: [
+        {
+            label: 'Inoperable',
+            value: 'yes'
+        },
+        {
+            label: 'Operable',
+            value: 'no'
+        },
+        {
+            label: 'Not Verified',
+            value: 'unknown'
+        }
+    ]
+};
+
 class PicklistService
 {
     static async updatePicklists()
@@ -114,7 +131,8 @@ class PicklistService
             equipmentTypes,
             locksmithJobTypes,
             loadboardData,
-            commodityTypes
+            commodityTypes,
+            conditionTypes
         });
         return picklists;
     }
@@ -128,6 +146,7 @@ class PicklistService
     static createCommodityTypes(commTypes)
     {
         const types = { vehicles: { options: [] }, freight: { options: [] } };
+        types.commodityTypes = { options: [{ label: 'Vehicles', value: 'vehicles' }, { label: 'Freight', value: 'freight' }] };
         for (const type of commTypes)
         {
             if (type.category === 'vehicle')
