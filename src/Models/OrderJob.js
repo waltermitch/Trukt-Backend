@@ -112,6 +112,14 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.vendorAgentGuid',
                     to: 'salesforce.contacts.guid'
                 }
+            },
+            equipmentType: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./EquipmentType'),
+                join: {
+                    from: 'rcgTms.orderJobs.equipmentTypeId',
+                    to: 'rcgTms.equipmentTypes.id'
+                }
             }
         };
     }
