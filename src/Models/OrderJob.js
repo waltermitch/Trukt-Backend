@@ -172,6 +172,12 @@ class OrderJob extends BaseModel
 
         return json;
     }
+
+    setIndex(index)
+    {
+        const newIndex = 'job_' + Date.now() + index;
+        super.setIndex(newIndex);
+    }
 }
 
 Object.assign(OrderJob.prototype, RecordAuthorMixin);
