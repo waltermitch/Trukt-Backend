@@ -224,5 +224,53 @@
                 ]
             }
         }
+    },
+    "Commodity": {
+        "hide": {
+            "external": {
+                "into": [
+                    "typeId",
+                    "vehicleId",
+                    "isDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdBy",
+                    "updatedBy",
+                    "deletedBy"
+                ]
+            }
+        }
+    },
+    "Order": {
+        "hide": {
+            "external": {
+                "into": [
+                    "clientGuid",
+                    "clientContactGuid",
+                    "referrerGuid",
+                    "salespersonGuid",
+                    "ownerGuid",
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedBy"
+                ]
+            }
+        }
+    },
+    "OrderJob": {
+        "hide": {
+            "external": {
+                "into": [
+                    "vendorGuid",
+                    "vendorContactGuid",
+                    "vendorAgentGuid",
+                    "ownerGuid",
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedBy"
+                ]
+            }
+        }
     }
 }

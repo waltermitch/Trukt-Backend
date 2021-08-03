@@ -1,7 +1,5 @@
 const BaseModel = require('./BaseModel');
 
-let commTypes = undefined;
-
 class CommodityType extends BaseModel
 {
     static get tableName()
@@ -17,26 +15,34 @@ class CommodityType extends BaseModel
     static get relationMappings()
     {
         return {
-            relation: BaseModel.HasManyRelation,
-            modeClass: require('./Commodity'),
-            join: {
-                from: 'rcgTms.commodityTypes.id',
-                to: 'rcgTms.commodities.type'
+            commodities: {
+                relation: BaseModel.HasManyRelation,
+                modeClass: require('./Commodity'),
+                join: {
+                    from: 'rcgTms.commodityTypes.id',
+                    to: 'rcgTms.commodities.type'
+                }
+
             }
         };
     }
 
-    static async types()
+    /**
+     *  Used to compare if the commodity has the current commodity type
+     * @param {Commodity} commodity
+     * @param {CommodityType} commType
+     * @returns {boolean}
+     */
+    static compare(commodity, commType)
     {
-        if (!commTypes)
+        // do not want undefined values to match undefined values
+        // one big line because of sort circuit boolean evaluation
+        return (commType.id != undefined
+            && (commType.id === commodity?.typeId || commType.id === commodity?.commType?.id)
+        ) || (commType?.type != undefined && commType?.category != undefined
+            && commType.category === commodity?.commType?.category
+            && commType.type === commodity?.commType?.type);
 
-            commTypes = await CommodityType.query();
-
-        // give the object that is requesting, a clone, so that it cannot
-        // change the internal commTypes that will mess with other objects
-        // that will need the commodity types
-        const clone = commTypes.map(x => Object.assign({}, x));
-        return clone;
     }
 }
 

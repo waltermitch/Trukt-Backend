@@ -1,5 +1,5 @@
 const BaseModel = require('./BaseModel');
-const RecordAuthors = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 class Order extends BaseModel
 {
@@ -16,13 +16,31 @@ class Order extends BaseModel
     static get relationMappings()
     {
         const SFAccount = require('./SFAccount');
+        const SFContact = require('./SFContact');
+        const User = require('./User');
         return {
             client: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: require('./SFAccount'),
+                modelClass: SFAccount,
                 join: {
                     from: 'rcgTms.orders.clientGuid',
                     to: 'salesforce.accounts.guid'
+                }
+            },
+            clientContact: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFContact,
+                join: {
+                    from: 'rcgTms.orders.clientContactGuid',
+                    to: 'salesforce.contacts.guid'
+                }
+            },
+            owner: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: User,
+                join: {
+                    from: 'rcgTms.orders.ownerGuid',
+                    to: 'rcgTms.tmsUsers.guid'
                 }
             },
             jobs: {
@@ -41,7 +59,7 @@ class Order extends BaseModel
                     through: {
                         modelClass: require('./OrderStopLink'),
                         from: 'rcgTms.orderStopLinks.orderGuid',
-                        extra: ['lotNumber', 'stops'],
+                        extra: ['lotNumber'],
                         to: 'rcgTms.orderStopLinks.commodityGuid'
                     },
                     to: 'rcgTms.commodities.guid'
@@ -67,34 +85,45 @@ class Order extends BaseModel
                     to: 'rcgTms.orderStopLinks.orderGuid'
                 }
             },
-            client: {
-                relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
-                join: {
-                    from: 'rcgTms.orders.clientGuid',
-                    to: 'salesforce.account.guid'
-                }
-            },
             cosignee: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: SFAccount,
                 join: {
                     from: 'rcgTms.orders.cosigneeGuid',
-                    to: 'salesforce.account.guid'
+                    to: 'salesforce.accounts.guid'
+                }
+            },
+            invoices: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./InvoiceBill'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    through: {
+                        from: 'rcgTms.invoices.orderGuid',
+                        to: 'rcgTms.invoices.invoiceGuid'
+                    },
+                    to: 'rcgTms.invoiceBills.order'
+                }
+            },
+            referrer: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFAccount,
+                join: {
+                    from: 'rcgTms.orders.referrerGuid',
+                    to: 'salesforce.accounts.guid'
+                }
+            },
+            salesperson: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFAccount,
+                join: {
+                    from: 'rcgTms.orders.salespersonGuid',
+                    to: 'salesforce.accounts.guid'
                 }
             }
-
-            // invoiceBills: {
-            //     relation: BaseModel.HasManyRelation,
-            //     modelClass: InvoiceBill,
-            //     join: {
-            //         from: 'rcgTms.orders.guid',
-            //         to: 'rcgTms.invoiceBills.order'
-            //     }
-            // }
         };
     }
 }
 
-Object.assign(Order.prototype, RecordAuthors);
+Object.assign(Order.prototype, RecordAuthorMixin);
 module.exports = Order;

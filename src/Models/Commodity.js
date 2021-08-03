@@ -1,7 +1,16 @@
 const BaseModel = require('./BaseModel');
-const CommodityType = require('./CommodityType');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
+
+// used for flattening the commodity in/out api
+const vehicleFields = [
+    'year',
+    'make',
+    'model',
+    'trim'
+];
+
+const commTypeFields = ['category', 'type'];
 
 class Commodity extends BaseModel
 {
@@ -76,101 +85,116 @@ class Commodity extends BaseModel
         return this.commType?.category === 'freight' || this.vehicle == undefined && this.vehicleId == undefined;
     }
 
-    /**
-     * Sets the commodity type id on this commodity
-     */
-    async setCommTypeId()
+    setType(commType)
     {
-        const commType = await this.getCommType();
-        if (!this.typeId)
+        if (!commType)
         {
-            this.typeId = commType.id;
+            throw new Error('invalid commodity type provided');
         }
+        this.commType = commType;
+        this.typeId = commType.id;
     }
 
-    async getCommType()
+    setVehicle(vehicle)
     {
-        const commTypes = await CommodityType.types();
-        let found = undefined;
-        const category = this.commType?.category;
-        const type = this.commType?.type;
-
-        if (this.typeId)
+        if (!vehicle)
         {
-            found = commTypes.find(it => it.id == this.typeId);
+            throw new Error('invalid commodity vehicle provided');
         }
-        else
-        {
-            found = commTypes.find(it => it.category === category && it.type === type);
-        }
-
-        if (!found)
-        {
-            throw new Error('Invalid commodity type provided: ' + (this.typeId || `${category} ${type}`));
-        }
-
-        return found;
-    }
-
-    /**
-     * Sets the commodity name field
-     * automatically generates the name if the user didn't supply a name
-     */
-    async setName()
-    {
-        const commType = this.commType || await this.getCommType();
-        if (!this.name)
-        {
-            let names = [];
-            switch (commType.category)
-            {
-                case 'vehicle':
-                    for (const fname of ['year', 'make', 'model'])
-                        if (this.vehicle?.[fname])
-                            names.push(this.vehicle[fname]);
-                    break;
-                case 'freight':
-                    names = [this.quantity, commType.type];
-                    if (this.weight)
-                        names.push(this.weight + ' lbs');
-                    break;
-                default:
-                    names = [this.quantity, commType.category];
-            }
-            this.name = names.join(' ').trim();
-        }
-        if (!this.name)
-        {
-            const category = this.quantity > 1 && commType.category === 'vehicle' ? 'vehicles' : commType.category;
-            this.name = [this.quantity > 1 ? this.quantity : '', category, commType.type].join(' ');
-        }
-        this.name = this.name.replace(/\s+/g, ' ').trim();
-    }
-
-    async setDescription()
-    {
-        if (!this.description)
-        {
-            await this.setName();
-            this.description = this.name;
-            if (!this.description)
-            {
-                this.description = 'no description provided';
-            }
-        }
+        this.vehicle = vehicle;
+        this.vehicleId = vehicle.id;
     }
 
     $parseJson(json)
     {
-        console.log(json);
         json = super.$parseJson(json);
 
-        if (!(json?.typeId) && 'category' in json && 'type' in json)
+        if (!(json?.commType))
         {
-            json.commType = { category: json.category, type: json.type };
-            delete json.category;
-            delete json.type;
+            // inflate the commodity from api
+            const commType = commTypeFields.reduce((commType, field) =>
+            {
+                if (field in json)
+                {
+                    commType[field] = json[field];
+                    delete json[field];
+                }
+                return commType;
+            }, {});
+
+            if (json.typeId)
+            {
+                commType.id = json.typeId;
+                delete json.typeId;
+            }
+
+            if (Object.keys(commType).length > 0)
+            {
+                json.commType = commType;
+            }
+            else
+            {
+                json.commType = null;
+            }
         }
+
+        if (!(json?.vehicle))
+        {
+            // vehicle is flat from api so unflatten it
+            const vehicle = vehicleFields.reduce((vehicle, field) =>
+            {
+                if (field in json)
+                {
+                    vehicle[field] = json[field];
+                    delete json[field];
+                }
+                return vehicle;
+            }, {});
+
+            if (json.vehicleId)
+            {
+                vehicle.id = json.vehicleId;
+                delete json.vehicleId;
+            }
+
+            if (Object.keys(vehicle).length > 0)
+            {
+                json.vehicle = vehicle;
+            }
+            else
+            {
+                json.vehicle = null;
+            }
+        }
+
+        if ('index' in json)
+        {
+            json['#id'] = json.index;
+            delete json.index;
+        }
+
+        return json;
+    }
+
+    $formatJson(json)
+    {
+        json = super.$formatJson(json);
+
+        // flatten the vehicle when sending out to api
+        if (json?.vehicle)
+        {
+            delete json.vehicle.id;
+            Object.assign(json, json.vehicle);
+        }
+        delete json.vehicle;
+
+        // flatten the commType when sending out to api
+        if (json?.commType)
+        {
+            delete json.commType.id;
+            Object.assign(json, json.commType);
+        }
+        delete json.commType;
 
         return json;
     }
@@ -186,9 +210,6 @@ class Commodity extends BaseModel
     async $beforeInsert(queryContext)
     {
         await super.$beforeInsert(queryContext);
-        await this.setCommTypeId();
-        await this.setName();
-        await this.setDescription();
 
         // only keep the id
         delete this.commType;
@@ -200,9 +221,6 @@ class Commodity extends BaseModel
     async $beforeUpdate(options, context)
     {
         await super.$beforeUpdate(options, context);
-        await this.setCommTypeId();
-        await this.setName();
-        await this.setDescription();
 
         // only keep the id
         delete this.commType;
