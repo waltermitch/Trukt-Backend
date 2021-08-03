@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 class InvoiceLine extends BaseModel
 {
@@ -35,4 +36,5 @@ class InvoiceLine extends BaseModel
     }
 }
 
+Object.assign(InvoiceLine.prototype, RecordAuthorMixin);
 module.exports = InvoiceLine;
