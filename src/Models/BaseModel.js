@@ -121,6 +121,16 @@ class BaseModel extends Model
             }
         }
     }
+
+    mapIndex(json)
+    {
+        if ('index' in json)
+        {
+            json['#id'] = json.index;
+            delete json.index;
+        }
+        return json;
+    }
 }
 
 module.exports = BaseModel;
