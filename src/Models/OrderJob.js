@@ -112,6 +112,18 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.vendorAgentGuid',
                     to: 'salesforce.contacts.guid'
                 }
+            },
+            bills: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./InvoiceBill'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    through: {
+                        from: 'rcgTms.bills.jobGuid',
+                        to: 'rcgTms.bills.billGuid'
+                    },
+                    to: 'rcgTms.invoiceBills.guid'
+                }
             }
         };
     }
