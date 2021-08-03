@@ -23,6 +23,14 @@ class SFContact extends BaseModel
                     from: 'salesforce.contacts.accountId',
                     to: 'salesforce.accounts.sfId'
                 }
+            },
+            orders: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./Order'),
+                join: {
+                    from: 'salesforce.contacts.guid',
+                    to: 'salesforce.order.clientGuid'
+                }
             }
         };
     }
