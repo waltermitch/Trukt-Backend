@@ -12,13 +12,18 @@ exports.up = function (knex)
         table.uuid(orderguid);
         table.foreign(orderguid).references('guid').inTable('rcg_tms.orders');
         table.string('number', 9).comment('The job number based off of the order number');
+        
         const vendorguid = 'vendor_guid';
-        table.string(vendorguid, 100).comment('The account completing the job for the company');
+        table.string(vendorguid, 100).comment('The account completing the job for the company, usually a carrier account');
         table.foreign(vendorguid).references('guid__c').inTable('salesforce.account');
 
         const vendorcontguid = 'vendor_contact_guid';
         table.string(vendorcontguid, 100).comment('The vendor\'s primary contact');
         table.foreign(vendorcontguid).references('guid__c').inTable('salesforce.contact');
+
+        const vendorAgentGuid = 'vendor_agent_guid';
+        table.string(vendorAgentGuid, 100).comment('the vendor\'s agent that will be doing the job, usually a driver or another worker');
+        table.foreign(vendorAgentGuid).references('guid__c').inTable('salesforce.contact');
 
         table.uuid('owner_guid').comment('This is the person in charge of making sure the job is full-filled. Either dispatcher or other actor.');
 

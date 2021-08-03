@@ -24,12 +24,7 @@ class PicklistController extends HttpRouteController
             }
         }
 
-        const finalBody = {
-            body: picklists,
-            status: 200
-        };
-
-        res.status(200).json(finalBody);
+        res.status(200).json(picklists);
     }
 
     static async update(req, res)

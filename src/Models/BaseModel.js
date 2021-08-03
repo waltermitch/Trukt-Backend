@@ -21,8 +21,13 @@ class BaseModel extends Model
     {
         json = super.$formatJson(json);
         for (const field of fieldMappings?.[this.constructor.name]?.hide?.external?.into || [])
-
+        {
             delete json[field];
+        }
+
+        delete json['#id'];
+        delete json['#ref'];
+        delete json['#dbRef'];
 
         return json;
     }
@@ -80,6 +85,36 @@ class BaseModel extends Model
         await super.$beforeUpdate(options, context);
         if (typeof this.setUpdatedBy === 'function')
             this.setUpdatedBy();
+    }
+
+    setIndex(index)
+    {
+        if (!this['#id'])
+        {
+            this['#id'] = index;
+        }
+    }
+
+    /**
+     * links a model to the current instance
+     * used for graph insert, doesnt do anything is model doesnt exist
+     * @param {string} relName
+     * @param {Model} model
+     */
+    graphLink(relName, model)
+    {
+        if (model && model.constructor.idColumn)
+        {
+            const link = { '#dbRef': model[model.constructor.idColumn] };
+            if (typeof this[relName] === 'object')
+            {
+                Object.assign(this[relName], link);
+            }
+            else
+            {
+                this[relName] = link;
+            }
+        }
     }
 }
 

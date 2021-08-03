@@ -12,12 +12,19 @@ exports.up = function (knex)
         const clientfieldname = 'client_guid';
         table.string(clientfieldname, 100).notNullable();
         table.foreign(clientfieldname).references('guid__c').inTable('salesforce.account');
-        const contactfieldname = 'contact_guid';
+        const contactfieldname = 'client_contact_guid';
         table.string(contactfieldname, 100).unsigned();
         table.foreign(contactfieldname).references('guid__c').inTable('salesforce.contact');
         table.text('instructions').comment('These are the instructions from the client');
-        table.uuid('owner_guid').comment('This is the person in charge of making sure the order is full-filled. Either a dispatcher or other actor.');
-        table.uuid('referrer_guid').comment('This is the person who referred this order');
+        const ownerFieldName = 'owner_guid';
+        table.uuid(ownerFieldName).comment('This is the person in charge of making sure the order is full-filled. Either a dispatcher or other actor.');
+        table.foreign(ownerFieldName).references('guid').inTable('rcg_tms.tms_users');
+        const referrerFieldName = 'referrer_guid';
+        table.string(referrerFieldName, 100).comment('This is the person who referred this order');
+        table.foreign(referrerFieldName).references('guid__c').inTable('salesforce.account');
+        const salespersonFieldName = 'salesperson_guid';
+        table.string(salespersonFieldName, 100).comment('This is the person who is responsible for the sales of this order');
+        table.foreign(salespersonFieldName).references('guid__c').inTable('salesforce.account');
 
         // status fields and statistics
         table.string('status').comment('This is purely for display for the user, do not change this status manually');

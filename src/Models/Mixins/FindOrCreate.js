@@ -1,78 +1,104 @@
 const mixin =
 {
+    /**
+     * checks if the current model has the id column in it
+     * this method exists because of salesforce
+     * @returns true or false
+     */
     hasId()
     {
-        return 'guid' in this;
+        return this.constructor.idColumn in this;
     },
 
+    /**
+     * finds the field that holds the id of the object
+     * salesforce objects have 3 different ids and are not supported by postgres constraints
+     * this method exists because of salesforce.
+     * @returns object with field, id keys. field is the field that stores the id
+     */
     findIdValue()
     {
-        return { field: 'guid', id: this.guid };
+        const idCol = this.constructor.idColumn;
+        return { field: idCol, id: this[idCol] };
     },
 
+    /**
+     * used to build the where statement for multiple unique fields
+     * override this field if you need unique operators for specific columns
+     * @returns the operator that should be used for the colname
+     */
     getColumnOp(colname, colvalue)
     {
         return typeof colvalue === 'string' ? 'ilike' : '=';
     },
 
-    async findOrCreate(model, trx)
+    /**
+     * some records are to be shared with other parent records
+     * this method is designed to locate those records before deciding to create them
+     * @returns
+     */
+    async findOrCreate(trx)
     {
         let record = undefined;
 
-        if (model.hasId())
+        if (this.hasId())
         {
             // find using an id
-            const { field, id } = model.findIdValue();
-            record = await model.constructor.query(trx).where(field, id);
+            const { field, id } = this.findIdValue();
+            record = await this.constructor.query(trx).findOne(field, id);
         }
 
-        const uniqueCols = model.constructor.uniqueColumns;
-
-        if ((!record || (Array.isArray(record) && record.length === 0)) && uniqueCols != undefined)
+        const uniqueCols = this.constructor.uniqueColumns;
+        if (!record && uniqueCols)
         {
-            let qb = model.constructor.query(trx);
+            const qb = this.constructor.query(trx);
 
             // find using unique fields
             for (const col of uniqueCols)
-                if (model[col] == undefined)
-                    qb = qb.whereNull(col);
+            {
+                if (this[col] == undefined)
+                {
+                    qb.whereNull(col);
+                }
                 else
-                    qb = qb.where(col, model.getColumnOp(col, model[col]), model[col]);
+                {
+                    qb.findOne(col, this.getColumnOp(col, this[col]), this[col]);
+                }
+            }
 
             record = await qb;
         }
 
-        if (Array.isArray(record))
-
-            if (record.length === 0)
+        if (!record)
+        {
+            record = Object.keys(this).reduce((obj, field) =>
             {
-                // the other queries showed up empty
-                // undefined will mean that there is a problem
-                record = Object.keys(model).reduce((obj, field) =>
-                {
-                    obj[field] = model[field] || null;
-                    return obj;
-                }, {});
+                obj[field] = this[field] || null;
+                return obj;
+            }, {});
 
-                const idCols = model.constructor?.idColumns || [model.constructor?.idColumn];
-                for (const field of idCols)
-
-                    delete record[field];
-                record = model.constructor.fromJson(record);
-
-                try
+            // when using this method, make sure that #id and #ref are not used in the model
+            // will cause the insert method to crash, also findOrCreate is not used for graphs
+            for (const x of ['#id', '#ref', '#dbRef'])
+            {
+                if (x in record)
                 {
-                    record = await model.constructor.query(trx).insert(record).returning('*');
-                }
-                catch (err)
-                {
-                    record = undefined;
+                    delete record[x];
                 }
             }
-            else
+
+            const idCols = this.constructor?.idColumns || [this.constructor?.idColumn];
+
+            // remove the id columns because insert will fail, id values should not be provided by external sources
+            // id columns are columns that are used to identify the record in our database
+            // external data identifiers can be stored in "non-identifying" columns
+            for (const field of idCols)
             {
-                record = record[0];
+                delete record[field];
             }
+            record = this.constructor.fromJson(record);
+            record = await this.constructor.query(trx).insertAndFetch(record);
+        }
 
         return record;
     }

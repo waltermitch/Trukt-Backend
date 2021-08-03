@@ -2,6 +2,16 @@ const BaseModel = require('./BaseModel');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 
+// used for flattening the commodity in/out api
+const vehicleFields = [
+    'year',
+    'make',
+    'model',
+    'trim'
+];
+
+const commTypeFields = ['category', 'type'];
+
 class Commodity extends BaseModel
 {
     static get tableName()
@@ -75,16 +85,116 @@ class Commodity extends BaseModel
         return this.commType?.category === 'freight' || this.vehicle == undefined && this.vehicleId == undefined;
     }
 
+    setType(commType)
+    {
+        if (!commType)
+        {
+            throw new Error('invalid commodity type provided');
+        }
+        this.commType = commType;
+        this.typeId = commType.id;
+    }
+
+    setVehicle(vehicle)
+    {
+        if (!vehicle)
+        {
+            throw new Error('invalid commodity vehicle provided');
+        }
+        this.vehicle = vehicle;
+        this.vehicleId = vehicle.id;
+    }
+
     $parseJson(json)
     {
         json = super.$parseJson(json);
 
-        if (!(json?.typeId) && 'category' in json && 'type' in json)
+        if (!(json?.commType))
         {
-            json.commType = { category: json.category, type: json.type };
-            delete json.category;
-            delete json.type;
+            // inflate the commodity from api
+            const commType = commTypeFields.reduce((commType, field) =>
+            {
+                if (field in json)
+                {
+                    commType[field] = json[field];
+                    delete json[field];
+                }
+                return commType;
+            }, {});
+
+            if (json.typeId)
+            {
+                commType.id = json.typeId;
+                delete json.typeId;
+            }
+
+            if (Object.keys(commType).length > 0)
+            {
+                json.commType = commType;
+            }
+            else
+            {
+                json.commType = null;
+            }
         }
+
+        if (!(json?.vehicle))
+        {
+            // vehicle is flat from api so unflatten it
+            const vehicle = vehicleFields.reduce((vehicle, field) =>
+            {
+                if (field in json)
+                {
+                    vehicle[field] = json[field];
+                    delete json[field];
+                }
+                return vehicle;
+            }, {});
+
+            if (json.vehicleId)
+            {
+                vehicle.id = json.vehicleId;
+                delete json.vehicleId;
+            }
+
+            if (Object.keys(vehicle).length > 0)
+            {
+                json.vehicle = vehicle;
+            }
+            else
+            {
+                json.vehicle = null;
+            }
+        }
+
+        if ('index' in json)
+        {
+            json['#id'] = json.index;
+            delete json.index;
+        }
+
+        return json;
+    }
+
+    $formatJson(json)
+    {
+        json = super.$formatJson(json);
+
+        // flatten the vehicle when sending out to api
+        if (json?.vehicle)
+        {
+            delete json.vehicle.id;
+            Object.assign(json, json.vehicle);
+        }
+        delete json.vehicle;
+
+        // flatten the commType when sending out to api
+        if (json?.commType)
+        {
+            delete json.commType.id;
+            Object.assign(json, json.commType);
+        }
+        delete json.commType;
 
         return json;
     }
