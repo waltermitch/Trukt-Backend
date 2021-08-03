@@ -17,7 +17,7 @@ exports.up = function (knex)
         }),
         knex.schema.withSchema('rcg_tms').table('order_jobs', table =>
         {
-            table.enu('load_type', null, { useNative: true, enumName: 'load_capacity_types', existingType: true }).notNullable();
+            table.enu('load_type', null, { useNative: true, enumName: 'load_capacity_types', existingType: true });
             table.boolean('is_started').defaultsTo(false).notNullable();
             table.text('instructions').comment('instructions for the vendor, these instructions will be posted to load boards');
         })
