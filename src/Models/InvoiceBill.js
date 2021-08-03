@@ -80,6 +80,20 @@ class InvoiceBill extends BaseModel
             }
         };
     }
+
+    static get modifiers()
+    {
+        return {
+            bill(builder)
+            {
+                builder.where('isInvoice', false);
+            },
+            invoice(builder)
+            {
+                builder.where('isInvoice', true);
+            }
+        };
+    }
 }
 
 module.exports = InvoiceBill;
