@@ -12,6 +12,12 @@ const api = new HTTPS(opts).connect();
 
 class Coupa
 {
+    static async sendInvoices(arr)
+    {
+        for (let i = 0; i < arr?.length; i++)
+            await Coupa.sendInvoice(arr[i]);
+    }
+
     static async sendInvoice(data)
     {
         const invoice = new Invoice(data);
