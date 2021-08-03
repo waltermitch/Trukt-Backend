@@ -38,6 +38,23 @@ const locksmithJobNames = [
     'transponder key'
 ];
 
+const conditionTypes = {
+    options: [
+        {
+            label: 'Inoperable',
+            value: 'yes'
+        },
+        {
+            label: 'Operable',
+            value: 'no'
+        },
+        {
+            label: 'Not Verified',
+            value: 'unknown'
+        }
+    ]
+};
+
 class PicklistService
 {
     static async updatePicklists()
@@ -114,7 +131,8 @@ class PicklistService
             equipmentTypes,
             locksmithJobTypes,
             loadboardData,
-            commodityTypes
+            commodityTypes,
+            conditionTypes
         });
         return picklists;
     }
