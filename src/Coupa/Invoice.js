@@ -4,7 +4,7 @@ class Invoice
 {
     constructor(data)
     {
-        this.time = Invoice.getDate();
+        this.time = Invoice.setDate();
         this.tariff = data.amount?.toString();
         this.description = data.description;
         this.orderNumber = data.orderNumber;
@@ -97,9 +97,9 @@ class Invoice
         return payload;
     }
 
-    static getDate()
+    static setDate(date)
     {
-        return DateTime.utc().toString().substr(0, 19) + '+00:00';
+        return (date ? DateTime.fromISO(date).toString() : DateTime.utc().toString()).substr(0, 19) + '+00:00';
     }
 }
 
