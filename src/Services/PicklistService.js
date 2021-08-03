@@ -128,6 +128,7 @@ class PicklistService
     static createCommodityTypes(commTypes)
     {
         const types = { vehicles: { options: [] }, freight: { options: [] } };
+        types.commodityTypes = { options: [{ label: 'Vehicles', value: 'vehicles' }, { label: 'Freight', value: 'freight' }] };
         for (const type of commTypes)
         {
             if (type.category === 'vehicle')
