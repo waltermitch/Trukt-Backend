@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 /**
  * This class represents an invoice or a bill
@@ -96,4 +97,5 @@ class InvoiceBill extends BaseModel
     }
 }
 
+Object.assign(InvoiceBill.prototype, RecordAuthorMixin);
 module.exports = InvoiceBill;
