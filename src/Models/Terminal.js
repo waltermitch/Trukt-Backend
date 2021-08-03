@@ -59,6 +59,14 @@ class Terminal extends BaseModel
     }
 
     static uniqueColumns = ['latitude', 'longitude']
+
+    $parseJson(json)
+    {
+        json = super.$parseJson(json);
+        json = this.mapIndex(json);
+        return json;
+
+    }
 }
 
 Object.assign(Terminal.prototype, RecordAuthorMixin);
