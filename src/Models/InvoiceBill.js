@@ -30,19 +30,11 @@ class InvoiceBill extends BaseModel
                     to: 'rcgTms.invoiceBillLines.invoiceGuid'
                 }
             },
-            client: {
+            cosignee: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: SFAccount,
                 join: {
-                    from: 'rcgTms.invoiceBills.externalPartyGuid',
-                    to: 'salesforce.accounts.guid'
-                }
-            },
-            vendor: {
-                relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
-                join: {
-                    from: 'rcgTms.invoiceBills.externalPartyGuid',
+                    from: 'rcgTms.invoiceBills.cosigneeGuid',
                     to: 'salesforce.accounts.guid'
                 }
             },
@@ -68,6 +60,22 @@ class InvoiceBill extends BaseModel
                         to: 'rcgTms.bills.jobGuid'
                     },
                     to: 'rcgTms.orderJobs.guid'
+                }
+            },
+            paymentTerms: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./InvoicePaymentTerm'),
+                join: {
+                    from: 'rcgTms.invoiceBills.paymentTermId',
+                    to: 'rcgTms.invoiceBillPaymentTerms.id'
+                }
+            },
+            paymentMethod: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./InvoicePaymentMethod'),
+                join: {
+                    from: 'rcgTms.invoiceBills.paymentMethodId',
+                    to: 'rcgTms.invoiceBillPaymentMethods.id'
                 }
             }
         };
