@@ -120,14 +120,6 @@ class Order extends BaseModel
                     from: 'rcgTms.orders.salespersonGuid',
                     to: 'salesforce.accounts.guid'
                 }
-            },
-            clientContact: {
-                relation: BaseModel.BelongsToOneRelation,
-                modelClass: require('./SFContact'),
-                join: {
-                    from: 'rcgTms.orders.contactGuid',
-                    to: 'salesforce.contacts.guid'
-                }
             }
         };
     }
