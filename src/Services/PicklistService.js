@@ -1,6 +1,7 @@
 const fs = require('fs');
 const BaseModel = require('../Models/BaseModel');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
+const CommodityType = require('../Models/CommodityType');
 const https = require('https');
 
 const knex = BaseModel.knex();
@@ -78,7 +79,6 @@ class PicklistService
                 on t.oid = e.enumtypid
             join pg_catalog.pg_namespace n 
                 on n.oid = t.typnamespace`);
-        const comTypes = await knex.raw('select \'commodityTypes\' as tableName, id as value, concat(category, \'Types\') as category, type as label from rcg_tms.commodity_types');
         const jobTypes = await knex.raw('select \'jobTypes\' as tableName, id as value, concat(category, \'Types\') as category, type as label from rcg_tms.order_job_types');
 
         // this lookup table needed a different category compared to the others because there is already an enum type called expense_types, which conflicts with the results
@@ -90,13 +90,13 @@ class PicklistService
         // as a response.
         const loadboardData = (await lbConn.get('/equipmenttypes')).data;
 
-        // Object.assign(picklists, loadboardData.data);
         const paymentTerms = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
         const paymentMethods = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_methods').select('*'));
         const equipmentTypes = PicklistService.createPicklistObject(await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true }));
         const locksmithJobTypes = PicklistService.createPicklistObject(await InvoiceLineItem.query().whereIn('name', locksmithJobNames));
+        const commodityTypes = PicklistService.createCommodityTypes(await CommodityType.query().select('id', 'category', 'type as name'));
 
-        const all = enums.rows.concat(comTypes.rows).concat(jobTypes.rows).concat(lineItems.rows);
+        const all = enums.rows.concat(jobTypes.rows).concat(lineItems.rows);
 
         for (const row of all)
         {
@@ -113,9 +113,33 @@ class PicklistService
             paymentTerms,
             equipmentTypes,
             locksmithJobTypes,
-            loadboardData
+            loadboardData,
+            commodityTypes
         });
         return picklists;
+    }
+
+    /**
+     * @description this method exists purely because Brad wants the vehicle commodity type
+     * labeled as 'vehicles'. This called for a hard coded solution
+     * @param {*} commTypes a raw objection query result of the commoditiy types
+     * @returns an object with vehicles and freight options
+     */
+    static createCommodityTypes(commTypes)
+    {
+        const types = { vehicles: { options: [] }, freight: { options: [] } };
+        for (const type of commTypes)
+        {
+            if (type.category === 'vehicle')
+            {
+                types.vehicles.options.push(PicklistService.createOptionObject(type.name, type.id));
+            }
+            else if (type.category === 'freight')
+            {
+                types.freight.options.push(PicklistService.createOptionObject(type.name, type.id));
+            }
+        }
+        return types;
     }
 
     /**
