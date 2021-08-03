@@ -95,6 +95,11 @@ class BaseModel extends Model
         }
     }
 
+    hasIndex()
+    {
+        return this['#id'] == undefined;
+    }
+
     /**
      * links a model to the current instance
      * used for graph insert, doesnt do anything is model doesnt exist
