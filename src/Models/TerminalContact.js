@@ -2,11 +2,11 @@ const BaseModel = require('./BaseModel');
 let FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
-class Contact extends BaseModel
+class TerminalContact extends BaseModel
 {
     static get tableName()
     {
-        return 'rcgTms.contacts';
+        return 'rcgTms.terminalContacts';
     }
 
     static get idColumn()
@@ -51,6 +51,6 @@ class Contact extends BaseModel
 FindOrCreateMixin = Object.assign({}, FindOrCreateMixin);
 delete FindOrCreateMixin.getColumnOp;
 
-Object.assign(Contact.prototype, FindOrCreateMixin);
-Object.assign(Contact.prototype, RecordAuthorMixin);
-module.exports = Contact;
+Object.assign(TerminalContact.prototype, FindOrCreateMixin);
+Object.assign(TerminalContact.prototype, RecordAuthorMixin);
+module.exports = TerminalContact;

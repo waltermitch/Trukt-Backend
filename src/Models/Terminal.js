@@ -1,5 +1,5 @@
 const BaseModel = require('./BaseModel');
-const Contact = require('./Contact');
+const Contact = require('./TerminalContact');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 

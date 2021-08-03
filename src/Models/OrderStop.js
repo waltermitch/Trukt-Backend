@@ -25,7 +25,7 @@ class OrderStop extends BaseModel
             },
             primaryContact: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: require('./Contact'),
+                modelClass: require('./TerminalContact'),
                 join: {
                     from: 'rcgTms.orderStops.primaryContactGuid',
                     to: 'rcgTms.contacts.guid'
@@ -33,7 +33,7 @@ class OrderStop extends BaseModel
             },
             alternativeContact: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: require('./Contact'),
+                modelClass: require('./TerminalContact'),
                 join: {
                     from: 'rcgTms.orderStops.alternativeContactGuid',
                     to: 'rcgTms.contacts.guid'
