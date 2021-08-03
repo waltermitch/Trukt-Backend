@@ -24,25 +24,23 @@ class Terminal extends BaseModel
                 modelClass: Contact,
                 join: {
                     from: 'rcgTms.terminals.guid',
-                    to: 'rcgTms.contacts.terminalGuid'
+                    to: 'rcgTms.terminalContacts.terminalGuid'
                 }
             },
-
             primaryContact: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Contact,
                 join: {
                     from: 'rcgTms.terminals.primaryContactGuid',
-                    to: 'rcgTms.contacts.guid'
+                    to: 'rcgTms.terminalContacts.guid'
                 }
             },
-
             alternativeContact: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Contact,
                 join: {
                     from: 'rcgTms.terminals.alternativeContactGuid',
-                    to: 'rcgTms.contacts.guid'
+                    to: 'rcgTms.terminalContacts.guid'
                 }
             }
         };

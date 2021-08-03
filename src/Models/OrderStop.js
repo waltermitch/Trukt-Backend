@@ -28,7 +28,7 @@ class OrderStop extends BaseModel
                 modelClass: require('./TerminalContact'),
                 join: {
                     from: 'rcgTms.orderStops.primaryContactGuid',
-                    to: 'rcgTms.contacts.guid'
+                    to: 'rcgTms.terminalContacts.guid'
                 }
             },
             alternativeContact: {
@@ -36,7 +36,7 @@ class OrderStop extends BaseModel
                 modelClass: require('./TerminalContact'),
                 join: {
                     from: 'rcgTms.orderStops.alternativeContactGuid',
-                    to: 'rcgTms.contacts.guid'
+                    to: 'rcgTms.terminalContacts.guid'
                 }
             },
             commodities: {
