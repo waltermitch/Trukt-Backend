@@ -157,16 +157,18 @@ class OrderJob extends BaseModel
             {
                 json.jobType = jobType;
             }
-            else
-            {
-                json.jobType = null;
-            }
         }
 
         if (json.jobType?.category === 'transport')
         {
             json.isTransport = true;
         }
+        else
+        {
+            json.isTransport = false;
+        }
+
+        json = this.mapIndex(json);
 
         return json;
     }
