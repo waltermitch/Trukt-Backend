@@ -17,7 +17,7 @@ exports.up = function (knex)
         {
             const fieldname = `${type}_contact_guid`;
             table.uuid(fieldname);
-            table.foreign(fieldname).references('guid').inTable('rcg_tms.contacts');
+            table.foreign(fieldname).references('guid').inTable('rcg_tms.terminal_contacts');
         }
 
         let exists = false;

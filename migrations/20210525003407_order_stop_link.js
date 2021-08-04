@@ -12,7 +12,7 @@ exports.up = function (knex)
         const orderfn = 'order_guid';
         table.uuid(commodityfn).notNullable();
         table.foreign(commodityfn).references('guid').inTable('rcg_tms.commodities');
-        table.uuid(orderfn).notNullable();
+        table.uuid(orderfn);
         table.foreign(orderfn).references('guid').inTable('rcg_tms.orders');
         table.uuid(jobfn);
         table.foreign(jobfn).references('guid').inTable('rcg_tms.order_jobs');

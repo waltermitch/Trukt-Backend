@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 class OrderStop extends BaseModel
 {
@@ -25,22 +26,71 @@ class OrderStop extends BaseModel
             },
             primaryContact: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: require('./Contact'),
+                modelClass: require('./TerminalContact'),
                 join: {
                     from: 'rcgTms.orderStops.primaryContactGuid',
-                    to: 'rcgTms.contacts.guid'
+                    to: 'rcgTms.terminalContacts.guid'
                 }
             },
             alternativeContact: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: require('./Contact'),
+                modelClass: require('./TerminalContact'),
                 join: {
                     from: 'rcgTms.orderStops.alternativeContactGuid',
-                    to: 'rcgTms.contacts.guid'
+                    to: 'rcgTms.terminalContacts.guid'
+                }
+            },
+            commodities: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./Commodity'),
+                join: {
+                    from: 'rcgTms.orderStops.guid',
+                    through: {
+                        modelClass: require('./OrderStopLink'),
+                        from: 'rcgTms.orderStopLinks.stopGuid',
+                        to: 'rcgTms.orderStopLinks.commodityGuid',
+                        extra: ['lotNumber']
+                    },
+                    to: 'rcgTms.commodities.guid'
                 }
             }
         };
     }
+
+    static get modifiers()
+    {
+        return {
+            distinct(builder)
+            {
+                // use distinctOn because we are using pg
+                builder.distinctOn('guid');
+            }
+        };
+    }
+
+    $parseJson(json)
+    {
+        json = super.$parseJson(json);
+
+        if ('index' in json)
+        {
+            json['#id'] = json.index;
+            delete json.index;
+        }
+        return json;
+    }
+
+    setIndex(index)
+    {
+        const newIndex = 'order_stop_' + Date.now() + index;
+        super.setIndex(newIndex);
+    }
+
+    static hasContact(stop)
+    {
+        return !(!(stop.primaryContact || stop.alternativeContact));
+    }
 }
 
+Object.assign(OrderStop.prototype, RecordAuthorMixin);
 module.exports = OrderStop;

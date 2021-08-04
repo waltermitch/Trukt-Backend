@@ -1,7 +1,7 @@
 const faker = require('faker');
 
 const test_user = '00000000-0000-0000-0000-000000000000';
-const table_name = 'rcg_tms.contacts';
+const table_name = 'rcg_tms.terminal_contacts';
 exports.seed = async function (knex)
 {
     return await knex.raw('UPDATE rcg_tms.terminals SET primary_contact_guid = null, alternative_contact_guid = null RETURNING guid;').then((terminals) =>
