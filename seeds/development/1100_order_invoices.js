@@ -16,7 +16,7 @@ exports.seed = async function (knex)
         for (const order of orders)
         {
             const invoice = Invoice.fromJson({
-                externalPartyGuid: order.cosignee?.guid || order.client?.guid,
+                cosigneeGuid: order.cosignee?.guid || order.client?.guid,
                 order: {
                     guid: order.guid
                 },
@@ -46,15 +46,26 @@ exports.seed = async function (knex)
 
                 }
             }
+            const accessorials = faker.datatype.number(3) + 2;
+            for (let i = 0; i < accessorials; i++)
+            {
+                const item = faker.random.arrayElement(items);
+                const invoiceline = InvoiceLine.fromJson({
+                    itemId: item.id,
+                    amount: faker.datatype.number(200) + 100,
+                    createdByGuid: testUser.guid
+                });
+                invoice.lines.push(invoiceline);
+            }
 
-            await Invoice.query(trx).upsertGraph(invoice, { relate: true });
+            await Invoice.query(trx).upsertGraph(invoice, { relate: true, noDelete: true });
 
             for (const job of order.jobs)
             {
                 if (job.vendorGuid)
                 {
                     const bill = Invoice.fromJson({
-                        externalPartyGuid: job.vendorGuid,
+                        cosigneeGuid: job.vendorGuid,
                         job: {
                             guid: job.guid
                         },
@@ -78,7 +89,7 @@ exports.seed = async function (knex)
                         bill.lines.push(billline);
                     }
 
-                    await Invoice.query(trx).upsertGraph(bill, { relate: true });
+                    await Invoice.query(trx).upsertGraph(bill, { relate: true, noDelete: true });
 
                 }
             }

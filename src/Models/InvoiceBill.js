@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 /**
  * This class represents an invoice or a bill
@@ -30,19 +31,11 @@ class InvoiceBill extends BaseModel
                     to: 'rcgTms.invoiceBillLines.invoiceGuid'
                 }
             },
-            client: {
+            cosignee: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: SFAccount,
                 join: {
-                    from: 'rcgTms.invoiceBills.externalPartyGuid',
-                    to: 'salesforce.accounts.guid'
-                }
-            },
-            vendor: {
-                relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
-                join: {
-                    from: 'rcgTms.invoiceBills.externalPartyGuid',
+                    from: 'rcgTms.invoiceBills.cosigneeGuid',
                     to: 'salesforce.accounts.guid'
                 }
             },
@@ -69,9 +62,40 @@ class InvoiceBill extends BaseModel
                     },
                     to: 'rcgTms.orderJobs.guid'
                 }
+            },
+            paymentTerms: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./InvoicePaymentTerm'),
+                join: {
+                    from: 'rcgTms.invoiceBills.paymentTermId',
+                    to: 'rcgTms.invoiceBillPaymentTerms.id'
+                }
+            },
+            paymentMethod: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./InvoicePaymentMethod'),
+                join: {
+                    from: 'rcgTms.invoiceBills.paymentMethodId',
+                    to: 'rcgTms.invoiceBillPaymentMethods.id'
+                }
+            }
+        };
+    }
+
+    static get modifiers()
+    {
+        return {
+            bill(builder)
+            {
+                builder.where('isInvoice', false);
+            },
+            invoice(builder)
+            {
+                builder.where('isInvoice', true);
             }
         };
     }
 }
 
+Object.assign(InvoiceBill.prototype, RecordAuthorMixin);
 module.exports = InvoiceBill;
