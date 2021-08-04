@@ -94,7 +94,7 @@ class Order extends BaseModel
                 }
             },
             invoices: {
-                relation: BaseModel.HasManyRelation,
+                relation: BaseModel.ManyToManyRelation,
                 modelClass: require('./InvoiceBill'),
                 join: {
                     from: 'rcgTms.orders.guid',
@@ -102,7 +102,21 @@ class Order extends BaseModel
                         from: 'rcgTms.invoices.orderGuid',
                         to: 'rcgTms.invoices.invoiceGuid'
                     },
-                    to: 'rcgTms.invoiceBills.order'
+                    to: 'rcgTms.invoiceBills.guid',
+                    modify: 'invoice'
+                }
+            },
+            bills: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./InvoiceBill'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    through: {
+                        from: 'rcgTms.invoices.orderGuid',
+                        to: 'rcgTms.invoices.invoiceGuid'
+                    },
+                    to: 'rcgTms.invoiceBills.guid',
+                    modify: 'bill'
                 }
             },
             referrer: {

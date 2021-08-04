@@ -112,6 +112,18 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.vendorAgentGuid',
                     to: 'salesforce.contacts.guid'
                 }
+            },
+            bills: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./InvoiceBill'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    through: {
+                        from: 'rcgTms.bills.jobGuid',
+                        to: 'rcgTms.bills.billGuid'
+                    },
+                    to: 'rcgTms.invoiceBills.guid'
+                }
             }
         };
     }
@@ -145,16 +157,18 @@ class OrderJob extends BaseModel
             {
                 json.jobType = jobType;
             }
-            else
-            {
-                json.jobType = null;
-            }
         }
 
         if (json.jobType?.category === 'transport')
         {
             json.isTransport = true;
         }
+        else
+        {
+            json.isTransport = false;
+        }
+
+        json = this.mapIndex(json);
 
         return json;
     }
@@ -171,6 +185,12 @@ class OrderJob extends BaseModel
         }
 
         return json;
+    }
+
+    setIndex(index)
+    {
+        const newIndex = 'job_' + Date.now() + index;
+        super.setIndex(newIndex);
     }
 }
 

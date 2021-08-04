@@ -1,5 +1,5 @@
 const BaseModel = require('./BaseModel');
-const Contact = require('./Contact');
+const Contact = require('./TerminalContact');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
@@ -24,25 +24,23 @@ class Terminal extends BaseModel
                 modelClass: Contact,
                 join: {
                     from: 'rcgTms.terminals.guid',
-                    to: 'rcgTms.contacts.terminalGuid'
+                    to: 'rcgTms.terminalContacts.terminalGuid'
                 }
             },
-
             primaryContact: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Contact,
                 join: {
                     from: 'rcgTms.terminals.primaryContactGuid',
-                    to: 'rcgTms.contacts.guid'
+                    to: 'rcgTms.terminalContacts.guid'
                 }
             },
-
             alternativeContact: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Contact,
                 join: {
                     from: 'rcgTms.terminals.alternativeContactGuid',
-                    to: 'rcgTms.contacts.guid'
+                    to: 'rcgTms.terminalContacts.guid'
                 }
             }
         };
@@ -59,6 +57,14 @@ class Terminal extends BaseModel
     }
 
     static uniqueColumns = ['latitude', 'longitude']
+
+    $parseJson(json)
+    {
+        json = super.$parseJson(json);
+        json = this.mapIndex(json);
+        return json;
+
+    }
 }
 
 Object.assign(Terminal.prototype, RecordAuthorMixin);

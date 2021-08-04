@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 class OrderStopLink extends BaseModel
 {
@@ -51,4 +52,5 @@ class OrderStopLink extends BaseModel
     }
 }
 
+Object.assign(OrderStopLink.prototype, RecordAuthorMixin);
 module.exports = OrderStopLink;
