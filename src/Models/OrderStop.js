@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 class OrderStop extends BaseModel
 {
@@ -47,7 +48,8 @@ class OrderStop extends BaseModel
                     through: {
                         modelClass: require('./OrderStopLink'),
                         from: 'rcgTms.orderStopLinks.stopGuid',
-                        to: 'rcgTms.orderStopLinks.commodityGuid'
+                        to: 'rcgTms.orderStopLinks.commodityGuid',
+                        extra: ['lotNumber']
                     },
                     to: 'rcgTms.commodities.guid'
                 }
@@ -58,13 +60,37 @@ class OrderStop extends BaseModel
     static get modifiers()
     {
         return {
-            filterDistinct(builder)
+            distinct(builder)
             {
                 // use distinctOn because we are using pg
                 builder.distinctOn('guid');
             }
         };
     }
+
+    $parseJson(json)
+    {
+        json = super.$parseJson(json);
+
+        if ('index' in json)
+        {
+            json['#id'] = json.index;
+            delete json.index;
+        }
+        return json;
+    }
+
+    setIndex(index)
+    {
+        const newIndex = 'order_stop_' + Date.now() + index;
+        super.setIndex(newIndex);
+    }
+
+    static hasContact(stop)
+    {
+        return !(!(stop.primaryContact || stop.alternativeContact));
+    }
 }
 
+Object.assign(OrderStop.prototype, RecordAuthorMixin);
 module.exports = OrderStop;

@@ -51,7 +51,7 @@ class OrderJob extends BaseModel
                 modelClass: require('./OrderStopLink'),
                 join: {
                     from: 'rcgTms.orderJobs.guid',
-                    to: 'rcgTms.orderStopLinks.orderGuid'
+                    to: 'rcgTms.orderStopLinks.jobGuid'
                 }
             },
             stops: {
@@ -150,7 +150,6 @@ class OrderJob extends BaseModel
             if (json.typeId)
             {
                 jobType.id = json.typeId;
-                delete json.typeId;
             }
 
             if (Object.keys(jobType).length > 0)
