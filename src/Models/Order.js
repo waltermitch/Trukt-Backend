@@ -186,6 +186,16 @@ class Order extends BaseModel
             }
         };
     }
+
+    static allStops(order)
+    {
+        let stops = order.stops;
+        for (const job of order.jobs || [])
+        {
+            stops = stops.concat(job.stops);
+        }
+        return stops;
+    }
 }
 
 Object.assign(Order.prototype, RecordAuthorMixin);
