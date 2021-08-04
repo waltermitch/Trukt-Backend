@@ -35,7 +35,7 @@ exports.up = function (knex)
         table.boolean('is_posted').defaultTo(false);
         table.boolean('is_synced').defaultTo(false);
         table.json('values');
-        migration_tools.timestamps(knex, table);
+        migration_tools.timestamps(table);
         table.foreign('job_guid').references('guid').inTable('rcg_tms.order_jobs');
         table.foreign('loadboard').references('name').inTable('rcg_tms.loadboards');
     }).then(() =>
