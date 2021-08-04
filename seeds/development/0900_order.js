@@ -46,7 +46,7 @@ exports.seed = async function (knex)
         }
         const vehicleTypes = await trx.select('id').from('rcg_tms.commodity_types');
         const transportJobType = await OrderJobType.query(trx).findOne('category', 'transport');
-        console.log(transportJobType);
+        
         const terminals = await Terminal.query(trx);
         if (terminals.length == 0)
         {
@@ -68,7 +68,7 @@ exports.seed = async function (knex)
         const tariff = carrierPay * 1.20;
 
         const client = faker.random.arrayElement(clients);
-        console.log(client);
+        
         const vendor = faker.random.arrayElement(vendors);
         const order = await Order.query(trx).insertAndFetch({
             status: 'new',
