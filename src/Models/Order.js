@@ -137,6 +137,65 @@ class Order extends BaseModel
             }
         };
     }
+
+    static get fetch()
+    {
+        return {
+            'payload': {
+                client: {
+                    $modify: ['byType']
+                },
+                clientContact: true,
+                owner: true,
+                referrer: {
+                    $modify: ['byType']
+                },
+                salesperson: {
+                    $modify: ['byType']
+                },
+                stopLinks:
+                {
+                    commodity: {
+                        vehicle: true,
+                        commType: true
+                    },
+                    stop: {
+                        terminal: true,
+                        primaryContact: true,
+                        alternativeContact: true
+                    }
+                },
+                jobs: {
+                    vendor: true,
+                    vendorAgent: true,
+                    vendorContact: true,
+                    jobType: true,
+                    stopLinks: {
+                        commodity: {
+                            vehicle: true,
+                            commType: true
+                        },
+                        stop: {
+                            terminal: true,
+                            primaryContact: true,
+                            alternativeContact: true
+                        }
+
+                    }
+                }
+            }
+        };
+    }
+
+    static allStops(order)
+    {
+        let stops = order.stops;
+        for (const job of order.jobs || [])
+        {
+            stops = stops.concat(job.stops);
+        }
+        return stops;
+    }
 }
 
 Object.assign(Order.prototype, RecordAuthorMixin);
