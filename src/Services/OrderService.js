@@ -35,7 +35,7 @@ class OrderService
         return order;
     }
 
-    static async create(orderObj)
+    static async create(orderObj, currentUser)
     {
 
         const trx = await Order.startTransaction();
@@ -49,6 +49,7 @@ class OrderService
 
             // order object will be used to link OrderStopLink from the job
             let order = Order.fromJson({});
+            order.setCreatedBy(currentUser);
 
             orderObj.client = await SFAccount.query(trx).modify('byType', 'client').findById(orderObj.client.guid);
 
@@ -95,6 +96,7 @@ class OrderService
             for (const commObj of orderObj.commodities || [])
             {
                 const commodity = Commodity.fromJson(commObj);
+                commodity.setCreatedBy(currentUser);
                 commodity.graphLink('commType', commTypes.find(it => CommodityType.compare(commodity, it)));
 
                 if (commodity.isVehicle())
@@ -108,14 +110,19 @@ class OrderService
             const terminals = {};
             for (const terminalObj of orderObj.terminals || [])
             {
-                const terminal = await Terminal.fromJson(terminalObj).findOrCreate(trx);
+                let terminal = Terminal.fromJson(terminalObj);
+                terminal.setCreatedBy(currentUser);
+                terminal = await terminal.findOrCreate(trx);
                 if (!terminal.isResolved)
                 {
                     // TODO: check if the terminal is resolved and put it inside of the service-bus queue
                 }
 
-                terminal['#id'] = terminalObj['#id'];
-                terminals[terminalObj['#id']] = terminal;
+                const terminalIndex = terminalObj['#id'];
+                terminal.setIndex(terminalIndex);
+
+                // store to use as a cache for later
+                terminals[terminalIndex] = terminal;
             }
 
             const terminalContacts = {};
@@ -129,10 +136,11 @@ class OrderService
                     if (stop[contactType])
                     {
                         let contact = Contact.fromJson(stop[contactType]);
-                        contact.terminalGuid = terminal.guid;
+                        contact.linkTerminal(terminal);
                         const key = contact.uniqueKey();
                         if (!(key in terminalContacts))
                         {
+                            contact.setCreatedBy(currentUser);
                             contact = await contact.findOrCreate(trx);
                             terminalContacts[key] = { '#dbRef': contact.guid };
                         }
@@ -147,7 +155,19 @@ class OrderService
             // not appear in the orders
             const stopsCache = {};
 
-            const stopLinks = OrderService.buildStopLinksGraph(orderObj.stops, stopsCache, terminals, commodities);
+            const orderStops = [];
+            for (const stopObj of orderObj.stops)
+            {
+                const stop = OrderStop.fromJson(stopObj);
+                stop.setCreatedBy(currentUser);
+                orderStops.push(stop);
+            }
+            order.stopLinks = OrderService.buildStopLinksGraph(orderStops, stopsCache, terminals, commodities);
+
+            for (const stopLink of order.stopLinks)
+            {
+                stopLink.setCreatedBy(currentUser);
+            }
 
             order.jobs = [];
 
@@ -161,7 +181,7 @@ class OrderService
                     type: jobObj.type,
                     loadType: jobObj.loadType
                 });
-
+                job.setCreatedBy(currentUser);
                 job.bills = [];
 
                 // vendor and driver are not always known when creating an order
@@ -195,9 +215,21 @@ class OrderService
 
                 job.graphLink('jobType', jobTypes.find(it => OrderJobType.compare(job, it)));
 
-                job.stopLinks = OrderService.buildStopLinksGraph(jobObj.stops, stopsCache, terminals, commodities);
+                const jobStops = [];
+                for (const stopObj of jobObj.stops)
+                {
+                    const stop = OrderStop.fromJson(stopObj);
+                    stop.setCreatedBy(currentUser);
+                    jobStops.push(stop);
+                }
 
+                // remove the stops so that they are not re-created in the graph insert
                 delete job.stops;
+                job.stopLinks = OrderService.buildStopLinksGraph(jobStops, stopsCache, terminals, commodities);
+                for (const stopLink of job.stopLinks)
+                {
+                    stopLink.setCreatedBy(currentUser);
+                }
                 order.jobs.push(job);
             }
 
@@ -207,6 +239,8 @@ class OrderService
 
                 estimatedDistance: orderObj.estimatedDistance,
                 isDummy: orderObj.isDummy || false,
+
+                isTender: orderObj.isTender || false,
 
                 // this field cannot be set by the user
                 isDeleted: false,
@@ -218,7 +252,6 @@ class OrderService
                 quotedRevenue: null,
                 dateExpectedCompleteBy: null,
                 dateCompleted: null,
-                stopLinks: stopLinks,
                 invoices: [],
                 bills: []
             });
@@ -253,13 +286,14 @@ class OrderService
 
                     if (!(invoiceKey in invoices))
                     {
-                        invoices[invoiceKey] = InvoiceBill.fromJson({
+                        const invoiceBill = InvoiceBill.fromJson({
                             // mark as invoice only if it is for the client, everyone else is a bill
                             isInvoice: expense.account === 'client',
                             lines: []
                         });
-                        invoices[invoiceKey].cosignee = actors[invoiceKey];
-
+                        invoiceBill.cosignee = actors[invoiceKey];
+                        invoiceBill.setCreatedBy(currentUser);
+                        invoices[invoiceKey] = invoiceBill;
                     }
                     const invoice = invoices[invoiceKey];
                     const lineItem = invoiceLineItems.find((it) => expense.item === it.name && expense.item);
@@ -271,6 +305,7 @@ class OrderService
                         amount: expense.amount
                     });
                     invoiceLine.graphLink('item', lineItem);
+                    invoiceLine.setCreatedBy(currentUser);
 
                     if (expense.commodity)
                     {
@@ -278,7 +313,6 @@ class OrderService
                     }
 
                     invoice.lines.push(invoiceLine);
-
                 }
 
                 const orderInvoices = [];
@@ -316,19 +350,15 @@ class OrderService
                     allowRefs: true
                 }).returning('*');
 
-            // fetching the data from the database because doesnt return everything and polluted with graph #dbRef
-            order = await Order.query(trx).skipUndefined().findById(order.guid).withGraphFetched(Order.fetch.payload);
             trx.commit();
-
+            order = await OrderService.getOrderByGuid(order.guid);
             return order;
-
         }
         catch (err)
         {
             trx.rollback();
             throw err;
         }
-
     }
 
     /**
@@ -343,10 +373,8 @@ class OrderService
     static buildStopLinksGraph(stops, stopsCache, terminalCache, commodityCache)
     {
         const stopLinks = [];
-        for (let i = 0; i < stops.length; i++)
+        for (const stop of stops)
         {
-            const stop = OrderStop.fromJson(stops[i]);
-
             // stops are re-usable, jobs and order can share a stop
             // However, the stop links are not reusable and must be created as new
             // commodities are linked to stops via stop links

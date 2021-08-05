@@ -44,6 +44,14 @@ class TerminalContact extends BaseModel
         ].join(';');
     }
 
+    /**
+     * Links the contact model object to a terminal model object
+     * @param {Terminal} terminal
+     */
+    linkTerminal(terminal)
+    {
+        this.terminalGuid = terminal.guid;
+    }
 }
 
 // deleting the property from require, will affect it globally
