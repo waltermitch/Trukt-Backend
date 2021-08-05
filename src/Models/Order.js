@@ -85,11 +85,11 @@ class Order extends BaseModel
                     to: 'rcgTms.orderStopLinks.orderGuid'
                 }
             },
-            cosignee: {
+            consignee: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: SFAccount,
                 join: {
-                    from: 'rcgTms.orders.cosigneeGuid',
+                    from: 'rcgTms.orders.consigneeGuid',
                     to: 'salesforce.accounts.guid'
                 }
             },
@@ -145,7 +145,7 @@ class Order extends BaseModel
                 client: {
                     $modify: ['byType']
                 },
-                cosignee: {
+                consignee: {
                     $modify: ['byType']
                 },
                 clientContact: true,

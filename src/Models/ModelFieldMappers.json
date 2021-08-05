@@ -268,7 +268,7 @@
                 "into": [
                     "clientGuid",
                     "clientContactGuid",
-                    "cosigneeGuid",
+                    "consigneeGuid",
                     "referrerGuid",
                     "salespersonGuid",
                     "dispatcherGuid",

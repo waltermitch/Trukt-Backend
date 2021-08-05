@@ -105,13 +105,13 @@ class OrderService
 
             orderObj.client = await SFAccount.query(trx).modify('byType', 'client').findById(orderObj.client.guid);
 
-            if (orderObj?.cosignee?.guid)
+            if (orderObj?.consignee?.guid)
             {
-                orderObj.cosignee = await SFAccount.query(trx).findById(orderObj.cosignee.guid);
+                orderObj.consignee = await SFAccount.query(trx).findById(orderObj.consignee.guid);
             }
             else
             {
-                orderObj.cosignee = orderObj.client;
+                orderObj.consignee = orderObj.client;
             }
 
             if (orderObj?.referrer?.guid)
@@ -135,7 +135,7 @@ class OrderService
                 order.graphLink('dispatcher', orderObj.dispatcher);
             }
 
-            order.graphLink('cosignee', orderObj.cosignee);
+            order.graphLink('consignee', orderObj.consignee);
             order.graphLink('client', orderObj.client);
 
             if (orderObj.clientContact)
@@ -315,7 +315,7 @@ class OrderService
             if (orderObj.expenses.length > 0)
             {
                 const actors = {
-                    'client': order.cosignee,
+                    'client': order.consignee,
                     'referrer': order.referrer,
                     'salesperson': order.salesperson,
                     'dispatcher': order.dispatcher
@@ -346,7 +346,7 @@ class OrderService
                             isInvoice: expense.account === 'client',
                             lines: []
                         });
-                        invoiceBill.cosignee = actors[invoiceKey];
+                        invoiceBill.consignee = actors[invoiceKey];
                         invoiceBill.setCreatedBy(currentUser);
                         invoices[invoiceKey] = invoiceBill;
                     }
