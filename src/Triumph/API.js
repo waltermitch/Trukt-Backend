@@ -27,7 +27,7 @@ class Triumph
                 triumph.connect();
             }
 
-            triumph.exp = token?.exp;
+            triumph.exp = token.exp;
 
             triumph.setToken(token?.value);
         }
