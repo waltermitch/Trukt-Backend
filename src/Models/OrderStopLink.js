@@ -50,6 +50,31 @@ class OrderStopLink extends BaseModel
             }
         };
     }
+
+    static toStops(stopLinks)
+    {
+        const stopCache = {};
+
+        for (const stopLink of stopLinks)
+        {
+
+            if (!(stopLink.stop.guid in stopCache))
+            {
+                const stop = stopLink.stop;
+                stop.commodities = [];
+                stopCache[stop.guid] = stop;
+            }
+            const stop = stopCache[stopLink.stop.guid];
+
+            const commodity = stopLink.commodity;
+            if (!(stop.commodities.find(it => it.guid == commodity.guid)))
+            {
+                commodity.lotNumber = stopLink.lotNumber;
+                stop.commodities.push(commodity);
+            }
+        }
+        return Object.values(stopCache);
+    }
 }
 
 Object.assign(OrderStopLink.prototype, RecordAuthorMixin);
