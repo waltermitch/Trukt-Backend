@@ -15,6 +15,7 @@ const User = require('../Models/User');
 const InvoiceBill = require('../Models/InvoiceBill');
 const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
+const Expense = require('../Models/Expense');
 
 class OrderService
 {
@@ -24,12 +25,63 @@ class OrderService
         let order = undefined;
         try
         {
-            order = await Order.query(trx).skipUndefined().findById(orderGuid).withGraphJoined(Order.fetch.payload);
-            trx.commit();
+            order = await Order.query(trx).skipUndefined().findById(orderGuid).withGraphFetched(Order.fetch.payload);
+            await trx.commit();
+
+            order.expenses = [];
+            const terminalCache = {};
+            order.stops = OrderStopLink.toStops(order.stopLinks);
+            delete order.stopLinks;
+
+            for (const stop of order.stops)
+            {
+                if (!(stop.terminal.guid in terminalCache))
+                {
+                    terminalCache[stop.terminal.guid] = stop.terminal;
+                }
+            }
+
+            for (const invoice of [...order.invoices, ...order.bills])
+            {
+                for (const line of invoice.lines)
+                {
+                    order.expenses.push(Expense.fromInvoiceLine(order, invoice, line));
+                }
+            }
+            delete order.invoices;
+            delete order.bills;
+
+            for (const job of order.jobs)
+            {
+                job.stops = OrderStopLink.toStops(job.stopLinks);
+                delete job.stopLinks;
+
+                for (const stop of job.stops)
+                {
+                    if (!(stop.terminal.guid in terminalCache))
+                    {
+                        terminalCache[stop.terminal.guid] = stop.terminal;
+                    }
+                }
+
+                for (const bill of job.bills)
+                {
+                    for (const line of bill.lines)
+                    {
+                        order.expenses.push(Expense.fromInvoiceLine(job, bill, line));
+                    }
+                }
+
+                delete job.bills;
+            }
+
+            // assign unique terminals to the top level
+            order.terminals = Object.values(terminalCache);
         }
         catch (err)
         {
-            trx.rollback();
+            await trx.rollback();
+            throw err;
         }
 
         return order;
@@ -239,7 +291,7 @@ class OrderService
             Object.assign(order, {
                 status: 'new',
                 instructions: orderObj.instructions || 'no instructions provided',
-
+                referenceNumber: orderObj.referenceNumber,
                 estimatedDistance: orderObj.estimatedDistance,
                 isDummy: orderObj.isDummy || false,
 
@@ -351,15 +403,15 @@ class OrderService
             order = await Order.query(trx).skipUndefined()
                 .insertGraph(order, {
                     allowRefs: true
-                }).returning('*');
+                }).returning('guid');
 
-            trx.commit();
+            await trx.commit();
             order = await OrderService.getOrderByGuid(order.guid);
             return order;
         }
         catch (err)
         {
-            trx.rollback();
+            await trx.rollback();
             throw err;
         }
     }
