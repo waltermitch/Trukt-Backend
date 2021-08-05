@@ -53,13 +53,13 @@ class Expense
         {
             for (const type of [
                 'client',
-                'cosignee',
+                'consignee',
                 'dispatcher',
                 'referrer',
                 'salesperson'
             ])
             {
-                if (orderjob[type]?.guid == invoice.cosigneeGuid && invoice.cosigneeGuid != undefined)
+                if (orderjob[type]?.guid == invoice.consigneeGuid && invoice.consigneeGuid != undefined)
                 {
                     accountType = type;
                     break;
