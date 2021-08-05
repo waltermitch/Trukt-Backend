@@ -94,7 +94,7 @@ class Order extends BaseModel
                 }
             },
             invoices: {
-                relation: BaseModel.HasManyRelation,
+                relation: BaseModel.ManyToManyRelation,
                 modelClass: require('./InvoiceBill'),
                 join: {
                     from: 'rcgTms.orders.guid',
@@ -102,7 +102,21 @@ class Order extends BaseModel
                         from: 'rcgTms.invoices.orderGuid',
                         to: 'rcgTms.invoices.invoiceGuid'
                     },
-                    to: 'rcgTms.invoiceBills.order'
+                    to: 'rcgTms.invoiceBills.guid',
+                    modify: 'invoice'
+                }
+            },
+            bills: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./InvoiceBill'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    through: {
+                        from: 'rcgTms.invoices.orderGuid',
+                        to: 'rcgTms.invoices.invoiceGuid'
+                    },
+                    to: 'rcgTms.invoiceBills.guid',
+                    modify: 'bill'
                 }
             },
             referrer: {
@@ -122,6 +136,65 @@ class Order extends BaseModel
                 }
             }
         };
+    }
+
+    static get fetch()
+    {
+        return {
+            'payload': {
+                client: {
+                    $modify: ['byType']
+                },
+                clientContact: true,
+                owner: true,
+                referrer: {
+                    $modify: ['byType']
+                },
+                salesperson: {
+                    $modify: ['byType']
+                },
+                stopLinks:
+                {
+                    commodity: {
+                        vehicle: true,
+                        commType: true
+                    },
+                    stop: {
+                        terminal: true,
+                        primaryContact: true,
+                        alternativeContact: true
+                    }
+                },
+                jobs: {
+                    vendor: true,
+                    vendorAgent: true,
+                    vendorContact: true,
+                    jobType: true,
+                    stopLinks: {
+                        commodity: {
+                            vehicle: true,
+                            commType: true
+                        },
+                        stop: {
+                            terminal: true,
+                            primaryContact: true,
+                            alternativeContact: true
+                        }
+
+                    }
+                }
+            }
+        };
+    }
+
+    static allStops(order)
+    {
+        let stops = order.stops;
+        for (const job of order.jobs || [])
+        {
+            stops = stops.concat(job.stops);
+        }
+        return stops;
     }
 }
 

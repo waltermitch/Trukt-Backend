@@ -35,18 +35,40 @@ exports.seed = async function (knex)
         const dateTypes = await new Enums(trx).select('date_schedule_types');
         const ternaryOptions = migration_tools.ternary_options;
         const createdBy = await User.query(trx).findOne('name', 'ilike', '%');
+        if (!createdBy)
+        {
+            throw new Error('No user found. Did you run the users seed?');
+        }
         const vehicles = await Vehicle.query(trx).limit(10);
+        if (vehicles.length == 0)
+        {
+            throw new Error('No vehicles found. Did you run the vehicle seed?');
+        }
         const vehicleTypes = await trx.select('id').from('rcg_tms.commodity_types');
         const transportJobType = await OrderJobType.query(trx).findOne('category', 'transport');
+        
         const terminals = await Terminal.query(trx);
+        if (terminals.length == 0)
+        {
+            throw new Error('No terminals found. Did you run the terminals seed?');
+        }
         const clients = await SFAccount.query(trx).modify('byType', 'client').limit(100);
+        if (clients.lenght == 0)
+        {
+            throw new Error('No SF client accounts found. Do you have the salesforce data?');
+        }
         const vendors = await SFAccount.query(trx).modify('byType', 'carrier').limit(100);
+        if (vendors.length == 0)
+        {
+            throw new Error('No SF carrier accounts found. Do you hvae the salesforce data?');
+        }
 
         const numComs = faker.datatype.number(9) + 1;
         const carrierPay = (250 + faker.datatype.number(400)) * numComs;
         const tariff = carrierPay * 1.20;
 
         const client = faker.random.arrayElement(clients);
+        
         const vendor = faker.random.arrayElement(vendors);
         const order = await Order.query(trx).insertAndFetch({
             status: 'new',

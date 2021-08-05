@@ -51,7 +51,7 @@ class OrderJob extends BaseModel
                 modelClass: require('./OrderStopLink'),
                 join: {
                     from: 'rcgTms.orderJobs.guid',
-                    to: 'rcgTms.orderStopLinks.orderGuid'
+                    to: 'rcgTms.orderStopLinks.jobGuid'
                 }
             },
             stops: {
@@ -120,6 +120,18 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.equipmentTypeId',
                     to: 'rcgTms.equipmentTypes.id'
                 }
+            },
+            bills: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./InvoiceBill'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    through: {
+                        from: 'rcgTms.bills.jobGuid',
+                        to: 'rcgTms.bills.billGuid'
+                    },
+                    to: 'rcgTms.invoiceBills.guid'
+                }
             }
         };
     }
@@ -146,16 +158,11 @@ class OrderJob extends BaseModel
             if (json.typeId)
             {
                 jobType.id = json.typeId;
-                delete json.typeId;
             }
 
             if (Object.keys(jobType).length > 0)
             {
                 json.jobType = jobType;
-            }
-            else
-            {
-                json.jobType = null;
             }
         }
 
@@ -163,6 +170,12 @@ class OrderJob extends BaseModel
         {
             json.isTransport = true;
         }
+        else
+        {
+            json.isTransport = false;
+        }
+
+        json = this.mapIndex(json);
 
         return json;
     }
@@ -179,6 +192,12 @@ class OrderJob extends BaseModel
         }
 
         return json;
+    }
+
+    setIndex(index)
+    {
+        const newIndex = 'job_' + Date.now() + index;
+        super.setIndex(newIndex);
     }
 }
 
