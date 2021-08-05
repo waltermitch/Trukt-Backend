@@ -48,7 +48,7 @@ class OrderJob extends BaseModel
             },
             stopLinks: {
                 relation: BaseModel.HasManyRelation,
-                modelClass: require('./OrderStopLink'),
+                modelClass: OrderStopLink,
                 join: {
                     from: 'rcgTms.orderJobs.guid',
                     to: 'rcgTms.orderStopLinks.jobGuid'
