@@ -35,11 +35,11 @@ class Order extends BaseModel
                     to: 'salesforce.contacts.guid'
                 }
             },
-            owner: {
+            dispatcher: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: User,
                 join: {
-                    from: 'rcgTms.orders.ownerGuid',
+                    from: 'rcgTms.orders.dispatcherGuid',
                     to: 'rcgTms.tmsUsers.guid'
                 }
             },
@@ -146,7 +146,7 @@ class Order extends BaseModel
                     $modify: ['byType']
                 },
                 clientContact: true,
-                owner: true,
+                dispatcher: true,
                 referrer: {
                     $modify: ['byType']
                 },

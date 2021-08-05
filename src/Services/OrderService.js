@@ -77,9 +77,12 @@ class OrderService
             }
 
             // dispatcher / manager responsible for the order
-            orderObj.owner = await User.query(trx).findById(orderObj.owner.guid);
+            if (orderObj.dispatcher?.guid)
+            {
+                orderObj.dispatcher = await User.query(trx).findById(orderObj.dispatcher.guid);
+                order.graphLink('dispatcher', orderObj.dispatcher);
+            }
 
-            order.graphLink('owner', orderObj.owner);
             order.graphLink('cosignee', orderObj.cosignee);
             order.graphLink('client', orderObj.client);
 
@@ -263,7 +266,7 @@ class OrderService
                     'client': order.cosignee,
                     'referrer': order.referrer,
                     'salesperson': order.salesperson,
-                    'owner': order.owner
+                    'dispatcher': order.dispatcher
                 };
 
                 // there can be many vendors
