@@ -232,6 +232,7 @@ class OrderService
 
                 const job = OrderJob.fromJson({
                     index: jobObj.index,
+                    status: 'new',
                     category: jobObj.category,
                     type: jobObj.type,
                     loadType: jobObj.loadType
