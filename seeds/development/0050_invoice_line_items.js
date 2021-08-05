@@ -1,6 +1,7 @@
 const items = [
     { name: 'transport', type: 'revenue' },
     { name: 'lumper', type: 'revenue' },
+    { name: 'referral', type: 'expense' },
     { name: 'fuel surcharge', type: 'revenue', is_accessorial: true },
     { name: 'unloading', type: 'revenue', is_accessorial: true },
     { name: 'refund', type: 'expense', is_accessorial: false },
