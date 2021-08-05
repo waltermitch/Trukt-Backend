@@ -102,9 +102,9 @@ class Order extends BaseModel
                         from: 'rcgTms.invoices.orderGuid',
                         to: 'rcgTms.invoices.invoiceGuid'
                     },
-                    to: 'rcgTms.invoiceBills.guid',
-                    modify: 'invoice'
-                }
+                    to: 'rcgTms.invoiceBills.guid'
+                },
+                modify: 'invoice'
             },
             bills: {
                 relation: BaseModel.ManyToManyRelation,
@@ -115,9 +115,9 @@ class Order extends BaseModel
                         from: 'rcgTms.invoices.orderGuid',
                         to: 'rcgTms.invoices.invoiceGuid'
                     },
-                    to: 'rcgTms.invoiceBills.guid',
-                    modify: 'bill'
-                }
+                    to: 'rcgTms.invoiceBills.guid'
+                },
+                modify: 'bill'
             },
             referrer: {
                 relation: BaseModel.BelongsToOneRelation,
@@ -145,6 +145,9 @@ class Order extends BaseModel
                 client: {
                     $modify: ['byType']
                 },
+                cosignee: {
+                    $modify: ['byType']
+                },
                 clientContact: true,
                 dispatcher: true,
                 referrer: {
@@ -165,6 +168,12 @@ class Order extends BaseModel
                         alternativeContact: true
                     }
                 },
+                invoices: {
+                    lines: { item: true }
+                },
+                bills: {
+                    lines: { item: true }
+                },
                 jobs: {
                     vendor: true,
                     vendorAgent: true,
@@ -180,7 +189,9 @@ class Order extends BaseModel
                             primaryContact: true,
                             alternativeContact: true
                         }
-
+                    },
+                    bills: {
+                        lines: { item: true }
                     }
                 }
             }

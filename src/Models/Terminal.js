@@ -3,6 +3,8 @@ const Contact = require('./TerminalContact');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
+const geoCoordFields = ['latitude', 'longitude'];
+
 class Terminal extends BaseModel
 {
     static get tableName()
@@ -61,9 +63,30 @@ class Terminal extends BaseModel
     $parseJson(json)
     {
         json = super.$parseJson(json);
+        for (const field of geoCoordFields)
+        {
+            if (field in json)
+            {
+                json[field] = parseFloat(json[field]);
+            }
+        }
         json = this.mapIndex(json);
         return json;
 
+    }
+
+    $formatJson(json)
+    {
+        json = super.$formatJson(json);
+
+        for (const field of geoCoordFields)
+        {
+            if (field in json)
+            {
+                json[field] = parseFloat(json[field]);
+            }
+        }
+        return json;
     }
 }
 

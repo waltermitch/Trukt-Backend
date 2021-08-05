@@ -48,7 +48,7 @@ class OrderJob extends BaseModel
             },
             stopLinks: {
                 relation: BaseModel.HasManyRelation,
-                modelClass: require('./OrderStopLink'),
+                modelClass: OrderStopLink,
                 join: {
                     from: 'rcgTms.orderJobs.guid',
                     to: 'rcgTms.orderStopLinks.jobGuid'
@@ -174,13 +174,14 @@ class OrderJob extends BaseModel
 
     $formatJson(json)
     {
-        json = super.$parseJson(json);
+        json = super.$formatJson(json);
 
         if (json?.jobType)
         {
             delete json.jobType.id;
             Object.assign(json, json.jobType);
             delete json.jobType;
+            delete json.typeId;
         }
 
         return json;
