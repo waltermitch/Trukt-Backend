@@ -6,6 +6,7 @@ const prefix = '/account/:accountType(client|carrier|referrer|employee)';
 
 router
     .get(`${prefix}/:accountId(${uuidRegexStr})`, controller.constructor.getAccount)
-    .get(`${prefix}`, controller.constructor.searchAccount);
+    .get(`${prefix}`, controller.constructor.searchAccount)
+    .get(`/account/:accountId(${uuidRegexStr})`, controller.constructor.getAccount);
 
 module.exports = router;
