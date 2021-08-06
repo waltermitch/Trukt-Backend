@@ -66,7 +66,8 @@ class OrderStopLink extends BaseModel
             }
             const stop = stopCache[stopLink.stop.guid];
 
-            const commodity = stopLink.commodity;
+            // dont want to reuse commodities, because can have different data per stoplink
+            const commodity = Object.assign({}, stopLink.commodity);
             if (!(stop.commodities.find(it => it.guid == commodity.guid)))
             {
                 commodity.lotNumber = stopLink.lotNumber;
