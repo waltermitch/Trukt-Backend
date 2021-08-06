@@ -14,29 +14,32 @@ class InvoiceService
 
     static async createInvoices(arr)
     {
-        const qb = Order.query();
+        const qb = Order.query().withGraphFetched('[invoices.[cosignee, lines.[commodity.[stops.[terminal]], item]], client]');
 
         for (const guid of arr)
             qb.orWhere('guid', '=', guid);
 
         // get all the orders
-        const orders = await qb.withGraphFetched('invoices');
+        const orders = await qb;
 
         // decide which system they will be invoiced in
         const QBInvoices = [];
         const CoupaInvoices = [];
-        for (const order in orders)
+        for (const order of orders)
         {
             // add logic to determine type of invoice to make
-            console.log(order);
+            if (['LKQ Corporation', 'LKQ Self Service']?.includes(order?.client?.name))
+                CoupaInvoices.push(order);
+            else
+                QBInvoices.push(order);
+
+            const res = await QBO.createInvoices(QBInvoices);
+
+            // submit coupa PO's don't await
+            // Coupa.sendInvoices(CoupaInvoices);
+
+            return res;
         }
-
-        const res = await QBO.createInvoices(QBInvoices);
-
-        // submit coupa PO's don't await
-        Coupa.sendInvoices(CoupaInvoices);
-
-        return res;
     }
 }
 
