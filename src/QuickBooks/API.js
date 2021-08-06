@@ -73,16 +73,7 @@ class QBO
                     const pTerminal = stops[0]?.terminal;
                     const dTerminal = stops[1]?.terminal;
 
-                    lineItem.description = `${pTerminal.city}, ${pTerminal.state} to ${dTerminal.city}, ${dTerminal.state}\n`;
-
-                    if (lineItem?.item?.name?.localeCompare('Logistics') || lineItem.item?.name?.includes('Vehicle Shipping'))
-                    {
-                        if (commodity.description)
-                            lineItem.description += commodity.description + '\n';
-                        if (commodity.identifier)
-                            lineItem.description += `VIN: ${commodity.identifier}`;
-                    }
-
+                    lineItem.description = QBO.composeDescription(pTerminal, dTerminal, lineItem);
                 }
 
                 const payload =
@@ -96,6 +87,43 @@ class QBO
             }
 
         const res = await QBO.batch(invoices);
+
+        return res;
+    }
+
+    static async createBills(jobs)
+    {
+        const bills = [];
+
+        for (const job of jobs)
+            for (const bill of job.invoices)
+            {
+                bill.vendorId = bill.vendor.qbId;
+                bill.orderNumber = job.number;
+
+                for (const lineItem of bill.lines)
+                {
+                    const commodity = lineItem.commodity;
+
+                    const stops = OrderStop.firstAndLast(commodity?.stops);
+
+                    const pTerminal = stops[0]?.terminal;
+                    const dTerminal = stops[1]?.terminal;
+
+                    lineItem.description = QBO.composeDescription(pTerminal, dTerminal, lineItem);
+                }
+
+                const payload =
+                {
+                    'bId': bill.guid,
+                    'operation': 'create',
+                    'Bill': new Invoice(bill)
+                };
+
+                bills.push(payload);
+            }
+
+        const res = await QBO.batch(bills);
 
         return res;
     }
@@ -336,6 +364,23 @@ class QBO
         };
 
         await Promise.all([VariableService.update(ATData.name, ATData), VariableService.update(RTData.name, RTData)]);
+    }
+
+    static composeDescription(pTerminal, dTerminal, lineItem)
+    {
+        const commodity = lineItem.commodity;
+
+        let description = `${pTerminal.city}, ${pTerminal.state} to ${dTerminal.city}, ${dTerminal.state}\n`;
+
+        if (lineItem?.item?.name?.localeCompare('Logistics') || lineItem.item?.name?.includes('Vehicle Shipping'))
+        {
+            if (commodity.description)
+                description += commodity.description + '\n';
+            if (commodity.identifier)
+                description += `VIN: ${commodity.identifier}`;
+        }
+
+        return description;
     }
 
 }

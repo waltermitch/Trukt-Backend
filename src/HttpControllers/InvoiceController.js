@@ -7,6 +7,12 @@ class InvoiceController extends HttpRouteController
     {
         const result = await InvoiceService.getInvoice(req.params.invoiceId);
 
+        if (!result)
+        {
+            res.status(404);
+            res.json({ 'error': 'Invoice Not Found' });
+        }
+
         res.status(200);
         res.json(result);
     }
