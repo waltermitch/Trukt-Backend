@@ -15,7 +15,7 @@ class VariableController extends HttpRouteController
 
     static async put(req, res)
     {
-        await VariableService.update(req.body.name, req.body.value);
+        await VariableService.update(req.body.name, req.body);
 
         res.status(200).send();
     }
