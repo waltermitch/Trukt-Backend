@@ -12,10 +12,19 @@ const api = new HTTPS(opts).connect();
 
 class Coupa
 {
-    static async sendInvoices(arr)
+    static async sendInvoices(orders)
     {
-        for (let i = 0; i < arr?.length; i++)
-            await Coupa.sendInvoice(arr[i]);
+        for (const order of orders)
+            for (const invoice of order.invoices)
+                if (invoice?.commodity?.identifier)
+                {
+                    invoice.orderNumber = order.number;
+                    invoice.description = order.commodities[0].description;
+                    invoice.vin = order.commodities[0].identifier;
+
+                    await Coupa.sendInvoice(invoice);
+                }
+
     }
 
     static async sendInvoice(data)

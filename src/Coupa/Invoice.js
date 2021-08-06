@@ -5,7 +5,7 @@ class Invoice
     constructor(data)
     {
         this.time = Invoice.setDate();
-        this.tariff = data.amount?.toString();
+        this.tariff = data.total?.toString();
         this.description = data.description;
         this.orderNumber = data.orderNumber;
         this.poNumber = data.poNumber;
