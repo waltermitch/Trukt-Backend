@@ -1,5 +1,6 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const IncomeCalcs = require('./Mixins/IncomeCalcs');
 
 const jobTypeFields = ['category', 'type'];
 
@@ -48,7 +49,7 @@ class OrderJob extends BaseModel
             },
             stopLinks: {
                 relation: BaseModel.HasManyRelation,
-                modelClass: require('./OrderStopLink'),
+                modelClass: OrderStopLink,
                 join: {
                     from: 'rcgTms.orderJobs.guid',
                     to: 'rcgTms.orderStopLinks.jobGuid'
@@ -174,13 +175,14 @@ class OrderJob extends BaseModel
 
     $formatJson(json)
     {
-        json = super.$parseJson(json);
+        json = super.$formatJson(json);
 
         if (json?.jobType)
         {
             delete json.jobType.id;
             Object.assign(json, json.jobType);
             delete json.jobType;
+            delete json.typeId;
         }
 
         return json;
@@ -191,7 +193,20 @@ class OrderJob extends BaseModel
         const newIndex = 'job_' + Date.now() + index;
         super.setIndex(newIndex);
     }
+
+    async $beforeInsert(context)
+    {
+        await super.$beforeInsert(context);
+        this.calculateEstimatedIncome();
+    }
+
+    async $beforeUpdate(opt, context)
+    {
+        await super.$beforeUpdate(opt, context);
+        this.calculateEstimatedIncome();
+    }
 }
 
+Object.assign(OrderJob.prototype, IncomeCalcs);
 Object.assign(OrderJob.prototype, RecordAuthorMixin);
 module.exports = OrderJob;

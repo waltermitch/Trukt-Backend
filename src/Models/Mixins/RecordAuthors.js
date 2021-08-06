@@ -1,27 +1,28 @@
 const BaseModel = require('../BaseModel');
 
 const authors = ['createdBy', 'updatedBy', 'deletedBy'];
+function setBy(obj, field, user)
+{
+    if (!obj[field])
+    {
+        const guid = typeof user === 'object' ? user.guid : user;
+        obj[field] = guid;
+    }
+}
+
 const RecordAuthorMixin =
 {
-
-    setCreatedBy()
+    setCreatedBy(user)
     {
-        if (!this.createdByGuid)
-            this.createdByGuid = process?.domain?.req?.session?.userGuid;
-
+        setBy(this, 'createdByGuid', user);
     },
-
-    setUpdatedBy()
+    setUpdatedBy(user)
     {
-        if (!this.createdByGuid)
-            this.updatedByGuid = process?.domain?.req?.session?.userGuid;
-
+        setBy(this, 'updatedByGuid', user);
     },
-
-    setDeletedBy()
+    setDeletedBy(user)
     {
-        if (!this.deletedByGuid)
-            this.deletedByGuid = process?.domain?.req?.session?.userGuid;
+        setBy(this, 'deletedByGuid', user);
     }
 };
 

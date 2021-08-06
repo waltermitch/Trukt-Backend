@@ -31,11 +31,11 @@ class InvoiceBill extends BaseModel
                     to: 'rcgTms.invoiceBillLines.invoiceGuid'
                 }
             },
-            cosignee: {
+            consignee: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: SFAccount,
                 join: {
-                    from: 'rcgTms.invoiceBills.cosigneeGuid',
+                    from: 'rcgTms.invoiceBills.consigneeGuid',
                     to: 'salesforce.accounts.guid'
                 }
             },

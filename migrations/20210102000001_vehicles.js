@@ -5,7 +5,7 @@ exports.up = function (knex)
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
         table.increments('id', { primaryKey: true }).unique().notNullable();
-        table.integer('year');
+        table.string('year', 4);
         table.string('make', 16);
         table.string('model', 16);
         table.string('trim', 5);

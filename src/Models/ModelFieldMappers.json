@@ -219,8 +219,15 @@
             "external": {
                 "into": [
                     "isResolved",
+                    "isDeleted",
                     "dateDeleted",
-                    "deletedBy"
+                    "dateCreated",
+                    "dateUpdated",
+                    "deletedByGuid",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "primaryContactGuid",
+                    "alternativeContactGuid"
                 ]
             }
         }
@@ -235,9 +242,9 @@
                     "dateCreated",
                     "dateUpdated",
                     "dateDeleted",
-                    "createdBy",
-                    "updatedBy",
-                    "deletedBy"
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid"
                 ]
             }
         }
@@ -248,12 +255,13 @@
                 "into": [
                     "clientGuid",
                     "clientContactGuid",
+                    "consigneeGuid",
                     "referrerGuid",
                     "salespersonGuid",
-                    "ownerGuid",
+                    "dispatcherGuid",
                     "isDeleted",
                     "dateDeleted",
-                    "deletedBy"
+                    "deletedByGuid"
                 ]
             }
         }
@@ -265,10 +273,56 @@
                     "vendorGuid",
                     "vendorContactGuid",
                     "vendorAgentGuid",
-                    "ownerGuid",
+                    "dispatcherGuid",
                     "isDeleted",
                     "dateDeleted",
-                    "deletedBy"
+                    "deletedByGuid",
+                    "orderGuid"
+                ]
+            }
+        }
+    },
+    "User": {
+        "hide": {
+            "external": {
+                "into": [
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted"
+                ]
+            }
+        }
+    },
+    "OrderStop": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid",
+                    "primaryContactGuid",
+                    "alternativeContactGuid",
+                    "terminalGuid"
+                ]
+            }
+        }
+    },
+    "TerminalContact": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid",
+                    "terminalGuid"
                 ]
             }
         }
