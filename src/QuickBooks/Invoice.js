@@ -14,7 +14,7 @@ class Invoice
 
     setLineItems(data)
     {
-        const items = data.lineItems;
+        const items = data.lines;
 
         this.lineItems = [];
 
@@ -49,7 +49,7 @@ class InvoiceLineItem extends LineItem
     constructor(data)
     {
         super(data);
-        this.SalesItemLineDetail = { ItemRef: { value: data.id } };
+        this.SalesItemLineDetail = { ItemRef: { value: data.item.externalSourceGuid } };
         this.DetailType = 'SalesItemLineDetail';
     }
 }
