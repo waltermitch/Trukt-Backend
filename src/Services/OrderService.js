@@ -21,42 +21,21 @@ class OrderService
 {
     static async getOrderByGuid(orderGuid)
     {
-        const trx = await Order.startTransaction();
-        let order = undefined;
-        try
+        // TODO split this up so that query is faster and also doesnt give 500 error.
+        let order = await Order.query().skipUndefined().findById(orderGuid);
+        if (order)
         {
-            order = await Order.query(trx).skipUndefined().findById(orderGuid).withGraphFetched(Order.fetch.payload);
-            await trx.commit();
-
-            order.expenses = [];
-            const terminalCache = {};
-            order.stops = OrderStopLink.toStops(order.stopLinks);
-            delete order.stopLinks;
-
-            for (const stop of order.stops)
+            const trx = await Order.startTransaction();
+            try
             {
-                if (!(stop.terminal.guid in terminalCache))
-                {
-                    terminalCache[stop.terminal.guid] = stop.terminal;
-                }
-            }
+                order = await Order.fetchGraph(order, Order.fetch.payload, { transaction: trx, skipFetched: true }).skipUndefined();
+                await trx.commit();
+                order.expenses = [];
+                const terminalCache = {};
+                order.stops = OrderStopLink.toStops(order.stopLinks);
+                delete order.stopLinks;
 
-            for (const invoice of [...order.invoices, ...order.bills])
-            {
-                for (const line of invoice.lines)
-                {
-                    order.expenses.push(Expense.fromInvoiceLine(order, invoice, line));
-                }
-            }
-            delete order.invoices;
-            delete order.bills;
-
-            for (const job of order.jobs)
-            {
-                job.stops = OrderStopLink.toStops(job.stopLinks);
-                delete job.stopLinks;
-
-                for (const stop of job.stops)
+                for (const stop of order.stops)
                 {
                     if (!(stop.terminal.guid in terminalCache))
                     {
@@ -64,24 +43,50 @@ class OrderService
                     }
                 }
 
-                for (const bill of job.bills)
+                for (const invoice of [...order.invoices, ...order.bills])
                 {
-                    for (const line of bill.lines)
+                    for (const line of invoice.lines)
                     {
-                        order.expenses.push(Expense.fromInvoiceLine(job, bill, line));
+                        order.expenses.push(Expense.fromInvoiceLine(order, invoice, line));
                     }
                 }
+                delete order.invoices;
+                delete order.bills;
 
-                delete job.bills;
+                for (const job of order.jobs)
+                {
+                    job.stops = OrderStopLink.toStops(job.stopLinks);
+                    delete job.stopLinks;
+
+                    for (const stop of job.stops)
+                    {
+                        if (!(stop.terminal.guid in terminalCache))
+                        {
+                            terminalCache[stop.terminal.guid] = stop.terminal;
+                        }
+                    }
+
+                    for (const bill of job.bills)
+                    {
+                        for (const line of bill.lines)
+                        {
+                            order.expenses.push(Expense.fromInvoiceLine(job, bill, line));
+                        }
+                    }
+
+                    delete job.bills;
+                }
+
+                // assign unique terminals to the top level
+                order.terminals = Object.values(terminalCache);
+
+            }
+            catch (err)
+            {
+                await trx.rollback();
+                throw err;
             }
 
-            // assign unique terminals to the top level
-            order.terminals = Object.values(terminalCache);
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw err;
         }
 
         return order;
