@@ -240,7 +240,17 @@ class OrderService
                     status: 'new',
                     category: jobObj.category,
                     type: jobObj.type,
-                    loadType: jobObj.loadType
+                    loadType: jobObj.loadType,
+                    inspectionType: jobObj.inspectionType,
+                    instructions: jobObj.instructions,
+                    loadboardInstructions: jobObj.loadboardInstructions,
+                    estimatedDistance: jobObj.estimatedDistance,
+                    estimatedExpense: jobObj.estimatedExpense,
+                    estimatedRevenue: jobObj.estimatedRevenue,
+                    quotedRevenue: jobObj.quotedRevenue,
+
+                    isDummy: jobObj.isDummy,
+                    isTransport: jobObj.isTransport || null
                 });
                 job.setCreatedBy(currentUser);
                 job.bills = [];
@@ -270,7 +280,7 @@ class OrderService
 
                 if (job.dispatcher?.guid)
                 {
-                    const dispatcher = SFAccount.query(trx).findById(job.dispatcher.guid);
+                    const dispatcher = await SFAccount.query(trx).findById(job.dispatcher.guid);
                     job.graphLink('dispatcher', dispatcher);
                 }
 
@@ -310,8 +320,8 @@ class OrderService
                 isCompleted: false,
                 estimatedExpense: orderObj.estimatedExpense || null,
                 estimatedRevenue: orderObj.estimatedRevenue || null,
-                quotedRevenue: null,
-                dateExpectedCompleteBy: null,
+                quotedRevenue: orderObj.quotedRevenue,
+                dateExpectedCompleteBy: order.dateExpectedCompleteBy,
                 dateCompleted: null,
                 invoices: [],
                 bills: []
