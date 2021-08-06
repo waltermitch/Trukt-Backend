@@ -13,19 +13,28 @@ class InvoiceController extends HttpRouteController
 
     static async createInvoices(req, res)
     {
-        const orders = req.body?.orders;
-
-        if (!orders || orders == 0)
+        try
         {
-            res.status(400);
-            res.json({ 'error': 'Missing Or Empty Array' });
+            const orders = req.body?.orders;
+
+            if (!orders || orders == 0)
+            {
+                res.status(400);
+                res.json({ 'error': 'Missing Or Empty Array' });
+            }
+            else
+            {
+                const result = await InvoiceService.createInvoices(orders);
+
+                res.status(200);
+                res.json(result);
+            }
         }
-        else
+        catch (err)
         {
-            const result = await InvoiceService.createInvoices(orders);
-
-            res.status(200);
-            res.json(result);
+            console.log(err);
+            res.status(err?.response?.status || 500);
+            res.json(err?.response?.data || err?.response || err);
         }
     }
 }
