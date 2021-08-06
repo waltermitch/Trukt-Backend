@@ -1,20 +1,21 @@
+const InvoicePaymentMethod = require('../Models/InvoicePaymentMethod');
+const InvoicePaymentTerm = require('../Models/InvoicePaymentTerm');
 const VariableService = require('../Services/VariableService');
-const SFAccount = require('../Models/SFAccount');
-const HTTPS = require('../AuthController');
-
 const LineItemMdl = require('../Models/InvoiceLineItem');
+const SFAccount = require('../Models/SFAccount');
+const OrderStop = require('../Models/OrderStop');
+const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
 const Invoice = require('./Invoice');
 const Vendor = require('./Vendor');
 const Client = require('./Client');
-const Mongo = require('../Mongo');
 const axios = require('axios');
 const Bill = require('./Bill');
 
 const authConfig = { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': process.env['quickbooks.basicAuth'] } };
 const authUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
-const tokenName = process.env['quickbooks.tokenName'];
 const url = process.env['quickbooks.apiUrl'];
+const tokenName = 'qb_access_token';
 
 // store client types (for now)
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 60 * 60 * 24 });
@@ -29,9 +30,7 @@ class QBO
         {
             const opts = { url, tokenName: 'qb_access_token' };
 
-            const token = await Mongo.getSecret({ 'name': tokenName });
-
-            qb.exp = token.exp;
+            const token = await VariableService.get(tokenName);
 
             if (!qb?.instance)
             {
@@ -39,6 +38,8 @@ class QBO
 
                 qb.connect();
             }
+
+            qb.exp = token.exp;
 
             qb.setToken(token.value);
         }
@@ -54,19 +55,45 @@ class QBO
 
         const invoices = [];
 
-        for (const e of array)
-        {
-            const invoice = new Invoice(e);
-
-            const payload =
+        for (const order of array)
+            for (const invoice of order.invoices)
             {
-                'bId': e.guid,
-                'operation': 'create',
-                'Invoice': invoice
-            };
+                // set client id
+                const client = invoice?.cosignee || order?.client;
 
-            invoices.push(payload);
-        }
+                invoice.clientId = client?.qbId;
+                invoice.orderNumber = order.number;
+
+                for (const lineItem of invoice.lines)
+                {
+                    const commodity = lineItem.commodity;
+
+                    const stops = OrderStop.firstAndLast(commodity?.stops);
+
+                    const pTerminal = stops[0]?.terminal;
+                    const dTerminal = stops[1]?.terminal;
+
+                    lineItem.description = `${pTerminal.city}, ${pTerminal.state} to ${dTerminal.city}, ${dTerminal.state}\n`;
+
+                    if (lineItem?.item?.name?.localeCompare('Logistics') || lineItem.item?.name?.includes('Vehicle Shipping'))
+                    {
+                        if (commodity.description)
+                            lineItem.description += commodity.description + '\n';
+                        if (commodity.identifier)
+                            lineItem.description += `VIN: ${commodity.identifier}`;
+                    }
+
+                }
+
+                const payload =
+                {
+                    'bId': invoice.guid,
+                    'operation': 'create',
+                    'Invoice': new Invoice(invoice)
+                };
+
+                invoices.push(payload);
+            }
 
         const res = await QBO.batch(invoices);
 
@@ -211,12 +238,22 @@ class QBO
         return res.data[`${objectName}`];
     }
 
-    static async syncItemTypes()
+    static async syncListsToDB()
     {
-        const items = await QBO.getItemTypes();
+        const proms = await Promise.all([QBO.getItemTypes(), QBO.getPaymentMethods(), QBO.getPaymentTerms()]);
 
-        for (let i = 0; i < items.length; i++)
-            await LineItemMdl.query().patch({ name: items[i].Name, type: items[i].Type, isAccessorial: false, isDeprecated: false }).where('id', items[i].Id);
+        const items = proms[0];
+        const methods = proms[1];
+        const terms = proms[2];
+
+        for (const method of methods)
+            await InvoicePaymentMethod.query().insert({ name: method.Name });
+
+        for (const term of terms)
+            await InvoicePaymentTerm.query().insert({ name: term.Name });
+
+        for (const item of items)
+            await LineItemMdl.query().insert({ name: item.Name, isAccessorial: false, isDeprecated: false, externalSourceGuid: item.Id, externalSource: 'QB' }).onConflict('name').merge();
     }
 
     static async getItemTypes()
@@ -227,6 +264,26 @@ class QBO
         const res = await api.get('/query?query=Select * from Item');
 
         return res.data.QueryResponse.Item;
+    }
+
+    static async getPaymentMethods()
+    {
+        const api = await QBO.connect();
+
+        // get items
+        const res = await api.get('/query?query=Select * from PaymentMethod');
+
+        return res.data.QueryResponse.PaymentMethod;
+    }
+
+    static async getPaymentTerms()
+    {
+        const api = await QBO.connect();
+
+        // get items
+        const res = await api.get('/query?query=Select * from Term');
+
+        return res.data.QueryResponse.Term;
     }
 
     static async getClientTypes()
@@ -257,9 +314,9 @@ class QBO
     static async refreshToken()
     {
         // get refrsh token
-        const refreshToken = await HTTPS.getSecret({ 'name': 'qb_refresh_token' });
+        const refreshToken = await VariableService.get('qb_refresh_token');
 
-        const payload = `grant_type=refresh_token&refresh_token=Bearer%20${refreshToken.value}`;
+        const payload = `grant_type=refresh_token&refresh_token=${refreshToken.value}`;
 
         // ask for new stuff
         const res = await axios.post(authUrl, payload, authConfig);

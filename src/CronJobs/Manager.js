@@ -33,4 +33,5 @@ Cron.schedule(expressions.daily, async () =>
 
     // get triumph token
     await Triumph.refreshToken();
+    await QBO.syncListsToDB();
 });
