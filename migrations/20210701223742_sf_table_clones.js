@@ -70,7 +70,6 @@ exports.up = function (knex)
             isdeleted as is_deleted,
             ispartner as is_partner,
             ispersonaccount as is_person_account,
-            is_synced_in_super as is_synced_in_super,
             job_title__c as job_title,
             lastmodifieddate as last_modified_date,
             lastname as last_name,
