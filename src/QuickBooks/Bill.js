@@ -5,13 +5,13 @@ class Bill
     constructor(data)
     {
         this.AccountId = data.vendorId;
-        this.orderNumber = data.order_number;
+        this.orderNumber = data.orderNumber;
         this.setLineItems(data);
     }
 
     setLineItems(data)
     {
-        const items = data.lineItems;
+        const items = data.lines;
 
         this.lineItems = [];
 
