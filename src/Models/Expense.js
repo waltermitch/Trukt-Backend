@@ -68,6 +68,7 @@ class Expense
         }
         else if (orderjob instanceof OrderJob)
         {
+            job = orderjob.guid;
             accountType = 'vendor';
         }
         else

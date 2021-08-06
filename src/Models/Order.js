@@ -1,5 +1,6 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const IncomeCalcs = require('./Mixins/IncomeCalcs');
 
 class Order extends BaseModel
 {
@@ -207,7 +208,20 @@ class Order extends BaseModel
         }
         return stops;
     }
+
+    async $beforeInsert(context)
+    {
+        await super.$beforeInsert(context);
+        this.calculateEstimatedIncome();
+    }
+
+    async $beforeUpdate(opt, context)
+    {
+        await super.$beforeUpdate(opt, context);
+        this.calculateEstimatedIncome();
+    }
 }
 
+Object.assign(Order.prototype, IncomeCalcs);
 Object.assign(Order.prototype, RecordAuthorMixin);
 module.exports = Order;
