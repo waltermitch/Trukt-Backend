@@ -1,4 +1,5 @@
-module.exports = (err, request, response) =>
+/* eslint-disable */
+module.exports = (err, request, response, next) =>
 {
     let status;
     let data;

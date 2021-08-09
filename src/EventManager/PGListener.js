@@ -13,7 +13,6 @@ class PGListener
     {
         if (!client)
         {
-
             // get raw connection
             client = await PG.getRawConnection();
 
@@ -47,7 +46,7 @@ class PGListener
                 }
                 catch (err)
                 {
-                    console.log(err?.response || err);
+                    console.log(err?.response?.data || err?.response || err);
                 }
             });
 

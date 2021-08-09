@@ -20,7 +20,11 @@ class PG
     {
         const db = await PG.connect();
 
-        const config = await db.client.config.connection();
+        let config;
+        if (Object.prototype.toString.call(db.client.config.connection) === '[object AsyncFunction]')
+            config = await db.client.config.connection();
+        else
+            config = db.client.config.connection;
 
         const conn = new Pool(config);
 
