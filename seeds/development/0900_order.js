@@ -46,14 +46,14 @@ exports.seed = async function (knex)
         }
         const vehicleTypes = await trx.select('id').from('rcg_tms.commodity_types');
         const transportJobType = await OrderJobType.query(trx).findOne('category', 'transport');
-        
+
         const terminals = await Terminal.query(trx);
         if (terminals.length == 0)
         {
             throw new Error('No terminals found. Did you run the terminals seed?');
         }
-        const clients = await SFAccount.query(trx).modify('byType', 'client').limit(100);
-        if (clients.lenght == 0)
+        const clients = await SFAccount.query(trx).modify('byType', 'client').whereNot({ guid: null }).limit(100);
+        if (clients.length == 0)
         {
             throw new Error('No SF client accounts found. Do you have the salesforce data?');
         }
@@ -68,7 +68,7 @@ exports.seed = async function (knex)
         const tariff = carrierPay * 1.20;
 
         const client = faker.random.arrayElement(clients);
-        
+
         const vendor = faker.random.arrayElement(vendors);
         const order = await Order.query(trx).insertAndFetch({
             status: 'new',
@@ -125,9 +125,9 @@ exports.seed = async function (knex)
         {
             const vehicle = faker.random.arrayElement(vehicles);
             const comm = Commodity.fromJson({
-                typeId: faker.random.arrayElement(vehicleTypes).id,
+                type_id: faker.random.arrayElement(vehicleTypes).id,
                 identifier: faker.vehicle.vin(),
-                vehicleId: vehicle.id,
+                vehicle_id: vehicle.id,
                 capacity: faker.random.arrayElement(capacityTypes),
                 deliveryStatus: 'none',
                 length: faker.datatype.number(3) + 12,
