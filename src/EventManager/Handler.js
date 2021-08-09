@@ -17,8 +17,6 @@ class Handler
         // get account info
         const res = await SFAccount.query().findOne('guid', data.guid).withGraphFetched('rectype');
 
-        console.log(res);
-
         const recordType = res.rectype.name;
 
         // build generic payload

@@ -13,21 +13,20 @@ class PGListener
     {
         if (!client)
         {
-            try
+
+            // get raw connection
+            client = await PG.getRawConnection();
+
+            console.log('Trying to Listen To DB Triggers');
+
+            // subscribe to these channels
+            channels.forEach((e) => client.query(`LISTEN ${e}`));
+
+            // handle notifications
+            client.on('notification', async (msg) =>
             {
-                // get raw connection
-                client = await PG.getRawConnection();
-
-                console.log('Trying to Listen To DB Triggers');
-
-                // subscribe to these channels
-                channels.forEach((e) => client.query(`LISTEN ${e}`));
-
-                // handle notifications
-                client.on('notification', async (msg) =>
+                try
                 {
-                    console.log(msg.channel);
-
                     // convert string to json
                     const jsonMsg = JSON.parse(msg.payload);
 
@@ -42,12 +41,16 @@ class PGListener
                         default:
                             break;
                     }
-                });
-            }
-            catch (err)
-            {
-                console.log(err?.response || err);
-            }
+
+                    console.log('DB Trigger: 200');
+
+                }
+                catch (err)
+                {
+                    console.log(err?.response || err);
+                }
+            });
+
         }
     }
 }

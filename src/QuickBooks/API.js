@@ -198,8 +198,6 @@ class QBO
         // get client types
         const clientTypes = await QBO.getClientTypes();
 
-        console.log(client);
-
         // set client type
         client.setBusinessType(data.businessType, clientTypes);
 
