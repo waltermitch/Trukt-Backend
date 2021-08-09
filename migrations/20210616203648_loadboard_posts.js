@@ -37,44 +37,6 @@ const loadboardNames = [
         }
     }
 ];
-const loadboardContacts = [
-    {
-        name: 'powersports',
-        phone: '(972)866-4640',
-        email: 'powersports@rcglogistics.com',
-        loadboard: 'DAT'
-    },
-    {
-        name: 'vkuzmenko',
-        phone: '(770)338-3583',
-        email: 'vkuzmenko@rcglogistics.com',
-        loadboard: 'DAT'
-    },
-    {
-        name: 'ship',
-        phone: '(972)866-4640',
-        email: 'ship@rcglogistics.com',
-        loadboard: 'DAT'
-    },
-    {
-        name: 'Gabriel Miranda',
-        phone: '(972)866-4640',
-        email: 'powersports@rcglogistics.com',
-        loadboard: 'TRUCKSTOP'
-    },
-    {
-        name: 'Donald Neverov',
-        phone: '(972)866-4640',
-        email: 'ship@rcglogistics.com',
-        loadboard: 'TRUCKSTOP'
-    },
-    {
-        name: 'YMC',
-        phone: '(770)338-3583',
-        email: 'ymc@rcglogistics.com',
-        loadboard: 'TRUCKSTOP'
-    }
-];
 const proms = [];
 const table_name_lb = 'loadboards';
 const table_name_lb_contact = 'loadboard_contacts';
@@ -90,10 +52,12 @@ exports.up = function (knex)
     }).createTable(table_name_lb_contact, (table) =>
     {
         table.increments().primary();
-        table.string('name').notNullable();
-        table.string('phone');
-        table.string('email').notNullable();
-        table.string('loadboard');
+        table.string('loadboard', 20);
+        table.string('name', 20).notNullable();
+        table.string('phone', 20).notNullable();
+        table.string('email', 50).notNullable();
+        table.string('username', 50).notNullable();
+        table.string('external_id', 80).comment('the external guid of the contact in the external loadboard system');
         table.foreign('loadboard').references('name').inTable(`rcg_tms.${table_name_lb}`);
     }).createTable(table_name_post, (table) =>
     {
@@ -128,7 +92,7 @@ exports.up = function (knex)
         .raw(migration_tools.authors_trigger(table_name_post))
         .then(() =>
         {
-            proms.push(knex(table_name_lb).insert(loadboardNames), knex(table_name_lb_contact).insert(loadboardContacts));
+            proms.push(knex(table_name_lb).insert(loadboardNames));
             Promise.all(proms);
         });
 
