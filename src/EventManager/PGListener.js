@@ -47,7 +47,7 @@ class PGListener
                 }
                 catch (err)
                 {
-                    console.log(err?.response || err);
+                    console.log(err?.response?.data || err?.response || err);
                 }
             });
 
