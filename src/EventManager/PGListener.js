@@ -46,7 +46,8 @@ class PGListener
                 }
                 catch (err)
                 {
-                    console.log(err?.response?.data || err?.response || err);
+                    const error = err?.response?.data || err?.response || err;
+                    console.log(JSON.stringify(error));
                 }
             });
 
