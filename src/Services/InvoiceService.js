@@ -7,7 +7,9 @@ class InvoiceService
 {
     static async getInvoice(guid)
     {
-        const res = await Invoice.query().where('guid', '=', guid);
+        const search = guid.replace(/%/g, '');
+
+        const res = await Invoice.query().where('guid', '=', search);
 
         return res?.[0];
     }
@@ -36,7 +38,7 @@ class InvoiceService
             const res = await QBO.createInvoices(QBInvoices);
 
             // submit coupa PO's don't await
-            // Coupa.sendInvoices(CoupaInvoices);
+            Coupa.sendInvoices(CoupaInvoices);
 
             return res;
         }

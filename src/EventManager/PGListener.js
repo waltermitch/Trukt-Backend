@@ -16,12 +16,16 @@ class PGListener
             // get raw connection
             client = await PG.getRawConnection();
 
+            console.log('Trying to Listen To DB Triggers');
+
             // subscribe to these channels
             channels.forEach((e) => client.query(`LISTEN ${e}`));
 
             // handle notifications
             client.on('notification', async (msg) =>
             {
+                console.log(msg);
+
                 // convert string to json
                 const jsonMsg = JSON.parse(msg.payload);
 

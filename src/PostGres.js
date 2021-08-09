@@ -1,4 +1,5 @@
 const knexfile = require('../knexfile');
+const { Pool } = require('pg');
 const Knex = require('knex');
 
 let db;
@@ -19,7 +20,13 @@ class PG
     {
         const db = await PG.connect();
 
-        return db.client.acquireRawConnection();
+        const config = await db.client.config.connection();
+
+        const conn = new Pool(config);
+
+        const rawClient = await conn.connect();
+
+        return rawClient;
     }
 }
 
