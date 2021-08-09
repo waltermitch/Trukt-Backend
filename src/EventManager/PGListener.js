@@ -40,9 +40,6 @@ class PGListener
                         default:
                             break;
                     }
-
-                    console.log('DB Trigger: 200');
-
                 }
                 catch (err)
                 {
