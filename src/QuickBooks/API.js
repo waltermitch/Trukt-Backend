@@ -198,13 +198,15 @@ class QBO
         // get client types
         const clientTypes = await QBO.getClientTypes();
 
+        console.log(client);
+
         // set client type
         client.setBusinessType(data.businessType, clientTypes);
 
         if (!data.qbId)
         {
             // create
-            const res = await api.post('/client', client);
+            const res = await api.post('/customer', client);
 
             // save qbid in database
             await SFAccount.query().patch({ qbId: res.data.Client.Id }).where('guid', data?.guid);
@@ -212,12 +214,12 @@ class QBO
         else
         {
             // update
-            const SyncToken = await QBO.getSyncToken('Client', data.qbId);
+            const SyncToken = await QBO.getSyncToken('Customer', data.qbId);
 
             client.SyncToken = SyncToken;
             client.Id = data.qbId;
 
-            await api.post('/client', client);
+            await api.post('/customer', client);
         }
     }
 
@@ -326,11 +328,11 @@ class QBO
         // get customer type
         const res = await api.get('/query?query=Select * from CustomerType');
 
-        const arr = res.data.QueryResponse.CustomerType;
+        const arr = res.data.QueryResponse?.CustomerType;
 
         const obj = {};
 
-        for (let i = 0; i < arr.length; i++)
+        for (let i = 0; i < arr?.length; i++)
             obj[`${arr[i].Name}`] = arr[i];
 
         // add to cache

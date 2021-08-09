@@ -23,18 +23,19 @@ class Super
             };
 
             // get token
-            const token = await HTTPS.getSecret({ 'name': sd.tokenName });
+            const token = await HTTPS.getSecret({ 'name': options.tokenName });
 
-            // set token expire time
-            sd.exp = token.exp;
-
-            if (!sd.instance)
+            if (!sd?.instance)
             {
                 // initialize
                 sd = new HTTPS(options);
 
                 sd?.connect();
+
             }
+
+            // set token expire time
+            sd.exp = token.exp;
 
             // set token
             sd.setToken(token.value);
@@ -46,7 +47,7 @@ class Super
     static async createClient(payload)
     {
         // get Super
-        const sd = await Super.getSuper();
+        const sd = await Super.connect();
 
         // post to creat customer
         const res = await sd.post('/v1/public/customers', payload);
@@ -58,7 +59,7 @@ class Super
     static async updateClient(guid, payload)
     {
         // get Super
-        const sd = await Super.getSuper();
+        const sd = await Super.connect();
 
         // updating Client
         const res = await sd.put(`/v1/public/customers/${guid}`, payload);
@@ -70,7 +71,7 @@ class Super
     static async getClientByExternalId(clientId)
     {
         // get super
-        const sd = await Super.getSuper();
+        const sd = await Super.connect();
 
         // patchers
         const res = await sd.get(`/v1/public/customers/custom_external_id/${clientId}`);
@@ -82,7 +83,7 @@ class Super
     static async getClient(guid)
     {
         // get super
-        const sd = await Super.getSuper();
+        const sd = await Super.connect();
 
         // getting info
         const res = await sd.get(`/v1/public/customers/${guid}`);
@@ -125,7 +126,7 @@ class Super
     {
         const carrier = new Carrier(data);
 
-        const sd = await Super.getSuper();
+        const sd = await Super.connect();
 
         const res = await sd.put(`/v1/public/carriers/${guid}/profile`, carrier);
 
@@ -134,7 +135,7 @@ class Super
 
     static async getCarrier(guid)
     {
-        const sd = await Super.getSuper();
+        const sd = await Super.connect();
 
         const res = await sd.get(`/v1/public/carriers/${guid}/profile`);
 
@@ -143,7 +144,7 @@ class Super
 
     static async getCarrierByExternalId(id)
     {
-        const sd = await Super.getSuper();
+        const sd = await Super.connect();
 
         // get carrier by salesforce ID
         const res = await sd.get(`/v1/public/carriers/custom_external_id/${id}`).
@@ -172,7 +173,7 @@ class Super
 
     static async queryCarriers(q)
     {
-        const sd = await Super.getSuper();
+        const sd = await Super.connect();
 
         const res = await sd.get(`/v1/public/carriers/full_search?query=${q}`);
 
