@@ -1,4 +1,4 @@
-module.exports = (err, request, response, next) =>
+module.exports = (err, request, response) =>
 {
     let status;
     let data;

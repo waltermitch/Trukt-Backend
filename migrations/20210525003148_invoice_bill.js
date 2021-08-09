@@ -7,7 +7,7 @@ exports.up = function (knex)
     {
         table.uuid('guid').primary().notNullable().unique();
         table.string('reference_number', 64).comment('reference number for this invoice as used by our internal systems');
-        const expartyfn = 'cosignee_guid';
+        const expartyfn = 'consignee_guid';
         table.string(expartyfn, 100).comment('this is the salesforce account vendor or client guid');
         table.foreign(expartyfn).references('guid__c').inTable('salesforce.account');
 

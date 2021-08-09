@@ -92,6 +92,8 @@ class SFAccount extends BaseModel
                     delete json.orderInstructions;
 
                     break;
+                case 'employee':
+                    delete json.referralAmount;
                 case 'referrer':
                     delete json.dotNumber;
                     for (const field of [

@@ -6,6 +6,7 @@ exports.up = function (knex)
     return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
     {
         table.uuid('guid').unique().notNullable().primary();
+        table.string('notes', 1024).comment('Line Description');
         const invoiceguid = 'invoice_guid';
         table.uuid(invoiceguid).notNullable();
         table.foreign(invoiceguid).references('guid').inTable('rcg_tms.invoice_bills');

@@ -54,16 +54,22 @@ class AccountService
 
     static async getById(accountType, accountId)
     {
-        const rtype = accountType?.toLowerCase();
-        const qb = SFAccount.query().where('guid', accountId).modify('byType', rtype);
-        switch (rtype)
-        {
-            case 'carrier':
-            case 'client':
-                qb.withGraphFetched('[contacts, primaryContact]');
+        const qb = SFAccount.query().where('guid', accountId);
 
-                break;
+        if (accountType)
+        {
+            const rtype = accountType?.toLowerCase();
+            qb.modify('byType', rtype);
+            switch (rtype)
+            {
+                case 'carrier':
+                case 'client':
+                    qb.withGraphFetched('[contacts, primaryContact]');
+
+                    break;
+            }
         }
+
         const result = await qb;
 
         return result;

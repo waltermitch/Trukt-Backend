@@ -12,7 +12,7 @@ exports.up = function (knex)
         table.uuid(orderguid);
         table.foreign(orderguid).references('guid').inTable('rcg_tms.orders');
         table.string('number', 9).comment('The job number based off of the order number');
-        
+
         const vendorguid = 'vendor_guid';
         table.string(vendorguid, 100).comment('The account completing the job for the company, usually a carrier account');
         table.foreign(vendorguid).references('guid__c').inTable('salesforce.account');
@@ -25,7 +25,7 @@ exports.up = function (knex)
         table.string(vendorAgentGuid, 100).comment('the vendor\'s agent that will be doing the job, usually a driver or another worker');
         table.foreign(vendorAgentGuid).references('guid__c').inTable('salesforce.contact');
 
-        table.uuid('owner_guid').comment('This is the person in charge of making sure the job is full-filled. Either dispatcher or other actor.');
+        table.uuid('dispatcher_guid').comment('This is the person in charge of making sure the job is full-filled. Either dispatcher or other actor.');
 
         table.string('status').comment('This is purley for display for user, do not change this status manually');
         table.decimal('distance', 8, 1).unsigned().comment('The maximum truck-route distance between all the order stops sorted by the sequence in miles');

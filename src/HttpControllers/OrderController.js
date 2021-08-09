@@ -40,8 +40,7 @@ class OrderController extends HttpRouteController
         // big kahuna payload
         try
         {
-            const order = await OrderService.create(req.body);
-
+            const order = await OrderService.create(req.body, req.session.userGuid);
             res.status(200);
             res.json(order);
         }
