@@ -5,11 +5,18 @@ const Cron = require('node-cron');
 
 const expressions =
 {
+    oneMinute: '0 */1 * * * *',
     thirtyMinutes: '0 */30 * * * *',
     hourly: '0 0 */1 * * *',
     biHourly: '0 0 */2 * * *',
     daily: '0 0 1 */1 * *'
 };
+
+// every minute
+Cron.schedule(expressions.oneMinute, async () =>
+{
+    console.log('Running Cron Job');
+});
 
 // every 30 minutes
 Cron.schedule(expressions.thirtyMinutes, async () =>

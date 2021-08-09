@@ -13,34 +13,41 @@ class PGListener
     {
         if (!client)
         {
-            // get raw connection
-            client = await PG.getRawConnection();
-
-            console.log('Trying to Listen To DB Triggers');
-
-            // subscribe to these channels
-            channels.forEach((e) => client.query(`LISTEN ${e}`));
-
-            // handle notifications
-            client.on('notification', async (msg) =>
+            try
             {
-                console.log(msg);
+                // get raw connection
+                client = await PG.getRawConnection();
 
-                // convert string to json
-                const jsonMsg = JSON.parse(msg.payload);
+                console.log('Trying to Listen To DB Triggers');
 
-                switch (msg.channel)
+                // subscribe to these channels
+                channels.forEach((e) => client.query(`LISTEN ${e}`));
+
+                // handle notifications
+                client.on('notification', async (msg) =>
                 {
-                    case 'job_status_change':
-                        await Handler.jobStatusChanged(jsonMsg);
-                        break;
-                    case 'account_upserted':
-                        await Handler.accountUpdated(jsonMsg);
-                        break;
-                    default:
-                        break;
-                }
-            });
+                    console.log(msg.channel);
+
+                    // convert string to json
+                    const jsonMsg = JSON.parse(msg.payload);
+
+                    switch (msg.channel)
+                    {
+                        case 'job_status_change':
+                            await Handler.jobStatusChanged(jsonMsg);
+                            break;
+                        case 'account_upserted':
+                            await Handler.accountUpdated(jsonMsg);
+                            break;
+                        default:
+                            break;
+                    }
+                });
+            }
+            catch (err)
+            {
+                console.log(err?.response || err);
+            }
         }
     }
 }
