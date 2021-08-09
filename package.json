@@ -32,7 +32,7 @@
         "node-cache": "^5.1.2",
         "node-cron": "^3.0.0",
         "objection": "^2.2.15",
-        "pg": "^8.6.0",
+        "pg": "^8.7.1",
         "pg-connection-string": "^2.5.0",
         "uuid": "^8.3.2"
     },
