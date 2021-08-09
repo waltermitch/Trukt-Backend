@@ -13,7 +13,6 @@ class PGListener
     {
         if (!client)
         {
-
             // get raw connection
             client = await PG.getRawConnection();
 
