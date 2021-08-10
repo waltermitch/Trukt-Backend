@@ -100,5 +100,9 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name_post).dropTableIfExists(table_name_lb_contact).dropTableIfExists(table_name_lb).raw('DROP TYPE IF EXISTS rcg_tms.post_status');
+    return knex.schema.withSchema('rcg_tms')
+        .dropTableIfExists(table_name_post)
+        .dropTableIfExists(table_name_lb_contact)
+        .dropTableIfExists(table_name_lb)
+        .raw('DROP TYPE IF EXISTS rcg_tms.post_status');
 };
