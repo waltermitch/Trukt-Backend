@@ -49,6 +49,17 @@ class OrderController extends HttpRouteController
             next(err);
         }
     }
+
+    static async getOrders(req, res, next)
+    {
+        const page = req.query.pg || 0;
+        const rowCount = req.query.rc || 25;
+
+        const searchParams = {};
+        const orders = await OrderService.getOrders(searchParams, page, rowCount);
+        res.status(200);
+        res.json(orders);
+    }
 }
 
 const controller = new OrderController();

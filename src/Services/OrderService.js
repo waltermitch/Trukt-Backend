@@ -19,6 +19,14 @@ const Expense = require('../Models/Expense');
 
 class OrderService
 {
+    static async getOrders(searchParams, page, rowCount)
+    {
+        const orders = await Order.query().page(page, rowCount).orderBy('number', 'ASC');
+        orders.page = page;
+        orders.rowCount = rowCount;
+        return orders;
+    }
+
     static async getOrderByGuid(orderGuid)
     {
         // TODO split this up so that query is faster and also doesnt give 500 error.
