@@ -15,7 +15,16 @@ class Heroku
         // search for config
         const res = await api.get(`/apps/${process.env['heroku.appId']}/config-vars`);
 
-        return res.data;
+        if (res.data?.DATABASE_URL)
+            return res.data;
+        else
+        {
+            const keys = Object.keys(res.data);
+
+            for (let i = 0; i < keys.length; i++)
+                if (keys[i].includes('POSTGRESQL'))
+                    return { 'DATABASE_URL': res.data[`${keys[i]}`] };
+        }
     }
 
     static connect()

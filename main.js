@@ -11,6 +11,8 @@ const HttpErrorHandler = require('./src/HttpErrorHandler');
 const PGListener = require('./src/EventManager/PGListener');
 require('./src/CronJobs/Manager');
 
+PGListener.listen();
+
 const store = new KnexSessionStore
     ({
         knex: BaseModel.knex(),
@@ -74,8 +76,6 @@ app.use(HttpErrorHandler);
 
 app.listen(process.env.PORT, async (err) =>
 {
-    // other startup jobs
-    await PGListener.listen();
     if (err) console.log('there is an error lol');
     console.log('listening on port ', process.env.PORT);
 });
