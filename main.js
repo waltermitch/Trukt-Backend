@@ -68,7 +68,7 @@ const filepaths = fs.readdirSync('./src/Routes');
 for (const filepath of filepaths)
 {
     const router = require(`./src/Routes/${filepath}`);
-    app.use(router);
+    initRoutes(filepath, router);
 }
 
 app.all('*', (req, res) => { res.status(404); res.json(); });
@@ -79,3 +79,14 @@ app.listen(process.env.PORT, async (err) =>
     if (err) console.log('there is an error lol');
     console.log('listening on port ', process.env.PORT);
 });
+
+// sexy function for printing routes
+function initRoutes(fileName, router)
+{
+    if (Object.keys(router).length > 0)
+    {
+        console.log('\x1b[1m\x1b[3m\x1b[31m%s\x1b[0m', `\n ${fileName.split('.')[0].toUpperCase()}`);
+        app.use(router);
+        router?.stack?.forEach((e) => { console.log('\x1b[32m%s\x1b[0m\x1b[36m%s\x1b[0m', `\n${Object.keys(e.route.methods).pop().toUpperCase()}`, ` ${e.route.path}`); });
+    }
+}
