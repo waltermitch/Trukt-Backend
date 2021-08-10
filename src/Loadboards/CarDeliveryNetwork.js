@@ -20,9 +20,9 @@ class CarDeliveryNetwork extends Loadboard
     {
         const payload = {
             loadId: this.data.number,
-            Notes: 'These notes are sent to the driver',
+            Notes: 'These notes are sent to the driver lmfao',
             ServiceRequired: 1,
-            JobInitiator: this.data.order.owner.name,
+            JobInitiator: this.data.order.dispatcher.name,
             Customer: {
                 AddressLines: '9300 Tech Center Drive',
                 City: 'Sacramento',
@@ -68,12 +68,17 @@ class CarDeliveryNetwork extends Loadboard
         const vehicles = [];
         for (const com of commodities)
         {
+            if (com.vehicle === null)
+            {
+                com.vehicle = { year: '', make: 'make', model: com.description };
+            }
+            com.identifier = com.identifier !== null ? com.identifier.substring(0, 17) : null;
             vehicles.push({
                 Make: com.vehicle.make,
                 Model: com.vehicle.model,
                 Registration: com.vehicle.year,
                 Vin: com.identifier,
-                Variant: com.commType.type
+                Variant: com.commType?.type
             });
         }
 
