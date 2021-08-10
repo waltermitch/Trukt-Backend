@@ -3,9 +3,6 @@ const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const states = require('us-state-codes');
 
-// const loadboardName = 'SUPERDISPATCH';
-const needsCreation = true;
-
 class Super extends Loadboard
 {
 
@@ -24,7 +21,7 @@ class Super extends Loadboard
     {
         console.log('validtaing for super');
     }
-    
+
     toJSON()
     {
         const payload =
@@ -50,10 +47,10 @@ class Super extends Loadboard
             number: this.data.number,
             purchase_order_number: this.data.order.referenceNumber,
             price: currency(this.data.estimatedExpense).value,
-            dispatcher_name: this.data.order.owner.name,
+            dispatcher_name: this.data.order.dispatcher.name,
             instructions: this.data.order.instructions,
             loadboard_instructions: this.postObject.instructions || this.data.loadboardInstructions,
-            transport_type: this.setEquipmentType(this.data.equipmentType?.name), // this.transportType,
+            transport_type: this.setEquipmentType(this.data.equipmentType?.name),
             tariff: currency(this.data.estimatedRevenue).value,
             inspection_type: this.data.order.inspectionType,
             payment: { terms: 'ach' },
@@ -142,7 +139,7 @@ class Super extends Loadboard
 
     setEquipmentType()
     {
-        switch (this.data.equipmentType.name)
+        switch (this.data.equipmentType?.name)
         {
             case 'Enclosed':
             case 'Van':
@@ -165,6 +162,10 @@ class Super extends Loadboard
     {
         return commodities.map(x =>
         {
+            if (x.vehicle === null)
+            {
+                x.vehicle = { year: '', make: 'make', model: x.description };
+            }
             const veh = {
                 'year': x.vehicle.year,
                 'make': x.vehicle.make,
