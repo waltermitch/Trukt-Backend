@@ -36,12 +36,16 @@ exports.up = function (knex)
         table.boolean('is_synced').defaultTo(false);
         table.json('values');
         migration_tools.timestamps(table);
+        migration_tools.authors(table);
         table.foreign('job_guid').references('guid').inTable('rcg_tms.order_jobs');
         table.foreign('loadboard').references('name').inTable('rcg_tms.loadboards');
-    }).then(() =>
-    {
-        return knex('loadboards').insert(loadboardNames);
-    });
+    })
+        .raw(migration_tools.authors_trigger('loadboard_posts'))
+        .raw(migration_tools.timestamps_trigger('loadboard_posts'))
+        .then(() =>
+        {
+            return knex('loadboards').insert(loadboardNames);
+        });
 };
 
 exports.down = function (knex)
