@@ -157,7 +157,12 @@ class OrderService
             {
                 const commodity = Commodity.fromJson(commObj);
                 commodity.setCreatedBy(currentUser);
-                commodity.graphLink('commType', commTypes.find(it => CommodityType.compare(commodity, it)));
+                const commType = commTypes.find(it => CommodityType.compare(commodity, it));
+                if (!commType)
+                {
+                    throw new Error(`unknown commodity ${commodity.commType.category} ${commodity.commType.type}`);
+                }
+                commodity.graphLink('commType', commType);
 
                 if (commodity.isVehicle())
                 {
@@ -235,67 +240,71 @@ class OrderService
             {
                 const jobObj = orderObj.jobs[i];
 
-                const job = OrderJob.fromJson({
-                    index: jobObj.index,
-                    status: 'new',
-                    category: jobObj.category,
-                    type: jobObj.type,
-                    loadType: jobObj.loadType,
-                    inspectionType: jobObj.inspectionType,
-                    instructions: jobObj.instructions,
-                    loadboardInstructions: jobObj.loadboardInstructions,
-                    estimatedDistance: jobObj.estimatedDistance,
-                    estimatedExpense: jobObj.estimatedExpense,
-                    estimatedRevenue: jobObj.estimatedRevenue,
-                    quotedRevenue: jobObj.quotedRevenue,
+                const job = OrderJob.fromJson(jobObj);
 
-                    isDummy: jobObj.isDummy,
-                    isTransport: jobObj.isTransport || null
-                });
+                job.status = 'new';
                 job.setCreatedBy(currentUser);
                 job.bills = [];
 
+                // remove the stops so that they are not re-created in the graph insert
+                delete job.stops;
+
                 // vendor and driver are not always known when creating an order
                 // most orders created will not have a vendor attached, but on the offchance they might?
-                if (jobObj.vendor?.guid)
+                if (job.vendor)
                 {
-                    const vendor = await SFAccount.query(trx).modify('byType', 'carrier').findById(jobObj.vendor.guid);
+                    const vendor = await SFAccount.query(trx).modify('byType', 'carrier').findById(job.vendor.guid);
+                    if (!vendor)
+                    {
+                        throw new Error('vendor doesnt exist');
+                    }
                     job.graphLink('vendor', vendor);
                 }
 
-                if (jobObj.vendorContact)
+                if (job.vendorContact)
                 {
-                    const vendorContact = SFContact.fromJson(jobObj.vendorContact);
-                    const contact = await SFContact.query(trx).findById('guid', vendorContact.guid);
+                    const contact = await SFContact.query(trx).findById(job.vendorContact.guid);
+                    if (!contact)
+                    {
+                        throw new Error('vendor contact doesnt exist');
+                    }
                     job.graphLink('vendorContact', contact);
                 }
 
                 // this is the driver and what not
-                if (jobObj.vendorAgent)
+                if (job.vendorAgent)
                 {
-                    const vendorAgent = SFContact.fromJson(jobObj.vendorAgent);
-                    const contact = await SFContact.query(trx).findById(vendorAgent.guid);
+                    const contact = await SFContact.query(trx).findById(job.vendorAgent.guid);
+                    if (!contact)
+                    {
+                        throw new Error('vendor agent doesnt exist');
+                    }
                     job.graphLink('vendorAgent', contact);
                 }
 
-                if (job.dispatcher?.guid)
+                if (job.dispatcher)
                 {
                     const dispatcher = await SFAccount.query(trx).findById(job.dispatcher.guid);
+                    if (!dispatcher)
+                    {
+                        throw new Error('dispatcher ' + job.dispatcher + ' doesnt exist');
+                    }
                     job.graphLink('dispatcher', dispatcher);
                 }
 
-                job.graphLink('jobType', jobTypes.find(it => OrderJobType.compare(job, it)));
-
-                const jobStops = [];
-                for (const stopObj of jobObj.stops)
+                const jobType = jobTypes.find(it => OrderJobType.compare(job, it));
+                if (!jobType)
                 {
-                    const stop = OrderStop.fromJson(stopObj);
-                    stop.setCreatedBy(currentUser);
-                    jobStops.push(stop);
+                    throw new Error(`unknown job type ${job.jobType.category} ${job.jobType.type}`);
                 }
+                job.graphLink('jobType', jobType);
+                const jobStops = jobObj.stops.map((it) =>
+                {
+                    const stop = OrderStop.fromJson(it);
+                    stop.setCreatedBy(currentUser);
+                    return stop;
+                });
 
-                // remove the stops so that they are not re-created in the graph insert
-                delete job.stops;
                 job.stopLinks = OrderService.buildStopLinksGraph(jobStops, stopsCache, terminals, commodities);
                 for (const stopLink of job.stopLinks)
                 {

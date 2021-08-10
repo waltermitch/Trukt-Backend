@@ -70,7 +70,7 @@ class SFContact extends BaseModel
             'accountId',
             'firstName',
             'lastName',
-            'phone'
+            'phoneNumber'
         ];
     }
 
