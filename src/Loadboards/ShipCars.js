@@ -47,7 +47,7 @@ class ShipCars extends Loadboard
             shipper_load_id: this.data.number,
             instructions: this.data.loadboardInstructions,
             specific_load_requirements: this.postObject.instructions,
-            enclosed_trailer: this.getEnclosedTrailer(this.data.equipmentType.name),
+            enclosed_trailer: this.getEnclosedTrailer(),
             vehicles: this.formatCommodities(this.data.commodities),
             guid: this.postObject.externalGuid,
 
@@ -68,12 +68,16 @@ class ShipCars extends Loadboard
         const vehicles = [];
         for (const com of commodities)
         {
+            if (com.vehicle === null)
+            {
+                com.vehicle = { year: 2000, make: 'make', model: com.description };
+            }
             vehicles.push({
                 type: this.setVehicleType(com.commType.type),
                 year: com.vehicle.year,
                 make: com.vehicle.make,
                 model: com.vehicle.model,
-                vin: com.identifier,
+                vin: com.identifier !== null ? com.identifier.substring(0, 19) : null,
                 lot_number: com.lotNumber,
                 operable: com.inoperable === 'no' ? false : true
             });
@@ -136,7 +140,7 @@ class ShipCars extends Loadboard
 
     getEnclosedTrailer()
     {
-        switch (this.data.equipmentType.name)
+        switch (this.data.equipmentType?.name)
         {
             case 'Enclosed':
             case 'Van':
