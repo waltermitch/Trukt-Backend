@@ -57,7 +57,7 @@ exports.seed = async function (knex)
         {
             throw new Error('No SF client accounts found. Do you have the salesforce data?');
         }
-        const vendors = await SFAccount.query(trx).modify('byType', 'carrier').wwhereNotNull('guid').limit(100);
+        const vendors = await SFAccount.query(trx).modify('byType', 'carrier').whereNotNull('guid').limit(100);
         if (vendors.length == 0)
         {
             throw new Error('No SF carrier accounts found. Do you have the salesforce data?');
