@@ -43,7 +43,7 @@ class CentralDispatch extends Loadboard
 
     setEquipmentType()
     {
-        switch (this.data.equipmentType.name)
+        switch (this.data.equipmentType?.name)
         {
             case 'Enclosed':
             case 'Van':
@@ -65,6 +65,10 @@ class CentralDispatch extends Loadboard
 
         for (const com of this.data.commodities)
         {
+            if (com.vehicle === null)
+            {
+                com.vehicle = { year: '', make: 'make', model: com.description };
+            }
             const vehicle = [
                 `${com.vehicle.year}`,
                 com.vehicle.make,
@@ -73,7 +77,6 @@ class CentralDispatch extends Loadboard
             ].map(it =>
             {
                 return it.replace(/[|;]/g, '');
-
             }).map((it) =>
             {
                 return (it == null) ? '' : it;
