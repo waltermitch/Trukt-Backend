@@ -46,7 +46,7 @@ exports.seed = async function (knex)
         }
         const vehicleTypes = await trx.select('id').from('rcg_tms.commodity_types');
         const transportJobType = await OrderJobType.query(trx).findOne('category', 'transport');
-        
+
         const terminals = await Terminal.query(trx);
         if (terminals.length == 0)
         {
@@ -68,7 +68,7 @@ exports.seed = async function (knex)
         const tariff = carrierPay * 1.20;
 
         const client = faker.random.arrayElement(clients);
-        
+
         const vendor = faker.random.arrayElement(vendors);
         const order = await Order.query(trx).insertAndFetch({
             status: 'new',
@@ -79,7 +79,7 @@ exports.seed = async function (knex)
             estimatedRevenue: tariff,
             referenceNumber: faker.lorem.word().toUpperCase().substring(0, 5).padEnd(5, '0') + (faker.datatype.number(9999) + 1000),
             inspectionType: 'advanced',
-            ownerGuid: createdBy.guid,
+            dispatcherGuid: createdBy.guid,
             createdByGuid: createdBy.guid
         });
 
