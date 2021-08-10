@@ -52,15 +52,15 @@ exports.seed = async function (knex)
         {
             throw new Error('No terminals found. Did you run the terminals seed?');
         }
-        const clients = await SFAccount.query(trx).modify('byType', 'client').limit(100);
+        const clients = await SFAccount.query(trx).modify('byType', 'client').whereNotNull('guid').limit(100);
         if (clients.lenght == 0)
         {
             throw new Error('No SF client accounts found. Do you have the salesforce data?');
         }
-        const vendors = await SFAccount.query(trx).modify('byType', 'carrier').limit(100);
+        const vendors = await SFAccount.query(trx).modify('byType', 'carrier').wwhereNotNull('guid').limit(100);
         if (vendors.length == 0)
         {
-            throw new Error('No SF carrier accounts found. Do you hvae the salesforce data?');
+            throw new Error('No SF carrier accounts found. Do you have the salesforce data?');
         }
 
         const numComs = faker.datatype.number(9) + 1;
