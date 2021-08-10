@@ -114,6 +114,14 @@ class OrderJob extends BaseModel
                     to: 'salesforce.contacts.guid'
                 }
             },
+            equipmentType: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./EquipmentType'),
+                join: {
+                    from: 'rcgTms.orderJobs.equipmentTypeId',
+                    to: 'rcgTms.equipmentTypes.id'
+                }
+            },
             bills: {
                 relation: BaseModel.ManyToManyRelation,
                 modelClass: require('./InvoiceBill'),
