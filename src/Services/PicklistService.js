@@ -23,19 +23,19 @@ const localPicklistPath = './localdata/picklists.json';
 // this exists to filter out invoice bill line items that are also locksmith
 // job types and to create a new picklist with locksmith job types from invoice line items
 const locksmithJobNames = [
-    'duplicate car keys',
-    'laser-cut transponder key',
-    'mechanical key',
-    'program car remotes',
-    'program keys',
-    'proximity fob w/last cut key override',
-    'remote/key combo',
-    'replace car fobs',
-    'replace car remotes',
-    'self programmable remote',
-    'sell car remotes',
-    'tibbe key',
-    'transponder key'
+    'duplicate car keys',
+    'laser-cut transponder key',
+    'mechanical key',
+    'program car remotes',
+    'program keys',
+    'proximity fob w/last cut key override',
+    'remote/key combo',
+    'replace car fobs',
+    'replace car remotes',
+    'self programmable remote',
+    'sell car remotes',
+    'tibbe key',
+    'transponder key'
 ];
 
 const conditionTypes = {
@@ -100,7 +100,11 @@ class PicklistService
 
         // this lookup table needed a different category compared to the others because there is already an enum type called expense_types, which conflicts with the results
         // from this query, so the solution was to make this category unique so it does not conflict anymore
-        const lineItems = await knex.raw('select \'lineItems\' as tableName, id as value, concat(type, \'LookupTypes\') as category, name as label from rcg_tms.invoice_bill_line_items where is_deprecated is false');
+        const lineItems = await knex.raw('select \'lineItems\' as tableName, id as value, type as category, name as label from rcg_tms.invoice_bill_line_items where is_deprecated is false');
+        for (const lineItem of lineItems.rows)
+        {
+            lineItem.category = 'expenseItems';
+        }
 
         // this api endpoint calls the loadboards function app that
         // gathers loadboard picklist information and sends it back
@@ -110,7 +114,7 @@ class PicklistService
         const paymentTerms = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
         const paymentMethods = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_methods').select('*'));
         const equipmentTypes = PicklistService.createPicklistObject(await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true }));
-        const locksmithJobTypes = PicklistService.createPicklistObject(await InvoiceLineItem.query().whereIn('name', locksmithJobNames));
+        const locksmithJobTypes = PicklistService.createPicklistObject(await InvoiceLineItem.query().whereIn('name', locksmithJobNames).andWhere({ 'is_deprecated': false }));
         const commodityTypes = PicklistService.createCommodityTypes(await CommodityType.query().select('id', 'category', 'type as name'));
 
         const all = enums.rows.concat(jobTypes.rows).concat(lineItems.rows);

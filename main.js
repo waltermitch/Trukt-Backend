@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+
+require('./local.settings');
 const express = require('express');
 const session = require('express-session');
 const domain = require('./src/Domain');
@@ -6,7 +8,10 @@ const KnexSessionStore = require('connect-session-knex')(session);
 const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
 const HttpErrorHandler = require('./src/HttpErrorHandler');
-require('./local.settings');
+const PGListener = require('./src/EventManager/PGListener');
+require('./src/CronJobs/Manager');
+
+PGListener.listen();
 
 const store = new KnexSessionStore
     ({
@@ -69,7 +74,7 @@ for (const filepath of filepaths)
 app.all('*', (req, res) => { res.status(404); res.json(); });
 app.use(HttpErrorHandler);
 
-app.listen(process.env.PORT, (err) =>
+app.listen(process.env.PORT, async (err) =>
 {
     if (err) console.log('there is an error lol');
     console.log('listening on port ', process.env.PORT);

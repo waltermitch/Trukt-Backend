@@ -1,12 +1,12 @@
 const table_name = 'orders';
-const cosignee = 'cosignee_guid';
+const consignee = 'consignee_guid';
 exports.up = function (knex)
 {
     return Promise.all([
         knex.schema.withSchema('rcg_tms').table(table_name, table =>
         {
-            table.string(cosignee, 100);
-            table.foreign(cosignee).references('guid__c').inTable('salesforce.account');
+            table.string(consignee, 100);
+            table.foreign(consignee).references('guid__c').inTable('salesforce.account');
             table.string('reference_number', 64).comment('external reference number that customer provides');
             table.enu('inspection_type', ['standard', 'advanced'],
                 {
@@ -29,8 +29,8 @@ exports.down = function (knex)
     return knex.schema.withSchema('rcg_tms')
         .table(table_name, (table) =>
         {
-            table.dropForeign(cosignee);
-            table.dropColumn(cosignee);
+            table.dropForeign(consignee);
+            table.dropColumn(consignee);
             table.dropColumn('reference_number');
             table.dropColumn('inspection_type');
             table.dropColumn('is_tender');

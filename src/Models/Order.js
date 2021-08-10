@@ -1,5 +1,6 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const IncomeCalcs = require('./Mixins/IncomeCalcs');
 
 class Order extends BaseModel
 {
@@ -35,11 +36,11 @@ class Order extends BaseModel
                     to: 'salesforce.contacts.guid'
                 }
             },
-            owner: {
+            dispatcher: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: User,
                 join: {
-                    from: 'rcgTms.orders.ownerGuid',
+                    from: 'rcgTms.orders.dispatcherGuid',
                     to: 'rcgTms.tmsUsers.guid'
                 }
             },
@@ -85,11 +86,11 @@ class Order extends BaseModel
                     to: 'rcgTms.orderStopLinks.orderGuid'
                 }
             },
-            cosignee: {
+            consignee: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: SFAccount,
                 join: {
-                    from: 'rcgTms.orders.cosigneeGuid',
+                    from: 'rcgTms.orders.consigneeGuid',
                     to: 'salesforce.accounts.guid'
                 }
             },
@@ -102,9 +103,9 @@ class Order extends BaseModel
                         from: 'rcgTms.invoices.orderGuid',
                         to: 'rcgTms.invoices.invoiceGuid'
                     },
-                    to: 'rcgTms.invoiceBills.guid',
-                    modify: 'invoice'
-                }
+                    to: 'rcgTms.invoiceBills.guid'
+                },
+                modify: 'invoice'
             },
             bills: {
                 relation: BaseModel.ManyToManyRelation,
@@ -115,9 +116,9 @@ class Order extends BaseModel
                         from: 'rcgTms.invoices.orderGuid',
                         to: 'rcgTms.invoices.invoiceGuid'
                     },
-                    to: 'rcgTms.invoiceBills.guid',
-                    modify: 'bill'
-                }
+                    to: 'rcgTms.invoiceBills.guid'
+                },
+                modify: 'bill'
             },
             referrer: {
                 relation: BaseModel.BelongsToOneRelation,
@@ -145,8 +146,11 @@ class Order extends BaseModel
                 client: {
                     $modify: ['byType']
                 },
+                consignee: {
+                    $modify: ['byType']
+                },
                 clientContact: true,
-                owner: true,
+                dispatcher: true,
                 referrer: {
                     $modify: ['byType']
                 },
@@ -165,6 +169,12 @@ class Order extends BaseModel
                         alternativeContact: true
                     }
                 },
+                invoices: {
+                    lines: { item: true }
+                },
+                bills: {
+                    lines: { item: true }
+                },
                 jobs: {
                     vendor: true,
                     vendorAgent: true,
@@ -180,7 +190,9 @@ class Order extends BaseModel
                             primaryContact: true,
                             alternativeContact: true
                         }
-
+                    },
+                    bills: {
+                        lines: { item: true }
                     }
                 }
             }
@@ -196,7 +208,20 @@ class Order extends BaseModel
         }
         return stops;
     }
+
+    async $beforeInsert(context)
+    {
+        await super.$beforeInsert(context);
+        this.calculateEstimatedIncome();
+    }
+
+    async $beforeUpdate(opt, context)
+    {
+        await super.$beforeUpdate(opt, context);
+        this.calculateEstimatedIncome();
+    }
 }
 
+Object.assign(Order.prototype, IncomeCalcs);
 Object.assign(Order.prototype, RecordAuthorMixin);
 module.exports = Order;

@@ -76,15 +76,20 @@ class BaseModel extends Model
     async $beforeInsert(context)
     {
         await super.$beforeInsert(context);
-        if (typeof this.setCreatedBy === 'function')
-            this.setCreatedBy();
+        if (typeof this.setCreatedBy === 'function' && this.createdByGuid == undefined)
+        {
+            throw new Error('created by user not set for record ' + this.constructor.name);
+        }
     }
 
     async $beforeUpdate(options, context)
     {
         await super.$beforeUpdate(options, context);
-        if (typeof this.setUpdatedBy === 'function')
-            this.setUpdatedBy();
+        if (typeof this.setUpdatedBy === 'function' && this.updatedByGuid == undefined)
+        {
+            throw new Error('updated by user not set for record ' + this.constructor.name);
+        }
+
     }
 
     setIndex(index)

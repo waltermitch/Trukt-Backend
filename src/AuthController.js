@@ -20,6 +20,11 @@ class HTTPController
 
     async getSecret(query)
     {
+        return await HTTPController.getSecret(query);
+    }
+
+    static async getSecret(query)
+    {
         return await DB.getSecret(query);
     }
 
@@ -61,7 +66,13 @@ class HTTPController
     setExpTime(int)
     {
         // set the exp time
-        this.exp = DateTime.utc().plus({ minutes: int }).toString();
+        this.exp = HTTPController.setExpTime(int);
+    }
+
+    static setExpTime(int)
+    {
+        // set the exp time
+        return DateTime.utc().plus({ minutes: int }).toString();
     }
 }
 

@@ -90,6 +90,13 @@ class OrderStop extends BaseModel
     {
         return !(!(stop.primaryContact || stop.alternativeContact));
     }
+
+    static firstAndLast(stops = [])
+    {
+        stops.sort((a, b) => (a.sequence < b.sequence));
+
+        return [stops[0], stops[stops.length - 1]];
+    }
 }
 
 Object.assign(OrderStop.prototype, RecordAuthorMixin);
