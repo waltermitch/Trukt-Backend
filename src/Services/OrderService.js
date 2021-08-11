@@ -330,6 +330,29 @@ class OrderService
                 order.jobs.push(job);
             }
 
+            if (numJobs == 0)
+            {
+                // no job was provided in the payload, means create the job based on the order, 1 to 1
+                const job = OrderJob.fromJson({
+                    category: 'transport',
+                    type: 'transport',
+                    status: 'new'
+                });
+                const jobType = jobTypes.find(it => OrderJobType.compare(job, it));
+                job.graphLink('jobType', jobType);
+                job.setIsTransport(jobType);
+                job.setCreatedBy(currentUser);
+
+                job.stopLinks = OrderService.buildStopLinksGraph(orderStops, stopsCache, terminals, commodities);
+
+                for (const stopLink of job.stopLinks)
+                {
+                    stopLink.setCreatedBy(currentUser);
+                }
+                job.graphLink(orderObj.dispatcher);
+                order.jobs.push(job);
+            }
+
             Object.assign(order, {
                 status: 'new',
                 instructions: orderObj.instructions || 'no instructions provided',
