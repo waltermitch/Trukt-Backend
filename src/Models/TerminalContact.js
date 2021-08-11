@@ -14,14 +14,16 @@ class TerminalContact extends BaseModel
         return 'guid';
     }
 
+    $parseJson(json)
+    {
+        json = super.$parseJson(json);
+        this.cleanUpNames(json);
+        return json;
+    }
+
     static get uniqueColumns()
     {
-        return [
-            'terminalGuid',
-            'firstName',
-            'lastName',
-            'phoneNumber'
-        ];
+        return ['terminalGuid', 'name', 'phoneNumber'];
     }
 
     getColumnOp(colname, colvalue)
@@ -36,12 +38,7 @@ class TerminalContact extends BaseModel
 
     uniqueKey()
     {
-        return [
-            this.firstName,
-            this.lastName,
-            this.phoneNumber,
-            this.terminalGuid || this.terminal?.guid
-        ].join(';');
+        return [this.name, this.phoneNumber, this.terminalGuid || this.terminal?.guid].join(';');
     }
 
     /**
@@ -51,6 +48,23 @@ class TerminalContact extends BaseModel
     linkTerminal(terminal)
     {
         this.terminalGuid = terminal.guid;
+    }
+
+    cleanUpNames(obj)
+    {
+        // flatten the names
+        if ((obj.firstName || obj.lastName) && (!obj.name))
+        {
+            obj.name = `${obj.firstName} ${obj.lastName}`;
+            delete obj.firstName;
+            delete obj.lastName;
+        }
+
+        // remove extra spaces and lowercase everything
+        if (obj.name)
+        {
+            obj.name = obj.name.replace(/\s+/, ' ').trim().toLowerCase();
+        }
     }
 }
 
