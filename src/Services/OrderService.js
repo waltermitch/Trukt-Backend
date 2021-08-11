@@ -244,7 +244,8 @@ class OrderService
 
             order.jobs = [];
 
-            for (let i = 0; i < orderObj.jobs.length; i++)
+            const numJobs = orderObj.jobs?.length || 0;
+            for (let i = 0; i < numJobs; i++)
             {
                 const jobObj = orderObj.jobs[i];
 
