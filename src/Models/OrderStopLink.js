@@ -1,5 +1,6 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const Commodity = require('./Commodity');
 
 class OrderStopLink extends BaseModel
 {
@@ -67,7 +68,7 @@ class OrderStopLink extends BaseModel
             const stop = stopCache[stopLink.stop.guid];
 
             // dont want to reuse commodities, because can have different data per stoplink
-            const commodity = Object.assign({}, stopLink.commodity);
+            const commodity = Commodity.fromJson(stopLink.commodity);
             if (!(stop.commodities.find(it => it.guid == commodity.guid)))
             {
                 commodity.lotNumber = stopLink.lotNumber;
