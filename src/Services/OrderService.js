@@ -116,11 +116,17 @@ class OrderService
             let order = Order.fromJson({});
             order.setCreatedBy(currentUser);
 
-            orderObj.client = await SFAccount.query(trx).modify('byType', 'client').findById(orderObj.client.guid);
+            orderObj.client = await SFAccount.query(trx).modify('byType', 'client').findOne(builder =>
+            {
+                builder.orWhere('guid', orderObj.client.guid).orWhere('salesforce.accounts.sfId', orderObj.client.guid);
+            });
 
             if (orderObj?.consignee?.guid)
             {
-                orderObj.consignee = await SFAccount.query(trx).findById(orderObj.consignee.guid);
+                orderObj.consignee = await SFAccount.query(trx).findOne(builder =>
+                {
+                    builder.orWhere('guid', orderObj.consignee.guid).orWhere('salesforce.accounts.sfId', orderObj.consignee.guid);
+                });
             }
             else
             {
