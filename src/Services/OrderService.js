@@ -303,9 +303,11 @@ class OrderService
                 const jobType = jobTypes.find(it => OrderJobType.compare(job, it));
                 if (!jobType)
                 {
-                    throw new Error(`unknown job type ${job.jobType.category} ${job.jobType.type}`);
+                    throw new Error(`unknown job type ${job.typeId || job.jobType.category + job.jobType.type}`);
                 }
                 job.graphLink('jobType', jobType);
+                job.setIsTransport(jobType);
+
                 const jobStops = jobObj.stops.map((it) =>
                 {
                     const stop = OrderStop.fromJson(it);

@@ -114,6 +114,14 @@ class OrderJob extends BaseModel
                     to: 'salesforce.contacts.guid'
                 }
             },
+            equipmentType: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./EquipmentType'),
+                join: {
+                    from: 'rcgTms.orderJobs.equipmentTypeId',
+                    to: 'rcgTms.equipmentTypes.id'
+                }
+            },
             bills: {
                 relation: BaseModel.ManyToManyRelation,
                 modelClass: require('./InvoiceBill'),
@@ -159,17 +167,7 @@ class OrderJob extends BaseModel
             }
         }
 
-        if (json.jobType?.category === 'transport')
-        {
-            json.isTransport = true;
-        }
-        else
-        {
-            json.isTransport = false;
-        }
-
         json = this.mapIndex(json);
-
         return json;
     }
 
@@ -204,6 +202,14 @@ class OrderJob extends BaseModel
     {
         await super.$beforeUpdate(opt, context);
         this.calculateEstimatedIncome();
+    }
+
+    /**
+     * @param {OrderJobType} type
+     */
+    setIsTransport(type)
+    {
+        this.isTransport = (type.category === 'transport');
     }
 }
 
