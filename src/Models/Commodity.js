@@ -132,10 +132,6 @@ class Commodity extends BaseModel
             {
                 json.commType = commType;
             }
-            else
-            {
-                json.commType = null;
-            }
         }
 
         if (!(json?.vehicle))
@@ -160,10 +156,6 @@ class Commodity extends BaseModel
             if (Object.keys(vehicle).length > 0)
             {
                 json.vehicle = vehicle;
-            }
-            else
-            {
-                json.vehicle = null;
             }
         }
 
@@ -191,6 +183,10 @@ class Commodity extends BaseModel
         // flatten the commType when sending out to api
         if (json?.commType)
         {
+            if (json.commType.id)
+            {
+                json.typeId = json.commType.id;
+            }
             delete json.commType.id;
             Object.assign(json, json.commType);
         }
