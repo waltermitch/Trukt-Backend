@@ -22,9 +22,43 @@ const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 
 class OrderService
 {
-    static async getOrders(searchParams, page, rowCount)
+    static async getOrders({ origin, destination }, page, rowCount)
     {
-        const orders = await Order.query().page(page, rowCount).orderBy('number', 'ASC');
+        const st = Terminal.st;
+        let ordersQuery = Order.query().page(page, rowCount);
+
+        if (origin)
+        {
+            ordersQuery = ordersQuery.whereExists(
+                Order.relatedQuery('stops').where('stopType', 'pickup').whereExists(
+                    OrderStop.relatedQuery('terminal').andWhere(
+                        st.dwithin(
+                            st.geography(st.makePoint('longitude', 'latitude')),
+                            st.geography(st.makePoint(origin.longitude, origin.latitude)),
+                            origin.radius
+                        )
+                    )
+                )
+            );
+        }
+        if (destination)
+        {
+            const destinationQuery = Order.query().select('guid').whereExists(
+                Order.relatedQuery('stops').where('stopType', 'delivery').whereExists(
+                    OrderStop.relatedQuery('terminal').andWhere(
+                        st.dwithin(
+                            st.geography(st.makePoint('longitude', 'latitude')),
+                            st.geography(st.makePoint(destination.longitude, destination.latitude)),
+                            destination.radius
+                        )
+                    )
+                )
+            );
+            ordersQuery = ordersQuery.whereIn('guid', destinationQuery);
+        }
+
+        const orders = await ordersQuery.orderBy('number', 'ASC');
+
         orders.page = page;
         orders.rowCount = rowCount;
         return orders;
