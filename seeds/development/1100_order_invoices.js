@@ -1,3 +1,6 @@
+/**
+ * @description creates an invoice and bills for each and every order and job
+ */
 const Invoice = require('../../src/Models/InvoiceBill');
 const InvoiceLine = require('../../src/Models/InvoiceLine');
 const InvoiceLineItem = require('../../src/Models/InvoiceLineItem');
@@ -16,16 +19,15 @@ exports.seed = async function (knex)
         for (const order of orders)
         {
             const invoice = Invoice.fromJson({
-                consigneeGuid: order.consignee?.guid || order.client?.guid,
-                order: {
-                    guid: order.guid
-                },
                 lines: [],
                 isInvoice: true,
-                createdByGuid: testUser.guid,
                 referenceNumber: faker.lorem.word().substring(0, 4).padEnd(5, '0') + (faker.datatype.number(9999) + 1000)
-
             });
+
+            invoice.graphLink('order', order);
+            invoice.graphLink('consignee', order.consignee || order.client);
+            invoice.setCreatedBy(testUser);
+            invoice.order.updatedByGuid = testUser.guid;
 
             const transportItem = items.find(it => it.name === 'transport');
             if (order.commodities.length > 0)
@@ -58,7 +60,7 @@ exports.seed = async function (knex)
                 invoice.lines.push(invoiceline);
             }
 
-            await Invoice.query(trx).upsertGraph(invoice, { relate: true, noDelete: true });
+            await Invoice.query(trx).upsertGraph(invoice, { allowRef: true, relate: true, noDelete: true });
 
             for (const job of order.jobs)
             {
@@ -66,14 +68,15 @@ exports.seed = async function (knex)
                 {
                     const bill = Invoice.fromJson({
                         consigneeGuid: job.vendorGuid,
-                        job: {
-                            guid: job.guid
-                        },
                         lines: [],
                         isInvoice: false,
                         createdByGuid: testUser.guid,
                         referenceNumber: faker.lorem.word().substring(0, 4).padEnd(5, '0') + (faker.datatype.number(9999) + 1000)
                     });
+
+                    bill.graphLink('job', job);
+                    bill.graphLink('consignee', job.vendor);
+                    bill.job.updatedByGuid = testUser.guid;
 
                     const numComs = job.commodities.length;
                     const carrierPays = currency(order.estimatedExpense).distribute(numComs);
@@ -88,9 +91,7 @@ exports.seed = async function (knex)
                         });
                         bill.lines.push(billline);
                     }
-
                     await Invoice.query(trx).upsertGraph(bill, { relate: true, noDelete: true });
-
                 }
             }
 

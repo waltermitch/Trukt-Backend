@@ -17,8 +17,7 @@ exports.seed = async function (knex)
                 for (let i = 0; i < 3; i++)
 
                     contacts.push({
-                        first_name: faker.name.firstName(),
-                        last_name: faker.name.lastName(),
+                        name: faker.name.firstName() + ' ' + faker.name.lastName(),
                         phone_number: faker.phone.phoneNumber(),
                         mobile_number: faker.phone.phoneNumber(),
                         email: faker.internet.email(),

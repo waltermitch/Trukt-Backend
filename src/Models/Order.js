@@ -1,5 +1,5 @@
 const BaseModel = require('./BaseModel');
-const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const IncomeCalcs = require('./Mixins/IncomeCalcs');
 
 class Order extends BaseModel
@@ -19,7 +19,7 @@ class Order extends BaseModel
         const SFAccount = require('./SFAccount');
         const SFContact = require('./SFContact');
         const User = require('./User');
-        return {
+        const relations = {
             client: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: SFAccount,
@@ -137,6 +137,8 @@ class Order extends BaseModel
                 }
             }
         };
+        Object.assign(relations, AuthorRelationMappings('rcgTms.orders'));
+        return relations;
     }
 
     static get fetch()
