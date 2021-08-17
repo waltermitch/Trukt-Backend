@@ -29,6 +29,8 @@ class PGListener
                     // convert string to json
                     const jsonMsg = JSON.parse(msg.payload);
 
+                    console.log(jsonMsg);
+
                     switch (msg.channel)
                     {
                         case 'job_status_change':
