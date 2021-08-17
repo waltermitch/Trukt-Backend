@@ -17,12 +17,12 @@ class DAT extends Loadboard
 
     }
 
-    createLoad()
+    toJSON()
     {
         const payload = {
             freight: {
-                equipmentType: this.postObject.values.equipmentTypeValue, // equipment type id as string
-                fullPartial: this.postObject.values.loadTypeValue, // either FULL or PARTIAL
+                equipmentType: this.postObject.values.equipmentType, // equipment type id as string
+                fullPartial: this.postObject.values.loadType, // either FULL or PARTIAL
                 comments: [
                     {
                         comment: this.postObject.values.comment1
@@ -47,13 +47,13 @@ class DAT extends Loadboard
                 }
             },
             exposure: {
-                audience: { includesExtendedNetwork: this.values.extendedNetwork, includesLoadBoard: true },
-                earliestAvailabilityWhen: this.pickup.dateScheduledStart,
-                latestAvailabilityWhen: this.pickup.dateScheduledEnd,
+                audience: { loadBoard: { includesExtendedNetwork: this.postObject.values.extendedNetwork } },
+                earliestAvailabilityWhen: this.data.pickup.dateScheduledStart,
+                latestAvailabilityWhen: this.data.pickup.dateScheduledEnd,
 
                 // endWhen - (From DAT) this is the date and time whent he posting is no longer visible to the target audience.
                 // this fueld gives you the flexibility to fine tune when the posting will no longer be available, separate from the end of the pick up window.
-                endWhen: '30 days after customer end date', // this.minusMinutes(this.pickup.customerEndDate, 30),
+                endWhen: this.dateAdd(this.data.pickup.dateScheduledEnd, 30, 'day'),
                 preferredContactMethod: 'PRIMARY_PHONE',
                 transactionDetails: {
                     loadOfferRateUsd: this.data.estimatedExpense // job.estimated_expense
