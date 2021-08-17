@@ -111,6 +111,35 @@ class Truckstop extends Loadboard
         else
             return date;
     }
+
+    static async handlepost(post, response)
+    {
+        if (response.hasErrors !== undefined)
+        {
+            post.status = 'fresh';
+            post.hasError = true;
+            post.apiError = response.errors;
+        } else
+        {
+            post.externalGuid = response.loadId;
+            post.externalPostGuid = response.loadId;
+            post.status = 'posted';
+            post.isSynced = true;
+            post.isPosted = true;
+            post.hasError = false;
+            post.apiError = null;
+        }
+    }
+
+    static async handleunpost(post, response)
+    {
+        post.externalGuid = null;
+        post.externalPostGuid = null;
+        post.status = 'unposted';
+        post.isSynced = true;
+        post.isPosted = false;
+    }
+
 }
 
 module.exports = Truckstop;
