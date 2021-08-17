@@ -49,7 +49,18 @@ function AuthorRelationMappings(tableName)
     return relationships;
 }
 
+function isNotDeleted(tableName)
+{
+    return {
+        isNotDeleted(query)
+        {
+            query.whereNot(`${tableName}.is_deleted`, true);
+        }
+    };
+}
+
 module.exports = {
     RecordAuthorMixin,
-    AuthorRelationMappings
+    AuthorRelationMappings,
+    isNotDeleted
 };
