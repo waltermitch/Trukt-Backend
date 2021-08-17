@@ -2,6 +2,7 @@
 require("../../local.settings");
 const Loadboard = require('../Models/Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
+const LoadboardContact = require('../Models/LoadboardContact');
 const Job = require('../Models/OrderJob');
 const SFAccount = require('../Models/SFAccount');
 const LoadboardHandler = require('../Loadboards/LoadboardHandler');
@@ -50,11 +51,12 @@ class LoadboardService
             lbPayload = new loadboardClasses[`${post.loadboard}`](job);
             payloads.push(lbPayload['post']());
         }
+
         // sending all payloads as one big object so one big response can be returned
         // and handler can then use one big transaction to update all records rather 
         // than have a single new transaction for each posting
         await sender.sendMessages({ body: payloads });
-        return payloads;
+        return job;
     }
 
     static async unpostPostings(jobId, posts)
@@ -63,9 +65,9 @@ class LoadboardService
 
         const payloads = [];
         let lbPayload;
-        for (const post of posts)
+        for (const lbName of Object.keys(job.postObjects))
         {
-            lbPayload = new loadboardClasses[`${post.loadboard}`](job);
+            lbPayload = new loadboardClasses[`${lbName}`](job);
             payloads.push(lbPayload['unpost']());
         }
         // sending all payloads as one big object so one big response can be returned
@@ -98,17 +100,21 @@ class LoadboardService
     {
         const loadboardNames = posts.map((post) => { return post.loadboard });
         const job = await Job.query().findById(jobId).withGraphFetched(`[
-            commodities(distinct).[vehicle, commType], order.[client, clientContact, owner],
-            stops(distinct).[primaryContact, terminal], loadboardPosts(getExistingFromList),
-            equipmentType
+            commodities(distinct, isNotDeleted).[vehicle, commType],
+            order.[client, clientContact, dispatcher, invoices.lines.item],
+            stops(distinct).[primaryContact, terminal], 
+            loadboardPosts(getExistingFromList),
+            equipmentType, 
+            bills.lines.item
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
 
-        // const dispatcher = await SFAccount.query().findById(job.order.owner);
-        // job.order.dispatcher = dispatcher;
-
-        await this.createPostRecords(job, posts);
+        await this.createPostRecordsNew(job, posts);
+        this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
+        delete job.order.invoices;
+        this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
+        delete job.bills;
         const stops = await this.getFirstAndLastStops(job.stops);
         Object.assign(job, stops);
         delete job.stops;
@@ -125,13 +131,13 @@ class LoadboardService
     static async getPostRecords(jobId, posts)
     {
         const loadboardNames = posts.map((post) => { return post.loadboard });
-        //console.log(jobId);
+
         const job = await Job.query().findById(jobId).withGraphFetched(`[
-            loadboardPosts(getExistingFromList)
+            loadboardPosts(getExistingFromList, getPosted)
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
-        //console.log(job);
+
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
         delete job.loadboardPosts;
         return job;
@@ -155,28 +161,23 @@ class LoadboardService
         return job;
     }
 
-    static convertPostListToObject(loadboardPosts)
-    {
-        const postObjects = {};
-        for (const post of loadboardPosts)
-
-            postObjects[post.loadboard] = post;
-
-        return postObjects;
-    }
-
     static async createPostRecordsNew(job, posts)
     {
         let newPosts = [];
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
         for (const post of posts)
         {
+            if (post.values != null)
+            {
+                const lbContact = await LoadboardContact.query().findById(post.values.contact).where({ loadboard: post.loadboard });
+                post.values.contact = lbContact;
+            }
             if (!(post.loadboard in job.postObjects))
             {
                 newPosts.push({
                     jobGuid: job.guid,
                     loadboard: post.loadboard,
-                    instructions: post.loadboardInstructions || job.loadboardInstructions,
+                    instructions: post.loadboardInstructions || job.loadboardInstructions.substring(0, 59),
                     values: post.values,
                     createdByGuid
                 });
@@ -187,7 +188,7 @@ class LoadboardService
                     jobGuid: job.guid,
                     loadboard: post.loadboard,
                     instructions: post.loadboardInstructions || job.loadboardInstructions,
-                    is_synced: false,
+                    isSynced: false,
                     values: post.values,
                 });
             }
@@ -206,10 +207,12 @@ class LoadboardService
     static checkLoadboardsParam(loadboardNames)
     {
         for (let i = 0; i < loadboardNames.length; i++)
+        {
             if (!dbLoadboardNames.includes(loadboardNames[i]))
-
+            {
                 throw `the loadboard: ${loadboardNames[i]} is not supported`;
-
+            }
+        }
     }
 
     static checkLoadboardsInput(req)
@@ -316,64 +319,25 @@ class LoadboardService
         return { pickup: stops[0], delivery: stops[stops.length - 1] };
     }
 
-    // static chooseLoadboard(BoardName, payload)
-    // {
-    //     let res = {};
-    //     switch (BoardName)
-    //     {
-    //         case 'SUPERDISPATCH':
-    //             res = new loadboardClasses.SD(payload);
-    //     }
-
-    //     return res;
-    // }
-
-    // static intializeLoadboards()
-    // {
-    //     for (const lbName of dbLoadboardNames)
-    //     {
-    //         this[`${lbName}_Requests`] = [];
-    //         this[`${lbName}`] = [];
-    //     }
-    // }
-
     /**
-     *
-     * @param {*} loadboardPosts a list of a jobs loadboard posts
+     * 
+     * @param {list<Commodity>} commodities list of job commodities
+     * @param {InvoiceLine} line a single invoice/bill line
+     * @param {String} lineType a string indicating if this is a bill or an invoice
      */
-    filterToCreate(loadboardPosts)
+    static async combineCommoditiesWithLines(commodities, invoiceBill, lineType) 
     {
-        const retPosts = [];
-        for (const post of loadboardPosts)
-            if (!post.hasError && post.isSynced && (post.isCreated == null || !post.isCreated))
+        let map = new Map(invoiceBill.lines.filter(o =>
+        {
+            return o.item.name === 'transport' && o.item.type === 'revenue';
+        }).map(p => [p.commodityGuid, p]));
 
-                retPosts.push(post);
-
-        return retPosts;
-    }
-
-    filterToUnpost(loadboardPosts)
-    {
-        const retPosts = [];
-        for (const post of loadboardPosts)
-            if (!post.hasError && post.isSynced && post.isCreated && post.isPosted)
-
-                retPosts.push(post);
-
-        return retPosts;
-    }
-
-    filterToRepost(loadboardPosts)
-    {
-        return this.filterToUnpost(loadboardPosts);
-    }
-
-    desync(loadboardPosts)
-    {
-        for (const post of loadboardPosts)
-
-            post.isSynced = false;
-
+        commodities.reduce((acc, o) =>
+        {
+            let match = map.get(o.guid);
+            o[`${lineType}`] = match;
+            return match ? acc.concat({ ...o }) : acc;
+        }, []);
     }
 }
 
