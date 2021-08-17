@@ -11,6 +11,7 @@ class Loadboard
         this.data = data;
         this.needsCreation = false;
         this.postObject;
+        this.currentUser = '00000000-0000-0000-0000-000000000000';
     }
 
     static validate() { }
@@ -18,37 +19,18 @@ class Loadboard
     post()
     {
         let payload = {};
-        const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
-        if (this.needsCreation && !this.postObject?.externalGuid)
-        {
-            // console.log(this.loadboardName, ' needs to be created first');
-            // payload = this.toJSON();
-            payloadMetadata.action = ['create', 'post'];
-        }
-        else if (this.needsCreation && this.postObject?.externalGuid)
-        {
-            // console.log(this.loadboardName, ' has post already, posting with existing guid');
-            // payload = { guid: this.postObject?.externalGuid };
-            // payload = this.toJSON();
-            payloadMetadata.action = ['post'];
-        }
-        else if (!this.needsCreation && !this.postObject?.externalGuid)
-        {
-            // console.log(this.loadboardName, ' does not need creation, posting directly');
-            // payload = this.toJSON();
-            payloadMetadata.action = ['post'];
-        }
+        const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
+        payloadMetadata.action = 'post';
         payload = this.toJSON();
+        console.log(payloadMetadata.action);
         return { payload, payloadMetadata };
-
-        // return { payload, payloadMetadata };
     }
 
     unpost()
     {
         const payload = { guid: this.postObject.externalPostGuid };
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
-        payloadMetadata.action = ['unpost'];
+        payloadMetadata.action = 'unpost';
         return { payload, payloadMetadata };
     }
 
@@ -65,10 +47,10 @@ class Loadboard
         return input ? date.year + '-' + date.month + '-' + date.day : null;
     }
 
-    saltOrderNumber()
+    saltOrderNumber(orderNumber)
     {
         // adding salt with ms to prevent duplicate name error
-        this.data.number = `${this.data.number}#${this.getMilliSeconds().substr(4, 12)}`;
+        return `${orderNumber}#${this.getMilliSeconds().substr(4, 12)}`;
     }
 
     getMilliSeconds()
