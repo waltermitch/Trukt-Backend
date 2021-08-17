@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 
 class LoadboardPost extends BaseModel
 {
@@ -32,6 +33,11 @@ class LoadboardPost extends BaseModel
                 builder.whereIn('loadboard', loadboardNames);
             },
 
+            getPosted(builder)
+            {
+                builder.where({ status: 'posted' }).orWhere({ isPosted: true });
+            },
+
             getValid(builder)
             {
                 builder.whereNot({ externalGuid: null, hasError: true }).andWhere({ isSynced: true });
@@ -47,6 +53,13 @@ class LoadboardPost extends BaseModel
         };
     }
 
+    $parseJson(json)
+    {
+        json = super.$parseJson(json);
+
+        return json;
+    }
 }
 
+Object.assign(LoadboardPost.prototype, FindOrCreateMixin);
 module.exports = LoadboardPost;
