@@ -1,14 +1,22 @@
 const { Model } = require('objection');
+const knexPostgis = require('knex-postgis');
 const Knex = require('knex');
 const knexfile = require('../../knexfile');
 const fieldMappings = require('./ModelFieldMappers.json');
 
 const knex = Knex(knexfile());
 
+const st = knexPostgis(knex);
+
 Model.knex(knex);
 
 class BaseModel extends Model
 {
+    static get st()
+    {
+        return st;
+    }
+
     static get modelPaths()
     {
         return [__dirname];
