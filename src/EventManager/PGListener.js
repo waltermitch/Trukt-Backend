@@ -6,6 +6,7 @@ const channels =
     ['job_status_change', 'account_upserted'];
 
 let client;
+let lastMessage = '';
 
 class PGListener
 {
@@ -24,12 +25,15 @@ class PGListener
             // handle notifications
             client.on('notification', async (msg) =>
             {
+                if (msg.payload === lastMessage)
+                    return;
+                else
+                    lastMessage = msg.payload;
+
                 try
                 {
                     // convert string to json
                     const jsonMsg = JSON.parse(msg.payload);
-
-                    console.log(jsonMsg);
 
                     switch (msg.channel)
                     {
