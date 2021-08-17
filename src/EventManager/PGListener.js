@@ -6,6 +6,7 @@ const channels =
     ['job_status_change', 'account_upserted'];
 
 let client;
+let lastMessage = '';
 
 class PGListener
 {
@@ -24,6 +25,11 @@ class PGListener
             // handle notifications
             client.on('notification', async (msg) =>
             {
+                if (msg.payload === lastMessage)
+                    return;
+                else
+                    lastMessage = msg.payload;
+
                 try
                 {
                     // convert string to json
@@ -40,9 +46,6 @@ class PGListener
                         default:
                             break;
                     }
-
-                    console.log('DB Trigger: 200');
-
                 }
                 catch (err)
                 {
