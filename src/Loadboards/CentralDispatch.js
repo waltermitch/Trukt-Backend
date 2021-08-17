@@ -17,7 +17,7 @@ class CentralDispatch extends Loadboard
         let string = `${this.data.number},
         ${this.data.pickup.terminal.city},${states.getStateCodeByStateName(this.data.pickup.terminal.state)},${this.data.pickup.terminal.zipCode},
         ${this.data.delivery.terminal.city},${states.getStateCodeByStateName(this.data.delivery.terminal.state)},${this.data.delivery.terminal.zipCode},
-        ${this.data.estimatedExpense},0.00,check,delivery,none,${this.setEquipmentType()},${this.setINOP()},
+        ${this.data.estimatedExpense},0.00,check,delivery,none,${this.setEquipmentType()},${this.getINOP()},
         ${this.toStringDate(this.data.pickup.dateScheduledStart)},${this.toDate(this.dateAdd(this.data.pickup.dateScheduledStart, 30, 'days'))},
         ${this.postObject.instructions},${this.setVehicles()}*`;
 
@@ -26,10 +26,9 @@ class CentralDispatch extends Loadboard
             string = string.replace('\n', ' ');
 
         return string;
-
     }
 
-    setINOP()
+    getINOP()
     {
         for (const com of this.data.commodities)
         {
@@ -117,6 +116,24 @@ class CentralDispatch extends Loadboard
             default:
                 return 'Other';
         }
+    }
+
+    static async handlepost(post, response)
+    {
+        post.externalGuid = response.id;
+        post.externalPostGuid = response.id;
+        post.status = 'posted';
+        post.isSynced = true;
+        post.isPosted = true;
+    }
+
+    static async handleunpost(post, response)
+    {
+        post.externalGuid = null;
+        post.externalPostGuid = null;
+        post.status = 'unposted';
+        post.isSynced = true;
+        post.isPosted = false;
     }
 }
 
