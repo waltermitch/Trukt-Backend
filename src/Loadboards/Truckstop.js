@@ -46,15 +46,15 @@ class Truckstop extends Loadboard
                     location: {
                         locationName: this.data.pickup.terminal.name,
                         city: this.data.pickup.terminal.city,
-                        state: states.getStateCodeByStateName(this.data.pickup.terminal.state), // must be two letter abbreviation
+                        state: this.data.pickup.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.pickup.terminal.state) : this.data.pickup.terminal.state, //states.getStateCodeByStateName(this.data.pickup.terminal.state), // must be two letter abbreviation
                         streetAddress1: this.data.pickup.terminal.street1,
                         streetAddress2: this.data.pickup.terminal.street2,
-                        countryCode: this.data.pickup.terminal.country,
+                        countryCode: this.data.pickup.terminal?.country.toUpperCase(),
                         postalCode: this.data.pickup.terminal.zipCode
 
                     },
-                    contactName: this.data.pickup.primaryContact.firstName + ' ' + this.data.pickup.primaryContact.lastName,
-                    contactPhone: this.data.pickup.primaryContact.phoneNumber,
+                    contactName: this.data.pickup.primaryContact.name,
+                    contactPhone: this.data.pickup.primaryContact?.phoneNumber.substring(0, 10),
                     stopNotes: this.data.pickup.notes
                 },
                 {
@@ -64,15 +64,15 @@ class Truckstop extends Loadboard
                     location: {
                         locationName: this.data.delivery.terminal.name,
                         city: this.data.delivery.terminal.city,
-                        state: states.getStateCodeByStateName(this.data.delivery.terminal.state), // must be two letter abbreviation
+                        state: this.data.delivery.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.delivery.terminal.state) : this.data.delivery.terminal.state, //states.getStateCodeByStateName(this.data.delivery.terminal.state), // must be two letter abbreviation
                         streetAddress1: this.data.delivery.terminal.street1,
                         streetAddress2: this.data.delivery.terminal.street2,
-                        countryCode: this.data.delivery.terminal.country,
+                        countryCode: this.data.delivery.terminal?.country.toUpperCase(),
                         postalCode: this.data.delivery.terminal.zipCode
 
                     },
-                    contactName: this.data.delivery.primaryContact.firstName + ' ' + this.data.delivery.primaryContact.lastName,
-                    contactPhone: this.data.delivery.primaryContact.phoneNumber,
+                    contactName: this.data.delivery.primaryContact.name,
+                    contactPhone: this.data.delivery.primaryContact?.phoneNumber.substring(0, 10),
                     stopNotes: this.data.delivery.notes
                 }
             ],
@@ -94,6 +94,22 @@ class Truckstop extends Loadboard
         };
 
         return payload;
+    }
+
+    fastForwardExpired(date, forwardAmount)
+    {
+        //get current date
+        const now = DateTime.utc().toString();
+
+        //if forward amount not provided return now
+        if (date < now && forwardAmount === undefined)
+            return now;
+        //if date is behind fast forward
+        else if (date < now)
+            return DateTime.fromISO(date).plus({ days: forwardAmount }).toString();
+        //if not expired return date;
+        else
+            return date;
     }
 }
 
