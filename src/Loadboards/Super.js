@@ -35,8 +35,9 @@ class Super extends Loadboard
                 city: this.data.order.client.billingCity,
                 state: this.data.order.client.billingState,
                 zip: this.data.order.client.billingPostalCode,
-                contact_name: this.data.order.clientContact?.firstName + ' ' + this.data.order.clientContact?.lastName,
-                contact_phone: this.data.order.clientContact?.phone,
+
+                contact_name: this.data.order.clientContact?.name,
+                contact_phone: this.data.order.clientContact?.phoneNumber,
                 contact_mobile_phone: this.data.order.clientContact?.mobilePhone,
                 contact_email: this.data.order.clientContact?.email,
                 name: this.data.order.client.name,
@@ -47,16 +48,16 @@ class Super extends Loadboard
                 save_as_new: this.data.order.client.sdGuid === null
             },
             customer_payment: { tariff: currency(this.data.estimatedRevenue).value },
+            tariff: currency(this.data.estimatedRevenue).value,
+            payment: { terms: 'ach' },
+            price: currency(this.data.estimatedExpense).value,
             number: this.data.number,
             purchase_order_number: this.data.order.referenceNumber,
-            price: currency(this.data.estimatedExpense).value,
             dispatcher_name: this.data.order.dispatcher.name,
             instructions: this.data.order.instructions,
             loadboard_instructions: this.postObject.instructions || this.data.loadboardInstructions,
             transport_type: this.setEquipmentType(this.data.equipmentType?.name),
-            tariff: currency(this.data.estimatedRevenue).value,
             inspection_type: this.data.order.inspectionType,
-            payment: { terms: 'ach' },
             pickup:
             {
                 first_available_pickup_date: this.data.pickup.dateScheduledStart,
@@ -74,7 +75,7 @@ class Super extends Loadboard
                     zip: this.data.pickup.terminal.zipCode,
                     name: this.data.pickup.terminal.name,
                     business_type: this.setBusinessType(this.data.pickup.terminal.locationType),
-                    contact_name: this.data.pickup.primaryContact.firstName + ' ' + this.data.pickup.primaryContact.lastName,
+                    contact_name: this.data.pickup.primaryContact.name,
                     contact_email: this.data.pickup.primaryContact.email,
                     contact_phone: this.data.pickup.primaryContact.phoneNumber,
                     contact_mobile_phone: this.data.pickup.primaryContact.mobileNumber,
@@ -97,7 +98,7 @@ class Super extends Loadboard
                     zip: this.data.delivery.terminal.zipCode,
                     name: this.data.delivery.terminal.name,
                     business_type: this.setBusinessType(this.data.delivery.terminal.locationType),
-                    contact_name: this.data.delivery.primaryContact.firstName + ' ' + this.data.delivery.primaryContact.lastName,
+                    contact_name: this.data.delivery.primaryContact.name,
                     contact_email: this.data.delivery.primaryContact.email,
                     contact_phone: this.data.delivery.primaryContact.phoneNumber,
                     contact_mobile_phone: this.data.delivery.primaryContact.mobileNumber,
@@ -106,6 +107,7 @@ class Super extends Loadboard
             },
 
             vehicles: this.formatCommodities(this.data.commodities),
+
             guid: this.postObject.externalGuid
         };
 
@@ -176,9 +178,9 @@ class Super extends Loadboard
                 'type': this.setVehicleType(x.commType.type),
                 'is_inoperable': false,
                 'lot_number': x.lotNumber,
-                'price': 12,
-                'tariff': 13,
-                'guid': null,
+                'price': x.bill.amount,
+                'tariff': x.invoice.amount,
+                'guid': x.extraExternalData?.sdGuid,
                 'vin': x.identifier
             };
             return veh;
