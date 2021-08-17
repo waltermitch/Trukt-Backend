@@ -63,6 +63,24 @@ class DAT extends Loadboard
 
         return payload;
     }
+
+    static async handlepost(post, response)
+    {
+        post.externalGuid = response.id;
+        post.externalPostGuid = response.id;
+        post.status = 'posted';
+        post.isSynced = true;
+        post.isPosted = true;
+    }
+
+    static async handleunpost(post, response)
+    {
+        post.externalGuid = null;
+        post.externalPostGuid = null;
+        post.status = 'unposted';
+        post.isSynced = true;
+        post.isPosted = false;
+    }
 }
 
 module.exports = DAT;
