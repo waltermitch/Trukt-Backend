@@ -2,6 +2,9 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const states = require('us-state-codes');
+const Job = require('../Models/OrderJob');
+const Commodity = require('../Models/Commodity');
+const SFAccount = require('../Models/SFAccount');
 
 class Super extends Loadboard
 {
@@ -222,6 +225,81 @@ class Super extends Loadboard
                 return 'boat';
             default:
                 return 'other';
+        }
+    }
+
+    static async handlepost(post, response)
+    {
+        const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
+            order.[client], commodities(distinct, isNotDeleted)
+        ]`);
+
+        const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+        for (const vehicle of vehicles)
+        {
+            vehicle.setUpdatedBy(this.curentUser);
+            await Commodity.query().patch(vehicle).findById(vehicle.guid);
+        }
+
+        const client = job.order.client;
+        if (client.sdGuid !== response.customer.counterparty_guid)
+        {
+            client.sdGuid = response.customer.counterparty_guid;
+            await SFAccount.query().patch(client).findById(client.guid);
+        }
+
+        post.externalGuid = response.guid;
+        post.externalPostGuid = response.guid;
+        post.status = 'posted';
+        post.isSynced = true;
+        post.isPosted = true;
+    }
+
+    static async handleunpost(post, response)
+    {
+        post.externalPostGuid = null;
+        post.status = 'unposted';
+        post.isSynced = true;
+        post.isPosted = false;
+    }
+
+    static async handleupdate(post, response)
+    {
+        post.externalGuid = response.guid;
+        post.externalPostGuid = response.guid;
+        post.isSynced = true;
+        post.isPosted = true;
+    }
+
+    static updateCommodity(ogCommodities, newCommodities)
+    {
+        const comsToUpdate = [];
+        while (ogCommodities.length !== 0)
+        {
+            const com = ogCommodities.shift();
+            this.commodityUpdater(com, newCommodities);
+            comsToUpdate.push(com);
+        }
+
+        return comsToUpdate;
+    }
+
+    static commodityUpdater(com, newCommodities)
+    {
+        for (let i = 0; i < newCommodities.length; i++)
+        {
+            const commodity = newCommodities[i];
+            const newName = commodity.vin + ' ' + commodity.year + ' ' + commodity.make + ' ' + commodity.model;
+            const comName = com.identifier + ' ' + com.description;
+            if (comName === newName)
+            {
+                if (com.extraExternalData == undefined)
+                {
+                    com.extraExternalData = {};
+                }
+                com.extraExternalData.sdGuid = commodity.guid;
+                newCommodities.shift(i);
+            }
         }
     }
 }
