@@ -80,6 +80,7 @@ exports.up = function (knex)
         table.boolean('is_posted').defaultTo(false);
         table.boolean('is_synced').defaultTo(false);
         table.boolean('has_error').defaultTo(false);
+        table.string('api_error').comment('error that is returned from the loadboard api');
         table.json('values');
 
         migration_tools.timestamps(table);
