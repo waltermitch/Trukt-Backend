@@ -43,7 +43,7 @@ class LoadboardService
         // sending all payloads as one big object so one big response can be returned
         // and handler can then use one big transaction to update all records rather
         // than have a single new transaction for each posting
-        // await sender.sendMessages({ body: payloads });
+        await sender.sendMessages({ body: payloads });
         return job;
     }
 
