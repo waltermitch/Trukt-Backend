@@ -2,6 +2,7 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const states = require('us-state-codes');
+const LoadboardPost = require('../Models/LoadboardPost');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
@@ -225,37 +226,66 @@ class Super extends Loadboard
 
     static async handlepost(post, response)
     {
-        const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
-            order.[client], commodities(distinct, isNotDeleted)
-        ]`);
+        const trx = await LoadboardPost.startTransaction();
 
-        const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-        for (const vehicle of vehicles)
+        try
         {
-            vehicle.setUpdatedBy(this.curentUser);
-            await Commodity.query().patch(vehicle).findById(vehicle.guid);
-        }
+            const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
+                order.[client], commodities(distinct, isNotDeleted)
+            ]`);
 
-        const client = job.order.client;
-        if (client.sdGuid !== response.customer.counterparty_guid)
+            const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+            for (const vehicle of vehicles)
+            {
+                vehicle.setUpdatedBy(this.curentUser);
+                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+            }
+
+            const client = job.order.client;
+            if (client.sdGuid !== response.customer.counterparty_guid)
+            {
+                client.sdGuid = response.customer.counterparty_guid;
+                await SFAccount.query(trx).patch(client).findById(client.guid);
+            }
+
+            post.externalGuid = response.guid;
+            post.externalPostGuid = response.guid;
+            post.status = 'posted';
+            post.isSynced = true;
+            post.isPosted = true;
+
+            const objectionPost = LoadboardPost.fromJson(post);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+
+            await trx.commit();
+        }
+        catch (err)
         {
-            client.sdGuid = response.customer.counterparty_guid;
-            await SFAccount.query().patch(client).findById(client.guid);
+            await trx.rollback();
         }
-
-        post.externalGuid = response.guid;
-        post.externalPostGuid = response.guid;
-        post.status = 'posted';
-        post.isSynced = true;
-        post.isPosted = true;
+        return post;
     }
 
     static async handleunpost(post, response)
     {
-        post.externalPostGuid = null;
-        post.status = 'unposted';
-        post.isSynced = true;
-        post.isPosted = false;
+        const trx = await LoadboardPost.startTransaction();
+        try
+        {
+            post.externalPostGuid = null;
+            post.status = 'unposted';
+            post.isSynced = true;
+            post.isPosted = false;
+
+            const objectionPost = LoadboardPost.fromJson(post);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return post;
     }
 
     static async handleupdate(post, response)
