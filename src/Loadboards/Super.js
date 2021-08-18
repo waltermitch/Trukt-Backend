@@ -16,13 +16,6 @@ class Super extends Loadboard
         this.needsCreation = true;
         this.data = data;
         this.postObject = data.postObjects[this.loadboardName];
-
-        // this.setEquipmentType(this.data.equipmentType?.name);
-    }
-
-    static validate(post)
-    {
-        console.log('validtaing for super');
     }
 
     toJSON()
