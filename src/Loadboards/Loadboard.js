@@ -11,7 +11,6 @@ class Loadboard
         this.data = data;
         this.needsCreation = false;
         this.postObject;
-        this.currentUser = '00000000-0000-0000-0000-000000000000';
     }
 
     static validate() { }
@@ -22,7 +21,7 @@ class Loadboard
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'post';
         payload = this.toJSON();
-        console.log(payloadMetadata.action);
+
         return { payload, payloadMetadata };
     }
 
