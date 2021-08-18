@@ -6,6 +6,8 @@ const LoadboardPost = require('../Models/LoadboardPost');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
 
+const anonUser = '00000000-0000-0000-0000-000000000000';
+
 class ShipCars extends Loadboard
 {
     constructor(data)
@@ -168,7 +170,7 @@ class ShipCars extends Loadboard
             const vehicles = this.updateCommodity(job.commodities, response.vehicles);
             for (const vehicle of vehicles)
             {
-                vehicle.setUpdatedBy(this.curentUser);
+                vehicle.setUpdatedBy(anonUser);
                 await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
             }
             objectionPost.externalGuid = response.id;

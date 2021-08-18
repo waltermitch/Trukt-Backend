@@ -1,4 +1,3 @@
-// const HTTPController = require('../Azure/HTTPController');
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const states = require('us-state-codes');
@@ -6,6 +5,8 @@ const LoadboardPost = require('../Models/LoadboardPost');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
+
+const anonUser = '00000000-0000-0000-0000-000000000000';
 
 class Super extends Loadboard
 {
@@ -238,7 +239,7 @@ class Super extends Loadboard
             const vehicles = this.updateCommodity(job.commodities, response.vehicles);
             for (const vehicle of vehicles)
             {
-                vehicle.setUpdatedBy(this.curentUser);
+                vehicle.setUpdatedBy(anonUser);
                 await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
             }
 
@@ -246,6 +247,7 @@ class Super extends Loadboard
             if (client.sdGuid !== response.customer.counterparty_guid)
             {
                 client.sdGuid = response.customer.counterparty_guid;
+                client.setUpdatedBy(anonUser);
                 await SFAccount.query(trx).patch(client).findById(client.guid);
             }
 
@@ -270,7 +272,7 @@ class Super extends Loadboard
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(post);
-        
+
         try
         {
             objectionPost.externalPostGuid = null;
