@@ -27,6 +27,7 @@
         "express-formidable": "^1.2.0",
         "express-session": "^1.17.2",
         "knex": "^0.95.6",
+        "knex-postgis": "^0.14.1",
         "luxon": "^1.26.0",
         "mongodb": "^3.6.6",
         "multer": "^1.4.2",
@@ -35,6 +36,7 @@
         "objection": "^2.2.15",
         "pg": "^8.7.1",
         "pg-connection-string": "^2.5.0",
+        "ramda": "^0.27.1",
         "us-state-codes": "^1.1.2",
         "uuid": "^8.3.2"
     },

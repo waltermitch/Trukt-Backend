@@ -168,6 +168,23 @@ const reasons =
 
 class EDIController
 {
+
+    static async createTender(req, res, next)
+    {
+        try
+        {
+            const orderObj = req.body;
+            orderObj.isTender = true;
+            orderObj.isDummy = false;
+
+            next();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
     static async reject(req, res)
     {
         return EDIController.loadTenderResponse('reject', req, res);
