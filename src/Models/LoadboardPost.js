@@ -1,5 +1,6 @@
 const BaseModel = require('./BaseModel');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
+const { RecordAuthorMixin, AuthorRelationMappings, isNotDeleted } = require('./Mixins/RecordAuthors');
 
 class LoadboardPost extends BaseModel
 {
@@ -62,4 +63,5 @@ class LoadboardPost extends BaseModel
 }
 
 Object.assign(LoadboardPost.prototype, FindOrCreateMixin);
+Object.assign(LoadboardPost.prototype, RecordAuthorMixin);
 module.exports = LoadboardPost;
