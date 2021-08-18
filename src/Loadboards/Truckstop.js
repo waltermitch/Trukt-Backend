@@ -114,30 +114,58 @@ class Truckstop extends Loadboard
 
     static async handlepost(post, response)
     {
-        if (response.hasErrors !== undefined)
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+        try
         {
-            post.status = 'fresh';
-            post.hasError = true;
-            post.apiError = response.errors;
-        } else
+            if (response.hasErrors !== undefined)
+            {
+                objectionPost.status = 'fresh';
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            } else
+            {
+                objectionPost.externalGuid = response.loadId;
+                objectionPost.externalPostGuid = response.loadId;
+                objectionPost.status = 'posted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = true;
+                objectionPost.hasError = false;
+                objectionPost.apiError = null;
+
+                await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+                await trx.commit();
+            }
+        } catch (err)
         {
-            post.externalGuid = response.loadId;
-            post.externalPostGuid = response.loadId;
-            post.status = 'posted';
-            post.isSynced = true;
-            post.isPosted = true;
-            post.hasError = false;
-            post.apiError = null;
+            await trx.rollback();
         }
+
+        return objectionPost;
     }
 
     static async handleunpost(post, response)
     {
-        post.externalGuid = null;
-        post.externalPostGuid = null;
-        post.status = 'unposted';
-        post.isSynced = true;
-        post.isPosted = false;
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            objectionPost.externalGuid = null;
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'unposted';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = false;
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
     }
 
 }
