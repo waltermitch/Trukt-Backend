@@ -1,4 +1,3 @@
-const LoadboardPost = require('../Models/LoadboardPost');
 const Knex = require('knex');
 const knexfile = require('../../knexfile');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
