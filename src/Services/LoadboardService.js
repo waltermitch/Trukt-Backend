@@ -4,7 +4,9 @@ const Loadboard = require('../Models/Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 const LoadboardContact = require('../Models/LoadboardContact');
 const Job = require('../Models/OrderJob');
-const SFAccount = require('../Models/SFAccount');
+
+// this is imported here because the file needs to be imported somewhere
+// in order for it to be able to listen to incoming events from service bus
 const LoadboardHandler = require('../Loadboards/LoadboardHandler');
 
 const loadboardClasses = require('../Loadboards/LoadboardsList');
@@ -15,7 +17,6 @@ const queueName = "loadboard_posts_outgoing";
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
 
-const createdByGuid = '00000000-0000-0000-0000-000000000000';
 let dbLoadboardNames;
 
 (async function ()
@@ -25,20 +26,6 @@ let dbLoadboardNames;
 
 class LoadboardService
 {
-    static async createPostings(jobId, lbNames, options)
-    {
-        //LoadboardService.intializeLoadboards();
-        console.log('creating posts');
-        const job = await LoadboardService.getAllPostingData(jobId, lbNames, options);
-        let lbClass = {};
-        for (const lbName of lbNames)
-        {
-            lbClass = LoadboardService.chooseLoadboard(lbName, job);
-            this[`${lbName}_Requests`].push({ 'func': 'create', 'class': lbClass });
-        }
-
-        return job;
-    }
 
     static async postPostings(jobId, posts)
     {
@@ -89,7 +76,6 @@ class LoadboardService
             payloads.push(lbPayload['update']());
         }
 
-        //console.log(payloads);
         await sender.sendMessages({ body: payloads });
         return payloads;
     }
@@ -110,7 +96,7 @@ class LoadboardService
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
 
-        await this.createPostRecordsNew(job, posts);
+        await this.createPostRecords(job, posts);
         this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
         delete job.order.invoices;
         this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
@@ -161,7 +147,7 @@ class LoadboardService
         return job;
     }
 
-    static async createPostRecordsNew(job, posts)
+    static async createPostRecords(job, posts)
     {
         let newPosts = [];
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
@@ -215,67 +201,7 @@ class LoadboardService
         }
     }
 
-    static checkLoadboardsInput(req)
-    {
-        let loadboardNames = req.loadboards;
-        let errors = [];
-        if (loadboardNames.length === 0)
-        {
-            const data = {
-                message: `a loadboard is required in order to post, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`
-            };
-            errors.push(data);
-        }
-        for (let i = 0; i < loadboardNames.length; i++)
-        {
-            let lbName = loadboardNames[i];
-            if (!(lbName in dbLoadboardNames))
-            {
-                const data = {
-                    message: `the loadboard: ${loadboardNames[i]} is not supported, 
-            here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`
-                };
-                throw data;
-            }
-            if (dbLoadboardNames[lbName].requiresOptions)
-            {
-                if (!(lbName in req))
-                {
-                    const data = {
-                        message: `HEY ${lbName} REQUIRES OPTIONS`
-                    }
-                    errors.push(data);
-                } else
-                {
-                    let post = req[lbName];
-                    const missing = [];
-                    const required = dbLoadboardNames[lbName].requiredFields.requiredFields;
-                    for (const requiredField of required) 
-                    {
-                        if (!(requiredField in post))
-                        {
-                            missing.push(requiredField);
-                        }
-                    }
-                    if (missing.length != 0) 
-                    {
-                        const data = {
-                            message: `HEY ${lbName} REQUIRES ${missing}`
-                        }
-                        errors.push(data);
-                    }
-
-                }
-            }
-        }
-        if (errors.length !== 0)
-        {
-            throw errors;
-        }
-        console.log('looks good');
-    }
-
-    static checkLoadboardsInputNew(posts)
+    static checkLoadboardsInput(posts)
     {
         let errors = [];
         if (posts.length === 0)
@@ -304,7 +230,6 @@ class LoadboardService
         {
             throw errors;
         }
-        console.log('ayyy looking good');
     }
 
     // recieves all the stops for a job and returns the first and last stops based on stop sequence
