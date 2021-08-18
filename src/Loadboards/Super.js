@@ -227,6 +227,7 @@ class Super extends Loadboard
     static async handlepost(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
 
         try
         {
@@ -248,13 +249,12 @@ class Super extends Loadboard
                 await SFAccount.query(trx).patch(client).findById(client.guid);
             }
 
-            post.externalGuid = response.guid;
-            post.externalPostGuid = response.guid;
-            post.status = 'posted';
-            post.isSynced = true;
-            post.isPosted = true;
+            objectionPost.externalGuid = response.guid;
+            objectionPost.externalPostGuid = response.guid;
+            objectionPost.status = 'posted';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = true;
 
-            const objectionPost = LoadboardPost.fromJson(post);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
             await trx.commit();
@@ -263,20 +263,21 @@ class Super extends Loadboard
         {
             await trx.rollback();
         }
-        return post;
+        return objectionPost;
     }
 
     static async handleunpost(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+        
         try
         {
-            post.externalPostGuid = null;
-            post.status = 'unposted';
-            post.isSynced = true;
-            post.isPosted = false;
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'unposted';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = false;
 
-            const objectionPost = LoadboardPost.fromJson(post);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();
         }
@@ -285,7 +286,7 @@ class Super extends Loadboard
             await trx.rollback();
         }
 
-        return post;
+        return objectionPost;
     }
 
     static async handleupdate(post, response)
