@@ -1,6 +1,7 @@
 const currency = require('currency.js');
 const states = require('us-state-codes');
 const Loadboard = require('./Loadboard');
+const LoadboardPost = require('../Models/LoadboardPost');
 
 class CentralDispatch extends Loadboard
 {
@@ -120,20 +121,48 @@ class CentralDispatch extends Loadboard
 
     static async handlepost(post, response)
     {
-        post.externalGuid = response.id;
-        post.externalPostGuid = response.id;
-        post.status = 'posted';
-        post.isSynced = true;
-        post.isPosted = true;
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+        try
+        {
+            objectionPost.externalGuid = response.id;
+            objectionPost.externalPostGuid = response.id;
+            objectionPost.status = 'posted';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = true;
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
     }
 
     static async handleunpost(post, response)
     {
-        post.externalGuid = null;
-        post.externalPostGuid = null;
-        post.status = 'unposted';
-        post.isSynced = true;
-        post.isPosted = false;
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+        try
+        {
+            objectionPost.externalGuid = null;
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'unposted';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = false;
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
     }
 }
 
