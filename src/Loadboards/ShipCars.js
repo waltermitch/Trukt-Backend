@@ -160,22 +160,23 @@ class ShipCars extends Loadboard
     static async handlepost(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
         try
         {
-            const job = await Job.query().findById(post.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
+            const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
             const vehicles = this.updateCommodity(job.commodities, response.vehicles);
             for (const vehicle of vehicles)
             {
                 vehicle.setUpdatedBy(this.curentUser);
                 await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
             }
-            post.externalGuid = response.id;
-            post.externalPostGuid = response.id;
-            post.status = 'posted';
-            post.isSynced = true;
-            post.isPosted = true;
+            objectionPost.externalGuid = response.id;
+            objectionPost.externalPostGuid = response.id;
+            objectionPost.status = 'posted';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = true;
 
-            const objectionPost = LoadboardPost.fromJson(post);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
             await trx.commit();
@@ -185,20 +186,21 @@ class ShipCars extends Loadboard
             await trx.rollback();
         }
 
-        return post;
+        return objectionPost;
     }
 
     static async handleunpost(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
         try
         {
-            post.isPosted = false;
-            post.externalPostGuid = null;
-            post.status = 'unposted';
-            post.isSynced = true;
+            objectionPost.isPosted = false;
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'unposted';
+            objectionPost.isSynced = true;
 
-            const objectionPost = LoadboardPost.fromJson(post);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();
         }
@@ -207,7 +209,7 @@ class ShipCars extends Loadboard
             await trx.rollback();
         }
 
-        return post;
+        return objectionPost;
     }
 
     static updateCommodity(ogCommodities, newCommodities)
