@@ -1,5 +1,4 @@
-/* eslint-disable */
-require("../../local.settings");
+require('../../local.settings');
 const Loadboard = require('../Models/Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 const LoadboardContact = require('../Models/LoadboardContact');
@@ -11,12 +10,14 @@ const LoadboardHandler = require('../Loadboards/LoadboardHandler');
 
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 
-const { ServiceBusClient } = require("@azure/service-bus");
-const connectionString = process.env["rcgqueue.loadboards.connectionString"];
-const queueName = "loadboard_posts_outgoing";
+const { ServiceBusClient } = require('@azure/service-bus');
+
+const connectionString = process.env['rcgqueue.loadboards.connectionString'];
+const queueName = 'loadboard_posts_outgoing';
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
 
+let currentUserGuid = '00000000-0000-0000-0000-000000000000';
 let dbLoadboardNames;
 
 (async function ()
@@ -27,10 +28,10 @@ let dbLoadboardNames;
 class LoadboardService
 {
 
-    static async postPostings(jobId, posts)
+    static async postPostings(jobId, posts, currentUser)
     {
+        currentUserGuid = currentUser;
         const job = await LoadboardService.getAllPostingData(jobId, posts);
-
         const payloads = [];
         let lbPayload;
         for (const post of posts)
@@ -40,16 +41,16 @@ class LoadboardService
         }
 
         // sending all payloads as one big object so one big response can be returned
-        // and handler can then use one big transaction to update all records rather 
+        // and handler can then use one big transaction to update all records rather
         // than have a single new transaction for each posting
-        await sender.sendMessages({ body: payloads });
+        // await sender.sendMessages({ body: payloads });
         return job;
     }
 
-    static async unpostPostings(jobId, posts)
+    static async unpostPostings(jobId, posts, currentUser)
     {
         const job = await LoadboardService.getPostRecords(jobId, posts);
-
+        currentUserGuid = currentUser;
         const payloads = [];
         let lbPayload;
         for (const lbName of Object.keys(job.postObjects))
@@ -57,8 +58,9 @@ class LoadboardService
             lbPayload = new loadboardClasses[`${lbName}`](job);
             payloads.push(lbPayload['unpost']());
         }
+
         // sending all payloads as one big object so one big response can be returned
-        // and handler can then use one big transaction to update all records rather 
+        // and handler can then use one big transaction to update all records rather
         // than have a single new transaction for each posting
         await sender.sendMessages({ body: payloads });
         return job;
@@ -84,7 +86,7 @@ class LoadboardService
     // list that is sent in if needed
     static async getAllPostingData(jobId, posts)
     {
-        const loadboardNames = posts.map((post) => { return post.loadboard });
+        const loadboardNames = posts.map((post) => { return post.loadboard; });
         const job = await Job.query().findById(jobId).withGraphFetched(`[
             commodities(distinct, isNotDeleted).[vehicle, commType],
             order.[client, clientContact, dispatcher, invoices.lines.item],
@@ -109,14 +111,14 @@ class LoadboardService
 
     // this gets the jobs post records that are passed in the posts paramate
     /**
-     * 
+     *
      * @param {*} jobId guid of the job
      * @param {*} posts an array of objects i.e [{"loadboard": "SHIPCARS"}]
      * @returns a job with its posts
      */
     static async getPostRecords(jobId, posts)
     {
-        const loadboardNames = posts.map((post) => { return post.loadboard });
+        const loadboardNames = posts.map((post) => { return post.loadboard; });
 
         const job = await Job.query().findById(jobId).withGraphFetched(`[
             loadboardPosts(getExistingFromList, getPosted)
@@ -129,7 +131,7 @@ class LoadboardService
         return job;
     }
 
-    //This method is for getting all existing data for the job 
+    // This method is for getting all existing data for the job
     static async getjobDataForUpdate(jobId)
     {
         const job = await Job.query().findById(jobId).withGraphFetched(`[
@@ -149,7 +151,7 @@ class LoadboardService
 
     static async createPostRecords(job, posts)
     {
-        let newPosts = [];
+        const newPosts = [];
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
         for (const post of posts)
         {
@@ -160,14 +162,16 @@ class LoadboardService
             }
             if (!(post.loadboard in job.postObjects))
             {
-                newPosts.push({
+                const objectionPost = LoadboardPost.fromJson({
                     jobGuid: job.guid,
                     loadboard: post.loadboard,
                     instructions: post.loadboardInstructions || job.loadboardInstructions.substring(0, 59),
                     values: post.values,
-                    createdByGuid
+                    createdByGuid: currentUserGuid
                 });
-            } else
+                newPosts.push(objectionPost);
+            }
+            else
             {
                 job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].id, {
                     id: job.postObjects[`${post.loadboard}`].id,
@@ -176,6 +180,7 @@ class LoadboardService
                     instructions: post.loadboardInstructions || job.loadboardInstructions,
                     isSynced: false,
                     values: post.values,
+                    updatedByGuid: currentUserGuid
                 });
             }
         }
@@ -203,7 +208,7 @@ class LoadboardService
 
     static checkLoadboardsInput(posts)
     {
-        let errors = [];
+        const errors = [];
         if (posts.length === 0)
         {
             const data = {
@@ -240,26 +245,26 @@ class LoadboardService
             return stop1.sequence - stop2.sequence;
         });
 
-        //return [stops[0], stops[stops.length - 1]];
+        // return [stops[0], stops[stops.length - 1]];
         return { pickup: stops[0], delivery: stops[stops.length - 1] };
     }
 
     /**
-     * 
+     *
      * @param {list<Commodity>} commodities list of job commodities
      * @param {InvoiceLine} line a single invoice/bill line
      * @param {String} lineType a string indicating if this is a bill or an invoice
      */
-    static async combineCommoditiesWithLines(commodities, invoiceBill, lineType) 
+    static async combineCommoditiesWithLines(commodities, invoiceBill, lineType)
     {
-        let map = new Map(invoiceBill.lines.filter(o =>
+        const map = new Map(invoiceBill.lines.filter(o =>
         {
             return o.item.name === 'transport' && o.item.type === 'revenue';
         }).map(p => [p.commodityGuid, p]));
 
         commodities.reduce((acc, o) =>
         {
-            let match = map.get(o.guid);
+            const match = map.get(o.guid);
             o[`${lineType}`] = match;
             return match ? acc.concat({ ...o }) : acc;
         }, []);
