@@ -2,9 +2,7 @@ const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const states = require('us-state-codes');
 const localSettings = require('../../local.settings.json');
-
-const loadboardName = 'CARDELIVERYNETWORK';
-const needsCreation = true;
+const LoadboardPost = require('../Models/LoadboardPost');
 
 class CarDeliveryNetwork extends Loadboard
 {
@@ -14,7 +12,7 @@ class CarDeliveryNetwork extends Loadboard
         this.loadboardName = 'CARDELIVERYNETWORK';
         this.needsCreation = true;
         this.data = data;
-        this.postObject = data.postObjects[loadboardName];
+        this.postObject = data.postObjects[this.loadboardName];
     }
 
     toJSON()
@@ -93,19 +91,50 @@ class CarDeliveryNetwork extends Loadboard
 
     static async handlepost(post, response)
     {
-        post.externalGuid = response.id;
-        post.externalPostGuid = response.id;
-        post.status = 'posted';
-        post.isSynced = true;
-        post.isPosted = true;
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            post.externalGuid = response.id;
+            post.externalPostGuid = response.id;
+            post.status = 'posted';
+            post.isSynced = true;
+            post.isPosted = true;
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+
+            trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
     }
 
     static async handleunpost(post, response)
     {
-        post.externalPostGuid = null;
-        post.status = 'unposted';
-        post.isSynced = true;
-        post.isPosted = true;
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'unposted';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = false;
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
     }
 }
 
