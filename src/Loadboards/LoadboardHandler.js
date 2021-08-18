@@ -12,28 +12,24 @@ const queueName = 'loadboard_posts_incoming';
 const sbClient = new ServiceBusClient(connectionString);
 const receiver = sbClient.createReceiver(queueName);
 
+const pubsub = require('../Azure/PubSub');
+
 const myMessageHandler = async (message) =>
 {
-    // your code here
     const responses = message.body;
-
-    const trx = await LoadboardPost.startTransaction();
     const posts = [];
-
-    // console.log(responses);
+    
     for (const res of responses)
     {
         const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
-        console.log('action ', res.payloadMetadata.action);
+        const post = await lbClass[`handle${res.payloadMetadata.action}`](res.payloadMetadata.post, res[`${res.payloadMetadata.action}`]);
 
-        await lbClass[`handle${res.payloadMetadata.action}`](res.payloadMetadata.post, res[`${res.payloadMetadata.action}`]);
-
-        const objectionPost = LoadboardPost.fromJson(res.payloadMetadata.post);
-        console.log(objectionPost);
-        await LoadboardPost.query().patch(objectionPost).findById(objectionPost.id);
-        posts.push(objectionPost);
+        posts.push(post);
     }
 
+    // publish to a group that is named after the the jobGuid which
+    // should be listening on messages posted to the group
+    await pubsub.publishToGroup(`${posts[0].jobGuid}`, posts);
 };
 const myErrorHandler = async (args) =>
 {
