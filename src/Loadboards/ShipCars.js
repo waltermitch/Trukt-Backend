@@ -2,11 +2,9 @@ const Loadboard = require('./Loadboard');
 const DateTime = require('luxon').DateTime;
 const currency = require('currency.js');
 const states = require('us-state-codes');
+const LoadboardPost = require('../Models/LoadboardPost');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
-const SFAccount = require('../Models/SFAccount');
-
-const needsCreation = true;
 
 class ShipCars extends Loadboard
 {
@@ -161,26 +159,55 @@ class ShipCars extends Loadboard
 
     static async handlepost(post, response)
     {
-        const job = await Job.query().findById(post.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
-        const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-        for (const vehicle of vehicles)
+        const trx = await LoadboardPost.startTransaction();
+        try
         {
-            vehicle.setUpdatedBy(this.curentUser);
-            await Commodity.query().patch(vehicle).findById(vehicle.guid);
+            const job = await Job.query().findById(post.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
+            const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+            for (const vehicle of vehicles)
+            {
+                vehicle.setUpdatedBy(this.curentUser);
+                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+            }
+            post.externalGuid = response.id;
+            post.externalPostGuid = response.id;
+            post.status = 'posted';
+            post.isSynced = true;
+            post.isPosted = true;
+
+            const objectionPost = LoadboardPost.fromJson(post);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+
+            await trx.commit();
         }
-        post.externalGuid = response.id;
-        post.externalPostGuid = response.id;
-        post.status = 'posted';
-        post.isSynced = true;
-        post.isPosted = true;
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return post;
     }
 
     static async handleunpost(post, response)
     {
-        post.externalPostGuid = null;
-        post.status = 'unposted';
-        post.isSynced = true;
-        post.isPosted = false;
+        const trx = await LoadboardPost.startTransaction();
+        try
+        {
+            post.isPosted = false;
+            post.externalPostGuid = null;
+            post.status = 'unposted';
+            post.isSynced = true;
+
+            const objectionPost = LoadboardPost.fromJson(post);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return post;
     }
 
     static updateCommodity(ogCommodities, newCommodities)
