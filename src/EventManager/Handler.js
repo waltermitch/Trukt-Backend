@@ -66,7 +66,19 @@ class Handler
                 payload.insuranceExpiration = res.insuranceExpiration;
                 payload.preferred = res.preferred;
 
-                await Promise.all([QB.upsertCarrier(payload), Triumph.createProfile(payload), Super.updateCarrier(payload)]);
+                const result = await Promise.allSettled([QB.upsertVendor(payload), Super.upsertCarrier(payload), Triumph.createCarrierProfile(payload)]);
+
+                for (const r of result)
+                {
+                    if (r.status === 'fulfilled')
+                    {
+                        console.log('Fulfilled');
+                    }
+                    else
+                    {
+                        console.log(r.reason);
+                    }
+                }
                 break;
 
             case 'Vendor':
