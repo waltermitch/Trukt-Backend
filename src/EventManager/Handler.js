@@ -1,4 +1,5 @@
 const SFAccount = require('../Models/SFAccount');
+const Queue = require('../Azure/ServiceBus');
 const PubSub = require('../Azure/PubSub');
 const Triumph = require('../Triumph/API');
 const QB = require('../QuickBooks/API');
@@ -47,6 +48,8 @@ class Handler
             taxId: res.taxId
         };
 
+        console.log(recordType);
+
         // make api calls, add additional fields base on recordType
         switch (recordType)
         {
@@ -70,24 +73,33 @@ class Handler
 
                 for (const r of result)
                 {
-                    if (r.status === 'fulfilled')
-                    {
-                        console.log('Fulfilled');
-                    }
-                    else
-                    {
-                        console.log(r.reason);
-                    }
+                    if (r.status !== 'fulfilled')
+                        console.log(r.reason?.response?.data ? JSON.stringify(r.reason?.response?.data) : r.reason);
                 }
                 break;
 
             case 'Vendor':
-                await QB.upsertCarrier(payload);
+                await QB.upsertVendor(payload);
                 break;
 
             default:
                 return;
         }
+    }
+
+    static async checkAccountUpdatedQueue()
+    {
+        const res = await Queue.pop('accountupdated');
+
+        if (res.status == 204)
+            return;
+        else
+            await Handler.accountUpdated(res.data);
+    }
+
+    static async pushToQueue(qName, data)
+    {
+        await Queue.push(qName, data);
     }
 }
 

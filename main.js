@@ -7,11 +7,13 @@ const domain = require('./src/Domain');
 const KnexSessionStore = require('connect-session-knex')(session);
 const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
-const HttpErrorHandler = require('./src/HttpErrorHandler');
 const PGListener = require('./src/EventManager/PGListener');
+const HttpErrorHandler = require('./src/HttpErrorHandler');
+const Mongo = require('./src/Mongo');
 require('./src/CronJobs/Manager');
 
 PGListener.listen();
+Mongo.connect();
 
 const store = new KnexSessionStore
     ({
@@ -71,7 +73,7 @@ for (const filepath of filepaths)
     initRoutes(filepath, router);
 }
 
-app.all('*', (req, res) => { res.status(404); res.json(); });
+app.all('*', (req, res) => { res.status(404).send(); });
 app.use(HttpErrorHandler);
 
 app.listen(process.env.PORT, async (err) =>

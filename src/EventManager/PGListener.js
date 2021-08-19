@@ -42,7 +42,7 @@ class PGListener
                             await Handler.jobStatusChanged(jsonMsg);
                             break;
                         case 'account_upserted':
-                            await Handler.accountUpdated(jsonMsg);
+                            await Handler.pushToQueue('accountupdated', jsonMsg);
                             break;
                         default:
                             break;
@@ -51,7 +51,7 @@ class PGListener
                 catch (err)
                 {
                     console.log('Error In PG Triggers');
-                    const error = err?.response?.data || err?.response || err;
+                    const error = err?.response?.data || err;
                     console.log(JSON.stringify(error));
                 }
             });
