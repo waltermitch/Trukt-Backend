@@ -101,9 +101,9 @@ class Handler
 
     static async pushToQueue(qName, data)
     {
-        if (!cache.has(data))
+        if (!cache.has(data.guid))
         {
-            cache.set(data, true, 10);
+            cache.set(data.guid, true, 10);
 
             await Queue.push(qName, data);
         }
