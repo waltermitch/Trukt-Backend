@@ -198,7 +198,10 @@ class OrderService
             if (isUseful(orderObj.clientContact))
             {
                 const clientContact = SFContact.fromJson(orderObj.clientContact);
-                clientContact.linkAccount(orderObj.client);
+
+                if (orderObj.client)
+                    clientContact.linkAccount(orderObj.client);
+
                 clientContact.linkRecordType(contactRecordType);
                 const contact = await clientContact.findOrCreate(trx);
                 order.graphLink('clientContact', contact);
@@ -212,7 +215,8 @@ class OrderService
                 const commType = commTypes.find(it => CommodityType.compare(commodity, it));
                 if (!commType)
                 {
-                    throw new Error(`unknown commodity ${commodity.commType.category} ${commodity.commType.type}`);
+                    console.log(commodity);
+                    throw new Error(`unknown commodity ${commodity.commType?.category} ${commodity.commType?.type}`);
                 }
                 commodity.graphLink('commType', commType);
 
