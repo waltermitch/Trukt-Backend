@@ -1,13 +1,11 @@
 const Handler = require('./Handler');
 const PG = require('../PostGres');
-const NodeCache = require('node-cache');
 
 // list of channels to listen to
 const channels =
     ['job_status_change', 'account_upserted'];
 
 let client;
-const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 30 });
 
 class PGListener
 {
@@ -26,11 +24,6 @@ class PGListener
             // handle notifications
             client.on('notification', async (msg) =>
             {
-                if (cache.has(msg.payload))
-                    return;
-                else
-                    cache.set(msg.payload, true);
-
                 try
                 {
                     // convert string to json

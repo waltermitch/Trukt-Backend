@@ -6,7 +6,7 @@ const Cron = require('node-cron');
 
 const expressions =
 {
-    threeSeconds: '*/3 * * * * *',
+    second: '*/1 * * * * *',
     minute: '0 */1 * * * *',
     thirtyMinutes: '0 */30 * * * *',
     hourly: '0 0 */1 * * *',
@@ -14,8 +14,8 @@ const expressions =
     daily: '0 0 1 */1 * *'
 };
 
-// every 5 seconds
-Cron.schedule(expressions.threeSeconds, async () =>
+// every second
+Cron.schedule(expressions.second, async () =>
 {
     await EventHandler.checkAccountUpdatedQueue();
 });

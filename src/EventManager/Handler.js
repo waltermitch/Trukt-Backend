@@ -4,6 +4,10 @@ const PubSub = require('../Azure/PubSub');
 const Triumph = require('../Triumph/API');
 const QB = require('../QuickBooks/API');
 const Super = require('../Super/API');
+const NodeCache = require('node-cache');
+
+// duplicate checking cache
+const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 10 });
 
 class Handler
 {
@@ -47,8 +51,6 @@ class Handler
             shippingCountry: res.shippingCountry,
             taxId: res.taxId
         };
-
-        console.log(recordType);
 
         // make api calls, add additional fields base on recordType
         switch (recordType)
@@ -99,7 +101,12 @@ class Handler
 
     static async pushToQueue(qName, data)
     {
-        await Queue.push(qName, data);
+        if (!cache.has(data))
+        {
+            cache.set(data, true, 10);
+
+            await Queue.push(qName, data);
+        }
     }
 }
 
