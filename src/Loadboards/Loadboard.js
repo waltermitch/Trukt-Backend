@@ -20,6 +20,7 @@ class Loadboard
         let payload = {};
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'post';
+        payloadMetadata.user = process.env['developerName'];
         payload = this.toJSON();
 
         return { payload, payloadMetadata };
@@ -30,6 +31,8 @@ class Loadboard
         const payload = { guid: this.postObject.externalPostGuid };
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
         payloadMetadata.action = 'unpost';
+        payloadMetadata.user = process.env['developerName'];
+
         return { payload, payloadMetadata };
     }
 
@@ -37,6 +40,8 @@ class Loadboard
     {
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
         payloadMetadata.action = ['update'];
+        payloadMetadata.user = process.env['developerName'];
+
         return { payload: this.toJSON(), payloadMetadata };
     }
 
