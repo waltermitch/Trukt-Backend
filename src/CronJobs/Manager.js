@@ -1,3 +1,4 @@
+const EventHandler = require('../EventManager/Handler');
 const Triumph = require('../Triumph/API');
 const QBO = require('../QuickBooks/API');
 const Super = require('../Super/API');
@@ -5,11 +6,19 @@ const Cron = require('node-cron');
 
 const expressions =
 {
+    second: '*/1 * * * * *',
+    minute: '0 */1 * * * *',
     thirtyMinutes: '0 */30 * * * *',
     hourly: '0 0 */1 * * *',
     biHourly: '0 0 */2 * * *',
     daily: '0 0 1 */1 * *'
 };
+
+// every second
+Cron.schedule(expressions.second, async () =>
+{
+    await EventHandler.checkAccountUpdatedQueue();
+});
 
 // every 30 minutes
 Cron.schedule(expressions.thirtyMinutes, async () =>

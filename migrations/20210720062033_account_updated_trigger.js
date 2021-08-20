@@ -10,7 +10,13 @@ exports.up = function (knex)
             COST 100
         AS $function$
         BEGIN
-                IF (TG_OP = 'UPDATE' OR TG_OP = 'INSERT') THEN
+                IF (TG_OP = 'UPDATE') THEN
+                    IF((OLD.qb_id__c IS NULL AND NEW.qb_id__c IS NOT null) or new.is_synced_in_super = true or new.is_synced_in_super = false) THEN
+                        RETURN NEW;
+                    ELSE
+                        PERFORM pg_notify('account_upserted',row_to_json((select d from (select new.guid__c as guid) d))::text);
+                    END IF;
+                ElSEIF (TG_OP = 'INSERT') THEN
                     PERFORM pg_notify('account_upserted',row_to_json((select d from (select new.guid__c as guid) d))::text);
                 END IF;
             RETURN NEW;

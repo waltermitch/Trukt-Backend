@@ -16,7 +16,7 @@ class InvoiceService
 
     static async createInvoices(arr)
     {
-        const qb = Order.query().withGraphFetched('[invoices.[cosignee, lines.[commodity.[stops.[terminal]], item]], client]');
+        const qb = Order.query().withGraphFetched('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item]], client]');
 
         for (const guid of arr)
             qb.orWhere('guid', '=', guid);
