@@ -18,7 +18,8 @@ const items = [
     { name: 'self programmable remote', type: 'revenue', is_accessorial: true },
     { name: 'sell car remotes', type: 'revenue', is_accessorial: true },
     { name: 'tibbe key', type: 'revenue', is_accessorial: true },
-    { name: 'transponder key', type: 'revenue', is_accessorial: true }
+    { name: 'transponder key', type: 'revenue', is_accessorial: true },
+    { name: 'Services', type: 'expense', is_accessorial: false }
 ];
 
 exports.seed = async function (knex)
