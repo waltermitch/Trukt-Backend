@@ -74,7 +74,7 @@ class Loadboard
     adjustDates()
     {
         const now = new Date(Date.now());
-        
+
         if (this.data.pickup.dateRequestedStart < now)
         {
             this.data.pickup.dateRequestedStart = now;
