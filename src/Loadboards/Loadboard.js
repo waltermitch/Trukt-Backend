@@ -70,6 +70,48 @@ class Loadboard
     {
         return date ? DateTime.fromJSDate(date).plus({ [`${type}`]: amount }).toString() : null;
     }
+
+    adjustDates()
+    {
+        const now = new Date(Date.now());
+        
+        if (this.data.pickup.dateRequestedStart < now)
+        {
+            this.data.pickup.dateRequestedStart = now;
+        }
+
+        if (this.data.pickup.dateRequestedEnd < this.data.pickup.dateRequestedStart)
+        {
+            this.data.pickup.dateRequestedEnd = this.fastForward(this.data.pickup.dateRequestedEnd, this.data.pickup.dateRequestedStart);
+        }
+
+        if (this.data.delivery.dateRequestedStart < this.data.pickup.dateRequestedEnd)
+        {
+            this.data.delivery.dateRequestedStart = this.fastForward(this.data.delivery.dateRequestedStart, this.data.pickup.dateRequestedEnd);
+        }
+
+        if (this.data.delivery.dateRequestedEnd < this.data.delivery.dateRequestedStart)
+        {
+            this.data.delivery.dateRequestedEnd = this.fastForward(this.data.delivery.dateRequestedEnd, this.data.delivery.dateRequestedStart);
+        }
+    }
+
+    getDifferencefromToday(date)
+    {
+        // get difference between the date and today.. today - date.. (future date would be negative)
+        const diff = DateTime.utc().diff(DateTime.fromJSDate(date), ['days']);
+
+        // return the float
+        return diff.toObject().days;
+    }
+
+    fastForward(targetDate, secondDate)
+    {
+        targetDate = DateTime.fromJSDate(targetDate);
+        secondDate = DateTime.fromJSDate(secondDate);
+        targetDate = secondDate.plus({ hours: 1 });
+        return targetDate.toJSDate();
+    }
 }
 
 module.exports = Loadboard;
