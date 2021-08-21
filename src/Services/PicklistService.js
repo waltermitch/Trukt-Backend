@@ -1,21 +1,20 @@
-const fs = require('fs');
-const BaseModel = require('../Models/BaseModel');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const CommodityType = require('../Models/CommodityType');
-const https = require('https');
+const BaseModel = require('../Models/BaseModel');
+const HTTPS = require('../AuthController');
+const fs = require('fs');
 
 const knex = BaseModel.knex();
 
 // creating an axios connection directly because this will not be reused
 // as far as we can tell for now
 const opts = {
-    httpsAgent: new https.Agent({ keepAlive: true }),
-    baseURL: process.env['azure.loadboard.baseurl'],
+    url: process.env['azure.loadboard.baseurl'],
     headers: {
         'x-functions-key': process.env['azure.loadboard.funcCode']
     }
 };
-const lbConn = require('axios').create(opts);
+const lbConn = new HTTPS(opts).connect();
 
 let picklists;
 const localPicklistPath = './localdata/picklists.json';

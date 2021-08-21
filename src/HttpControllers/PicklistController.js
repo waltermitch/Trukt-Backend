@@ -1,11 +1,10 @@
 const PicklistService = require('../Services/PicklistService');
-const HttpRouteController = require('./HttpRouteController');
 const fs = require('fs');
 
 const localPicklistPath = './localdata/picklists.json';
 let picklists;
 
-class PicklistController extends HttpRouteController
+class PicklistController
 {
     static async getAll(req, res)
     {
@@ -41,5 +40,4 @@ class PicklistController extends HttpRouteController
     }
 }
 
-const controller = new PicklistController();
-module.exports = controller;
+module.exports = PicklistController;
