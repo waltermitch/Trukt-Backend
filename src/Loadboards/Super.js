@@ -15,8 +15,6 @@ class Super extends Loadboard
     {
         super(data);
         this.loadboardName = 'SUPERDISPATCH';
-        this.needsCreation = true;
-        this.data = data;
         this.postObject = data.postObjects[this.loadboardName];
     }
 
@@ -256,6 +254,7 @@ class Super extends Loadboard
             objectionPost.status = 'posted';
             objectionPost.isSynced = true;
             objectionPost.isPosted = true;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
@@ -279,6 +278,7 @@ class Super extends Loadboard
             objectionPost.status = 'unposted';
             objectionPost.isSynced = true;
             objectionPost.isPosted = false;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();
