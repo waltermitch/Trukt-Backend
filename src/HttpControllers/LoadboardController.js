@@ -3,17 +3,34 @@ const LoadboardService = require('../Services/LoadboardService');
 
 class LoadboardController extends HttpRouteController
 {
-    static async handlePost(req, res)
+    static async handleCreate(req, res)
     {
         const posts = req.body.posts;
-        
+
         try
         {
             LoadboardService.checkLoadboardsInput(posts);
-            const pot = await LoadboardService.postPostings(req.params.jobId, posts, req.session.userGuid);
+            await LoadboardService.createPostings(req.params.jobId, posts, req.session.userGuid);
 
-            res.status(200);
-            res.json(pot);
+            res.status(204).send();
+        }
+        catch (e)
+        {
+            res.status(400);
+            res.json({ message: e });
+        }
+    }
+
+    static async handlePost(req, res)
+    {
+        const posts = req.body.posts;
+
+        try
+        {
+            LoadboardService.checkLoadboardsInput(posts);
+            await LoadboardService.postPostings(req.params.jobId, posts, req.session.userGuid);
+
+            res.status(204).send();
         }
         catch (e)
         {
@@ -30,10 +47,9 @@ class LoadboardController extends HttpRouteController
         try
         {
             LoadboardService.checkLoadboardsInput(posts);
-            const pot = await LoadboardService.unpostPostings(req.params.jobId, posts, req.session.userGuid);
+            await LoadboardService.unpostPostings(req.params.jobId, posts, req.session.userGuid);
 
-            res.status(200);
-            res.json(pot);
+            res.status(204).send();
         }
         catch (e)
         {

@@ -4,14 +4,14 @@ const states = require('us-state-codes');
 const localSettings = require('../../local.settings.json');
 const LoadboardPost = require('../Models/LoadboardPost');
 
+const anonUser = '00000000-0000-0000-0000-000000000000';
+
 class CarDeliveryNetwork extends Loadboard
 {
     constructor(data)
     {
         super(data);
         this.loadboardName = 'CARDELIVERYNETWORK';
-        this.needsCreation = true;
-        this.data = data;
         this.postObject = data.postObjects[this.loadboardName];
     }
 
@@ -89,6 +89,30 @@ class CarDeliveryNetwork extends Loadboard
         return vehicles;
     }
 
+    static async handlecreate(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            objectionPost.externalGuid = response.id;
+            objectionPost.status = 'created';
+            objectionPost.isSynced = true;
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+
+            trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
+    }
+
     static async handlepost(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
@@ -96,11 +120,12 @@ class CarDeliveryNetwork extends Loadboard
 
         try
         {
-            post.externalGuid = response.id;
-            post.externalPostGuid = response.id;
-            post.status = 'posted';
-            post.isSynced = true;
-            post.isPosted = true;
+            objectionPost.externalGuid = response.id;
+            objectionPost.externalPostGuid = response.id;
+            objectionPost.status = 'posted';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = true;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
@@ -125,7 +150,8 @@ class CarDeliveryNetwork extends Loadboard
             objectionPost.status = 'unposted';
             objectionPost.isSynced = true;
             objectionPost.isPosted = false;
-
+            objectionPost.setUpdatedBy(anonUser);
+            
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();
         }

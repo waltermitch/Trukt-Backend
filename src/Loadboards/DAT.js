@@ -3,13 +3,14 @@ const currency = require('currency.js');
 const states = require('us-state-codes');
 const LoadboardPost = require('../Models/LoadboardPost');
 
+const anonUser = '00000000-0000-0000-0000-000000000000';
+
 class DAT extends Loadboard
 {
     constructor(data)
     {
         super(data);
         this.loadboardName = 'DAT';
-        this.data = data;
         this.postObject = data.postObjects[this.loadboardName];
     }
 
@@ -77,6 +78,7 @@ class DAT extends Loadboard
             objectionPost.status = 'posted';
             objectionPost.isSynced = true;
             objectionPost.isPosted = true;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();
@@ -100,6 +102,7 @@ class DAT extends Loadboard
             objectionPost.status = 'unposted';
             objectionPost.isSynced = true;
             objectionPost.isPosted = false;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();

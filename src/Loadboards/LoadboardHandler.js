@@ -7,9 +7,9 @@ const knex = Knex(knexfile());
 const { ServiceBusClient } = require('@azure/service-bus');
 
 const connectionString = process.env['rcgqueue.loadboards.connectionString'];
-const queueName = 'loadboard_posts_incoming';
+const topicName = 'loadboard_incoming';
 const sbClient = new ServiceBusClient(connectionString);
-const receiver = sbClient.createReceiver(queueName);
+const receiver = sbClient.createReceiver(topicName, process.env['developerName']);
 
 const pubsub = require('../Azure/PubSub');
 
@@ -17,7 +17,7 @@ const myMessageHandler = async (message) =>
 {
     const responses = message.body;
     const posts = [];
-    
+
     for (const res of responses)
     {
         const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];

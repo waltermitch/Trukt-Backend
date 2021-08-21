@@ -1,25 +1,38 @@
+const LoadboardPost = require('../Models/LoadboardPost');
 const DateTime = require('luxon').DateTime;
 const currency = require('currency.js');
 const states = require('us-state-codes');
+const R = require('ramda');
 
+const anonUser = '00000000-0000-0000-0000-000000000000';
 const loadboardName = '';
 
 class Loadboard
 {
     constructor(data)
     {
-        this.data = data;
-        this.needsCreation = false;
-        this.postObject;
+        this.data = R.clone(data);
     }
 
     static validate() { }
+
+    create()
+    {
+        let payload = {};
+        const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
+        payloadMetadata.action = 'create';
+        payloadMetadata.user = process.env['developerName'];
+        payload = this.toJSON();
+
+        return { payload, payloadMetadata };
+    }
 
     post()
     {
         let payload = {};
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'post';
+        payloadMetadata.user = process.env['developerName'];
         payload = this.toJSON();
 
         return { payload, payloadMetadata };
@@ -30,6 +43,8 @@ class Loadboard
         const payload = { guid: this.postObject.externalPostGuid };
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
         payloadMetadata.action = 'unpost';
+        payloadMetadata.user = process.env['developerName'];
+
         return { payload, payloadMetadata };
     }
 
@@ -37,6 +52,8 @@ class Loadboard
     {
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
         payloadMetadata.action = ['update'];
+        payloadMetadata.user = process.env['developerName'];
+
         return { payload: this.toJSON(), payloadMetadata };
     }
 
@@ -65,6 +82,53 @@ class Loadboard
     dateAdd(date, amount, type)
     {
         return date ? DateTime.fromJSDate(date).plus({ [`${type}`]: amount }).toString() : null;
+    }
+
+    adjustDates()
+    {
+        const now = new Date(Date.now());
+
+        if (this.data.pickup.dateRequestedStart < now)
+        {
+            this.data.pickup.dateRequestedStart = now;
+        }
+
+        if (this.data.pickup.dateRequestedEnd < this.data.pickup.dateRequestedStart)
+        {
+            this.data.pickup.dateRequestedEnd = this.fastForward(this.data.pickup.dateRequestedEnd, this.data.pickup.dateRequestedStart);
+        }
+
+        if (this.data.delivery.dateRequestedStart < this.data.pickup.dateRequestedEnd)
+        {
+            this.data.delivery.dateRequestedStart = this.fastForward(this.data.delivery.dateRequestedStart, this.data.pickup.dateRequestedEnd);
+        }
+
+        if (this.data.delivery.dateRequestedEnd < this.data.delivery.dateRequestedStart)
+        {
+            this.data.delivery.dateRequestedEnd = this.fastForward(this.data.delivery.dateRequestedEnd, this.data.delivery.dateRequestedStart);
+        }
+    }
+
+    getDifferencefromToday(date)
+    {
+        // get difference between the date and today.. today - date.. (future date would be negative)
+        const diff = DateTime.utc().diff(DateTime.fromJSDate(date), ['days']);
+
+        // return the float
+        return diff.toObject().days;
+    }
+
+    fastForward(targetDate, secondDate)
+    {
+        targetDate = DateTime.fromJSDate(targetDate);
+        secondDate = DateTime.fromJSDate(secondDate);
+        targetDate = secondDate.plus({ hours: 1 });
+        return targetDate.toJSDate();
+    }
+
+    static async handlecreate(post, response)
+    {
+        return LoadboardPost.fromJson(post);
     }
 }
 

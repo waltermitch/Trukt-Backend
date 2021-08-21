@@ -24,7 +24,7 @@ class ShipCars extends Loadboard
         const payload =
         {
             pickup_name: this.data.pickup.terminal.name,
-            pickup_contact: this.data.pickup?.primaryContact.firstName + ' ' + this.data.pickup?.primaryContact.lastName,
+            pickup_contact: this.data.pickup?.primaryContact.name,
             pickup_phone_1: this.data.pickup?.primaryContact.phoneNumber,
             pickup_phone_2: this.data.pickup?.primaryContact.mobilePhone,
             pickup_address: this.data.pickup.terminal.street1,
@@ -35,7 +35,7 @@ class ShipCars extends Loadboard
             pickup_estimate_type: this.setDateType(this.data.pickup.dateScheduledType),
 
             delivery_name: this.data.delivery.terminal.name,
-            delivery_contact: this.data.delivery?.primaryContact.firstName + ' ' + this.data.delivery?.primaryContact.lastName,
+            delivery_contact: this.data.delivery?.primaryContact.name,
             delivery_phone_1: this.data.delivery?.primaryContact.phoneNumber,
             delivery_phone_2: this.data.delivery?.primaryContact.mobilePhone,
             delivery_address: this.data.delivery.terminal.street1,
@@ -159,6 +159,37 @@ class ShipCars extends Loadboard
         }
     }
 
+    static async handlecreate(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
+            const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+            for (const vehicle of vehicles)
+            {
+                vehicle.setUpdatedBy(anonUser);
+                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+            }
+            objectionPost.externalGuid = response.id;
+            objectionPost.status = 'created';
+            objectionPost.isSynced = true;
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
+    }
+
     static async handlepost(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
@@ -178,6 +209,7 @@ class ShipCars extends Loadboard
             objectionPost.status = 'posted';
             objectionPost.isSynced = true;
             objectionPost.isPosted = true;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
@@ -202,6 +234,7 @@ class ShipCars extends Loadboard
             objectionPost.externalPostGuid = null;
             objectionPost.status = 'unposted';
             objectionPost.isSynced = true;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();

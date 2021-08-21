@@ -36,7 +36,10 @@ class LoadboardPost extends BaseModel
 
             getPosted(builder)
             {
-                builder.where({ status: 'posted' }).orWhere({ isPosted: true });
+                builder.where(builder =>
+                {
+                    builder.where({ status: 'posted' }).orWhere({ isPosted: true });
+                });
             },
 
             getValid(builder)

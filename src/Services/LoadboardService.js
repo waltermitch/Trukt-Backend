@@ -28,6 +28,34 @@ let dbLoadboardNames;
 class LoadboardService
 {
 
+    static async createPostings(jobId, posts, currentUser)
+    {
+        currentUserGuid = currentUser;
+        const job = await LoadboardService.getAllPostingData(jobId, posts);
+        const payloads = [];
+        let lbPayload;
+        for (const post of posts)
+        {
+            // to prevent creating multiples of the same loads, check if the posting already
+            // has an external guid. If it does and it alreadys exists, skip it.
+            if (job.postObjects[`${post.loadboard}`].externalGuid != null)
+            {
+                continue;
+            }
+            else
+            {
+                lbPayload = new loadboardClasses[`${post.loadboard}`](job);
+                payloads.push(lbPayload['create']());
+
+            }
+        }
+
+        // sending all payloads as one big object so one big response can be returned
+        // and handler can then use one big transaction to update all records rather
+        // than have a single new transaction for each posting
+        await sender.sendMessages({ body: payloads });
+    }
+
     static async postPostings(jobId, posts, currentUser)
     {
         currentUserGuid = currentUser;
@@ -127,6 +155,7 @@ class LoadboardService
         });
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        console.log(job.postObjects);
         delete job.loadboardPosts;
         return job;
     }
@@ -193,17 +222,6 @@ class LoadboardService
         }
         delete job.loadboardPosts;
         return job;
-    }
-
-    static checkLoadboardsParam(loadboardNames)
-    {
-        for (let i = 0; i < loadboardNames.length; i++)
-        {
-            if (!dbLoadboardNames.includes(loadboardNames[i]))
-            {
-                throw `the loadboard: ${loadboardNames[i]} is not supported`;
-            }
-        }
     }
 
     static checkLoadboardsInput(posts)
