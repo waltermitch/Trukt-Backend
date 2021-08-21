@@ -1,6 +1,7 @@
 const DateTime = require('luxon').DateTime;
 const currency = require('currency.js');
 const states = require('us-state-codes');
+const R = require('ramda');
 
 const loadboardName = '';
 
@@ -8,9 +9,7 @@ class Loadboard
 {
     constructor(data)
     {
-        this.data = data;
-        this.needsCreation = false;
-        this.postObject;
+        this.data = R.clone(data);
     }
 
     static validate() { }
