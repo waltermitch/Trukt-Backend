@@ -24,7 +24,7 @@ class ShipCars extends Loadboard
         const payload =
         {
             pickup_name: this.data.pickup.terminal.name,
-            pickup_contact: this.data.pickup?.primaryContact.firstName + ' ' + this.data.pickup?.primaryContact.lastName,
+            pickup_contact: this.data.pickup?.primaryContact.name,
             pickup_phone_1: this.data.pickup?.primaryContact.phoneNumber,
             pickup_phone_2: this.data.pickup?.primaryContact.mobilePhone,
             pickup_address: this.data.pickup.terminal.street1,
@@ -35,7 +35,7 @@ class ShipCars extends Loadboard
             pickup_estimate_type: this.setDateType(this.data.pickup.dateScheduledType),
 
             delivery_name: this.data.delivery.terminal.name,
-            delivery_contact: this.data.delivery?.primaryContact.firstName + ' ' + this.data.delivery?.primaryContact.lastName,
+            delivery_contact: this.data.delivery?.primaryContact.name,
             delivery_phone_1: this.data.delivery?.primaryContact.phoneNumber,
             delivery_phone_2: this.data.delivery?.primaryContact.mobilePhone,
             delivery_address: this.data.delivery.terminal.street1,
@@ -178,6 +178,7 @@ class ShipCars extends Loadboard
             objectionPost.status = 'posted';
             objectionPost.isSynced = true;
             objectionPost.isPosted = true;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
@@ -202,6 +203,7 @@ class ShipCars extends Loadboard
             objectionPost.externalPostGuid = null;
             objectionPost.status = 'unposted';
             objectionPost.isSynced = true;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();
