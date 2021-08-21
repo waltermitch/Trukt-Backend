@@ -1,9 +1,14 @@
 const Loadboard = require('./Loadboard');
+const DateTime = require('luxon').DateTime;
 const currency = require('currency.js');
 const states = require('us-state-codes');
 const fs = require('fs');
 
+const LoadboardPost = require('../Models/LoadboardPost');
+
 const localPicklistPath = 'localdata/picklists.json';
+
+const anonUser = '00000000-0000-0000-0000-000000000000';
 
 class Truckstop extends Loadboard
 {
@@ -11,10 +16,7 @@ class Truckstop extends Loadboard
     {
         super(data);
         this.loadboardName = 'TRUCKSTOP';
-        this.data = data;
         this.postObject = this.data.postObjects[this.loadboardName];
-
-        // this.valid = this.validate(data.postObjects[this.loadboardName]);
     }
 
     static async validate(postObject)
@@ -26,9 +28,9 @@ class Truckstop extends Loadboard
         return postObject.values;
     }
 
-    /* eslint-disable */
     toJSON()
     {
+        this.adjustDates();
         const payload = {
             postAsUserId: this.postObject.values.contact.externalId,
             equipmentAttributes:
@@ -41,12 +43,12 @@ class Truckstop extends Loadboard
                 {
                     type: 1, // indicates what kind of stop this is i.e 1 = pickup, 2 = delivery
                     sequence: 1, // indicates order in stops
-                    earlyDateTime: this.data.pickup.dateScheduledStart,
-                    lateDateTime: this.data.pickup.dateScheduledEnd,
+                    earlyDateTime: this.data.pickup.dateRequestedStart,
+                    lateDateTime: this.data.pickup.dateRequestedEnd,
                     location: {
                         locationName: this.data.pickup.terminal.name,
                         city: this.data.pickup.terminal.city,
-                        state: this.data.pickup.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.pickup.terminal.state) : this.data.pickup.terminal.state, //states.getStateCodeByStateName(this.data.pickup.terminal.state), // must be two letter abbreviation
+                        state: this.data.pickup.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.pickup.terminal.state) : this.data.pickup.terminal.state, // states.getStateCodeByStateName(this.data.pickup.terminal.state), // must be two letter abbreviation
                         streetAddress1: this.data.pickup.terminal.street1,
                         streetAddress2: this.data.pickup.terminal.street2,
                         countryCode: this.data.pickup.terminal?.country.toUpperCase(),
@@ -59,12 +61,12 @@ class Truckstop extends Loadboard
                 },
                 {
                     type: 2, // indicates what kind of stop this is i.e 1 = pickup, 2 = delivery
-                    earlyDateTime: this.data.delivery.dateScheduledStart,
-                    lateDateTime: this.data.delivery.dateScheduledEnd,
+                    earlyDateTime: this.data.delivery.dateRequestedStart,
+                    lateDateTime: this.data.delivery.dateRequestedEnd,
                     location: {
                         locationName: this.data.delivery.terminal.name,
                         city: this.data.delivery.terminal.city,
-                        state: this.data.delivery.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.delivery.terminal.state) : this.data.delivery.terminal.state, //states.getStateCodeByStateName(this.data.delivery.terminal.state), // must be two letter abbreviation
+                        state: this.data.delivery.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.delivery.terminal.state) : this.data.delivery.terminal.state, // states.getStateCodeByStateName(this.data.delivery.terminal.state), // must be two letter abbreviation
                         streetAddress1: this.data.delivery.terminal.street1,
                         streetAddress2: this.data.delivery.terminal.street2,
                         countryCode: this.data.delivery.terminal?.country.toUpperCase(),
@@ -96,22 +98,6 @@ class Truckstop extends Loadboard
         return payload;
     }
 
-    fastForwardExpired(date, forwardAmount)
-    {
-        //get current date
-        const now = DateTime.utc().toString();
-
-        //if forward amount not provided return now
-        if (date < now && forwardAmount === undefined)
-            return now;
-        //if date is behind fast forward
-        else if (date < now)
-            return DateTime.fromISO(date).plus({ days: forwardAmount }).toString();
-        //if not expired return date;
-        else
-            return date;
-    }
-
     static async handlepost(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
@@ -123,7 +109,8 @@ class Truckstop extends Loadboard
                 objectionPost.status = 'fresh';
                 objectionPost.hasError = true;
                 objectionPost.apiError = response.errors;
-            } else
+            }
+            else
             {
                 objectionPost.externalGuid = response.loadId;
                 objectionPost.externalPostGuid = response.loadId;
@@ -133,11 +120,15 @@ class Truckstop extends Loadboard
                 objectionPost.hasError = false;
                 objectionPost.apiError = null;
 
-                await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
-                await trx.commit();
             }
-        } catch (err)
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
         {
+            console.log(err);
             await trx.rollback();
         }
 
@@ -156,6 +147,7 @@ class Truckstop extends Loadboard
             objectionPost.status = 'unposted';
             objectionPost.isSynced = true;
             objectionPost.isPosted = false;
+            objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();
