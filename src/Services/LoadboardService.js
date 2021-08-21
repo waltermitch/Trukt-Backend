@@ -36,8 +36,18 @@ class LoadboardService
         let lbPayload;
         for (const post of posts)
         {
-            lbPayload = new loadboardClasses[`${post.loadboard}`](job);
-            payloads.push(lbPayload['create']());
+            // to prevent creating multiples of the same loads, check if the posting already
+            // has an external guid. If it does and it alreadys exists, skip it.
+            if (job.postObjects[`${post.loadboard}`].externalGuid != null)
+            {
+                continue;
+            }
+            else
+            {
+                lbPayload = new loadboardClasses[`${post.loadboard}`](job);
+                payloads.push(lbPayload['create']());
+
+            }
         }
 
         // sending all payloads as one big object so one big response can be returned
