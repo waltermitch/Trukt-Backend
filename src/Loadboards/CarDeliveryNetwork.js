@@ -89,6 +89,30 @@ class CarDeliveryNetwork extends Loadboard
         return vehicles;
     }
 
+    static async handlecreate(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            objectionPost.externalGuid = response.id;
+            objectionPost.status = 'created';
+            objectionPost.isSynced = true;
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+
+            trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
+    }
+
     static async handlepost(post, response)
     {
         const trx = await LoadboardPost.startTransaction();

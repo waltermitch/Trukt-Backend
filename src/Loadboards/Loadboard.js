@@ -1,8 +1,10 @@
+const LoadboardPost = require('../Models/LoadboardPost');
 const DateTime = require('luxon').DateTime;
 const currency = require('currency.js');
 const states = require('us-state-codes');
 const R = require('ramda');
 
+const anonUser = '00000000-0000-0000-0000-000000000000';
 const loadboardName = '';
 
 class Loadboard
@@ -13,6 +15,17 @@ class Loadboard
     }
 
     static validate() { }
+
+    create()
+    {
+        let payload = {};
+        const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
+        payloadMetadata.action = 'create';
+        payloadMetadata.user = process.env['developerName'];
+        payload = this.toJSON();
+
+        return { payload, payloadMetadata };
+    }
 
     post()
     {
@@ -111,6 +124,11 @@ class Loadboard
         secondDate = DateTime.fromJSDate(secondDate);
         targetDate = secondDate.plus({ hours: 1 });
         return targetDate.toJSDate();
+    }
+
+    static async handlecreate(post, response)
+    {
+        return LoadboardPost.fromJson(post);
     }
 }
 

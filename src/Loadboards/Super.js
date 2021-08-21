@@ -223,6 +223,49 @@ class Super extends Loadboard
         }
     }
 
+    static async handlecreate(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
+                order.[client], commodities(distinct, isNotDeleted)
+            ]`);
+
+            const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+            for (const vehicle of vehicles)
+            {
+                vehicle.setUpdatedBy(anonUser);
+                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+            }
+
+            const client = job.order.client;
+            if (client.sdGuid !== response.customer.counterparty_guid)
+            {
+                client.sdGuid = response.customer.counterparty_guid;
+                client.setUpdatedBy(anonUser);
+                await SFAccount.query(trx).patch(client).findById(client.guid);
+            }
+
+            objectionPost.externalGuid = response.guid;
+            objectionPost.status = 'created';
+            objectionPost.isSynced = true;
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
+    }
+
     static async handlepost(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
@@ -264,7 +307,7 @@ class Super extends Loadboard
         {
             await trx.rollback();
         }
-        
+
         return objectionPost;
     }
 
