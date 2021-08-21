@@ -16,7 +16,7 @@
     "license": "ISC",
     "dependencies": {
         "@azure/service-bus": "^7.3.0",
-        "@azure/storage-blob": "^12.6.0",
+        "@azure/storage-blob": "^12.7.0",
         "@azure/web-pubsub": "^1.0.0-beta.2",
         "ajv": "^8.2.0",
         "ajv-keywords": "^5.0.0",

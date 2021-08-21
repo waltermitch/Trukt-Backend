@@ -49,11 +49,16 @@ class QBO
 
     static async createInvoices(array)
     {
+        await QBO.syncListsToDB();
+        await QBO.refreshToken();
+
         // this way we take in arrays and singular objects
         if (!Array.isArray(array))
             array = [array];
 
         const invoices = [];
+
+        console.log(array);
 
         for (const order of array)
             for (const invoice of order.invoices)
@@ -68,12 +73,18 @@ class QBO
                 {
                     const commodity = lineItem.commodity;
 
-                    const stops = OrderStop.firstAndLast(commodity?.stops);
+                    if (commodity)
+                    {
 
-                    const pTerminal = stops[0]?.terminal;
-                    const dTerminal = stops[1]?.terminal;
+                        const stops = OrderStop.firstAndLast(commodity?.stops);
 
-                    lineItem.description = QBO.composeDescription(pTerminal, dTerminal, lineItem);
+                        const pTerminal = stops[0]?.terminal;
+                        const dTerminal = stops[1]?.terminal;
+
+                        lineItem.description = QBO.composeDescription(pTerminal, dTerminal, lineItem);
+                    }
+                    else
+                        lineItem.description = lineItem.notes || '';
                 }
 
                 const payload =
@@ -105,12 +116,18 @@ class QBO
                 {
                     const commodity = lineItem.commodity;
 
-                    const stops = OrderStop.firstAndLast(commodity?.stops);
+                    if (commodity)
+                    {
 
-                    const pTerminal = stops[0]?.terminal;
-                    const dTerminal = stops[1]?.terminal;
+                        const stops = OrderStop.firstAndLast(commodity?.stops);
 
-                    lineItem.description = QBO.composeDescription(pTerminal, dTerminal, lineItem);
+                        const pTerminal = stops[0]?.terminal;
+                        const dTerminal = stops[1]?.terminal;
+
+                        lineItem.description = QBO.composeDescription(pTerminal, dTerminal, lineItem);
+                    }
+                    else
+                        lineItem.description = lineItem.notes || '';
                 }
 
                 const payload =

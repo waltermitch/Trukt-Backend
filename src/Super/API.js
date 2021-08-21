@@ -157,7 +157,7 @@ class Super
             });
 
         // returning the first object in array
-        return res.data.data.objects[0];
+        return res?.data?.data?.objects?.[0];
     }
 
     static async getCarrierByDOT(dot)
@@ -195,17 +195,17 @@ class Super
                 if (!res)
                 {
                     // mark carrier not synced in Postgres
-                    await SFAccount.query().patch({ is_synced_in_super: false }).where('guid', data?.guid);
+                    return await SFAccount.query().patch({ is_synced_in_super: false }).where('guid', data?.guid);
                 }
             }
 
             // if we got here then we can update and save sdguid to database and mark as synced
-            await Promise.all([Super.updateCarrier(res.guid, data), SFAccount.query().patch({ sdGuid: res.guid, is_synced_in_super: true }).where('guid', data?.guid)]);
+            return await Promise.all([Super.updateCarrier(res.guid, data), SFAccount.query().patch({ sdGuid: res.guid, is_synced_in_super: true }).where('guid', data?.guid)]);
         }
         else
         {
             // update carrier
-            await Super.updateCarrier(data.sdGuid, data);
+            return await Super.updateCarrier(data.sdGuid, data);
         }
     }
 

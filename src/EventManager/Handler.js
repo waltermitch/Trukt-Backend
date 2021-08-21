@@ -1,8 +1,13 @@
 const SFAccount = require('../Models/SFAccount');
+const Queue = require('../Azure/ServiceBus');
 const PubSub = require('../Azure/PubSub');
 const Triumph = require('../Triumph/API');
 const QB = require('../QuickBooks/API');
 const Super = require('../Super/API');
+const NodeCache = require('node-cache');
+
+// duplicate checking cache
+const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 10 });
 
 class Handler
 {
@@ -66,15 +71,41 @@ class Handler
                 payload.insuranceExpiration = res.insuranceExpiration;
                 payload.preferred = res.preferred;
 
-                await Promise.all([QB.upsertCarrier(payload), Triumph.createProfile(payload), Super.updateCarrier(payload)]);
+                const result = await Promise.allSettled([QB.upsertVendor(payload), Super.upsertCarrier(payload), Triumph.createCarrierProfile(payload)]);
+
+                for (const r of result)
+                {
+                    if (r.status !== 'fulfilled')
+                        console.log(r.reason?.response?.data ? JSON.stringify(r.reason?.response?.data) : r.reason);
+                }
                 break;
 
             case 'Vendor':
-                await QB.upsertCarrier(payload);
+                await QB.upsertVendor(payload);
                 break;
 
             default:
                 return;
+        }
+    }
+
+    static async checkAccountUpdatedQueue()
+    {
+        const res = await Queue.pop('accountupdated');
+
+        if (res.status == 204)
+            return;
+        else
+            await Handler.accountUpdated(res.data);
+    }
+
+    static async pushToQueue(qName, data)
+    {
+        if (!cache.has(data.guid))
+        {
+            cache.set(data.guid, true, 10);
+
+            await Queue.push(qName, data);
         }
     }
 }

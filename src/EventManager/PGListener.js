@@ -6,7 +6,6 @@ const channels =
     ['job_status_change', 'account_upserted'];
 
 let client;
-let lastMessage = '';
 
 class PGListener
 {
@@ -17,7 +16,7 @@ class PGListener
             // get raw connection
             client = await PG.getRawConnection();
 
-            console.log('Trying to Listen To DB Triggers');
+            console.log('Listening To DB Triggers');
 
             // subscribe to these channels
             channels.forEach((e) => client.query(`LISTEN ${e}`));
@@ -25,11 +24,6 @@ class PGListener
             // handle notifications
             client.on('notification', async (msg) =>
             {
-                if (msg.payload === lastMessage)
-                    return;
-                else
-                    lastMessage = msg.payload;
-
                 try
                 {
                     // convert string to json
@@ -41,7 +35,7 @@ class PGListener
                             await Handler.jobStatusChanged(jsonMsg);
                             break;
                         case 'account_upserted':
-                            await Handler.accountUpdated(jsonMsg);
+                            await Handler.pushToQueue('accountupdated', jsonMsg);
                             break;
                         default:
                             break;
@@ -49,7 +43,8 @@ class PGListener
                 }
                 catch (err)
                 {
-                    const error = err?.response?.data || err?.response || err;
+                    console.log('Error In PG Triggers');
+                    const error = err?.response?.data || err;
                     console.log(JSON.stringify(error));
                 }
             });
