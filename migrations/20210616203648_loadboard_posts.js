@@ -76,7 +76,7 @@ exports.up = function (knex)
             'unposted',
             'removed'
         ], { useNative: true, enumName: 'post_status' }).defaultTo('fresh');
-        table.boolean('is_created').defaultTo(true);
+        table.boolean('is_created').defaultTo(false);
         table.boolean('is_posted').defaultTo(false);
         table.boolean('is_synced').defaultTo(false);
         table.boolean('has_error').defaultTo(false);
