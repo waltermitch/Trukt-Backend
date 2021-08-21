@@ -127,6 +127,7 @@ class LoadboardService
         });
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        console.log(job.postObjects);
         delete job.loadboardPosts;
         return job;
     }
@@ -193,17 +194,6 @@ class LoadboardService
         }
         delete job.loadboardPosts;
         return job;
-    }
-
-    static checkLoadboardsParam(loadboardNames)
-    {
-        for (let i = 0; i < loadboardNames.length; i++)
-        {
-            if (!dbLoadboardNames.includes(loadboardNames[i]))
-            {
-                throw `the loadboard: ${loadboardNames[i]} is not supported`;
-            }
-        }
     }
 
     static checkLoadboardsInput(posts)
