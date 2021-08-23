@@ -12,7 +12,7 @@ class CentralDispatch extends Loadboard
         super(data);
         this.loadboardName = 'CENTRALDISPATCH';
         this.postObject = data.postObjects[this.loadboardName];
-        this.senderId = process.env.CDId;
+        this.senderId = process.env['loadboards.CentralDispatch.Id'];
     }
 
     toJSON()
