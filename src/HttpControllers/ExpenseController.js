@@ -36,7 +36,7 @@ class ExpenseController
         if (!guid)
             throw { 'status': 400, 'data': 'Missing Guid' };
 
-        const result = await ExpenseService.update(req.body);
+        const result = await ExpenseService.update(guid, req.body);
 
         if (result)
         {

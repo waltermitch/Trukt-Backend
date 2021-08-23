@@ -1,7 +1,7 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const states = require('us-state-codes');
-const localSettings = require('../../local.settings.json');
+
 const LoadboardPost = require('../Models/LoadboardPost');
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
