@@ -1,7 +1,12 @@
-// const HTTPController = require('../Azure/HTTPController');
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const states = require('us-state-codes');
+const LoadboardPost = require('../Models/LoadboardPost');
+const Job = require('../Models/OrderJob');
+const Commodity = require('../Models/Commodity');
+const SFAccount = require('../Models/SFAccount');
+
+const anonUser = '00000000-0000-0000-0000-000000000000';
 
 class Super extends Loadboard
 {
@@ -10,16 +15,7 @@ class Super extends Loadboard
     {
         super(data);
         this.loadboardName = 'SUPERDISPATCH';
-        this.needsCreation = true;
-        this.data = data;
         this.postObject = data.postObjects[this.loadboardName];
-
-        // this.setEquipmentType(this.data.equipmentType?.name);
-    }
-
-    static validate(post)
-    {
-        console.log('validtaing for super');
     }
 
     toJSON()
@@ -32,8 +28,9 @@ class Super extends Loadboard
                 city: this.data.order.client.billingCity,
                 state: this.data.order.client.billingState,
                 zip: this.data.order.client.billingPostalCode,
-                contact_name: this.data.order.clientContact?.firstName + ' ' + this.data.order.clientContact?.lastName,
-                contact_phone: this.data.order.clientContact?.phone,
+
+                contact_name: this.data.order.clientContact?.name,
+                contact_phone: this.data.order.clientContact?.phoneNumber,
                 contact_mobile_phone: this.data.order.clientContact?.mobilePhone,
                 contact_email: this.data.order.clientContact?.email,
                 name: this.data.order.client.name,
@@ -44,16 +41,16 @@ class Super extends Loadboard
                 save_as_new: this.data.order.client.sdGuid === null
             },
             customer_payment: { tariff: currency(this.data.estimatedRevenue).value },
+            tariff: currency(this.data.estimatedRevenue).value,
+            payment: { terms: 'ach' },
+            price: currency(this.data.estimatedExpense).value,
             number: this.data.number,
             purchase_order_number: this.data.order.referenceNumber,
-            price: currency(this.data.estimatedExpense).value,
             dispatcher_name: this.data.order.dispatcher.name,
             instructions: this.data.order.instructions,
             loadboard_instructions: this.postObject.instructions || this.data.loadboardInstructions,
             transport_type: this.setEquipmentType(this.data.equipmentType?.name),
-            tariff: currency(this.data.estimatedRevenue).value,
             inspection_type: this.data.order.inspectionType,
-            payment: { terms: 'ach' },
             pickup:
             {
                 first_available_pickup_date: this.data.pickup.dateScheduledStart,
@@ -71,7 +68,7 @@ class Super extends Loadboard
                     zip: this.data.pickup.terminal.zipCode,
                     name: this.data.pickup.terminal.name,
                     business_type: this.setBusinessType(this.data.pickup.terminal.locationType),
-                    contact_name: this.data.pickup.primaryContact.firstName + ' ' + this.data.pickup.primaryContact.lastName,
+                    contact_name: this.data.pickup.primaryContact.name,
                     contact_email: this.data.pickup.primaryContact.email,
                     contact_phone: this.data.pickup.primaryContact.phoneNumber,
                     contact_mobile_phone: this.data.pickup.primaryContact.mobileNumber,
@@ -94,7 +91,7 @@ class Super extends Loadboard
                     zip: this.data.delivery.terminal.zipCode,
                     name: this.data.delivery.terminal.name,
                     business_type: this.setBusinessType(this.data.delivery.terminal.locationType),
-                    contact_name: this.data.delivery.primaryContact.firstName + ' ' + this.data.delivery.primaryContact.lastName,
+                    contact_name: this.data.delivery.primaryContact.name,
                     contact_email: this.data.delivery.primaryContact.email,
                     contact_phone: this.data.delivery.primaryContact.phoneNumber,
                     contact_mobile_phone: this.data.delivery.primaryContact.mobileNumber,
@@ -103,6 +100,7 @@ class Super extends Loadboard
             },
 
             vehicles: this.formatCommodities(this.data.commodities),
+
             guid: this.postObject.externalGuid
         };
 
@@ -173,9 +171,9 @@ class Super extends Loadboard
                 'type': this.setVehicleType(x.commType.type),
                 'is_inoperable': false,
                 'lot_number': x.lotNumber,
-                'price': 12,
-                'tariff': 13,
-                'guid': null,
+                'price': x.bill.amount,
+                'tariff': x.invoice.amount,
+                'guid': x.extraExternalData?.sdGuid,
                 'vin': x.identifier
             };
             return veh;
@@ -222,6 +220,188 @@ class Super extends Loadboard
                 return 'boat';
             default:
                 return 'other';
+        }
+    }
+
+    static async handlecreate(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
+                    order.[client], commodities(distinct, isNotDeleted)
+                ]`);
+
+                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of vehicles)
+                {
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                }
+
+                const client = job.order.client;
+                if (client.sdGuid !== response.customer.counterparty_guid)
+                {
+                    client.sdGuid = response.customer.counterparty_guid;
+                    client.setUpdatedBy(anonUser);
+                    await SFAccount.query(trx).patch(client).findById(client.guid);
+                }
+
+                objectionPost.externalGuid = response.guid;
+                objectionPost.status = 'created';
+                objectionPost.isSynced = true;
+            }
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
+    }
+
+    static async handlepost(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
+                    order.[client], commodities(distinct, isNotDeleted)
+                ]`);
+
+                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of vehicles)
+                {
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                }
+
+                const client = job.order.client;
+                if (client.sdGuid !== response.customer.counterparty_guid)
+                {
+                    client.sdGuid = response.customer.counterparty_guid;
+                    client.setUpdatedBy(anonUser);
+                    await SFAccount.query(trx).patch(client).findById(client.guid);
+                }
+
+                objectionPost.externalGuid = response.guid;
+                objectionPost.externalPostGuid = response.guid;
+                objectionPost.status = 'posted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = true;
+            }
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
+    }
+
+    static async handleunpost(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+        console.log(response);
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+            }
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
+    }
+
+    static async handleupdate(post, response)
+    {
+        post.externalGuid = response.guid;
+        post.externalPostGuid = response.guid;
+        post.isSynced = true;
+        post.isPosted = true;
+    }
+
+    static updateCommodity(ogCommodities, newCommodities)
+    {
+        const comsToUpdate = [];
+        while (ogCommodities.length !== 0)
+        {
+            const com = ogCommodities.shift();
+            this.commodityUpdater(com, newCommodities);
+            comsToUpdate.push(com);
+        }
+
+        return comsToUpdate;
+    }
+
+    static commodityUpdater(com, newCommodities)
+    {
+        for (let i = 0; i < newCommodities.length; i++)
+        {
+            const commodity = newCommodities[i];
+            const newName = commodity.vin + ' ' + commodity.year + ' ' + commodity.make + ' ' + commodity.model;
+            const comName = com.identifier + ' ' + com.description;
+            if (comName === newName)
+            {
+                if (com.extraExternalData == undefined)
+                {
+                    com.extraExternalData = {};
+                }
+                com.extraExternalData.sdGuid = commodity.guid;
+                newCommodities.shift(i);
+            }
         }
     }
 }

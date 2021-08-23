@@ -1,6 +1,6 @@
 const BaseModel = require('./BaseModel');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
-const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin, AuthorRelationMappings, isNotDeleted } = require('./Mixins/RecordAuthors');
 
 // used for flattening the commodity in/out api
 const vehicleFields = [
@@ -66,13 +66,15 @@ class Commodity extends BaseModel
 
     static get modifiers()
     {
-        return {
+        const modifiers = {
             distinct(query)
             {
                 // use distinctOn because we are using pg
                 query.distinctOn('guid');
             }
         };
+        Object.assign(modifiers, isNotDeleted(Commodity.tableName));
+        return modifiers;
     }
 
     isVehicle()
@@ -200,6 +202,8 @@ class Commodity extends BaseModel
         json = super.$formatDatabaseJson(json);
 
         delete json.commType;
+        delete json.lotNumber;
+        delete json.stopGuid;
         return json;
     }
 

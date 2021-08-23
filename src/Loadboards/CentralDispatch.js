@@ -1,6 +1,9 @@
 const currency = require('currency.js');
 const states = require('us-state-codes');
 const Loadboard = require('./Loadboard');
+const LoadboardPost = require('../Models/LoadboardPost');
+
+const anonUser = '00000000-0000-0000-0000-000000000000';
 
 class CentralDispatch extends Loadboard
 {
@@ -9,7 +12,7 @@ class CentralDispatch extends Loadboard
         super(data);
         this.loadboardName = 'CENTRALDISPATCH';
         this.postObject = data.postObjects[this.loadboardName];
-        this.senderId = process.env.CDId;
+        this.senderId = process.env['loadboards.CentralDispatch.Id'];
     }
 
     toJSON()
@@ -17,7 +20,7 @@ class CentralDispatch extends Loadboard
         let string = `${this.data.number},
         ${this.data.pickup.terminal.city},${states.getStateCodeByStateName(this.data.pickup.terminal.state)},${this.data.pickup.terminal.zipCode},
         ${this.data.delivery.terminal.city},${states.getStateCodeByStateName(this.data.delivery.terminal.state)},${this.data.delivery.terminal.zipCode},
-        ${this.data.estimatedExpense},0.00,check,delivery,none,${this.setEquipmentType()},${this.setINOP()},
+        ${this.data.estimatedExpense},0.00,check,delivery,none,${this.setEquipmentType()},${this.getINOP()},
         ${this.toStringDate(this.data.pickup.dateScheduledStart)},${this.toDate(this.dateAdd(this.data.pickup.dateScheduledStart, 30, 'days'))},
         ${this.postObject.instructions},${this.setVehicles()}*`;
 
@@ -26,10 +29,9 @@ class CentralDispatch extends Loadboard
             string = string.replace('\n', ' ');
 
         return string;
-
     }
 
-    setINOP()
+    getINOP()
     {
         for (const com of this.data.commodities)
         {
@@ -117,6 +119,74 @@ class CentralDispatch extends Loadboard
             default:
                 return 'Other';
         }
+    }
+
+    static async handlepost(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalGuid = response.id;
+                objectionPost.externalPostGuid = response.id;
+                objectionPost.status = 'posted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = true;
+            }
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
+    }
+
+    static async handleunpost(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalGuid = null;
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+            }
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
     }
 }
 
