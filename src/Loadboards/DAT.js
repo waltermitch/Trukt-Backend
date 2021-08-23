@@ -21,6 +21,7 @@ class DAT extends Loadboard
 
     toJSON()
     {
+        this.adjustDates();
         const payload = {
             freight: {
                 equipmentType: this.postObject.values.equipmentType, // equipment type id as string
