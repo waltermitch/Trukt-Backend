@@ -5,6 +5,7 @@ const states = require('us-state-codes');
 const R = require('ramda');
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
+const returnTo = process.env['rcgqueue.loadboards.subscription.to'];
 const loadboardName = '';
 
 class Loadboard
@@ -21,7 +22,7 @@ class Loadboard
         let payload = {};
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'create';
-        payloadMetadata.user = process.env['developerName'];
+        payloadMetadata.user = returnTo;
         payload = this.toJSON();
 
         return { payload, payloadMetadata };
@@ -32,7 +33,7 @@ class Loadboard
         let payload = {};
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'post';
-        payloadMetadata.user = process.env['developerName'];
+        payloadMetadata.user = returnTo;
         payload = this.toJSON();
 
         return { payload, payloadMetadata };
@@ -43,7 +44,7 @@ class Loadboard
         const payload = { guid: this.postObject.externalPostGuid };
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
         payloadMetadata.action = 'unpost';
-        payloadMetadata.user = process.env['developerName'];
+        payloadMetadata.user = returnTo;
 
         return { payload, payloadMetadata };
     }
@@ -52,7 +53,7 @@ class Loadboard
     {
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
         payloadMetadata.action = ['update'];
-        payloadMetadata.user = process.env['developerName'];
+        payloadMetadata.user = returnTo;
 
         return { payload: this.toJSON(), payloadMetadata };
     }

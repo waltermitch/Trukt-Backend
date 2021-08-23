@@ -151,7 +151,7 @@ class CarDeliveryNetwork extends Loadboard
             objectionPost.isSynced = true;
             objectionPost.isPosted = false;
             objectionPost.setUpdatedBy(anonUser);
-            
+
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
             await trx.commit();
         }
