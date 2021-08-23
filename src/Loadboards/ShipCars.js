@@ -166,16 +166,26 @@ class ShipCars extends Loadboard
 
         try
         {
-            const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
-            const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-            for (const vehicle of vehicles)
+            if (response.hasErrors)
             {
-                vehicle.setUpdatedBy(anonUser);
-                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
             }
-            objectionPost.externalGuid = response.id;
-            objectionPost.status = 'created';
-            objectionPost.isSynced = true;
+            else
+            {
+                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
+                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of vehicles)
+                {
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                }
+                objectionPost.externalGuid = response.id;
+                objectionPost.status = 'created';
+                objectionPost.isSynced = true;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
@@ -197,18 +207,28 @@ class ShipCars extends Loadboard
 
         try
         {
-            const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
-            const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-            for (const vehicle of vehicles)
+            if (response.hasErrors)
             {
-                vehicle.setUpdatedBy(anonUser);
-                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
             }
-            objectionPost.externalGuid = response.id;
-            objectionPost.externalPostGuid = response.id;
-            objectionPost.status = 'posted';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = true;
+            else
+            {
+                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
+                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of vehicles)
+                {
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                }
+                objectionPost.externalGuid = response.id;
+                objectionPost.externalPostGuid = response.id;
+                objectionPost.status = 'posted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = true;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
@@ -230,10 +250,20 @@ class ShipCars extends Loadboard
 
         try
         {
-            objectionPost.isPosted = false;
-            objectionPost.externalPostGuid = null;
-            objectionPost.status = 'unposted';
-            objectionPost.isSynced = true;
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.isPosted = false;
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isSynced = true;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);

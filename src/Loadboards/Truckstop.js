@@ -107,6 +107,7 @@ class Truckstop extends Loadboard
             if (response.hasErrors !== undefined)
             {
                 objectionPost.status = 'fresh';
+                objectionPost.isSynced = false;
                 objectionPost.hasError = true;
                 objectionPost.apiError = response.errors;
             }
@@ -142,11 +143,21 @@ class Truckstop extends Loadboard
 
         try
         {
-            objectionPost.externalGuid = null;
-            objectionPost.externalPostGuid = null;
-            objectionPost.status = 'unposted';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = false;
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalGuid = null;
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);

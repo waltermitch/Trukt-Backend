@@ -96,9 +96,19 @@ class CarDeliveryNetwork extends Loadboard
 
         try
         {
-            objectionPost.externalGuid = response.id;
-            objectionPost.status = 'created';
-            objectionPost.isSynced = true;
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalGuid = response.id;
+                objectionPost.status = 'created';
+                objectionPost.isSynced = true;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
@@ -120,11 +130,21 @@ class CarDeliveryNetwork extends Loadboard
 
         try
         {
-            objectionPost.externalGuid = response.id;
-            objectionPost.externalPostGuid = response.id;
-            objectionPost.status = 'posted';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = true;
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalGuid = response.id;
+                objectionPost.externalPostGuid = response.id;
+                objectionPost.status = 'posted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = true;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
@@ -146,10 +166,20 @@ class CarDeliveryNetwork extends Loadboard
 
         try
         {
-            objectionPost.externalPostGuid = null;
-            objectionPost.status = 'unposted';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = false;
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);

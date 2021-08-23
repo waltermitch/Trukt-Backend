@@ -127,11 +127,21 @@ class CentralDispatch extends Loadboard
         const objectionPost = LoadboardPost.fromJson(post);
         try
         {
-            objectionPost.externalGuid = response.id;
-            objectionPost.externalPostGuid = response.id;
-            objectionPost.status = 'posted';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = true;
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalGuid = response.id;
+                objectionPost.externalPostGuid = response.id;
+                objectionPost.status = 'posted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = true;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
@@ -151,11 +161,21 @@ class CentralDispatch extends Loadboard
         const objectionPost = LoadboardPost.fromJson(post);
         try
         {
-            objectionPost.externalGuid = null;
-            objectionPost.externalPostGuid = null;
-            objectionPost.status = 'unposted';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = false;
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalGuid = null;
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);

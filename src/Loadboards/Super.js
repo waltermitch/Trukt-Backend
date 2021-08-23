@@ -230,28 +230,38 @@ class Super extends Loadboard
 
         try
         {
-            const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
-                order.[client], commodities(distinct, isNotDeleted)
-            ]`);
-
-            const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-            for (const vehicle of vehicles)
+            if (response.hasErrors)
             {
-                vehicle.setUpdatedBy(anonUser);
-                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
             }
-
-            const client = job.order.client;
-            if (client.sdGuid !== response.customer.counterparty_guid)
+            else
             {
-                client.sdGuid = response.customer.counterparty_guid;
-                client.setUpdatedBy(anonUser);
-                await SFAccount.query(trx).patch(client).findById(client.guid);
-            }
+                const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
+                    order.[client], commodities(distinct, isNotDeleted)
+                ]`);
 
-            objectionPost.externalGuid = response.guid;
-            objectionPost.status = 'created';
-            objectionPost.isSynced = true;
+                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of vehicles)
+                {
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                }
+
+                const client = job.order.client;
+                if (client.sdGuid !== response.customer.counterparty_guid)
+                {
+                    client.sdGuid = response.customer.counterparty_guid;
+                    client.setUpdatedBy(anonUser);
+                    await SFAccount.query(trx).patch(client).findById(client.guid);
+                }
+
+                objectionPost.externalGuid = response.guid;
+                objectionPost.status = 'created';
+                objectionPost.isSynced = true;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
@@ -273,30 +283,40 @@ class Super extends Loadboard
 
         try
         {
-            const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
-                order.[client], commodities(distinct, isNotDeleted)
-            ]`);
-
-            const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-            for (const vehicle of vehicles)
+            if (response.hasErrors)
             {
-                vehicle.setUpdatedBy(anonUser);
-                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
             }
-
-            const client = job.order.client;
-            if (client.sdGuid !== response.customer.counterparty_guid)
+            else
             {
-                client.sdGuid = response.customer.counterparty_guid;
-                client.setUpdatedBy(anonUser);
-                await SFAccount.query(trx).patch(client).findById(client.guid);
-            }
+                const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
+                    order.[client], commodities(distinct, isNotDeleted)
+                ]`);
 
-            objectionPost.externalGuid = response.guid;
-            objectionPost.externalPostGuid = response.guid;
-            objectionPost.status = 'posted';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = true;
+                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of vehicles)
+                {
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                }
+
+                const client = job.order.client;
+                if (client.sdGuid !== response.customer.counterparty_guid)
+                {
+                    client.sdGuid = response.customer.counterparty_guid;
+                    client.setUpdatedBy(anonUser);
+                    await SFAccount.query(trx).patch(client).findById(client.guid);
+                }
+
+                objectionPost.externalGuid = response.guid;
+                objectionPost.externalPostGuid = response.guid;
+                objectionPost.status = 'posted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = true;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
@@ -315,13 +335,23 @@ class Super extends Loadboard
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(post);
-
+        console.log(response);
         try
         {
-            objectionPost.externalPostGuid = null;
-            objectionPost.status = 'unposted';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = false;
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+            }
             objectionPost.setUpdatedBy(anonUser);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
