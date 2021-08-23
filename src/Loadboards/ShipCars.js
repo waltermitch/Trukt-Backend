@@ -1,6 +1,4 @@
 const Loadboard = require('./Loadboard');
-const DateTime = require('luxon').DateTime;
-const currency = require('currency.js');
 const states = require('us-state-codes');
 const LoadboardPost = require('../Models/LoadboardPost');
 const Job = require('../Models/OrderJob');

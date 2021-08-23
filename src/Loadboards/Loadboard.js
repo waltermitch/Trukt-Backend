@@ -1,7 +1,5 @@
 const LoadboardPost = require('../Models/LoadboardPost');
 const DateTime = require('luxon').DateTime;
-const currency = require('currency.js');
-const states = require('us-state-codes');
 const R = require('ramda');
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
