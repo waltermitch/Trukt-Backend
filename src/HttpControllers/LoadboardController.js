@@ -3,7 +3,7 @@ const LoadboardService = require('../Services/LoadboardService');
 
 class LoadboardController extends HttpRouteController
 {
-    static async handleCreate(req, res)
+    static async createJobPost(req, res)
     {
         const posts = req.body.posts;
 
@@ -21,7 +21,7 @@ class LoadboardController extends HttpRouteController
         }
     }
 
-    static async handlePost(req, res)
+    static async postJob(req, res)
     {
         const posts = req.body.posts;
 
@@ -40,7 +40,7 @@ class LoadboardController extends HttpRouteController
 
     }
 
-    static async handleUnpost(req, res)
+    static async unpostJob(req, res)
     {
         const posts = req.body.posts;
 
