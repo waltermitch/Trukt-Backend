@@ -141,6 +141,7 @@ class OrderService
     {
 
         const trx = await Order.startTransaction();
+
         try
         {
             // use trx (transaction) because none of the data should be left in the database if any of it fails
@@ -215,8 +216,7 @@ class OrderService
                 const commType = commTypes.find(it => CommodityType.compare(commodity, it));
                 if (!commType)
                 {
-                    console.log(commodity);
-                    throw new Error(`unknown commodity ${commodity.commType?.category} ${commodity.commType?.type}`);
+                    throw new Error(`unknown commodity ${commodity.commType.category} ${commodity.commType.type}`);
                 }
                 commodity.graphLink('commType', commType);
 

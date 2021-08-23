@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 
 require('./local.settings');
+require('./src/HttpControllers/HttpRouteController');
 const express = require('express');
 const session = require('express-session');
 const domain = require('./src/Domain');
