@@ -62,6 +62,7 @@ class LoadboardService
         const job = await LoadboardService.getAllPostingData(jobId, posts);
         const payloads = [];
         let lbPayload;
+
         for (const post of posts)
         {
             lbPayload = new loadboardClasses[`${post.loadboard}`](job);
@@ -71,8 +72,10 @@ class LoadboardService
         // sending all payloads as one big object so one big response can be returned
         // and handler can then use one big transaction to update all records rather
         // than have a single new transaction for each posting
-        await sender.sendMessages({ body: payloads });
-        return job;
+        if (payloads.length != 0)
+        {
+            await sender.sendMessages({ body: payloads });
+        }
     }
 
     static async unpostPostings(jobId, posts, currentUser)
@@ -90,8 +93,10 @@ class LoadboardService
         // sending all payloads as one big object so one big response can be returned
         // and handler can then use one big transaction to update all records rather
         // than have a single new transaction for each posting
-        await sender.sendMessages({ body: payloads });
-        return job;
+        if (payloads.length != 0)
+        {
+            await sender.sendMessages({ body: payloads });
+        }
     }
 
     static async updatePostings(jobId)
@@ -155,7 +160,7 @@ class LoadboardService
         });
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
-        console.log(job.postObjects);
+
         delete job.loadboardPosts;
         return job;
     }
@@ -182,35 +187,45 @@ class LoadboardService
     {
         const newPosts = [];
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
-        for (const post of posts)
+
+        for (let i = 0; i < posts.length; i++)
         {
-            if (post.values != null)
+            const post = posts[i];
+            if (job.postObjects[`${post.loadboard}`].hasError)
             {
-                const lbContact = await LoadboardContact.query().findById(post.values.contact).where({ loadboard: post.loadboard });
-                post.values.contact = lbContact;
-            }
-            if (!(post.loadboard in job.postObjects))
-            {
-                const objectionPost = LoadboardPost.fromJson({
-                    jobGuid: job.guid,
-                    loadboard: post.loadboard,
-                    instructions: post.loadboardInstructions || job.loadboardInstructions.substring(0, 59),
-                    values: post.values,
-                    createdByGuid: currentUserGuid
-                });
-                newPosts.push(objectionPost);
+                delete job.postObjects[`${post.loadboard}`];
+                posts.splice(i, 1);
             }
             else
             {
-                job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].id, {
-                    id: job.postObjects[`${post.loadboard}`].id,
-                    jobGuid: job.guid,
-                    loadboard: post.loadboard,
-                    instructions: post.loadboardInstructions || job.loadboardInstructions,
-                    isSynced: false,
-                    values: post.values,
-                    updatedByGuid: currentUserGuid
-                });
+                if (post.values != null)
+                {
+                    const lbContact = await LoadboardContact.query().findById(post.values.contact).where({ loadboard: post.loadboard });
+                    post.values.contact = lbContact;
+                }
+                if (!(post.loadboard in job.postObjects))
+                {
+                    const objectionPost = LoadboardPost.fromJson({
+                        jobGuid: job.guid,
+                        loadboard: post.loadboard,
+                        instructions: post.loadboardInstructions || job.loadboardInstructions.substring(0, 59),
+                        values: post.values,
+                        createdByGuid: currentUserGuid
+                    });
+                    newPosts.push(objectionPost);
+                }
+                else
+                {
+                    job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].id, {
+                        id: job.postObjects[`${post.loadboard}`].id,
+                        jobGuid: job.guid,
+                        loadboard: post.loadboard,
+                        instructions: post.loadboardInstructions || job.loadboardInstructions,
+                        isSynced: false,
+                        values: post.values,
+                        updatedByGuid: currentUserGuid
+                    });
+                }
             }
         }
         if (newPosts.length != 0)
