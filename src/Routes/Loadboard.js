@@ -1,14 +1,12 @@
-// const controller = require('../HttpControllers/LoadboardController');
-// const { uuidRegexStr } = require('../Utils/Regexes');
-// const router = require('express').Router();
+const controller = require('../HttpControllers/LoadboardController');
+const { uuidRegexStr } = require('../Utils/Regexes');
+const router = require('express').Router();
 
-// const prefix = '/loadboard';
+const prefix = '/loadboard';
 
-// router
-//     .post(`${prefix}/:jobId(${uuidRegexStr})`, controller.constructor.handlePost)
-//     .delete(`${prefix}/:jobId(${uuidRegexStr})`, controller.constructor.handleUnpost);
+router
+    .post(`${prefix}/:jobId(${uuidRegexStr})`, controller.constructor.createJobPost)
+    .put(`${prefix}/:jobId(${uuidRegexStr})`, controller.constructor.postJob)
+    .delete(`${prefix}/:jobId(${uuidRegexStr})`, controller.constructor.unpostJob);
 
-// // .post(`${prefix}/bulkPost`, controller.constructor.bulkPost)
-// // .delete(`${prefix}/bulkUnpost`, controller.constructor.bulkUnpost);
-
-// module.exports = router;
+module.exports = router;

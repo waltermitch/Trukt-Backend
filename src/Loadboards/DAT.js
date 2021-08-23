@@ -1,6 +1,9 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const states = require('us-state-codes');
+const LoadboardPost = require('../Models/LoadboardPost');
+
+const anonUser = '00000000-0000-0000-0000-000000000000';
 
 class DAT extends Loadboard
 {
@@ -8,7 +11,6 @@ class DAT extends Loadboard
     {
         super(data);
         this.loadboardName = 'DAT';
-        this.data = data;
         this.postObject = data.postObjects[this.loadboardName];
     }
 
@@ -17,12 +19,13 @@ class DAT extends Loadboard
 
     }
 
-    createLoad()
+    toJSON()
     {
+        this.adjustDates();
         const payload = {
             freight: {
-                equipmentType: this.postObject.values.equipmentTypeValue, // equipment type id as string
-                fullPartial: this.postObject.values.loadTypeValue, // either FULL or PARTIAL
+                equipmentType: this.postObject.values.equipmentType, // equipment type id as string
+                fullPartial: this.postObject.values.loadType, // either FULL or PARTIAL
                 comments: [
                     {
                         comment: this.postObject.values.comment1
@@ -37,7 +40,7 @@ class DAT extends Loadboard
             lane: {
                 origin: {
                     city: this.data.pickup.terminal.city,
-                    stateProv: this.data.pickup.terminal.state, // abbreviated state
+                    stateProv: this.data.pickup.terminal.state,
                     postalCode: this.data.pickup.terminal.zipCode
                 },
                 destination: {
@@ -47,21 +50,88 @@ class DAT extends Loadboard
                 }
             },
             exposure: {
-                audience: { includesExtendedNetwork: this.values.extendedNetwork, includesLoadBoard: true },
-                earliestAvailabilityWhen: this.pickup.dateScheduledStart,
-                latestAvailabilityWhen: this.pickup.dateScheduledEnd,
+                audience: { loadBoard: { includesExtendedNetwork: this.postObject.values.extendedNetwork } },
+                earliestAvailabilityWhen: this.data.pickup.dateScheduledStart,
+                latestAvailabilityWhen: this.data.pickup.dateScheduledEnd,
 
                 // endWhen - (From DAT) this is the date and time whent he posting is no longer visible to the target audience.
                 // this fueld gives you the flexibility to fine tune when the posting will no longer be available, separate from the end of the pick up window.
-                endWhen: '30 days after customer end date', // this.minusMinutes(this.pickup.customerEndDate, 30),
+                endWhen: this.dateAdd(this.data.pickup.dateScheduledEnd, 30, 'day'),
                 preferredContactMethod: 'PRIMARY_PHONE',
                 transactionDetails: {
-                    loadOfferRateUsd: this.data.estimatedExpense // job.estimated_expense
+                    loadOfferRateUsd: this.data.estimatedExpense
                 }
             }
         };
 
         return payload;
+    }
+
+    static async handlepost(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalGuid = response.id;
+                objectionPost.externalPostGuid = response.id;
+                objectionPost.status = 'posted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = true;
+            }
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
+    }
+
+    static async handleunpost(post, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(post);
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalGuid = null;
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+            }
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rolback();
+        }
     }
 }
 
