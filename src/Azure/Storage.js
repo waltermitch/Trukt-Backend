@@ -18,9 +18,6 @@ const sas = {};
 
 class AzureStorage
 {
-    constructor()
-    { }
-
     static async storeBlob(fileName, fileContents)
     {
         // init blob connection
