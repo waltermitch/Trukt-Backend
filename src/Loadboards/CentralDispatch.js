@@ -1,4 +1,3 @@
-const currency = require('currency.js');
 const states = require('us-state-codes');
 const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
