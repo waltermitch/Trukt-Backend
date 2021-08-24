@@ -83,6 +83,11 @@ class Loadboard
         return date ? DateTime.fromJSDate(date).plus({ [`${type}`]: amount }).toString() : null;
     }
 
+    minusMinutes(date, amount)
+    {
+        return DateTime.fromJSDate(date).minus({ minutes: amount }).toUTC().toString();
+    }
+
     adjustDates()
     {
         const now = new Date(Date.now());
