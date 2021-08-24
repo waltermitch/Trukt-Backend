@@ -4,11 +4,20 @@ const Bill = require('../Models/Bill');
 
 class ExpenseService
 {
-    static async update(guid, data)
+    static async update(guid, data, user)
     {
-        const res = await Line.query().patch(data);
+        const payload =
+        {
+            notes: data.notes || undefined,
+            amount: data.amount || undefined,
+            itemId: data.itemId || undefined,
+            commodityGuid: data.commodityGuid || undefined,
+            updatedByGuid: user
+        };
 
-        return res;
+        await Line.query().patch(payload).findOne({ 'guid': guid });
+
+        return;
     }
 
     static async create(data, user)
