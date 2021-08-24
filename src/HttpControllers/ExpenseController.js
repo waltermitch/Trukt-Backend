@@ -1,18 +1,48 @@
+const ExpenseService = require('../Services/ExpenseService');
+
 class ExpenseController
 {
     static async get(req, res)
     {
+        const result = await ExpenseService.find(req.params.expenseId);
 
+        if (result)
+        {
+            res.status(200);
+            res.json(result);
+        }
+        else
+        {
+            res.status(404);
+            res.json({ 'error': 'No Matches Found' });
+        }
     }
 
     static async post(req, res)
     {
-        console.log(req.body);
+        const result = await ExpenseService.create(req.body, req.session.userGuid);
+
+        if (result)
+        {
+            res.status(200);
+            res.json(result);
+        }
     }
 
-    static async patch()
+    static async patch(req, res)
     {
-        // TODO: Implement patch
+        const guid = req?.body?.guid || req?.params?.expenseId;
+
+        if (!guid)
+            throw { 'status': 400, 'data': 'Missing Guid' };
+
+        const result = await ExpenseService.update(guid, req.body, req.session.userGuid);
+
+        if (result)
+        {
+            res.status(200);
+            res.json(result);
+        }
     }
 }
 

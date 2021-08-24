@@ -58,8 +58,6 @@ class QBO
 
         const invoices = [];
 
-        console.log(array);
-
         for (const order of array)
             for (const invoice of order.invoices)
             {
