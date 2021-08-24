@@ -20,7 +20,7 @@ class ExpenseController
 
     static async post(req, res)
     {
-        const result = await ExpenseService.create(req.body);
+        const result = await ExpenseService.create(req.body, req.session.userGuid);
 
         if (result)
         {
@@ -36,7 +36,7 @@ class ExpenseController
         if (!guid)
             throw { 'status': 400, 'data': 'Missing Guid' };
 
-        const result = await ExpenseService.update(guid, req.body);
+        const result = await ExpenseService.update(guid, req.body, req.session.userGuid);
 
         if (result)
         {
