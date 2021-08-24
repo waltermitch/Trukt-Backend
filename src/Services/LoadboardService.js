@@ -38,15 +38,10 @@ class LoadboardService
         {
             // to prevent creating multiples of the same loads, check if the posting already
             // has an external guid. If it does and it alreadys exists, skip it.
-            if (job.postObjects[`${post.loadboard}`].externalGuid != null)
-            {
-                continue;
-            }
-            else
+            if (job.postObjects[`${post.loadboard}`].externalGuid == null)
             {
                 lbPayload = new loadboardClasses[`${post.loadboard}`](job);
                 payloads.push(lbPayload['create']());
-
             }
         }
 
@@ -208,7 +203,7 @@ class LoadboardService
                     const objectionPost = LoadboardPost.fromJson({
                         jobGuid: job.guid,
                         loadboard: post.loadboard,
-                        instructions: post.loadboardInstructions || job.loadboardInstructions.substring(0, 59),
+                        instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
                         values: post.values,
                         createdByGuid: currentUserGuid
                     });
@@ -220,7 +215,7 @@ class LoadboardService
                         id: job.postObjects[`${post.loadboard}`].id,
                         jobGuid: job.guid,
                         loadboard: post.loadboard,
-                        instructions: post.loadboardInstructions || job.loadboardInstructions,
+                        instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
                         isSynced: false,
                         values: post.values,
                         updatedByGuid: currentUserGuid
