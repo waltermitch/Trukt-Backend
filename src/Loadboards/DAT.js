@@ -41,12 +41,12 @@ class DAT extends Loadboard
             lane: {
                 origin: {
                     city: this.data.pickup.terminal.city,
-                    stateProv: this.data.pickup.terminal.state,
+                    stateProv: this.getStateCode(this.data.pickup.terminal.state),
                     postalCode: this.data.pickup.terminal.zipCode
                 },
                 destination: {
                     city: this.data.delivery.terminal.city,
-                    stateProv: this.data.delivery.terminal.state,
+                    stateProv: this.getStateCode(this.data.delivery.terminal.state),
                     postalCode: this.data.delivery.terminal.zipCode
                 }
             },
