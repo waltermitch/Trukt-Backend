@@ -1,6 +1,4 @@
 const Loadboard = require('./Loadboard');
-const currency = require('currency.js');
-const states = require('us-state-codes');
 const LoadboardPost = require('../Models/LoadboardPost');
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
@@ -34,6 +32,9 @@ class DAT extends Loadboard
                         comment: this.postObject.values.comment2
                     }
                 ],
+                commodity: {
+                    details: this.postObject.values.commodity
+                },
                 lengthFeet: this.postObject.values.length, // integer good between 1 and 199
                 weightPounds: this.postObject.values.weight // integer good between 1 and 999998
             },
@@ -51,12 +52,12 @@ class DAT extends Loadboard
             },
             exposure: {
                 audience: { loadBoard: { includesExtendedNetwork: this.postObject.values.extendedNetwork } },
-                earliestAvailabilityWhen: this.data.pickup.dateScheduledStart,
-                latestAvailabilityWhen: this.data.pickup.dateScheduledEnd,
+                earliestAvailabilityWhen: this.data.pickup.dateRequestedStart,
+                latestAvailabilityWhen: this.data.pickup.dateRequestedEnd,
 
                 // endWhen - (From DAT) this is the date and time whent he posting is no longer visible to the target audience.
                 // this fueld gives you the flexibility to fine tune when the posting will no longer be available, separate from the end of the pick up window.
-                endWhen: this.dateAdd(this.data.pickup.dateScheduledEnd, 30, 'day'),
+                endWhen: this.minusMinutes(this.data.pickup.dateRequestedEnd, 30),
                 preferredContactMethod: 'PRIMARY_PHONE',
                 transactionDetails: {
                     loadOfferRateUsd: this.data.estimatedExpense
@@ -132,6 +133,8 @@ class DAT extends Loadboard
         {
             await trx.rolback();
         }
+
+        return objectionPost;
     }
 }
 

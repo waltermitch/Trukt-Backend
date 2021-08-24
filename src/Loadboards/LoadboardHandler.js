@@ -2,14 +2,12 @@ const Knex = require('knex');
 const knexfile = require('../../knexfile');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 
-const knex = Knex(knexfile());
-
 const { ServiceBusClient } = require('@azure/service-bus');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const topicName = 'loadboard_incoming';
 const sbClient = new ServiceBusClient(connectionString);
-const receiver = sbClient.createReceiver(topicName, process.env['rcgqueue.loadboards.subscription.to']);
+const receiver = sbClient.createReceiver(topicName, process.env['azure.servicebus.loadboards.subscription.to']);
 
 const pubsub = require('../Azure/PubSub');
 

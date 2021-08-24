@@ -53,12 +53,12 @@ class Super extends Loadboard
             inspection_type: this.data.order.inspectionType,
             pickup:
             {
-                first_available_pickup_date: this.data.pickup.dateScheduledStart,
-                scheduled_at: this.data.pickup.dateScheduledStart,
-                scheduled_ends_at: this.data.pickup.dateScheduledEnd,
-                scheduled_at_by_customer: this.data.pickup.dateScheduledStart,
-                scheduled_ends_at_by_customer: this.data.pickup.dateScheduledEnd,
-                date_type: this.setDateType(this.data.pickup.dateScheduledType),
+                first_available_pickup_date: this.data.pickup.dateRequestedStart,
+                scheduled_at: this.data.pickup.dateScheduledStart ? this.data.pickup.dateScheduledStart : this.data.pickup.dateRequestedStart,
+                scheduled_ends_at: this.data.pickup.dateScheduledEnd ? this.data.pickup.dateScheduledEnd : this.data.pickup.dateRequestedEnd,
+                scheduled_at_by_customer: this.data.pickup.dateRequestedStart,
+                scheduled_ends_at_by_customer: this.data.pickup.dateRequestedEnd,
+                date_type: this.setDateType(this.data.pickup.dateRequestedType),
                 notes: this.data.pickup.notes,
                 venue:
                 {
@@ -68,21 +68,21 @@ class Super extends Loadboard
                     zip: this.data.pickup.terminal.zipCode,
                     name: this.data.pickup.terminal.name,
                     business_type: this.setBusinessType(this.data.pickup.terminal.locationType),
-                    contact_name: this.data.pickup.primaryContact.name,
-                    contact_email: this.data.pickup.primaryContact.email,
-                    contact_phone: this.data.pickup.primaryContact.phoneNumber,
-                    contact_mobile_phone: this.data.pickup.primaryContact.mobileNumber,
-                    date_type: this.setDateType(this.data.pickup.dateScheduledType)
+                    contact_name: this.data.pickup?.primaryContact.name,
+                    contact_email: this.data.pickup?.primaryContact.email,
+                    contact_phone: this.data.pickup?.primaryContact.phoneNumber,
+                    contact_mobile_phone: this.data.pickup?.primaryContact.mobileNumber,
+                    date_type: this.setDateType(this.data.pickup.dateRequestedType)
                 }
             },
             delivery:
             {
-                scheduled_at: this.data.delivery.dateScheduledStart,
-                scheduled_ends_at: this.data.delivery.dateScheduledEnd,
-                scheduled_at_by_customer: this.data.delivery.dateScheduledStart,
-                scheduled_ends_at_by_customer: this.data.delivery.dateScheduledEnd,
+                scheduled_at: this.data.delivery.dateScheduledStart ? this.data.delivery.dateScheduledStart : this.data.delivery.dateRequestedStart,
+                scheduled_ends_at: this.data.delivery.dateScheduledEnd ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
+                scheduled_at_by_customer: this.data.delivery.dateRequestedStart,
+                scheduled_ends_at_by_customer: this.data.delivery.dateRequestedEnd,
                 notes: this.data.delivery.notes,
-                date_type: this.setDateType(this.data.delivery.dateScheduledType),
+                date_type: this.setDateType(this.data.delivery.dateRequestedType),
                 venue:
                 {
                     address: this.data.delivery.terminal.street1,
@@ -91,11 +91,11 @@ class Super extends Loadboard
                     zip: this.data.delivery.terminal.zipCode,
                     name: this.data.delivery.terminal.name,
                     business_type: this.setBusinessType(this.data.delivery.terminal.locationType),
-                    contact_name: this.data.delivery.primaryContact.name,
-                    contact_email: this.data.delivery.primaryContact.email,
-                    contact_phone: this.data.delivery.primaryContact.phoneNumber,
-                    contact_mobile_phone: this.data.delivery.primaryContact.mobileNumber,
-                    date_type: this.setDateType(this.data.delivery.dateScheduledType)
+                    contact_name: this.data.delivery?.primaryContact.name,
+                    contact_email: this.data.delivery?.primaryContact.email,
+                    contact_phone: this.data.delivery?.primaryContact.phoneNumber,
+                    contact_mobile_phone: this.data.delivery?.primaryContact.mobileNumber,
+                    date_type: this.setDateType(this.data.delivery.dateRequestedType)
                 }
             },
 
@@ -103,7 +103,8 @@ class Super extends Loadboard
 
             guid: this.postObject.externalGuid
         };
-
+        console.log(payload.pickup);
+        console.log(payload.delivery);
         return payload;
     }
 
@@ -280,7 +281,7 @@ class Super extends Loadboard
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(post);
-
+        console.log(response.vehicles);
         try
         {
             if (response.hasErrors)
@@ -382,7 +383,7 @@ class Super extends Loadboard
             this.commodityUpdater(com, newCommodities);
             comsToUpdate.push(com);
         }
-
+        console.log(comsToUpdate);
         return comsToUpdate;
     }
 

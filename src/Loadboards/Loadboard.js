@@ -1,11 +1,9 @@
 const LoadboardPost = require('../Models/LoadboardPost');
 const DateTime = require('luxon').DateTime;
-const currency = require('currency.js');
-const states = require('us-state-codes');
 const R = require('ramda');
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
-const returnTo = process.env['rcgqueue.loadboards.subscription.to'];
+const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
 const loadboardName = '';
 
 class Loadboard
@@ -83,6 +81,11 @@ class Loadboard
     dateAdd(date, amount, type)
     {
         return date ? DateTime.fromJSDate(date).plus({ [`${type}`]: amount }).toString() : null;
+    }
+
+    minusMinutes(date, amount)
+    {
+        return DateTime.fromJSDate(date).minus({ minutes: amount }).toUTC().toString();
     }
 
     adjustDates()
