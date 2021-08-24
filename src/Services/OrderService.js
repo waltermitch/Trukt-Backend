@@ -216,7 +216,7 @@ class OrderService
                 const commType = commTypes.find(it => CommodityType.compare(commodity, it));
                 if (!commType)
                 {
-                    throw new Error(`unknown commodity ${commodity.commType.category} ${commodity.commType.type}`);
+                    throw new Error(`unknown commodity ${commodity.commType?.category} ${commodity.commType?.type}`);
                 }
                 commodity.graphLink('commType', commType);
 
@@ -532,7 +532,6 @@ class OrderService
                 }).returning('guid');
 
             await trx.commit();
-            order = await OrderService.getOrderByGuid(order.guid);
             return order;
         }
         catch (err)
