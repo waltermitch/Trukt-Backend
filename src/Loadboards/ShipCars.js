@@ -55,7 +55,7 @@ class ShipCars extends Loadboard
             payment_on_pickup_method: 'cash',
             payment_on_delivery_method: 'uship',
             total_payment_to_carrier: this.data.estimatedExpense,
-            payment_to_carrier: this.data.carrierPay,
+            payment_to_carrier: this.data.estimatedExpense,
             payment_term_begins: 'delivery',
             payment_term_business_days: 2
         };
