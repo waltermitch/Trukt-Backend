@@ -1,5 +1,6 @@
 const LoadboardPost = require('../Models/LoadboardPost');
 const DateTime = require('luxon').DateTime;
+const states = require('us-state-codes');
 const R = require('ramda');
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
@@ -128,6 +129,11 @@ class Loadboard
         secondDate = DateTime.fromJSDate(secondDate);
         targetDate = secondDate.plus({ hours: 1 });
         return targetDate.toJSDate();
+    }
+
+    getStateCode(state)
+    {
+        return states.getStateCodeByStateName(state) == null ? states.sanitizeStateCode(state) : states.getStateCodeByStateName(state);
     }
 
     static async handlecreate(post, response)

@@ -1,5 +1,4 @@
 const Loadboard = require('./Loadboard');
-const states = require('us-state-codes');
 const LoadboardPost = require('../Models/LoadboardPost');
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
@@ -41,7 +40,7 @@ class CarDeliveryNetwork extends Loadboard
                     Contact: this.data.pickup.primaryContact.name,
                     OrganisationName: this.data.pickup.terminal.name,
                     QuickCode: null,
-                    StateRegion: this.data.pickup.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.pickup.terminal.state) : this.data.pickup.terminal.state,
+                    StateRegion: this.getStateCode(this.data.pickup.terminal.state),
                     ZipPostCode: this.data.pickup.terminal.zipCode
                 },
                 RequestedDate: this.data.pickup.dateScheduledStart
@@ -53,7 +52,7 @@ class CarDeliveryNetwork extends Loadboard
                     Contact: this.data.delivery.primaryContact.name,
                     OrganisationName: this.data.delivery.terminal.name,
                     QuickCode: null,
-                    StateRegion: this.data.delivery.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.delivery.terminal.state) : this.data.delivery.terminal.state,
+                    StateRegion: this.getStateCode(this.data.delivery.terminal.state),
                     ZipPostCode: this.data.delivery.terminal.zipCode
                 },
                 RequestedDate: this.data.delivery.dateScheduledStart,
