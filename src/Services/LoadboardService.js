@@ -191,7 +191,7 @@ class LoadboardService
         for (let i = 0; i < posts.length; i++)
         {
             const post = posts[i];
-            if (job.postObjects[`${post.loadboard}`].hasError)
+            if (job.postObjects[`${post.loadboard}`]?.hasError)
             {
                 delete job.postObjects[`${post.loadboard}`];
                 posts.splice(i, 1);
