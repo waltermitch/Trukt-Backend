@@ -51,22 +51,25 @@ const mixin =
         const uniqueCols = this.constructor.uniqueColumns;
         if (!record && uniqueCols)
         {
-            const qb = this.constructor.query(trx);
-
-            // find using unique fields
-            for (const col of uniqueCols)
+            // if a column in postgres has a null value
+            // then it isnt considered unique and doesnt follow the constraint
+            // for example, terminals created with null lat/long will not be considered unique and you can have lots of them
+            const hasNoNulls = uniqueCols.reduce((valid, field) => valid && this[field] != undefined, true);
+            if (hasNoNulls)
             {
-                if (this[col] == undefined)
-                {
-                    qb.whereNull(col);
-                }
-                else
-                {
-                    qb.findOne(col, this.getColumnOp(col, this[col]), this[col]);
-                }
-            }
+                const qb = this.constructor.query(trx);
 
-            record = await qb;
+                // find using unique fields
+                for (const col of uniqueCols)
+                {
+                    if (this[col] != undefined)
+                    {
+                        qb.findOne(col, this.getColumnOp(col, this[col]), this[col]);
+                    }
+                }
+
+                record = await qb;
+            }
         }
 
         if (!record)
