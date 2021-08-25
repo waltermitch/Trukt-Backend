@@ -1,6 +1,5 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
-const states = require('us-state-codes');
 const LoadboardPost = require('../Models/LoadboardPost');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
@@ -64,7 +63,7 @@ class Super extends Loadboard
                 {
                     address: this.data.pickup.terminal.street1,
                     city: this.data.pickup.terminal.city,
-                    state: states.getStateCodeByStateName(this.data.pickup.terminal.state),
+                    state: this.getStateCode(this.data.pickup.terminal.state),
                     zip: this.data.pickup.terminal.zipCode,
                     name: this.data.pickup.terminal.name,
                     business_type: this.setBusinessType(this.data.pickup.terminal.locationType),
@@ -87,7 +86,7 @@ class Super extends Loadboard
                 {
                     address: this.data.delivery.terminal.street1,
                     city: this.data.delivery.terminal.city,
-                    state: states.getStateCodeByStateName(this.data.delivery.terminal.state),
+                    state: this.getStateCode(this.data.delivery.terminal.state),
                     zip: this.data.delivery.terminal.zipCode,
                     name: this.data.delivery.terminal.name,
                     business_type: this.setBusinessType(this.data.delivery.terminal.locationType),

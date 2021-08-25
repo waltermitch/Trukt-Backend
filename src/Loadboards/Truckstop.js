@@ -1,6 +1,5 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
-const states = require('us-state-codes');
 const fs = require('fs');
 
 const LoadboardPost = require('../Models/LoadboardPost');
@@ -47,7 +46,7 @@ class Truckstop extends Loadboard
                     location: {
                         locationName: this.data.pickup.terminal.name,
                         city: this.data.pickup.terminal.city,
-                        state: this.data.pickup.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.pickup.terminal.state) : this.data.pickup.terminal.state, // states.getStateCodeByStateName(this.data.pickup.terminal.state), // must be two letter abbreviation
+                        state: this.getStateCode(this.data.pickup.terminal.state),
                         streetAddress1: this.data.pickup.terminal.street1,
                         streetAddress2: this.data.pickup.terminal.street2,
                         countryCode: this.data.pickup.terminal?.country.toUpperCase(),
@@ -65,7 +64,7 @@ class Truckstop extends Loadboard
                     location: {
                         locationName: this.data.delivery.terminal.name,
                         city: this.data.delivery.terminal.city,
-                        state: this.data.delivery.terminal.state.length > 2 ? states.getStateCodeByStateName(this.data.delivery.terminal.state) : this.data.delivery.terminal.state, // states.getStateCodeByStateName(this.data.delivery.terminal.state), // must be two letter abbreviation
+                        state: this.getStateCode(this.data.delivery.terminal.state),
                         streetAddress1: this.data.delivery.terminal.street1,
                         streetAddress2: this.data.delivery.terminal.street2,
                         countryCode: this.data.delivery.terminal?.country.toUpperCase(),
