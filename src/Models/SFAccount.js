@@ -86,7 +86,8 @@ class SFAccount extends BaseModel
                     delete json.dotNumber;
                     delete json.referralAmount;
                     delete json.mcNumber;
-
+                    delete json.preferred;
+                    delete json.blacklist;
                     break;
                 case 'carrier':
                     delete json.loadboardInstructions;
@@ -96,6 +97,8 @@ class SFAccount extends BaseModel
                 case 'employee':
                     delete json.referralAmount;
                 case 'referrer':
+                    delete json.preferred;
+                    delete json.blacklist;
                     delete json.dotNumber;
                     for (const field of [
                         'Street',

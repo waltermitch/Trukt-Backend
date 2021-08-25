@@ -38,10 +38,10 @@ class Order extends BaseModel
             },
             dispatcher: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: User,
+                modelClass: SFAccount,
                 join: {
                     from: 'rcgTms.orders.dispatcherGuid',
-                    to: 'rcgTms.tmsUsers.guid'
+                    to: 'salesforce.accounts.guid'
                 }
             },
             jobs: {
@@ -152,7 +152,9 @@ class Order extends BaseModel
                     $modify: ['byType']
                 },
                 clientContact: true,
-                dispatcher: true,
+                dispatcher: {
+                    $modify: ['byType']
+                },
                 referrer: {
                     $modify: ['byType']
                 },
@@ -178,9 +180,14 @@ class Order extends BaseModel
                     lines: { item: true }
                 },
                 jobs: {
-                    vendor: true,
+                    vendor: {
+                        $modify: ['byType']
+                    },
                     vendorAgent: true,
                     vendorContact: true,
+                    dispatcher: {
+                        $modify: ['byType']
+                    },
                     jobType: true,
                     stopLinks: {
                         commodity: {
