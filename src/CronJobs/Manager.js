@@ -3,6 +3,7 @@ const Triumph = require('../Triumph/API');
 const QBO = require('../QuickBooks/API');
 const Super = require('../Super/API');
 const Cron = require('node-cron');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const expressions =
 {
@@ -43,4 +44,9 @@ Cron.schedule(expressions.daily, async () =>
     // get triumph token
     await Triumph.refreshToken();
     await QBO.syncListsToDB();
+});
+
+Cron.schedule(expressions.second, async () =>
+{
+    await StatusManagerHandler.checkStatus();
 });
