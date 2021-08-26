@@ -22,7 +22,7 @@ class Super extends Loadboard
         const payload =
         {
             customer: {
-                notes: 'these are notes for customer visibile in the customer portal',
+                notes: null,
                 address: this.data.order.client.billingStreet,
                 city: this.data.order.client.billingCity,
                 state: this.data.order.client.billingState,
@@ -30,7 +30,7 @@ class Super extends Loadboard
 
                 contact_name: this.data.order.clientContact?.name,
                 contact_phone: this.data.order.clientContact?.phoneNumber,
-                contact_mobile_phone: this.data.order.clientContact?.mobilePhone,
+                contact_mobile_phone: this.data.order.clientContact?.mobileNumber,
                 contact_email: this.data.order.clientContact?.email,
                 name: this.data.order.client.name,
                 business_type: this.data.order.client.type,
@@ -45,7 +45,7 @@ class Super extends Loadboard
             price: currency(this.data.estimatedExpense).value,
             number: this.data.number,
             purchase_order_number: this.data.order.referenceNumber,
-            dispatcher_name: this.data.order.dispatcher.name,
+            dispatcher_name: this.data.dispatcher?.name || 'Brad Marinov',
             instructions: this.data.order.instructions,
             loadboard_instructions: this.postObject.instructions || this.data.loadboardInstructions,
             transport_type: this.setEquipmentType(this.data.equipmentType?.name),
@@ -67,10 +67,10 @@ class Super extends Loadboard
                     zip: this.data.pickup.terminal.zipCode,
                     name: this.data.pickup.terminal.name,
                     business_type: this.setBusinessType(this.data.pickup.terminal.locationType),
-                    contact_name: this.data.pickup?.primaryContact.name,
-                    contact_email: this.data.pickup?.primaryContact.email,
-                    contact_phone: this.data.pickup?.primaryContact.phoneNumber,
-                    contact_mobile_phone: this.data.pickup?.primaryContact.mobileNumber,
+                    contact_name: this.data.pickup?.primaryContact?.name,
+                    contact_email: this.data.pickup?.primaryContact?.email,
+                    contact_phone: this.data.pickup?.primaryContact?.phoneNumber,
+                    contact_mobile_phone: this.data.pickup?.primaryContact?.mobileNumber,
                     date_type: this.setDateType(this.data.pickup.dateRequestedType)
                 }
             },
@@ -90,10 +90,10 @@ class Super extends Loadboard
                     zip: this.data.delivery.terminal.zipCode,
                     name: this.data.delivery.terminal.name,
                     business_type: this.setBusinessType(this.data.delivery.terminal.locationType),
-                    contact_name: this.data.delivery?.primaryContact.name,
-                    contact_email: this.data.delivery?.primaryContact.email,
-                    contact_phone: this.data.delivery?.primaryContact.phoneNumber,
-                    contact_mobile_phone: this.data.delivery?.primaryContact.mobileNumber,
+                    contact_name: this.data.delivery?.primaryContact?.name,
+                    contact_email: this.data.delivery?.primaryContact?.email,
+                    contact_phone: this.data.delivery?.primaryContact?.phoneNumber,
+                    contact_mobile_phone: this.data.delivery?.primaryContact?.mobileNumber,
                     date_type: this.setDateType(this.data.delivery.dateRequestedType)
                 }
             },
@@ -102,8 +102,7 @@ class Super extends Loadboard
 
             guid: this.postObject.externalGuid
         };
-        console.log(payload.pickup);
-        console.log(payload.delivery);
+
         return payload;
     }
 
@@ -254,7 +253,6 @@ class Super extends Loadboard
                 if (client.sdGuid !== response.customer.counterparty_guid)
                 {
                     client.sdGuid = response.customer.counterparty_guid;
-                    client.setUpdatedBy(anonUser);
                     await SFAccount.query(trx).patch(client).findById(client.guid);
                 }
 
@@ -280,7 +278,7 @@ class Super extends Loadboard
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(post);
-        console.log(response.vehicles);
+
         try
         {
             if (response.hasErrors)
@@ -293,7 +291,7 @@ class Super extends Loadboard
             else
             {
                 const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
-                    order.[client], commodities(distinct, isNotDeleted)
+                    order.[client], commodities(distinct, isNotDeleted).[vehicle]
                 ]`);
 
                 const vehicles = this.updateCommodity(job.commodities, response.vehicles);
@@ -307,7 +305,6 @@ class Super extends Loadboard
                 if (client.sdGuid !== response.customer.counterparty_guid)
                 {
                     client.sdGuid = response.customer.counterparty_guid;
-                    client.setUpdatedBy(anonUser);
                     await SFAccount.query(trx).patch(client).findById(client.guid);
                 }
 
@@ -335,7 +332,7 @@ class Super extends Loadboard
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(post);
-        console.log(response);
+
         try
         {
             if (response.hasErrors)
@@ -382,7 +379,7 @@ class Super extends Loadboard
             this.commodityUpdater(com, newCommodities);
             comsToUpdate.push(com);
         }
-        console.log(comsToUpdate);
+
         return comsToUpdate;
     }
 
@@ -392,7 +389,8 @@ class Super extends Loadboard
         {
             const commodity = newCommodities[i];
             const newName = commodity.vin + ' ' + commodity.year + ' ' + commodity.make + ' ' + commodity.model;
-            const comName = com.identifier + ' ' + com.description;
+            const comDescription = com.description == null ? com.vehicle?.year + ' ' + com.vehicle?.make + ' ' + com.vehicle?.model : com.description;
+            const comName = com.identifier + ' ' + comDescription;
             if (comName === newName)
             {
                 if (com.extraExternalData == undefined)
