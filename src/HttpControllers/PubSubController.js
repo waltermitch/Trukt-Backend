@@ -1,17 +1,20 @@
-const HttpRouteController = require('./HttpRouteController');
 const PubSub = require('../Azure/PubSub');
 
-class PubSubController extends HttpRouteController
+class PubSubController
 {
-    async handleGet(context, req)
+    static async get(req, res)
     {
-        if (!('groupName' in req.query) || !('user' in req.query))
-            return { 'status': 400, 'error': 'Missing groupName Or user' };
+        if (!req.query.groupName)
+            throw { 'status': 400, 'data': 'Missing GroupName' };
 
-        return { body: await PubSub.getSubToken(req.query.groupName, req.query.user) };
+        const result = await PubSub.getSubToken(req.query.groupName, req.session.userId);
+
+        if (result)
+        {
+            res.status(200);
+            res.json(result);
+        }
     }
 }
 
-const controller = new PubSubController();
-
-module.exports = controller;
+module.exports = PubSubController;
