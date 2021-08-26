@@ -187,9 +187,14 @@ class OrderService
             }
 
             // dispatcher / manager responsible for the order
-            if (isUseful(orderObj.dispatcher))
+            if (isUseful(orderObj?.dispatcher))
             {
-                orderObj.dispatcher = await User.query(trx).findById(orderObj.dispatcher.guid);
+                const dispatcher = await SFAccount.query(trx).findById(orderObj.dispatcher.guid);
+                if (!dispatcher)
+                {
+                    throw new Error('dispatcher ' + JSON.stringify(orderObj.dispatcher) + ' doesn\'t exist');
+                }
+                orderObj.dispatcher = dispatcher;
                 order.graphLink('dispatcher', orderObj.dispatcher);
             }
 
@@ -356,7 +361,7 @@ class OrderService
                     const dispatcher = await SFAccount.query(trx).findById(job.dispatcher.guid);
                     if (!dispatcher)
                     {
-                        throw new Error('dispatcher ' + job.dispatcher + ' doesnt exist');
+                        throw new Error('dispatcher ' + JSON.stringify(job.dispatcher) + ' doesnt exist');
                     }
                     job.graphLink('dispatcher', dispatcher);
                 }
@@ -410,7 +415,7 @@ class OrderService
 
                 if (isUseful(orderObj.dispatcher))
                 {
-                    job.graphLink(orderObj.dispatcher);
+                    job.graphLink('dispatcher', orderObj.dispatcher);
                 }
                 order.jobs.push(job);
             }

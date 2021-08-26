@@ -114,6 +114,14 @@ class OrderJob extends BaseModel
                     to: 'salesforce.contacts.guid'
                 }
             },
+            dispatcher: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: SFAccount,
+                join: {
+                    from: 'rcgTms.orderJobs.dispatcherGuid',
+                    to: 'salesforce.accounts.guid'
+                }
+            },
             equipmentType: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: require('./EquipmentType'),
