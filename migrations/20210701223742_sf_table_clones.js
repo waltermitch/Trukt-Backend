@@ -67,7 +67,7 @@ exports.up = function (knex)
             primary_contact__c as primary_contact_id,
             qb_id__c as qb_id,
             recordtypeid as record_type_id,
-            sd_guid__pc as sd_guid,
+            sd_guid__c as sd_guid,
             sfid as sf_id,
             shippingcity as shipping_city,
             shippingcountry as shipping_country,
