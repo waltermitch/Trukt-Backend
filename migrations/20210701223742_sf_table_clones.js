@@ -87,7 +87,7 @@ exports.up = function (knex)
             type as type,
             vendor_type__c as vendor_type,
             website as website,
-            is_synced_in_super as is_synced_in_super
+            sync_in_super__c as sync_in_super
             FROM salesforce.account;
             
             CREATE OR REPLACE VIEW salesforce.contacts AS
