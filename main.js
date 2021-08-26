@@ -13,7 +13,7 @@ const HttpErrorHandler = require('./src/HttpErrorHandler');
 const Mongo = require('./src/Mongo');
 require('./src/CronJobs/Manager');
 
-PGListener.listen();
+// PGListener.listen();
 Mongo.connect();
 
 const store = new KnexSessionStore

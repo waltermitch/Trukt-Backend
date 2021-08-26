@@ -29,11 +29,17 @@ class Coupa
 
     static async sendInvoice(data)
     {
+        console.log('Sending Coupa Invoice');
+
         const invoice = new Invoice(data);
 
         const res = await api.post('/cxml/invoices', invoice);
 
+        console.log(res.data);
+
         const parsedRes = await Coupa.parseXML(res.data);
+
+        console.log(parsedRes.cXML.Response[0].Status[0].$.code);
 
         return { 'status': parsedRes.cXML.Response[0].Status[0].$.code, 'data': res.data };
     }

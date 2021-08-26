@@ -44,6 +44,7 @@ class PGListener
                 catch (err)
                 {
                     console.log('Error In PG Triggers');
+                    console.log(err);
                     const error = err?.response?.data || err;
                     console.log(JSON.stringify(error));
                 }

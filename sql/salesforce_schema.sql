@@ -70,7 +70,7 @@ CREATE TABLE salesforce.account (
     personindividualid character varying(18),
     referral_amount__c double precision,
     business_type__c character varying(255),
-    sd_guid__pc character varying(255),
+    sd_guid__c character varying(255),
     commonauthority__c boolean,
     fraud_identity_theft_status__c character varying(255),
     name character varying(255),

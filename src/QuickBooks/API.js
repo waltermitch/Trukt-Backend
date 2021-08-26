@@ -61,6 +61,8 @@ class QBO
         for (const order of array)
             for (const invoice of order.invoices)
             {
+                console.log(order);
+
                 // set client id
                 const client = invoice?.cosignee || order?.client;
 
@@ -92,10 +94,16 @@ class QBO
                     'Invoice': new Invoice(invoice)
                 };
 
+                console.log(payload);
+
                 invoices.push(payload);
             }
 
+        console.log(invoices.length);
+
         const res = await QBO.batch(invoices);
+
+        console.log(res);
 
         return res;
     }
@@ -206,6 +214,9 @@ class QBO
 
     static async upsertClient(data)
     {
+        console.log('Upserting Client');
+        console.log(data.name);
+
         const client = new Client(data);
 
         const api = await QBO.connect();
@@ -221,11 +232,17 @@ class QBO
             // create
             const res = await api.post('/customer', client);
 
+            console.log('Creating QB Client', data.name);
+
             // save qbid in database
-            await SFAccount.query().patch({ qbId: res.data.Client.Id }).where('guid', data?.guid);
+            const update = await SFAccount.query().patch({ qbId: res.data.Client.Id }).findById({ 'guid': data?.guid });
+
+            console.log(update);
         }
         else
         {
+            console.log('Updating QB Client', data.name);
+
             // update
             const SyncToken = await QBO.getSyncToken('Customer', data.qbId);
 
