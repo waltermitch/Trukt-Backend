@@ -28,13 +28,18 @@ let dbLoadboardNames;
 class LoadboardService
 {
 
+    static async getAllLoadboardPosts(jobId)
+    {
+        return (await LoadboardPost.query().where({ jobGuid: jobId })).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+    }
+
     static async createPostings(jobId, posts, currentUser)
     {
         currentUserGuid = currentUser;
         const job = await LoadboardService.getAllPostingData(jobId, posts);
         const payloads = [];
         let lbPayload;
-        
+
         try
         {
             for (const post of posts)
