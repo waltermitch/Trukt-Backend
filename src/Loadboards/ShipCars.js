@@ -22,9 +22,9 @@ class ShipCars extends Loadboard
         const payload =
         {
             pickup_name: this.data.pickup.terminal.name,
-            pickup_contact: this.data.pickup?.primaryContact.name,
-            pickup_phone_1: this.data.pickup?.primaryContact.phoneNumber,
-            pickup_phone_2: this.data.pickup?.primaryContact.mobilePhone,
+            pickup_contact: this.data.pickup?.primaryContact?.name,
+            pickup_phone_1: this.data.pickup?.primaryContact?.phoneNumber?.substring(0, 19),
+            pickup_phone_2: this.data.pickup?.primaryContact?.mobileNumber?.substring(0, 19),
             pickup_address: this.data.pickup.terminal.street1,
             pickup_city: this.data.pickup.terminal.city,
             pickup_state: this.getStateCode(this.data.pickup.terminal.state),
@@ -33,9 +33,9 @@ class ShipCars extends Loadboard
             pickup_estimate_type: this.setDateType(this.data.pickup.dateScheduledType),
 
             delivery_name: this.data.delivery.terminal.name,
-            delivery_contact: this.data.delivery?.primaryContact.name,
-            delivery_phone_1: this.data.delivery?.primaryContact.phoneNumber,
-            delivery_phone_2: this.data.delivery?.primaryContact.mobilePhone,
+            delivery_contact: this.data.delivery?.primaryContact?.name,
+            delivery_phone_1: this.data.delivery?.primaryContact?.phoneNumber?.substring(0, 19),
+            delivery_phone_2: this.data.delivery?.primaryContact?.mobileNumber?.substring(0, 19),
             delivery_address: this.data.delivery.terminal.street1,
             delivery_city: this.data.delivery.terminal.city,
             delivery_state: this.getStateCode(this.data.delivery.terminal.state),
@@ -294,7 +294,8 @@ class ShipCars extends Loadboard
         {
             const commodity = newCommodities[i];
             const newName = commodity.vin + ' ' + commodity.year + ' ' + commodity.make + ' ' + commodity.model;
-            const comName = com.identifier + ' ' + com.description;
+            const comDescription = com.description == null ? com.vehicle?.year + ' ' + com.vehicle?.make + ' ' + com.vehicle?.model : com.description;
+            const comName = com.identifier + ' ' + comDescription;
             if (comName === newName)
             {
                 if (com.extraExternalData == undefined)

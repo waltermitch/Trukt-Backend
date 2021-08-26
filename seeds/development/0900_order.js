@@ -136,7 +136,7 @@ exports.seed = async function (knex)
                 damaged: faker.random.arrayElement(ternaryOptions),
                 inoperable: faker.random.arrayElement(ternaryOptions),
                 createdByGuid: createdBy.guid,
-                description: faker.lorem.words()
+                description: vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model
             });
             commodities.push(comm);
         }

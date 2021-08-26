@@ -14,19 +14,20 @@ const pubsub = require('../Azure/PubSub');
 const myMessageHandler = async (message) =>
 {
     const responses = message.body;
-    const posts = [];
+    const jobGuid = responses[0].payloadMetadata.post.jobGuid;
+    const posts = {};
 
     for (const res of responses)
     {
         const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
         const post = await lbClass[`handle${res.payloadMetadata.action}`](res.payloadMetadata.post, res[`${res.payloadMetadata.action}`]);
 
-        posts.push(post);
+        posts[`${post.loadboard}`] = post;
     }
 
     // publish to a group that is named after the the jobGuid which
     // should be listening on messages posted to the group
-    await pubsub.publishToGroup(`${posts[0].jobGuid}`, posts);
+    await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
 };
 const myErrorHandler = async (args) =>
 {
