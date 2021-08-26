@@ -24,6 +24,8 @@ class InvoiceService
         // get all the orders
         const orders = await qb;
 
+        console.log('Orders:', orders);
+
         // decide which system they will be invoiced in
         const QBInvoices = [];
         const CoupaInvoices = [];
