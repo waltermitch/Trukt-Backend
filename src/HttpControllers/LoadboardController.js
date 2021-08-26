@@ -63,6 +63,24 @@ class LoadboardController extends HttpRouteController
             });
         }
     }
+
+    static async getJobPostings(req, res, next)
+    {
+        try
+        {
+            const posts = await LoadboardService.getAllLoadboardPosts(req.params.jobId);
+
+            res.json(posts);
+            res.status(200);
+        }
+        catch (e)
+        {
+            next({
+                status: 500,
+                data: { message: e.toString() || 'Internal server error' }
+            });
+        }
+    }
 }
 
 const controller = new LoadboardController();
