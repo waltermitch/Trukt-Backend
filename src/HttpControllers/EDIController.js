@@ -2,6 +2,7 @@ const { DateTime } = require('luxon');
 const currency = require('currency.js');
 const R = require('ramda');
 const OrderService = require('../Services/OrderService');
+const Order = require('../Models/Order');
 
 const SCAC_CODE = 'RCGQ';
 
@@ -318,51 +319,6 @@ class EDIController
         }
         res.status(501);
         res.json(payload);
-    }
-
-    static async outbound214(req, res)
-    {
-        for (const param of ['partner', 'bol'])
-        {
-            if (!(req.query[param]))
-            {
-                res.status(400);
-                res.send(`missing ${param} in query parameter`);
-                return;
-            }
-        }
-
-        let payload;
-        switch (req.query.partner)
-        {
-            case '7147617300':
-                // this is yamaha partner id
-                if (!req.query.shipmentId)
-                {
-                    res.status(400);
-                    res.send('missing shipmentId in query parameter');
-                    return;
-                }
-                payload = await EDIController.outbound214yamaha(req);
-                break;
-            case 'AGTX':
-                // this is the agistix
-                payload = await EDIController.outbound214agistix(req);
-                break;
-            default:
-                res.status(404);
-                res.send('partner doesn\'t exist');
-                return;
-        }
-
-        res.status(200);
-        res.json(payload);
-    }
-
-    static async inbound214yamaha(req)
-    {
-        // i dont think i will be sending anything
-        return;
     }
 
     static async outbound214(req, res)
