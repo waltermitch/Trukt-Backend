@@ -4,10 +4,7 @@ class PubSubController
 {
     static async get(req, res)
     {
-        if (!req.query.groupName)
-            throw { 'status': 400, 'data': 'Missing GroupName' };
-
-        const result = await PubSub.getSubToken(req.query.groupName, req.session.userId);
+        const result = await PubSub.getSubToken(req.session.userId);
 
         if (result)
         {
