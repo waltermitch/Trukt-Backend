@@ -49,12 +49,12 @@ class Truckstop extends Loadboard
                         state: this.getStateCode(this.data.pickup.terminal.state),
                         streetAddress1: this.data.pickup.terminal.street1,
                         streetAddress2: this.data.pickup.terminal.street2,
-                        countryCode: this.data.pickup.terminal?.country.toUpperCase(),
+                        countryCode: this.data.pickup.terminal?.country?.toUpperCase(),
                         postalCode: this.data.pickup.terminal.zipCode
 
                     },
-                    contactName: this.data.pickup.primaryContact.name,
-                    contactPhone: this.data.pickup.primaryContact?.phoneNumber.substring(0, 10),
+                    contactName: this.data.pickup.primaryContact?.name,
+                    contactPhone: this.data.pickup.primaryContact?.phoneNumber?.substring(0, 10),
                     stopNotes: this.data.pickup.notes
                 },
                 {
@@ -67,12 +67,12 @@ class Truckstop extends Loadboard
                         state: this.getStateCode(this.data.delivery.terminal.state),
                         streetAddress1: this.data.delivery.terminal.street1,
                         streetAddress2: this.data.delivery.terminal.street2,
-                        countryCode: this.data.delivery.terminal?.country.toUpperCase(),
+                        countryCode: this.data.delivery.terminal?.country?.toUpperCase(),
                         postalCode: this.data.delivery.terminal.zipCode
 
                     },
-                    contactName: this.data.delivery.primaryContact.name,
-                    contactPhone: this.data.delivery.primaryContact?.phoneNumber.substring(0, 10),
+                    contactName: this.data.delivery?.primaryContact?.name,
+                    contactPhone: this.data.delivery?.primaryContact?.phoneNumber?.substring(0, 10),
                     stopNotes: this.data.delivery.notes
                 }
             ],
