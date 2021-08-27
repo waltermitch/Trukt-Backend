@@ -49,19 +49,24 @@ class SFAccount extends BaseModel
         {
             const qb = query.leftJoinRelated('rectype');
 
-            if (type === 'client')
+            switch (type)
             {
-                qb.select(raw('\'client\' as rtype'), 'salesforce.accounts.*');
-                qb.where(builder =>
-                {
-                    builder.orWhere('rectype.name', 'ilike', 'client');
-                    builder.orWhere('rectype.name', 'ilike', 'person account');
-                });
-            }
-            else
-            {
-                qb.select('rectype.name as rtype', 'salesforce.accounts.*');
-                qb.where('rectype.name', 'ilike', type);
+                case 'client':
+                    qb.select(raw('\'client\' as rtype'), 'salesforce.accounts.*');
+                    qb.where(builder =>
+                    {
+                        builder.orWhere('rectype.name', 'ilike', 'client');
+                        builder.orWhere('rectype.name', 'ilike', 'person account');
+                    });
+                    break;
+                case 'dispatcher':
+                    qb.select(raw('\'employee\' as rtype'), 'salesforce.accounts.*');
+                    qb.where('rectype.name', 'ilike', 'employee')
+                        .where('salesforce.accounts.userRole', 'ilike', 'dispatcher');
+                    break;
+                default:
+                    qb.select('rectype.name as rtype', 'salesforce.accounts.*');
+                    qb.where('rectype.name', 'ilike', type);
             }
 
             return qb;
@@ -92,8 +97,8 @@ class SFAccount extends BaseModel
                 case 'carrier':
                     delete json.loadboardInstructions;
                     delete json.orderInstructions;
-
                     break;
+                case 'dispatcher':
                 case 'employee':
                     delete json.referralAmount;
                 case 'referrer':
