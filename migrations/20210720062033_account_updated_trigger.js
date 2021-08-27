@@ -11,13 +11,16 @@ exports.up = function (knex)
         AS $function$
         BEGIN
                 IF (TG_OP = 'UPDATE') THEN
-                    IF((OLD.qb_id__c IS NULL AND NEW.qb_id__c IS NOT null) or new.sync_in_super__c = true or new.sync_in_super__c = false) THEN
+                    IF((OLD.qb_id__c IS NULL AND NEW.qb_id__c IS NOT null) or (old.sync_in_super__c != new.sync_in_super__c)) THEN
                         RETURN NEW;
                     ELSE
-                        PERFORM pg_notify('account_upserted',row_to_json((select d from (select new.guid__c as guid) d))::text);
+                        PERFORM pg_notify('account_upserted',row_to_json((select d from (select new.guid__c as guid, new.sfid as sfid) d))::text);
                     END IF;
-                ElSEIF (TG_OP = 'INSERT') THEN
-                    PERFORM pg_notify('account_upserted',row_to_json((select d from (select new.guid__c as guid) d))::text);
+                ElSEIF (TG_OP = 'INSERT') then
+		                 IF (NEW.guid__c IS NULL) THEN
+		                    NEW.guid__c = gen_random_uuid();
+		                END IF;
+                    PERFORM pg_notify('account_upserted',row_to_json((select d from (select new.guid__c as guid, new.sfid as sfid) d))::text);
                 END IF;
             RETURN NEW;
         END;
