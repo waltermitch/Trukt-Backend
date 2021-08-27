@@ -17,7 +17,7 @@ const expressions =
 // every second
 Cron.schedule(expressions.second, async () =>
 {
-    await EventHandler.checkAccountUpdatedQueue();
+    // await EventHandler.checkAccountUpdatedQueue();
 });
 
 // every 30 minutes

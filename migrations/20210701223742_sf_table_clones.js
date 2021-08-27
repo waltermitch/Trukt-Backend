@@ -67,7 +67,7 @@ exports.up = function (knex)
             primary_contact__c as primary_contact_id,
             qb_id__c as qb_id,
             recordtypeid as record_type_id,
-            sd_guid__pc as sd_guid,
+            sd_guid__c as sd_guid,
             sfid as sf_id,
             shippingcity as shipping_city,
             shippingcountry as shipping_country,
@@ -87,7 +87,7 @@ exports.up = function (knex)
             type as type,
             vendor_type__c as vendor_type,
             website as website,
-            is_synced_in_super as is_synced_in_super
+            sync_in_super__c as sync_in_super
             FROM salesforce.account;
             
             CREATE OR REPLACE VIEW salesforce.contacts AS

@@ -28,21 +28,34 @@ let dbLoadboardNames;
 class LoadboardService
 {
 
+    static async getAllLoadboardPosts(jobId)
+    {
+        return (await LoadboardPost.query().where({ jobGuid: jobId })).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+    }
+
     static async createPostings(jobId, posts, currentUser)
     {
         currentUserGuid = currentUser;
         const job = await LoadboardService.getAllPostingData(jobId, posts);
         const payloads = [];
         let lbPayload;
-        for (const post of posts)
+
+        try
         {
-            // to prevent creating multiples of the same loads, check if the posting already
-            // has an external guid. If it does and it alreadys exists, skip it.
-            if (job.postObjects[`${post.loadboard}`].externalGuid == null)
+            for (const post of posts)
             {
-                lbPayload = new loadboardClasses[`${post.loadboard}`](job);
-                payloads.push(lbPayload['create']());
+                // to prevent creating multiples of the same loads, check if the posting already
+                // has an external guid. If it does and it alreadys exists, skip it.
+                if (job.postObjects[`${post.loadboard}`].externalGuid == null)
+                {
+                    lbPayload = new loadboardClasses[`${post.loadboard}`](job);
+                    payloads.push(lbPayload['create']());
+                }
             }
+        }
+        catch (e)
+        {
+            throw new Error(e.toString());
         }
 
         // sending all payloads as one big object so one big response can be returned
@@ -58,19 +71,27 @@ class LoadboardService
         const payloads = [];
         let lbPayload;
 
-        for (const post of posts)
+        try
         {
-            lbPayload = new loadboardClasses[`${post.loadboard}`](job);
-            payloads.push(lbPayload['post']());
+            for (const post of posts)
+            {
+                lbPayload = new loadboardClasses[`${post.loadboard}`](job);
+                payloads.push(lbPayload['post']());
+            }
+
+            // sending all payloads as one big object so one big response can be returned
+            // and handler can then use one big transaction to update all records rather
+            // than have a single new transaction for each posting
+            if (payloads.length != 0)
+            {
+                await sender.sendMessages({ body: payloads });
+            }
+        }
+        catch (e)
+        {
+            throw new Error(e.toString());
         }
 
-        // sending all payloads as one big object so one big response can be returned
-        // and handler can then use one big transaction to update all records rather
-        // than have a single new transaction for each posting
-        if (payloads.length != 0)
-        {
-            await sender.sendMessages({ body: payloads });
-        }
     }
 
     static async unpostPostings(jobId, posts, currentUser)
@@ -79,18 +100,26 @@ class LoadboardService
         currentUserGuid = currentUser;
         const payloads = [];
         let lbPayload;
-        for (const lbName of Object.keys(job.postObjects))
-        {
-            lbPayload = new loadboardClasses[`${lbName}`](job);
-            payloads.push(lbPayload['unpost']());
-        }
 
-        // sending all payloads as one big object so one big response can be returned
-        // and handler can then use one big transaction to update all records rather
-        // than have a single new transaction for each posting
-        if (payloads.length != 0)
+        try
         {
-            await sender.sendMessages({ body: payloads });
+            for (const lbName of Object.keys(job.postObjects))
+            {
+                lbPayload = new loadboardClasses[`${lbName}`](job);
+                payloads.push(lbPayload['unpost']());
+            }
+
+            // sending all payloads as one big object so one big response can be returned
+            // and handler can then use one big transaction to update all records rather
+            // than have a single new transaction for each posting
+            if (payloads.length != 0)
+            {
+                await sender.sendMessages({ body: payloads });
+            }
+        }
+        catch (e)
+        {
+            throw new Error(e.toString());
         }
     }
 
@@ -121,7 +150,8 @@ class LoadboardService
             stops(distinct).[primaryContact, terminal], 
             loadboardPosts(getExistingFromList),
             equipmentType, 
-            bills.lines.item
+            bills.lines.item,
+            dispatcher
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });

@@ -3,7 +3,7 @@ const LoadboardService = require('../Services/LoadboardService');
 
 class LoadboardController extends HttpRouteController
 {
-    static async createJobPost(req, res)
+    static async createJobPost(req, res, next)
     {
         const posts = req.body.posts;
 
@@ -16,12 +16,14 @@ class LoadboardController extends HttpRouteController
         }
         catch (e)
         {
-            res.status(400);
-            res.json({ message: e });
+            next({
+                status: 500,
+                data: { message: e.toString() || 'Internal server error' }
+            });
         }
     }
 
-    static async postJob(req, res)
+    static async postJob(req, res, next)
     {
         const posts = req.body.posts;
 
@@ -34,13 +36,15 @@ class LoadboardController extends HttpRouteController
         }
         catch (e)
         {
-            res.status(400);
-            res.json({ message: e });
+            next({
+                status: 500,
+                data: { message: e.toString() || 'Internal server error' }
+            });
         }
 
     }
 
-    static async unpostJob(req, res)
+    static async unpostJob(req, res, next)
     {
         const posts = req.body.posts;
 
@@ -53,8 +57,28 @@ class LoadboardController extends HttpRouteController
         }
         catch (e)
         {
-            res.status(400);
-            res.json({ message: e });
+            next({
+                status: 500,
+                data: { message: e.toString() || 'Internal server error' }
+            });
+        }
+    }
+
+    static async getJobPostings(req, res, next)
+    {
+        try
+        {
+            const posts = await LoadboardService.getAllLoadboardPosts(req.params.jobId);
+
+            res.json(posts);
+            res.status(200);
+        }
+        catch (e)
+        {
+            next({
+                status: 500,
+                data: { message: e.toString() || 'Internal server error' }
+            });
         }
     }
 }
