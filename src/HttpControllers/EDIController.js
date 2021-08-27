@@ -15,7 +15,6 @@ const reasons =
         'too time sensitive load',
         'no price provided',
         'weather wont permit',
-        'godzilla is attacking roads',
         'dispatcher didnt like the load',
         'unreasonable requests for load',
         'load is expired',
@@ -233,92 +232,302 @@ class EDIController
         }
     }
 
-    static async reject(req, res)
+    static async loadTenderResponse(action, req, res, next)
     {
-        return EDIController.loadTenderResponse('reject', req, res);
-    }
-
-    static async accept(req, res)
-    {
-        return EDIController.loadTenderResponse('accept', req, res);
-    }
-
-    static async loadTenderResponse(action, req, res)
-    {
-        const queryParams = ['partner', 'reference', 'order'];
-        const missing = [];
-        for (const param of queryParams)
+        try
         {
-            if (!(req.query[param]))
+            const queryParams = ['partner', 'reference'];
+            const missing = [];
+            for (const param of queryParams)
             {
-                missing.push(param);
-            }
-        }
-
-        if (missing.length > 0)
-        {
-            let message = 'this is for development only and generates psuedo responses on demand\n';
-            for (const param of missing)
-            {
-                message += `missing ${param} query parameter\n`;
+                if (!(req.query[param]))
+                {
+                    missing.push(param);
+                }
             }
 
-            res.status(400);
-            res.send(message);
-            return;
-        }
-
-        const payload = {
-            'date': DateTime.now().toISO(),
-            'partner': req.query.partner,
-            'scac': SCAC_CODE,
-            'reference': req.query.reference,
-            'order': req.query.order,
-            'action': action
-        };
-
-        if (action != 'accept')
-        {
-            const rs = [];
-            rs.push(reasons[parseInt(Math.random() * reasons.length)]);
-            if (Math.random() > 0.5)
+            if (missing.length > 0)
             {
-                rs.push(reasons[parseInt(Math.random() * reasons.length)]);
-            }
-            payload.reason = rs.join('. ');
-        }
+                let message = 'this is for development only and generates psuedo responses on demand\n';
+                for (const param of missing)
+                {
+                    message += `missing ${param} query parameter\n`;
+                }
 
-        res.status(200);
-        res.json(payload);
-    }
-
-    static async inbound214(req, res)
-    {
-        if (!(req.query.partner))
-        {
-            res.status(400);
-            res.send('missing partner in query parameter');
-            return;
-        }
-
-        let payload;
-        switch (req.query.partner)
-        {
-            case '7147617300':
-                // this is yamaha partner id
-                payload = await EDIController.inbound214yamaha(req);
-                break;
-            case 'AGTX':
-                // this is the agistix
-                payload = await EDIController.inbound214agistix(req);
-                break;
-            default:
-                res.status(404);
-                res.send('partner doesn\'t exist');
+                res.status(400);
+                res.send(message);
                 return;
+            }
+
+            const order = await Order.query()
+                .findOne('referenceNumber', req.query.reference)
+                .whereIn('clientGuid', Order.relatedQuery('client').findOne(builder =>
+                {
+                    builder.orWhere('guid', req.query.partner);
+                    builder.orWhere('sfId', req.query.partner);
+                }).select('guid'))
+                .where('isTender', true);
+
+            if (!order)
+            {
+                throw new Error('load tender with reference number: "' + req.query.reference + '" doesn\'t exist');
+            }
+
+            const payload = {
+                'action': action,
+                'order': order.guid,
+                'reference': req.query.reference,
+                'partner': req.query.partner,
+                'date': DateTime.now().toISO(),
+                'scac': SCAC_CODE
+            };
+
+            if (action != 'accept')
+            {
+                const rs = [];
+                rs.push(reasons[parseInt(Math.random() * reasons.length)]);
+                if (Math.random() > 0.5)
+                {
+                    rs.push(reasons[parseInt(Math.random() * reasons.length)]);
+                }
+                payload.reason = rs.join('. ');
+            }
+
+            res.status(200);
+            res.json(payload);
         }
-        res.status(501);
-        res.json(payload);
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async inbound214(req, res, next)
+    {
+        try
+        {
+            const payload = req.body;
+            const queries = [];
+
+            const modifiers = {};
+            const graphJoin = {
+                client: true,
+                stops: {
+                    terminal: true
+                }
+            };
+
+            if (payload.commodity)
+            {
+                graphJoin.stops.commodities = { $modify: ['byId'] };
+                modifiers.byId = query => query.where('identifier', payload.commodity);
+            }
+
+            queries.push(Order.query()
+                .findOne(builder =>
+                {
+                    builder.orWhere('rcg_tms.orders.referenceNumber', payload.shipment);
+                    builder.orWhere('rcg_tms.orders.guid', payload.order);
+                }).where('clientGuid', Order.relatedQuery('client').findOne(builder =>
+                {
+                    builder.orWhere('client.guid', payload.partner);
+                    builder.orWhere('client.sfId', payload.partner);
+                }).select('guid'))
+                .withGraphJoined(graphJoin)
+                .modifiers(modifiers)
+            );
+
+            const [order] = await Promise.all(queries);
+
+            if (!order)
+            {
+                throw Error('order with reference number "' + payload.shipment + '" doesn\'t exist');
+            }
+
+            if (payload.status.type == 'appointment')
+            {
+                // set appointment of an order
+                /* eslint-disable */
+                switch (payload.status.code)
+                {
+                    case 'AA':
+                        //  Pick - up Appointment Date and / or Time
+                        break;
+                    case 'AB':
+                        //  Delivery Appointment Date and / or Time
+                        break;
+                    case 'AC':
+                        //  Estimated Delivery Appointment Date and / or Time
+                        break;
+                    case 'ED':
+                        //  Deliver No Earlier Than Date and / or Time
+                        break;
+                    case 'EP':
+                        //  Pick - up No Earlier Than Date and / or Time
+                        break;
+                    case 'LD':
+                        //  Deliver No Later Than Date and / or Time
+                        break;
+                    case 'LP':
+                        //  Pick - up No Later Than Date and / or Time
+                        break;
+                    case 'X9':
+                        //  Delivery Appointment Secured on This Date and / or Time
+                        break;
+                    case 'XA':
+                        //  Pick - up Appointment Secured on This Date and / or Time
+                        break;
+                    default:
+                        throw new Error('unknown appointment status code: ' + payload.status.code);
+                }
+                /* eslint-enable */
+            }
+            else if (payload.status.type == 'status')
+            {
+                switch (payload.status.code)
+                {
+                    case 'A3':
+                        // Shipment Returned to Shipper
+                        break;
+                    case 'A7':
+                        // Refused by Consignee
+                        break;
+                    case 'A9':
+                        // Shipment Damaged
+                        break;
+                    case 'AF':
+                        // Carrier Departed Pick - up Location with Shipment
+                        break;
+                    case 'AG':
+                        // Estimated Delivery
+                        break;
+                    case 'AH':
+                        // Attempted Delivery
+                        break;
+                    case 'AI':
+                        // Shipment has been Reconsigned
+                        break;
+                    case 'AJ':
+                        // Tendered for Delivery
+                        break;
+                    case 'AM':
+                        // Loaded on Truck
+                        break;
+                    case 'AN':
+                        // Diverted to Air Carrier
+                        break;
+                    case 'AP':
+                        // Delivery Not Completed
+                        break;
+                    case 'AR':
+                        // Rail Arrival at Destination Intermodal Ramp
+                        break;
+                    case 'AV':
+                        // Available for Delivery
+                        break;
+                    case 'B6':
+                        // Estimated to Arrive at Carrier Terminal
+                        break;
+                    case 'BA':
+                        // Connecting Line or Cartage Pick - up
+                        break;
+                    case 'BC':
+                        // Storage in Transit
+                        break;
+                    case 'C1':
+                        // Estimated to Depart Terminal Location
+                        break;
+                    case 'CA':
+                        // Shipment Cancelled
+                        break;
+                    case 'CD':
+                        // Carrier Departed Delivery Location
+                        break;
+                    case 'CL':
+                        // Trailer Closed Out
+                        break;
+                    case 'CP':
+                        // Completed Loading at Pick - up Location
+                        break;
+                    case 'D1':
+                        // Completed Unloading at Delivery Location
+                        break;
+                    case 'I1':
+                        // In - Gate
+                        break;
+                    case 'J1':
+                        // Delivered to Connecting Line
+                        break;
+                    case 'K1':
+                        // Arrived at Customs
+                        break;
+                    case 'L1':
+                        // Loading
+                        break;
+                    case 'OA':
+                        // Out - Gate
+                        break;
+                    case 'OO':
+                        // Paperwork Received - Did not Receive Shipment or Equipment
+                        break;
+                    case 'P1':
+                        // Departed Terminal Location
+                        break;
+                    case 'PR':
+                        // U.S.Customs Hold at In - Bond Location
+                        break;
+                    case 'R1':
+                        // Received from Prior Carrier
+                        break;
+                    case 'RL':
+                        // Rail Departure from Origin Intermodal Ramp
+                        break;
+                    case 'S1':
+                        // Trailer Spotted at Consignee's Location
+                        break;
+                    case 'SD':
+                        // Shipment Delayed
+                        break;
+                    case 'X1':
+                        // Arrived at Delivery Location
+                        break;
+                    case 'X2':
+                        // Estimated Date and / or Time of Arrival at Consignee's Location
+                        break;
+                    case 'X3':
+                        // Arrived at Pick - up Location
+                        break;
+                    case 'X4':
+                        // Arrived at Terminal Location
+                        break;
+                    case 'X5':
+                        // Arrived at Delivery Location Loading Dock
+                        break;
+                    case 'X6':
+                        // En Route to Delivery Location
+                        break;
+                    case 'X8':
+                        // Arrived at Pick - up Location Loading Dock
+                        break;
+                    case 'XB':
+                        // Shipment Acknowledged
+                        break;
+                    default:
+                        throw new Error('unknown status code: ' + payload.status.code);
+                }
+            }
+            else
+            {
+                throw new Error('unknown status type: ' + payload.status.type);
+            }
+
+            res.status(200);
+            res.json(req.body);
+        }
+        catch (err)
+        {
+            next(err);
+        }
     }
 
     static async outbound214(req, res)
