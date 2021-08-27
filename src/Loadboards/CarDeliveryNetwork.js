@@ -37,7 +37,9 @@ class CarDeliveryNetwork extends Loadboard
                 Destination: {
                     AddressLines: this.data.pickup.terminal.street1,
                     City: this.data.pickup.terminal.city,
-                    Contact: this.data.pickup.primaryContact.name,
+                    Contact: this.data.pickup.primaryContact?.name,
+                    Phone: this.data.pickup.primaryContact?.phone,
+                    MobilePhone: this.data.pickup.primaryContact?.mobilePhone,
                     OrganisationName: this.data.pickup.terminal.name,
                     QuickCode: null,
                     StateRegion: this.getStateCode(this.data.pickup.terminal.state),
@@ -49,7 +51,9 @@ class CarDeliveryNetwork extends Loadboard
                 Destination: {
                     AddressLines: this.data.delivery.terminal.street1,
                     City: this.data.delivery.terminal.city,
-                    Contact: this.data.delivery.primaryContact.name,
+                    Contact: this.data.delivery.primaryContact?.name,
+                    Phone: this.data.delivery.primaryContact?.phone,
+                    MobilePhone: this.data.delivery.primaryContact?.mobilePhone,
                     OrganisationName: this.data.delivery.terminal.name,
                     QuickCode: null,
                     StateRegion: this.getStateCode(this.data.delivery.terminal.state),
