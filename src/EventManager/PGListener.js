@@ -18,8 +18,6 @@ class PGListener
 
             console.log('Listening To DB Triggers');
 
-            console.log(process.env.ENV, process.env.NODE_ENV);
-
             // subscribe to these channels
             channels.forEach(async (e) => await client.query(`LISTEN ${e}`));
 
@@ -28,8 +26,6 @@ class PGListener
             {
                 try
                 {
-                    console.log(msg.payload);
-
                     // convert string to json
                     const jsonMsg = JSON.parse(msg.payload);
 

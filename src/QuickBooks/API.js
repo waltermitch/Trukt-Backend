@@ -2,7 +2,6 @@ const InvoicePaymentMethod = require('../Models/InvoicePaymentMethod');
 const InvoicePaymentTerm = require('../Models/InvoicePaymentTerm');
 const VariableService = require('../Services/VariableService');
 const LineItemMdl = require('../Models/InvoiceLineItem');
-const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
@@ -214,9 +213,6 @@ class QBO
 
     static async upsertClient(data)
     {
-        console.log('Upserting Client');
-        console.log(data.name);
-
         const client = new Client(data);
 
         const api = await QBO.connect();
@@ -232,17 +228,10 @@ class QBO
             // create
             const res = await api.post('/customer', client);
 
-            console.log('Creating QB Client', data.name);
-
-            // save qbid in database
-            const update = await SFAccount.query().patch({ qbId: res.data.Client.Id }).findById({ 'guid': data?.guid });
-
-            console.log(update);
+            return { qbId: res.data.Customer.Id };
         }
         else
         {
-            console.log('Updating QB Client', data.name);
-
             // update
             const SyncToken = await QBO.getSyncToken('Customer', data.qbId);
 
@@ -264,8 +253,7 @@ class QBO
             // create
             const res = await api.post('/vendor', vendor);
 
-            // save qbid in database
-            await SFAccount.query().patch({ qbId: res.data.Vendor.Id }).where('sfId', data?.sfId);
+            return { qbId: res.data.Vendor.Id };
         }
         else
         {
