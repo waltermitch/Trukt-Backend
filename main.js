@@ -8,13 +8,12 @@ const domain = require('./src/Domain');
 const KnexSessionStore = require('connect-session-knex')(session);
 const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
-
-// const PGListener = require('./src/EventManager/PGListener');
+const PGListener = require('./src/EventManager/PGListener');
 const HttpErrorHandler = require('./src/HttpErrorHandler');
 const Mongo = require('./src/Mongo');
 require('./src/CronJobs/Manager');
 
-// PGListener.listen();
+PGListener.listen();
 Mongo.connect();
 
 const store = new KnexSessionStore
