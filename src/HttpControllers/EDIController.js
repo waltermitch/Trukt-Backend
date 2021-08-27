@@ -306,6 +306,21 @@ class EDIController
     {
         try
         {
+            // TODO: this is temp, will add using validator schema
+            const missing = [
+                'partner',
+                'reference',
+                'datetime',
+                'status',
+                'location'
+
+            ].filter(it => { return !(it in req.body); });
+
+            if (missing.length > 0)
+            {
+                throw new Error('missing field(s): ' + missing.join(', '));
+            }
+
             const payload = req.body;
             const queries = [];
 
@@ -323,25 +338,27 @@ class EDIController
                 modifiers.byId = query => query.where('identifier', payload.commodity);
             }
 
-            queries.push(Order.query()
-                .findOne(builder =>
-                {
-                    builder.orWhere('rcg_tms.orders.referenceNumber', payload.shipment);
-                    builder.orWhere('rcg_tms.orders.guid', payload.order);
-                }).where('clientGuid', Order.relatedQuery('client').findOne(builder =>
+            const orderQuery = Order.query()
+                .findOne('rcg_tms.orders.referenceNumber', payload.reference)
+                .where('clientGuid', Order.relatedQuery('client').findOne(builder =>
                 {
                     builder.orWhere('client.guid', payload.partner);
                     builder.orWhere('client.sfId', payload.partner);
                 }).select('guid'))
                 .withGraphJoined(graphJoin)
-                .modifiers(modifiers)
-            );
+                .modifiers(modifiers);
+
+            if (payload.order)
+            {
+                orderQuery.where('rcg_tms.orders.guid', payload.order);
+            }
+            queries.push(orderQuery);
 
             const [order] = await Promise.all(queries);
 
             if (!order)
             {
-                throw Error('order with reference number "' + payload.shipment + '" doesn\'t exist');
+                throw Error('order with reference number "' + payload.reference + '" doesn\'t exist');
             }
 
             if (payload.status.type == 'appointment')
@@ -522,7 +539,7 @@ class EDIController
             }
 
             res.status(200);
-            res.json(req.body);
+            res.json();
         }
         catch (err)
         {
@@ -530,50 +547,77 @@ class EDIController
         }
     }
 
-    static async outbound214(req, res)
+    static async outbound214(req, res, next)
     {
-        const orders = await Order.query().where('isTender', true).withGraphJoined('[ client, stops.[commodities, terminal] ]').limit(100);
-        const order = orders[Math.floor(Math.random() * orders.length)];
-        const stop = order.stops[Math.floor(Math.random() * order.stops.length)];
-        const commodity = stop?.commodities[Math.floor(Math.random() * stop.commodities.length)];
-        const payload = {
-            order: order.guid,
-            partner: order.client.sfId,
-            shipment: order.referenceNumber,
-            datetime: DateTime.now().toISO()
-        };
-
-        if (stop)
+        try
         {
-            payload.commodity = commodity?.identifier;
-            payload.location = {
-                city: stop?.terminal?.city,
-                state: stop?.terminal?.state,
-                country: stop?.terminal?.country,
-                latitude: stop?.terminal?.latitude,
-                longitude: stop?.terminal?.longitude
-            };
-        }
+            const orderQuery = Order.query().where('isTender', true).withGraphJoined('[ client, stops.[commodities, terminal] ]').limit(100);
+            if (req.query.reference)
+            {
+                orderQuery.findOne('referenceNumber', req.query.reference);
+            }
+            let order = await orderQuery;
+            if (Array.isArray(order) && order.length > 0)
+            {
+                order = order[Math.floor(Math.random() * order.length)];
 
-        if (Math.random() > 0.5)
-        {
-            payload.status = {
-                type: 'appointment',
-                code: shipmentAppointmentStatusCode[Math.floor(Math.random() * shipmentAppointmentStatusCode.length)],
-                reason: shipmentStatusCodeReason[Math.floor(Math.random() * shipmentStatusCodeReason.length)]
+            }
+            else if (!order)
+            {
+                if (req.query.reference)
+                {
+                    throw new Error('load tender with reference number: "' + req.query.reference + '" doesn\'t exist');
+                }
+                else
+                {
+                    throw new Error('No order / load tender was found. Please create a load tender first.');
+                }
+            }
+            const stop = order.stops[Math.floor(Math.random() * order.stops.length)];
+            const commodity = stop?.commodities[Math.floor(Math.random() * stop.commodities.length)];
+            const payload = {
+                order: order.guid,
+                partner: order.client.sfId,
+                reference: order.referenceNumber,
+                datetime: DateTime.now().toISO()
             };
-        }
-        else
-        {
-            payload.status = {
-                type: 'status',
-                code: shipmentStatusCodes[Math.floor(Math.random() * shipmentStatusCodes.length)],
-                reason: shipmentStatusCodeReason[Math.floor(Math.random() * shipmentStatusCodeReason.length)]
-            };
-        }
 
-        res.status(200);
-        res.json(payload);
+            if (stop)
+            {
+                payload.commodity = commodity?.identifier;
+                payload.location = {
+                    city: stop?.terminal?.city,
+                    state: stop?.terminal?.state,
+                    country: stop?.terminal?.country,
+                    latitude: stop?.terminal?.latitude,
+                    longitude: stop?.terminal?.longitude
+                };
+            }
+
+            if (Math.random() > 0.5)
+            {
+                payload.status = {
+                    type: 'appointment',
+                    code: shipmentAppointmentStatusCode[Math.floor(Math.random() * shipmentAppointmentStatusCode.length)],
+                    reason: shipmentStatusCodeReason[Math.floor(Math.random() * shipmentStatusCodeReason.length)]
+                };
+            }
+            else
+            {
+                payload.status = {
+                    type: 'status',
+                    code: shipmentStatusCodes[Math.floor(Math.random() * shipmentStatusCodes.length)],
+                    reason: shipmentStatusCodeReason[Math.floor(Math.random() * shipmentStatusCodeReason.length)]
+                };
+            }
+
+            res.status(200);
+            res.json(payload);
+        }
+        catch (error)
+        {
+            next(error);
+        }
     }
 }
 
