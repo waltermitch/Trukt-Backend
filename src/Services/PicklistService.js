@@ -1,5 +1,6 @@
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const CommodityType = require('../Models/CommodityType');
+const LoadboardContact = require('../Models/LoadboardContact');
 const BaseModel = require('../Models/BaseModel');
 const HTTPS = require('../AuthController');
 const fs = require('fs');
@@ -109,6 +110,19 @@ class PicklistService
         // gathers loadboard picklist information and sends it back
         // as a response.
         const loadboardData = (await lbConn.get('/equipmenttypes')).data;
+
+        for (const contact of (await LoadboardContact.query()))
+        {
+            const newContact = { id: contact.id, name: contact.name, phone: contact.phone, email: contact.email };
+            if (loadboardData[`${contact.loadboard}`].contacts == null)
+            {
+                loadboardData[`${contact.loadboard}`].contacts = [newContact];
+            }
+            else
+            {
+                loadboardData[`${contact.loadboard}`].contacts.push(newContact);
+            }
+        }
 
         const paymentTerms = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
         const paymentMethods = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_methods').select('*'));
