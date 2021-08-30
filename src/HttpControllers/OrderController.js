@@ -55,7 +55,7 @@ class OrderController extends HttpRouteController
     {
         try
         {
-            const { filters, page, rowCount } = req.body;
+            const { filters = {}, page, rowCount } = req.body;
             const orders = await OrderService.getOrders(filters, page || 0, rowCount || 25);
 
             res.status(200);
