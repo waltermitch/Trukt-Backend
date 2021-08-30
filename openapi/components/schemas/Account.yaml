@@ -1,0 +1,11 @@
+type: object
+required:
+  - name
+properties:
+  guid:
+    oneOf:
+      - $ref: .\SFID.yaml
+      - type: string
+        format: uuid
+  name:
+    type: string

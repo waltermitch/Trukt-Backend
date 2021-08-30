@@ -1,0 +1,16 @@
+post:
+  summary: Create a load tender
+  operationId: createLoadTender
+  tags:
+    - EDI
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ..\components\schemas\Order.yaml
+  responses:
+    '201':
+      description: Created load tender.
+      content:
+        application/json: {}

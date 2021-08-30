@@ -1,0 +1,24 @@
+openapi: 3.0.0
+info:
+  version: 0.0.1
+  title: Trukt
+  description: Transportation management system
+  license:
+    name: Private
+    url: there is no url
+servers:
+  - url: 'https://truktbackend-dev.rcgauto.p.azurewebsites.net'
+    description: Development server
+  - url: 'https://truktbackend-staging.rcgauto.p.azurewebsites.net'
+    description: Staging server
+  - url: 'https://truktbackend.rcgauto.p.azurewebsites.net'
+    description: Production server
+paths:
+  /edi/204/inbound:
+    $ref: paths\edi@204@inbound.yaml
+  /edi/214/inbound:
+    $ref: paths\edi@214@inbound.yaml
+  /edi/990/outbound/accept:
+    $ref: paths\edi@990@outbound@accept.yaml
+  /edi/990/outbound/reject:
+    $ref: paths\edi@990@outbound@reject.yaml

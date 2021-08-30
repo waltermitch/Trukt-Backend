@@ -1,0 +1,79 @@
+put:
+  summary: Update a load tender status
+  operationId: updateLoadTenderStatus
+  tags:
+    - EDI
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - partner
+            - reference
+            - location
+            - status
+            - datetime
+          properties:
+            order:
+              type: string
+              format: uuid
+            partner:
+              description: the partner that wishes to update a load tender
+              oneOf:
+                - $ref: ..\components\schemas\SFID.yaml
+                - type: string
+                  format: uuid
+            reference:
+              description: >-
+                the shipment/reference number from the load that was created via
+                EDI 204 load tender
+              type: string
+            commodity:
+              description: >-
+                identifier field from a commodity that was created via EDI 204
+                load tender
+              type: string
+            location:
+              description: Include the location to update the respective stop
+              type: object
+              properties:
+                city:
+                  type: string
+                state:
+                  type: string
+                country:
+                  type: string
+                latitude:
+                  type: number
+                  format: float
+                  minimum: -180
+                  maximum: 180
+                longitude:
+                  type: number
+                  format: float
+                  minimum: -180
+                  maximum: 180
+            status:
+              description: Represents the status/appointment update for the load tender
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - status
+                    - appointment
+                code:
+                  description: EDI 214  AT701/AT703 appointment status code
+                  type: string
+                reason:
+                  description: EDI 214 AT702/AT704 appointment status reason code
+                  type: string
+            datetime:
+              type: string
+              format: datetime with timezone ISO 8601
+  responses:
+    '200':
+      description: Inbound Load Tender Update
+      content:
+        application/json: {}
