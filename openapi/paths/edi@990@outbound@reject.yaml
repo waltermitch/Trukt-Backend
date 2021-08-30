@@ -1,0 +1,44 @@
+get:
+  summary: Reject Load Tender
+  description: >-
+    this will be sent out, do not make a call to this endpoint, you will recieve
+    a 404 error
+  tags:
+    - EDI
+  operationId: rejectLoadTender
+  responses:
+    '200':
+      description: Return this status code if the request was accepted
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              order:
+                description: The EDI load tender guid inside of RCG database
+                type: string
+                format: uuid
+              partner:
+                description: >-
+                  The EDI load tender client guid that was used when creating a
+                  load tender in our system.
+                $ref: ..\components\schemas\SFID.yaml
+              reference:
+                description: >-
+                  The EDI load tender reference number used when creating a load
+                  tender in our system.
+                type: string
+              action:
+                description: The action to take with the EDI load tender.
+                type: string
+                enum:
+                  - accept
+                  - decline
+              date:
+                description: The date the response was generated
+                type: string
+                format: datetime with timezone ISO 8601
+              scac:
+                description: The scac number
+                type: string
+                format: scac
