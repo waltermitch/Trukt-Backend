@@ -70,7 +70,7 @@ CREATE TABLE salesforce.account (
     personindividualid character varying(18),
     referral_amount__c double precision,
     business_type__c character varying(255),
-    sd_guid__pc character varying(255),
+    sd_guid__c character varying(255),
     commonauthority__c boolean,
     fraud_identity_theft_status__c character varying(255),
     name character varying(255),
@@ -182,6 +182,7 @@ CREATE TABLE salesforce.account (
     loadboard_instructions__c text,
     sfid character varying(18) COLLATE pg_catalog.ucs_basic,
     id integer NOT NULL,
+    sync_in_super__c boolean,
     _hc_lastop character varying(32),
     _hc_err text
 );
@@ -273,7 +274,8 @@ CREATE TABLE salesforce.recordtype (
     sfid character varying(18) COLLATE pg_catalog.ucs_basic,
     id integer NOT NULL,
     _hc_lastop character varying(32),
-    _hc_err text
+    _hc_err text,
+    sobjecttype character varying(255) COLLATE pg_catalog."default"
 );
 ALTER TABLE salesforce.recordtype OWNER TO postgres;
 CREATE SEQUENCE salesforce.recordtype_id_seq
@@ -300,6 +302,8 @@ CREATE INDEX hc_idx_account_masterrecordid ON salesforce.account USING btree (ma
 CREATE INDEX hc_idx_account_systemmodstamp ON salesforce.account USING btree (systemmodstamp);
 CREATE INDEX hc_idx_contact_systemmodstamp ON salesforce.contact USING btree (systemmodstamp);
 CREATE INDEX hc_idx_recordtype_systemmodstamp ON salesforce.recordtype USING btree (systemmodstamp);
+CREATE INDEX hc_idx_recordtype_sobjecttype ON salesforce.recordtype USING btree (sobjecttype COLLATE pg_catalog."default" ASC NULLS LAST);
+CREATE INDEX hc_idx_recordtype_name ON salesforce.recordtype USING btree (name COLLATE pg_catalog."default" ASC NULLS LAST);
 CREATE UNIQUE INDEX hcu_idx_account_guid__c ON salesforce.account USING btree (guid__c);
 CREATE UNIQUE INDEX hcu_idx_account_sfid ON salesforce.account USING btree (sfid);
 CREATE UNIQUE INDEX hcu_idx_contact_guid__c ON salesforce.contact USING btree (guid__c);

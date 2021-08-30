@@ -1,0 +1,337 @@
+{
+    "SFAccount": {
+        "hide": {
+            "database": {
+                "outa": [],
+                "into": []
+            },
+            "external": {
+                "outa": [],
+                "into": [
+                    "accountNameDuplicate",
+                    "accountNumber",
+                    "accountSource",
+                    "active",
+                    "auctionId",
+                    "autoInsuranceExpiration",
+                    "autoimsClientId",
+                    "azureId",
+                    "bankAccountName",
+                    "bankAccountNumber",
+                    "bankAccountType",
+                    "bankRoutingNumber",
+                    "billingGeocodeAccuracy",
+                    "brokerAuthority",
+                    "businessType",
+                    "cargoInsuranceExpiration",
+                    "carrierType",
+                    "cellPhone",
+                    "certificateHolder",
+                    "clientAccountManager",
+                    "coiRequestDate",
+                    "commonAuthority",
+                    "contractAuthority",
+                    "counterPartyGuid",
+                    "createdById",
+                    "createdDate",
+                    "creditLimitAmount",
+                    "customerInQbo",
+                    "customerPriority",
+                    "datUsername",
+                    "dbaName",
+                    "deliveryNotes",
+                    "description",
+                    "dotNumberStatus",
+                    "emergencyPhone",
+                    "factoringCompany",
+                    "fax",
+                    "firstName",
+                    "flag",
+                    "flagHistory",
+                    "fraudIdentityTheftStatus",
+                    "freePhone",
+                    "icpEligible",
+                    "icpGp",
+                    "icpMultiplier",
+                    "id",
+                    "inactive",
+                    "industry",
+                    "insuranceExpiration",
+                    "insuranceOnFile",
+                    "internalNotes",
+                    "isCustomerPortal",
+                    "isDeleted",
+                    "isPartner",
+                    "isPersonAccount",
+                    "isSyncedInSuper",
+                    "jobTitle",
+                    "lastModifiedDate",
+                    "lastName",
+                    "lastReferencedDate",
+                    "lastViewedDate",
+                    "liabilityInsuranceExpiration",
+                    "lkqTrainingItems",
+                    "masterRecordGuid",
+                    "masterRecordId",
+                    "notes",
+                    "numberOfEmployees",
+                    "numberOfLocations",
+                    "operationsEmail",
+                    "ownerId",
+                    "parentId",
+                    "paymentMethod",
+                    "paymentTerms",
+                    "pendingCancellationDate",
+                    "personAssistantName",
+                    "personAssistantPhone",
+                    "personBirthDate",
+                    "personContactId",
+                    "personDepartment",
+                    "personEmail",
+                    "personEmailBouncedDate",
+                    "personEmailBouncedReason",
+                    "personHomePhone",
+                    "personIndividualId",
+                    "personLastCuRequestDate",
+                    "personLastCuUpdateDate",
+                    "personLeadSource",
+                    "personMailingCity",
+                    "personMailingCountry",
+                    "personMailingGeocodeAccuracy",
+                    "personMailingLatitude",
+                    "personMailingLongitude",
+                    "personMailingPostalCode",
+                    "personMailingState",
+                    "personMailingStreet",
+                    "personMobilePhone",
+                    "personOtherCity",
+                    "personOtherCountry",
+                    "personOtherGeocodeAccuracy",
+                    "personOtherLatitude",
+                    "personOtherLongitude",
+                    "personOtherPhone",
+                    "personOtherPostalCode",
+                    "personOtherState",
+                    "personOtherStreet",
+                    "personTitle",
+                    "photoUrl",
+                    "pickupNotes",
+                    "portfolioCode",
+                    "primaryContactId",
+                    "primaryContactPersonId",
+                    "qbId",
+                    "rating",
+                    "recordTypeId",
+                    "referralCode",
+                    "requiresAttention",
+                    "salesAccountManager",
+                    "salutation",
+                    "sdGuid",
+                    "searchAddress",
+                    "sfId",
+                    "shippingGeocodeAccuracy",
+                    "sic",
+                    "sicDesc",
+                    "site",
+                    "sla",
+                    "slaDays",
+                    "slaExpirationDate",
+                    "slaSerialNumber",
+                    "status",
+                    "subIndustry",
+                    "suite",
+                    "systemModStamp",
+                    "taxId",
+                    "track1099",
+                    "trainee",
+                    "trainer",
+                    "trainingDate",
+                    "trainingItems",
+                    "truckstopUsername",
+                    "type",
+                    "upsellOpportunity",
+                    "userRole",
+                    "usesFactoringCompany",
+                    "vendorType",
+                    "website"
+                ]
+            }
+        }
+    },
+    "SFContact": {
+        "hide": {
+            "database": {
+                "outa": [],
+                "into": []
+            },
+            "external": {
+                "outa": [],
+                "into": [
+                    "accountId",
+                    "accountingContact",
+                    "assistantName",
+                    "assistantPhone",
+                    "birthDate",
+                    "createdDate",
+                    "department",
+                    "description",
+                    "emailBouncedDate",
+                    "emailBouncedReason",
+                    "fax",
+                    "firstName",
+                    "homePhone",
+                    "id",
+                    "individualId",
+                    "isDeleted",
+                    "isEmailBounced",
+                    "isPersonAccount",
+                    "lastName",
+                    "leadSource",
+                    "lkqTrainingItems",
+                    "mailingCity",
+                    "mailingCountry",
+                    "mailingGeocodeAccuracy",
+                    "mailingLatitude",
+                    "mailingLongitude",
+                    "mailingPostalCode",
+                    "mailingState",
+                    "mailingStreet",
+                    "otherCity",
+                    "otherCountry",
+                    "otherGeocodeAccuracy",
+                    "otherLatitude",
+                    "otherLongitude",
+                    "otherPhone",
+                    "otherPostalCode",
+                    "otherState",
+                    "otherStreet",
+                    "photoUrl",
+                    "primaryContact",
+                    "recordTypeId",
+                    "salutation",
+                    "sdGuid",
+                    "secondaryContact",
+                    "sfId",
+                    "systemModStamp",
+                    "title",
+                    "trainer",
+                    "trainingDate",
+                    "trainingItems"
+                ]
+            }
+        }
+    },
+    "Terminal": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isResolved",
+                    "isDeleted",
+                    "dateDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "deletedByGuid",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "primaryContactGuid",
+                    "alternativeContactGuid"
+                ]
+            }
+        }
+    },
+    "Commodity": {
+        "hide": {
+            "external": {
+                "into": [
+                    "typeId",
+                    "vehicleId",
+                    "isDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid"
+                ]
+            }
+        }
+    },
+    "Order": {
+        "hide": {
+            "external": {
+                "into": [
+                    "clientGuid",
+                    "clientContactGuid",
+                    "consigneeGuid",
+                    "referrerGuid",
+                    "salespersonGuid",
+                    "dispatcherGuid",
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid"
+                ]
+            }
+        }
+    },
+    "OrderJob": {
+        "hide": {
+            "external": {
+                "into": [
+                    "vendorGuid",
+                    "vendorContactGuid",
+                    "vendorAgentGuid",
+                    "dispatcherGuid",
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid",
+                    "orderGuid"
+                ]
+            }
+        }
+    },
+    "User": {
+        "hide": {
+            "external": {
+                "into": [
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted"
+                ]
+            }
+        }
+    },
+    "OrderStop": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid",
+                    "primaryContactGuid",
+                    "alternativeContactGuid",
+                    "terminalGuid"
+                ]
+            }
+        }
+    },
+    "TerminalContact": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid",
+                    "terminalGuid"
+                ]
+            }
+        }
+    }
+}
