@@ -30,7 +30,7 @@ exports.up = function (knex)
             SELECT array_position(alpha_digits, alpha_char) INTO index_part;
             index_part = index_part + 1;
             IF (index_part > alpha_digits_length) THEN
-                index_part = 1;
+                RAISE EXCEPTION 'cannot create any more jobs for order %', order_number;
             END IF;
             nxt_idx = alpha_digits[index_part];
         END IF;

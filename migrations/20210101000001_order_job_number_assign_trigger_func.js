@@ -13,10 +13,12 @@ exports.up = function (knex)
         order_number varchar;
     BEGIN
         IF (TG_OP = 'INSERT') THEN
-            SELECT number INTO order_number FROM orders WHERE orders.guid = NEW.order;
-            NEW.number = rcg_tms.rcg_next_order_job_number(order_number);
+            IF (NEW.number IS NULL) THEN 
+                SELECT number INTO order_number FROM rcg_tms.orders WHERE orders.guid = NEW.order_guid;
+                NEW.number = rcg_tms.rcg_next_order_job_number(order_number);
+            END IF;
         ELSEIF (TG_OP = 'UPDATE') THEN
-        -- do not allow users to change the guid once it is assigned
+        -- do not allow users to change the order job number once it is assigned
             IF (NEW.number <> OLD.number ) THEN
                 NEW.number = OLD.number;
             END IF;
