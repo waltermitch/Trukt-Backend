@@ -1,0 +1,509 @@
+openapi: 3.0.0
+info:
+  version: 0.0.1
+  title: Trukt
+  description: Transportation management system
+  license:
+    name: Private
+    url: there is no url
+servers:
+  - url: 'https://truktbackend-dev.rcgauto.p.azurewebsites.net'
+    description: Development server
+  - url: 'https://truktbackend-staging.rcgauto.p.azurewebsites.net'
+    description: Staging server
+  - url: 'https://truktbackend.rcgauto.p.azurewebsites.net'
+    description: Production server
+paths:
+  /edi/204/inbound:
+    post:
+      summary: Create a load tender
+      operationId: createLoadTender
+      tags:
+        - EDI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '201':
+          description: Created load tender.
+          content:
+            application/json: {}
+  /edi/214/inbound:
+    put:
+      summary: Update a load tender status
+      operationId: updateLoadTenderStatus
+      tags:
+        - EDI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - partner
+                - reference
+                - location
+                - status
+                - datetime
+              properties:
+                order:
+                  type: string
+                  format: uuid
+                partner:
+                  description: the partner that wishes to update a load tender
+                  oneOf:
+                    - $ref: '#/components/schemas/SFID'
+                    - type: string
+                      format: uuid
+                reference:
+                  description: >-
+                    the shipment/reference number from the load that was created
+                    via EDI 204 load tender
+                  type: string
+                commodity:
+                  description: >-
+                    identifier field from a commodity that was created via EDI
+                    204 load tender
+                  type: string
+                location:
+                  description: Include the location to update the respective stop
+                  type: object
+                  properties:
+                    city:
+                      type: string
+                    state:
+                      type: string
+                    country:
+                      type: string
+                    latitude:
+                      type: number
+                      format: float
+                      minimum: -180
+                      maximum: 180
+                    longitude:
+                      type: number
+                      format: float
+                      minimum: -180
+                      maximum: 180
+                status:
+                  description: Represents the status/appointment update for the load tender
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - status
+                        - appointment
+                    code:
+                      description: EDI 214  AT701/AT703 appointment status code
+                      type: string
+                    reason:
+                      description: EDI 214 AT702/AT704 appointment status reason code
+                      type: string
+                datetime:
+                  type: string
+                  format: datetime with timezone ISO 8601
+      responses:
+        '200':
+          description: Inbound Load Tender Update
+          content:
+            application/json: {}
+  /edi/990/outbound/accept:
+    get:
+      summary: Accept Load Tender
+      description: >-
+        this will be sent out, do not make a call to this endpoint, you will
+        recieve a 404 error
+      tags:
+        - EDI
+      operationId: acceptLoadTender
+      responses:
+        '200':
+          description: Return this status code if the request was accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    description: The EDI load tender guid inside of RCG database
+                    type: string
+                    format: uuid
+                  partner:
+                    description: >-
+                      The EDI load tender client guid that was used when
+                      creating a load tender in our system.
+                    $ref: '#/components/schemas/SFID'
+                  reference:
+                    description: >-
+                      The EDI load tender reference number used when creating a
+                      load tender in our system.
+                    type: string
+                  action:
+                    description: The action to take with the EDI load tender.
+                    type: string
+                    enum:
+                      - accept
+                      - decline
+                  date:
+                    description: The date the response was generated
+                    type: string
+                    format: datetime with timezone ISO 8601
+                  scac:
+                    description: The scac number
+                    type: string
+                    format: scac
+  /edi/990/outbound/reject:
+    get:
+      summary: Reject Load Tender
+      description: >-
+        this will be sent out, do not make a call to this endpoint, you will
+        recieve a 404 error
+      tags:
+        - EDI
+      operationId: rejectLoadTender
+      responses:
+        '200':
+          description: Return this status code if the request was accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    description: The EDI load tender guid inside of RCG database
+                    type: string
+                    format: uuid
+                  partner:
+                    description: >-
+                      The EDI load tender client guid that was used when
+                      creating a load tender in our system.
+                    $ref: '#/components/schemas/SFID'
+                  reference:
+                    description: >-
+                      The EDI load tender reference number used when creating a
+                      load tender in our system.
+                    type: string
+                  action:
+                    description: The action to take with the EDI load tender.
+                    type: string
+                    enum:
+                      - accept
+                      - decline
+                  date:
+                    description: The date the response was generated
+                    type: string
+                    format: datetime with timezone ISO 8601
+                  scac:
+                    description: The scac number
+                    type: string
+                    format: scac
+components:
+  schemas:
+    SFID:
+      type: string
+      format: id
+      pattern: '^(:?[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$'
+      maxLength: 18
+      minLength: 15
+    Account:
+      type: object
+      required:
+        - name
+      properties:
+        guid:
+          oneOf:
+            - $ref: '#/components/schemas/SFID'
+            - type: string
+              format: uuid
+        name:
+          type: string
+    Contact:
+      type: object
+      required:
+        - name
+        - phoneNumber
+      properties:
+        guid:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 121
+        email:
+          type: string
+          format: email
+        phoneNumber:
+          type: string
+          format: phone
+        mobileNumber:
+          type: string
+          format: phone
+    Terminal:
+      type: object
+      required:
+        - zipCode
+      properties:
+        guid:
+          type: string
+          format: uuid
+        index:
+          description: >-
+            A unique arbitrary string that will be used to reference this
+            terminal record inside of other objects.
+          type: string
+        name:
+          description: >-
+            A non-unique name for this terminal that will be displayed to the
+            users.
+          type: string
+          maxLength: 255
+        street1:
+          type: string
+          maxLength: 64
+        state:
+          type: string
+          maxLength: 100
+        city:
+          type: string
+          maxLength: 64
+        country:
+          type: string
+          maxLength: 64
+        zipCode:
+          type: string
+          maxLength: 16
+        latitude:
+          type: number
+          format: float
+          minimum: -180
+          maximum: 180
+        longitude:
+          type: number
+          format: float
+          minimum: -180
+          maximum: 180
+    Commodity:
+      description: >-
+        The real world item(s) that need to be transported between two real
+        world locations
+      type: object
+      required:
+        - identifier
+        - type
+        - category
+      properties:
+        guid:
+          type: string
+          format: uuid
+        index:
+          description: >-
+            A unique arbitrary string that will be used to reference this
+            commodity record inside of other objects.
+          type: string
+        identifier:
+          type: string
+          maxLength: 255
+        category:
+          type: string
+          enum:
+            - vehicle
+            - freight
+        type:
+          type: string
+          enum:
+            - coupe
+            - convertible
+            - sedan
+            - SUV
+            - minivan
+            - pickup truck (2 door)
+            - pickup truck (4 door)
+            - pickup dually
+            - motorcycle
+            - ATV
+            - boat
+            - RV
+            - trailer (5th wheel)
+            - trailer (bumper pull)
+            - trailer (gooseneck)
+            - cargo van
+            - box truck
+            - day cab
+            - sleeper cab
+            - other
+            - bulk
+            - crushed cars
+            - other
+        description:
+          description: A breif description of the commodity.
+          type: string
+          maxLength: 255
+        quantity:
+          description: The number of peices of the commodity to be transported.
+          type: integer
+        length:
+          description: The number of feet the commodity is length-wise.
+          type: integer
+          minimum: 0
+        weight:
+          description: The number of US pounds the commodity weighs.
+          type: integer
+          minimum: 0
+        extraExternalData:
+          description: >-
+            Any information about the commodity that is stored in external
+            systems. This is a free response json field.
+          type: object
+        cost:
+          description: Only used for EDI
+          type: string
+          format: currency
+    Stop:
+      type: object
+      required:
+        - sequence
+        - stopType
+        - terminal
+        - commodities
+      properties:
+        guid:
+          type: string
+          format: uuid
+        index:
+          description: >-
+            A unique arbitrary string that will be used to reference this stop
+            record inside of other objects.
+          type: string
+        sequence:
+          type: integer
+        stopType:
+          description: >-
+            Describes the type of stop, use pickup to indicate that the stop is
+            for picking up commodities, use delivery for dropping off
+            commodities.
+          type: string
+          enum:
+            - delivery
+            - pickup
+        notes:
+          description: Used to convey any instructions about the stops.
+          type: string
+        dateRequestedStart:
+          description: >-
+            This date is requested by the customer. The earliest date this stop
+            should be worked.
+          type: string
+          format: datetime with timezone ISO 8601
+        dateRequestedEnd:
+          description: >-
+            This date is requested by the customer. The latest date this stop
+            should be worked.
+          type: string
+          format: datetime with timezone ISO 8601
+        dateRequestedType:
+          description: Defines the type of requested date the customer requested.
+          type: string
+          enum:
+            - exactly
+            - estimated
+            - no later than
+            - no earlier than
+        dateEstimatedStart:
+          description: >-
+            This date is submitted by the carrier/vendor. The earliest date this
+            stop could be worked.
+          type: string
+          format: datetime with timezone ISO 8601
+        dateEstimatedEnd:
+          description: >-
+            This date is submitted by the carrier/vendor. The latest date this
+            stop could be worked.
+          type: string
+          format: datetime with timezone ISO 8601
+        dateEstimatedType:
+          description: Defines the type of estimated date the carrier/vendor submitted.
+          type: string
+          enum:
+            - exactly
+            - estimated
+            - no later than
+            - no earlier than
+        dateScheduledStart:
+          description: >-
+            This date is submitted by the dispatcher. The earliest date this
+            stop will be worked
+          type: string
+          format: datetime with timezone ISO 8601
+        dateScheduledEnd:
+          description: >-
+            This date is submitted by the dispatcher. The latest date this stop
+            will be worked
+          type: string
+          format: datetime with timezone ISO 8601
+        dateScheduledType:
+          description: Defined the type of scheduled date the dispatcher submitted.
+          type: string
+          enum:
+            - exactly
+            - estimated
+            - no later than
+            - no earlier than
+        primaryContact:
+          $ref: '#/components/schemas/Contact'
+        alternativeContact:
+          $ref: '#/components/schemas/Contact'
+        terminal:
+          $ref: '#/components/schemas/Terminal'
+        commodities:
+          type: array
+          minLength: 1
+          items:
+            $ref: '#/components/schemas/Commodity'
+    Order:
+      type: object
+      required:
+        - client
+        - stops
+        - terminals
+        - commodities
+      properties:
+        referenceNumber:
+          type: string
+          maxLength: 64
+        bol:
+          type: string
+          maxLength: 64
+        totalCost:
+          description: >-
+            Only used for EDI. The total cost of the order. This should match
+            the sum of the cost of all of the commodities.
+          type: string
+          format: currency
+        client:
+          description: The client/customer that is placing the order.
+          $ref: '#/components/schemas/Account'
+        consignee:
+          description: The party that is responsible for paying for the order.
+          $ref: '#/components/schemas/Account'
+        clientContact:
+          description: The contact information of the client.
+          $ref: '#/components/schemas/Contact'
+        stops:
+          type: array
+          items:
+            $ref: '#/components/schemas/Stop'
+          minLength: 1
+        terminals:
+          type: array
+          items:
+            $ref: '#/components/schemas/Terminal'
+          minLength: 1
+        commodities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Commodity'
