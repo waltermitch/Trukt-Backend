@@ -17,6 +17,7 @@ const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Expense = require('../Models/Expense');
 const R = require('ramda');
+const { MilesToMeters } = require('./../Utils');
 
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
@@ -24,40 +25,15 @@ const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 
 class OrderService
 {
-    static async getOrders({ origin, destination }, page, rowCount)
+    static async getOrders({ pickup, delivery }, page, rowCount)
     {
-        const st = Terminal.st;
         let ordersQuery = Order.query().page(page, rowCount);
 
-        if (origin)
-        {
-            ordersQuery = ordersQuery.whereExists(
-                Order.relatedQuery('stops').where('stopType', 'pickup').whereExists(
-                    OrderStop.relatedQuery('terminal').andWhere(
-                        st.dwithin(
-                            st.geography(st.makePoint('longitude', 'latitude')),
-                            st.geography(st.makePoint(origin.longitude, origin.latitude)),
-                            origin.radius
-                        )
-                    )
-                )
-            );
-        }
-        if (destination)
-        {
-            const destinationQuery = Order.query().select('guid').whereExists(
-                Order.relatedQuery('stops').where('stopType', 'delivery').whereExists(
-                    OrderStop.relatedQuery('terminal').andWhere(
-                        st.dwithin(
-                            st.geography(st.makePoint('longitude', 'latitude')),
-                            st.geography(st.makePoint(destination.longitude, destination.latitude)),
-                            destination.radius
-                        )
-                    )
-                )
-            );
-            ordersQuery = ordersQuery.whereIn('guid', destinationQuery);
-        }
+        if (pickup)
+            ordersQuery = OrderService.addFilterPickups(ordersQuery, pickup);
+
+        if (delivery)
+            ordersQuery = OrderService.addFilterDeliveries(ordersQuery, delivery);
 
         const orders = await ordersQuery.orderBy('number', 'ASC');
 
@@ -623,6 +599,62 @@ class OrderService
         }
 
         return stopLinks;
+    }
+
+    static getSTWithin(latitude, longitude, radius)
+    {
+        const st = Terminal.st;
+        return st.dwithin(
+            st.geography(st.makePoint('longitude', 'latitude')),
+            st.geography(st.makePoint(longitude, latitude)),
+            MilesToMeters(radius)
+        );
+    }
+
+    static addFilterPickups(baseQuery, pickups)
+    {
+        return baseQuery.whereExists(
+            Order.relatedQuery('stops').where('stopType', 'pickup').whereExists(
+                OrderService.basePickupDeliveryFilterQuery(pickups)
+            )
+        );
+    }
+
+    static addFilterDeliveries(baseQuery, deliveries)
+    {
+        const deliveryQuery = Order.query().select('guid').whereExists(
+            Order.relatedQuery('stops').where('stopType', 'delivery').whereExists(
+                OrderService.basePickupDeliveryFilterQuery(deliveries)
+            )
+        );
+        return baseQuery.whereIn('guid', deliveryQuery);
+    }
+
+    static basePickupDeliveryFilterQuery(coordinatesList)
+    {
+        return OrderStop.relatedQuery('terminal').where(function ()
+        {
+            return coordinatesList.reduce((query, coordinates, index) =>
+            {
+                // NOT add orWhere clause if it is the first element
+                if (index === 0)
+                    return this.where(
+                        OrderService.getSTWithin(
+                            coordinates.latitude,
+                            coordinates.longitude,
+                            coordinates.radius
+                        )
+                    );
+
+                return query.orWhere(
+                    OrderService.getSTWithin(
+                        coordinates.latitude,
+                        coordinates.longitude,
+                        coordinates.radius)
+                );
+            }, undefined);
+        }
+        );
     }
 }
 
