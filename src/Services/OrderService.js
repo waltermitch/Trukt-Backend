@@ -18,6 +18,8 @@ const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Expense = require('../Models/Expense');
 const R = require('ramda');
 
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 
 class OrderService
@@ -537,6 +539,13 @@ class OrderService
                 }).returning('guid');
 
             await trx.commit();
+
+            StatusManagerHandler.registerStatus({
+                orderGuid: order.guid,
+                userGuid: currentUser,
+                statusId: 1
+            });
+
             return order;
         }
         catch (err)
