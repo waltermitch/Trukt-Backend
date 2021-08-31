@@ -3,6 +3,11 @@ operationId: deleteAttachment
 description: Delete Attachment of a given job/order
 tags:
   - Attachments
+parameters:
+  - in: path
+    name: guid
+    format: uuid
+    required: true
 responses:
-  '204':
-    description: Deleted Attachments
+  "204":
+    description: Deleted Attachment

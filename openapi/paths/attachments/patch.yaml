@@ -3,12 +3,17 @@ operationId: updateAttachment
 description: Update Attachment of a given job/order
 tags:
   - Attachments
+parameters:
+  - in: path
+    name: guid
+    format: uuid
+    required: true
 requestBody:
   required: true
   content:
     application/json:
       schema:
-        $ref: '#/components/schemas/Attachment'
+        $ref: ..\..\components\schemas\Attachment.yaml
 responses:
-  '204':
+  "204":
     description: updated Attachment

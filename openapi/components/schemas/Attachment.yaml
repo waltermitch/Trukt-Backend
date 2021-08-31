@@ -1,11 +1,18 @@
 type: object
-required:
-  - name
 properties:
-  guid:
-    oneOf:
-      - $ref: .\SFID.yaml
-      - type: string
-        format: uuid
-  name:
-    type: string
+  type:
+    required: false
+    allowEmptyValue: true
+    description: The type of attachment (i.e. photo, billOfLading, etc)
+    enum: [photo]
+    default: undefined
+  visibility:
+    type: array
+    items:
+      type: string
+      enum: [carrier, client, internal]
+      default: [internal]
+    required: false
+    explode: false
+    allowEmptyValue: true
+    description: The visibility of the attachment (i.e. carrier, internal)
