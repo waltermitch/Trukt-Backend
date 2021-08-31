@@ -5,7 +5,7 @@ exports.up = function (knex)
     return knex.raw(`
     CREATE TYPE document_visibility AS ENUM ('internal', 'carrier', 'client');
     ALTER TABLE ${table_name}
-    ADD visibility document_visibility`);
+    ADD visibility document_visibility[] DEFAULT array['internal']::document_visibility[]`);
 };
 
 exports.down = function (knex)

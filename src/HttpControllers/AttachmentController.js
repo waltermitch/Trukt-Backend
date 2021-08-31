@@ -2,16 +2,26 @@ const AttachmentService = require('../Services/AttachmentService');
 
 class AttachmentController
 {
+    static async get(req, res)
+    {
+        const result = await AttachmentService.get(req.params.attachmentId);
+
+        if (result)
+            res.status(200).json(result);
+        else
+            res.status(404).send({ 'error': 'Attachment Not Found' });
+    }
+
     static async search(req, res)
     {
-        if (!req.query?.parent || !req.query?.parentType || !req?.query?.visibility)
+        if (!req.query?.parent || !req.query?.parentType)
         {
             res.status(400);
             res.send({ 'error': 'Missing Query Params' });
         }
         else
         {
-            const result = await AttachmentService.searchByParent(req.query.parent, req.query.parentType, req.query?.attachmentType);
+            const result = await AttachmentService.searchByParent(req.query);
 
             res.status(200);
             res.json(result);
@@ -35,7 +45,7 @@ class AttachmentController
         else
         {
             const result = await AttachmentService.insert(req.files, req.headers, req.query);
-            res.status(200);
+            res.status(201);
             res.json(result);
         }
     }
@@ -58,10 +68,9 @@ class AttachmentController
 
     static async delete(req, res)
     {
-        const result = await AttachmentService.delete(req.params.attachmentId);
+        await AttachmentService.delete(req.params.attachmentId);
 
-        res.status(200);
-        res.json(result);
+        res.status(204).send();
     }
 }
 

@@ -14,6 +14,61 @@ servers:
   - url: 'https://truktbackend.rcgauto.p.azurewebsites.net'
     description: Production server
 paths:
+  /attachments:
+    post:
+      summary: Add An Attachment
+      operationId: createAttachment
+      description: Add Attachment to a given job/order
+      tags:
+        - Attachments
+      parameters:
+        - in: query
+          schema:
+            $ref: '#/components/schemas/AttachmentParams'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/File'
+      responses:
+        '201':
+          description: Created Attachment
+          content:
+            application/json: {}
+    get:
+      summary: Get Attachments
+      operationId: searchAttachments
+      description: Search For Attachments of a given job/order
+      tags:
+        - Attachments
+      parameters:
+        - in: query
+          schema:
+            $ref: '#/components/schemas/AttachmentParams'
+      responses:
+        '201':
+          description: Found Attachments
+          content:
+            application/json: {}
+    delete:
+      summary: Delete Attachments
+      operationId: deleteAttachments
+      description: Delete Attachment of a given job/order
+      tags:
+        - Attachments
+      responses:
+        '204':
+          description: Deleted Attachments
+    patch:
+      summary: Delete Attachments
+      operationId: deleteAttachments
+      description: Delete Attachment of a given job/order
+      tags:
+        - Attachments
+      responses:
+        '204':
+          description: Deleted Attachments
   /edi/204/inbound:
     post:
       summary: Create a load tender
@@ -327,6 +382,49 @@ paths:
                     format: scac
 components:
   schemas:
+    AttachmentParams:
+      description: The parameters required for attachments
+      type: object
+      title: AttachmentParams
+      required:
+        - parent
+        - parentType
+      properties:
+        parent:
+          required: true
+          allowEmptyValue: false
+          description: The guid of the parent object
+        parentType:
+          required: true
+          allowEmptyValue: false
+          description: 'The type of the parent object (i.e job, order)'
+          enum:
+            - jobs
+        attachmentType:
+          required: false
+          allowEmptyValue: true
+          description: 'The type of attachment (i.e. photo, billOfLading, etc)'
+          enum:
+            - photo
+          default: undefined
+        visibility:
+          type: array
+          items:
+            type: string
+            enum:
+              - carrier
+              - client
+              - internal
+            default:
+              - internal
+          required: false
+          explode: false
+          allowEmptyValue: true
+          description: 'The visibility of the attachment (i.e. carrier, internal)'
+    File:
+      type: string
+      format: binary
+      required: true
     SFID:
       type: string
       format: id

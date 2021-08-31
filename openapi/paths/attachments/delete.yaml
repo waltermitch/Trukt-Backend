@@ -1,0 +1,8 @@
+summary: Delete Attachment
+operationId: deleteAttachment
+description: Delete Attachment of a given job/order
+tags:
+  - Attachments
+responses:
+  '204':
+    description: Deleted Attachments

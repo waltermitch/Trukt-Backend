@@ -14,6 +14,15 @@ servers:
   - url: 'https://truktbackend.rcgauto.p.azurewebsites.net'
     description: Production server
 paths:
+  /attachments:
+    post:
+      $ref: paths\attachments\post.yaml
+    get:
+      $ref: paths\attachments\get.yaml
+    delete:
+      $ref: paths\attachments\delete.yaml
+    patch: 
+      $ref: paths\attachments\patch.yaml
   /edi/204/inbound:
     $ref: paths\edi@204@inbound.yaml
   /edi/214/inbound:

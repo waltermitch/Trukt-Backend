@@ -1,0 +1,14 @@
+summary: Update Attachment
+operationId: updateAttachment
+description: Update Attachment of a given job/order
+tags:
+  - Attachments
+requestBody:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/Attachment'
+responses:
+  '204':
+    description: updated Attachment
