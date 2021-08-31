@@ -1,24 +1,18 @@
+const LoadboardContact = require('../Models/LoadboardContact');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const CommodityType = require('../Models/CommodityType');
-const LoadboardContact = require('../Models/LoadboardContact');
-const BaseModel = require('../Models/BaseModel');
+const knex = require('../Models/BaseModel').knex();
 const HTTPS = require('../AuthController');
-const fs = require('fs');
+const NodeCache = require('node-cache');
 
-const knex = BaseModel.knex();
-
-// creating an axios connection directly because this will not be reused
-// as far as we can tell for now
 const opts = {
     url: process.env['azure.loadboard.baseurl'],
-    headers: {
-        'x-functions-key': process.env['azure.loadboard.funcCode']
-    }
+    params: { code: process.env['azure.loadboard.funcCode'] }
 };
+
 const lbConn = new HTTPS(opts).connect();
 
-let picklists;
-const localPicklistPath = './localdata/picklists.json';
+const cache = new NodeCache({ stdTTL: 60 * 60, deleteOnExpire: true });
 
 // this exists to filter out invoice bill line items that are also locksmith
 // job types and to create a new picklist with locksmith job types from invoice line items
@@ -57,24 +51,17 @@ const conditionTypes = {
 
 class PicklistService
 {
-    static async updatePicklists()
+    static async getPicklists()
     {
-        picklists = await PicklistService.getPicklistBod();
-
-        // since the localdata folder does not get tracked in git and not get pushed to the server,
-        // check if the folder exists first; create it if it does not exist.
-        if (!fs.existsSync('./localdata'))
+        // first check if the picklist is in memory
+        if (!cache.has('picklists'))
         {
-            fs.mkdirSync('./localdata');
+            const picklists = await PicklistService.getPicklistBody();
+
+            cache.set('picklists', picklists);
         }
 
-        // at this point the folder should definately exist, so it is safe to write to the file.
-        fs.writeFile(localPicklistPath, JSON.stringify(picklists, null), err =>
-        {
-            if (err) throw err;
-        });
-
-        return picklists;
+        return cache.get('picklists');
     }
 
     /**
@@ -82,7 +69,7 @@ class PicklistService
      * @returns queries the database for all the enum types and any other lookup tables and
      * constructs a more readable json object
      */
-    static async getPicklistBod()
+    static async getPicklistBody()
     {
         const picklists = {};
         const enums = await knex.raw(`
