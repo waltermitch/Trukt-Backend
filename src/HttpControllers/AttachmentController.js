@@ -1,14 +1,13 @@
 const AttachmentService = require('../Services/AttachmentService');
-const HttpRouteController = require('./HttpRouteController');
 
-class AttachmentController extends HttpRouteController
+class AttachmentController
 {
     static async search(req, res)
     {
-        if (!req.query?.parent || !req.query?.parentType)
+        if (!req.query?.parent || !req.query?.parentType || !req?.query?.visibility)
         {
             res.status(400);
-            res.send({ 'error': 'Missing parent and/or parentType' });
+            res.send({ 'error': 'Missing Query Params' });
         }
         else
         {
@@ -40,7 +39,30 @@ class AttachmentController extends HttpRouteController
             res.json(result);
         }
     }
+
+    static async update(req, res)
+    {
+        if (!req.body)
+        {
+            res.status(400);
+            res.send({ 'error': 'Missing Body' });
+        }
+        else
+        {
+            const result = await AttachmentService.update(req.params.attachmentId, req.body);
+
+            res.status(200);
+            res.json(result);
+        }
+    }
+
+    static async delete(req, res)
+    {
+        const result = await AttachmentService.delete(req.params.attachmentId);
+
+        res.status(200);
+        res.json(result);
+    }
 }
 
-const controller = new AttachmentController();
-module.exports = controller;
+module.exports = AttachmentController;

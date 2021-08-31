@@ -63,6 +63,20 @@ class AttachmentService
 
         return urls;
     }
+
+    static async update(guid, data)
+    {
+        const res = await Attachment.query().patchAndFetchById(guid, data);
+
+        return res;
+    }
+
+    static async delete(guid)
+    {
+        const res = await Attachment.query().deleteById(guid);
+
+        return res;
+    }
 }
 
 module.exports = AttachmentService;
