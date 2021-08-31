@@ -10,7 +10,8 @@
         "decrypt": "bash ./tools/decrypt.sh",
         "setup": "bash ./tools/git_setup.sh && bash ./tools/decrypt.sh './local.settings.enc' './local.settings.json'",
         "merge-settings": "node ./tools/merge_settings.js",
-        "knex-debug": "set DEBUG=knex* && node main.js"
+        "knex-debug": "set DEBUG=knex* && node main.js",
+        "api-bundle": "openapi bundle main --output public/openapi/spec.yaml"
     },
     "author": "",
     "license": "ISC",
@@ -41,6 +42,7 @@
         "uuid": "^8.3.2"
     },
     "devDependencies": {
+        "@redocly/openapi-cli": "^1.0.0-beta.55",
         "@shelf/jest-mongodb": "^1.2.4",
         "axios-mock-adapter": "^1.19.0",
         "babel-eslint": "^10.1.0",

@@ -1,0 +1,107 @@
+type: object
+description: Represents the status/appointment update for the load tender
+required:
+  - code
+  - type
+  - reason
+properties:
+  type:
+    type: string
+    enum:
+      - status
+      - appointment
+  code:
+    type: string
+    minLength: 2
+    maxLength: 2
+  reason:
+    type: string
+    enum:
+      - A1
+      - A2
+      - A3
+      - A5
+      - A6
+      - AA
+      - AD
+      - AE
+      - AF
+      - AG
+      - AH
+      - AI
+      - AJ
+      - AK
+      - AL
+      - AM
+      - AN
+      - AO
+      - AP
+      - AQ
+      - AR
+      - AS
+      - AT
+      - AU
+      - AV
+      - AW
+      - AX
+      - AY
+      - AZ
+      - B1
+      - B2
+      - B4
+      - B5
+      - B8
+      - B9
+      - BB
+      - BC
+      - BD
+      - BE
+      - BF
+      - BG
+      - BH
+      - BI
+      - BJ
+      - BK
+      - BL
+      - BM
+      - BN
+      - BO
+      - BP
+      - BQ
+      - BR
+      - BS
+      - BT
+      - C1
+      - C2
+      - C3
+      - C4
+      - C5
+      - C6
+      - C7
+      - C8
+      - C9
+      - CA
+      - CB
+      - CC
+      - D1
+      - D2
+      - F1
+      - F2
+      - HB
+      - NA
+      - NS
+      - P1
+      - P2
+      - P3
+      - P4
+      - RC
+      - S1
+      - T1
+      - T2
+      - T3
+      - T4
+      - T5
+      - T6
+      - T7
+    minLength: 2
+    maxLength: 2
