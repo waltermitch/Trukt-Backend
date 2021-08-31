@@ -18,6 +18,8 @@ paths:
     $ref: paths\edi@204@inbound.yaml
   /edi/214/inbound:
     $ref: paths\edi@214@inbound.yaml
+  /edi/214/outbound:
+    $ref: paths\edi@214@outbound.yaml
   /edi/990/outbound/accept:
     $ref: paths\edi@990@outbound@accept.yaml
   /edi/990/outbound/reject:

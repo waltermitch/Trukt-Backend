@@ -1,6 +1,7 @@
 post:
   summary: Create a load tender
   operationId: createLoadTender
+  description: Create a load tender that will eventually be accepted or rejected.
   tags:
     - EDI
   requestBody:

@@ -1,6 +1,8 @@
 put:
   summary: Update a load tender status
   operationId: updateLoadTenderStatus
+  description: >-
+    Update the status or set appointment of a load tender.
   tags:
     - EDI
   requestBody:
@@ -16,35 +18,37 @@ put:
             - status
             - datetime
           properties:
-            order:
-              type: string
-              format: uuid
             partner:
-              description: the partner that wishes to update a load tender
+              description: The partner that wishes to update a load tender
               oneOf:
                 - $ref: ..\components\schemas\SFID.yaml
                 - type: string
                   format: uuid
             reference:
               description: >-
-                the shipment/reference number from the load that was created via
+                The shipment/reference number from the load that was created via
                 EDI 204 load tender
               type: string
+              maxLength: 64
             commodity:
               description: >-
-                identifier field from a commodity that was created via EDI 204
+                The identifier field from a commodity that was created via EDI 204
                 load tender
               type: string
+              maxLength: 255
             location:
               description: Include the location to update the respective stop
               type: object
               properties:
                 city:
                   type: string
+                  maxLength: 64
                 state:
                   type: string
+                  maxLength: 100
                 country:
                   type: string
+                  maxLength: 64
                 latitude:
                   type: number
                   format: float
@@ -56,24 +60,21 @@ put:
                   minimum: -180
                   maximum: 180
             status:
-              description: Represents the status/appointment update for the load tender
-              properties:
-                type:
-                  type: string
-                  enum:
-                    - status
-                    - appointment
-                code:
-                  description: EDI 214  AT701/AT703 appointment status code
-                  type: string
-                reason:
-                  description: EDI 214 AT702/AT704 appointment status reason code
-                  type: string
+              oneOf:
+                - $ref: ..\components\schemas\EDI214StopStatus.yaml
+                - $ref: ..\components\schemas\EDI214Appointment.yaml
+              description: Represents the status/appointment update for the load tender.
+              type: object
+              discriminator:
+                propertyName: type
+                mapping:
+                  status: ..\components\schemas\EDI214StopStatus.yaml
+                  appointment: ..\components\schemas\EDI214Appointment.yaml
             datetime:
               type: string
               format: datetime with timezone ISO 8601
   responses:
     '200':
-      description: Inbound Load Tender Update
+      description: Updated Load Tender status.
       content:
         application/json: {}
