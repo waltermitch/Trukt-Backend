@@ -1,14 +1,25 @@
 get:
   summary: Accept Load Tender
+  operationId: acceptLoadTender
   description: >-
-    this will be sent out, do not make a call to this endpoint, you will recieve
-    a 404 error
+    This endpoint is designed for development purposes only. 
+    It will generate a sample payload for a specific load tender described by query parameters.
   tags:
     - EDI
-  operationId: acceptLoadTender
+  parameters:
+    - name: reference
+      required: true
+      allowEmptyValue: false
+      description: The reference number of a load tender.
+      in: query
+    - name: partner
+      required: true
+      allowEmptyValue: false
+      description: The partner ID provided when creating a load tender.
+      in: query
   responses:
     '200':
-      description: Return this status code if the request was accepted
+      description: Sample outbound 990 accept payload.
       content:
         application/json:
           schema:
