@@ -1,10 +1,11 @@
 const SFAccount = require('../Models/SFAccount');
 const Queue = require('../Azure/ServiceBus');
+const { mergeDeepRight } = require('ramda');
 const PubSub = require('../Azure/PubSub');
 const Triumph = require('../Triumph/API');
+const NodeCache = require('node-cache');
 const QB = require('../QuickBooks/API');
 const Super = require('../Super/API');
-const NodeCache = require('node-cache');
 
 // duplicate checking cache
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 10 });
@@ -14,7 +15,7 @@ class Handler
     static async jobStatusChanged(data)
     {
         // send to group
-        await PubSub.publishToGroup(data.guid, data);
+        await PubSub.publishToGroup(data.guid, { 'object': 'job', 'data': data });
     }
 
     static async accountUpdated(data)
@@ -53,6 +54,7 @@ class Handler
         };
 
         // make api calls, add additional fields base on recordType
+        let response;
         switch (recordType)
         {
             case 'Client':
@@ -61,7 +63,7 @@ class Handler
                 payload.businessType = res.businessType;
                 payload.notes = res.notes;
 
-                await Promise.all([QB.upsertClient(payload), Super.upsertClient(payload)]);
+                response = await Promise.allSettled([QB.upsertClient(payload), Super.upsertClient(payload)]);
                 break;
 
             case 'Carrier':
@@ -71,22 +73,30 @@ class Handler
                 payload.insuranceExpiration = res.insuranceExpiration;
                 payload.preferred = res.preferred;
 
-                const result = await Promise.allSettled([QB.upsertVendor(payload), Super.upsertCarrier(payload), Triumph.createCarrierProfile(payload)]);
+                response = await Promise.allSettled([QB.upsertVendor(payload), Super.upsertCarrier(payload), Triumph.createCarrierProfile(payload)]);
 
-                for (const r of result)
-                {
-                    if (r.status !== 'fulfilled')
-                        console.log(r.reason?.response?.data ? JSON.stringify(r.reason?.response?.data) : r.reason);
-                }
                 break;
 
             case 'Vendor':
-                await QB.upsertVendor(payload);
+                response = await Promise.allSettled([QB.upsertVendor(payload)]);
                 break;
 
             default:
                 return;
         }
+
+        let update = {};
+        for (const r of response)
+        {
+            if (r.status !== 'fulfilled')
+                console.log(r.reason?.response?.data ? JSON.stringify(r.reason?.response?.data) : r.reason);
+            else if (r.value != undefined)
+                update = mergeDeepRight(update, r.value);
+
+        }
+
+        // update database
+        await SFAccount.query().patch(update).where('guid', data?.guid);
     }
 
     static async checkAccountUpdatedQueue()
@@ -101,9 +111,9 @@ class Handler
 
     static async pushToQueue(qName, data)
     {
-        if (!cache.has(data.guid))
+        if (!cache.has(data.guid || data.sfid))
         {
-            cache.set(data.guid, true, 10);
+            cache.set((data.guid || data.sfid), true, 10);
 
             await Queue.push(qName, data);
         }

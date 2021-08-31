@@ -105,13 +105,15 @@ class Super
             {
                 // create client and save guid
                 const newClient = await Super.createClient(client);
-                await SFAccount.query().patch({ sdGuid: newClient.guid }).where('guid', data?.guid);
-                return;
+
+                return { sdGuid: newClient.guid };
             }
             else
             {
                 // update and set guid in our db
-                await Promise.allSettled([Super.updateClient(res[0].guid, client), SFAccount.query().patch({ sdGuid: res[0].guid }).where('guid', data?.guid)]);
+                await Super.updateClient(res[0].guid, client);
+
+                return { sdGuid: res[0].guid };
             }
         }
         else
@@ -193,19 +195,22 @@ class Super
                 res = await Super.getCarrierByDOT(data.dotNumber);
 
                 if (!res)
-                {
+
                     // mark carrier not synced in Postgres
-                    return await SFAccount.query().patch({ is_synced_in_super: false }).where('guid', data?.guid);
-                }
+                    return { sync_in_super: false };
             }
 
             // if we got here then we can update and save sdguid to database and mark as synced
-            return await Promise.all([Super.updateCarrier(res.guid, data), SFAccount.query().patch({ sdGuid: res.guid, is_synced_in_super: true }).where('guid', data?.guid)]);
+            await Super.updateCarrier(res.guid, data);
+
+            return { sdGuid: res.guid, sync_in_super: true };
         }
         else
         {
             // update carrier
-            return await Super.updateCarrier(data.sdGuid, data);
+            await Super.updateCarrier(data.sdGuid, data);
+
+            return;
         }
     }
 

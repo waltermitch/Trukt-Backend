@@ -129,8 +129,14 @@ class Super extends Loadboard
         {
             case 'repo yard':
                 return 'REPO_YARD';
+            case 'dealer':
+            case 'port':
+            case 'private':
+            case 'business':
+            case 'auction':
+                rcgType.toUpperCase();
             default:
-                return rcgType.toUpperCase();
+                return 'business';
         }
     }
 

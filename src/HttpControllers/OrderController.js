@@ -1,8 +1,6 @@
 const OrderService = require('../Services/OrderService');
 const HttpRouteController = require('./HttpRouteController');
 
-const { MilesToMeters } = require('./../Utils');
-
 class OrderController extends HttpRouteController
 {
 
@@ -55,83 +53,21 @@ class OrderController extends HttpRouteController
 
     static async getOrders(req, res, next)
     {
-        const userInputValidated = OrderController.validateInput(req.query);
+        try
+        {
+            const { filters = {}, page, rowCount } = req.body;
+            const orders = await OrderService.getOrders(filters, page || 0, rowCount || 25);
 
-        if (!userInputValidated)
+            res.status(200);
+            res.json(orders);
+        }
+        catch (error)
         {
             next({
-                status: 400,
-                data: { message: 'Invalid user input' }
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
             });
         }
-        else
-        {
-            try
-            {
-                const {
-                    page,
-                    rowCount,
-                    originLatitude,
-                    originLongitude,
-                    originRadius,
-                    destinationLatitude,
-                    destinationLongitude,
-                    destinationRadius } = userInputValidated;
-
-                const origin = originLatitude && originLongitude && {
-                    latitude: originLatitude,
-                    longitude: originLongitude,
-                    radius: MilesToMeters(originRadius || 1)
-                };
-
-                const destination = destinationLatitude && destinationLongitude && {
-                    latitude: destinationLatitude,
-                    longitude: destinationLongitude,
-                    radius: MilesToMeters(destinationRadius || 1)
-                };
-
-                const orders = await OrderService.getOrders({ origin, destination }, page || 0, rowCount || 25);
-
-                res.status(200);
-                res.json(orders);
-            }
-            catch (error)
-            {
-                next({
-                    status: 500,
-                    data: { message: error?.nativeError?.hint || 'Internal server error' }
-                });
-            }
-
-        }
-
-    }
-
-    static validateInput({
-        pg,
-        rc,
-        originLatitude,
-        originLongitude,
-        originRadius,
-        destinationLatitude,
-        destinationLongitude,
-        destinationRadius
-    })
-    {
-        const result = {
-            page: pg && parseInt(pg),
-            rowCount: rc && parseInt(rc),
-            originLatitude: originLatitude && parseFloat(originLatitude),
-            originLongitude: originLongitude && parseFloat(originLongitude),
-            originRadius: originRadius && parseInt(originRadius),
-            destinationLatitude: destinationLatitude && parseFloat(destinationLatitude),
-            destinationLongitude: destinationLongitude && parseFloat(destinationLongitude),
-            destinationRadius: destinationRadius && parseInt(destinationRadius)
-        };
-
-        const isAnyValueNaN = Object.values(result).some((value) => isNaN(value === undefined ? null : value));
-
-        return isAnyValueNaN ? false : result;
 
     }
 }
