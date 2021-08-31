@@ -18,6 +18,7 @@ paths:
     post:
       summary: Create a load tender
       operationId: createLoadTender
+      description: Create a load tender that will eventually be accepted or rejected.
       tags:
         - EDI
       requestBody:
@@ -35,6 +36,7 @@ paths:
     put:
       summary: Update a load tender status
       operationId: updateLoadTenderStatus
+      description: Update the status or set appointment of a load tender.
       tags:
         - EDI
       requestBody:
@@ -50,35 +52,37 @@ paths:
                 - status
                 - datetime
               properties:
-                order:
-                  type: string
-                  format: uuid
                 partner:
-                  description: the partner that wishes to update a load tender
+                  description: The partner that wishes to update a load tender
                   oneOf:
                     - $ref: '#/components/schemas/SFID'
                     - type: string
                       format: uuid
                 reference:
                   description: >-
-                    the shipment/reference number from the load that was created
+                    The shipment/reference number from the load that was created
                     via EDI 204 load tender
                   type: string
+                  maxLength: 64
                 commodity:
                   description: >-
-                    identifier field from a commodity that was created via EDI
-                    204 load tender
+                    The identifier field from a commodity that was created via
+                    EDI 204 load tender
                   type: string
+                  maxLength: 255
                 location:
                   description: Include the location to update the respective stop
                   type: object
                   properties:
                     city:
                       type: string
+                      maxLength: 64
                     state:
                       type: string
+                      maxLength: 100
                     country:
                       type: string
+                      maxLength: 64
                     latitude:
                       type: number
                       format: float
@@ -90,39 +94,143 @@ paths:
                       minimum: -180
                       maximum: 180
                 status:
-                  description: Represents the status/appointment update for the load tender
-                  properties:
-                    type:
-                      type: string
-                      enum:
-                        - status
-                        - appointment
-                    code:
-                      description: EDI 214  AT701/AT703 appointment status code
-                      type: string
-                    reason:
-                      description: EDI 214 AT702/AT704 appointment status reason code
-                      type: string
+                  oneOf:
+                    - $ref: '#/components/schemas/EDI214StopStatus'
+                    - $ref: '#/components/schemas/EDI214Appointment'
+                  description: >-
+                    Represents the status/appointment update for the load
+                    tender.
+                  type: object
+                  discriminator:
+                    propertyName: type
+                    mapping:
+                      status: '#/components/schemas/EDI214StopStatus'
+                      appointment: '#/components/schemas/EDI214Appointment'
                 datetime:
                   type: string
                   format: datetime with timezone ISO 8601
       responses:
         '200':
-          description: Inbound Load Tender Update
+          description: Updated Load Tender status.
           content:
             application/json: {}
+  /edi/214/outbound:
+    get:
+      summary: Update a load tender status
+      operationId: notifyLoadTenderStatus
+      description: >-
+        This endpoint is designed for development purposes only.  It will
+        generate a sample payload for a specific load tender described by query
+        parameters.
+      tags:
+        - EDI
+      parameters:
+        - name: reference
+          required: true
+          allowEmptyValue: false
+          description: The reference number of a load tender
+          in: query
+      responses:
+        '200':
+          description: Outbound Load Tender Update
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - partner
+                  - reference
+                  - location
+                  - status
+                  - datetime
+                properties:
+                  order:
+                    description: >-
+                      The guid of the order in our system that is being updated.
+                      may be used to fetch additional information
+                    type: string
+                    format: uuid
+                  partner:
+                    description: The partner that wishes to update a load tender
+                    oneOf:
+                      - $ref: '#/components/schemas/SFID'
+                      - type: string
+                        format: uuid
+                  reference:
+                    description: >-
+                      The shipment/reference number from the load that was
+                      created via EDI 204 load tender
+                    type: string
+                    maxLength: 64
+                  commodity:
+                    description: >-
+                      The identifier field from a commodity that was created via
+                      EDI 204 load tender
+                    type: string
+                    maxLength: 255
+                  location:
+                    description: The load tender's stop whose status will be updated.
+                    type: object
+                    properties:
+                      city:
+                        type: string
+                        maxLength: 64
+                      state:
+                        type: string
+                        maxLength: 100
+                      country:
+                        type: string
+                        maxLength: 64
+                      latitude:
+                        type: number
+                        format: float
+                        minimum: -180
+                        maximum: 180
+                      longitude:
+                        type: number
+                        format: float
+                        minimum: -180
+                        maximum: 180
+                  status:
+                    oneOf:
+                      - $ref: '#/components/schemas/EDI214StopStatus'
+                      - $ref: '#/components/schemas/EDI214Appointment'
+                    description: >-
+                      Represents the status/appointment update for the load
+                      tender
+                    type: object
+                    discriminator:
+                      propertyName: type
+                      mapping:
+                        status: '#/components/schemas/EDI214StopStatus'
+                        appointment: '#/components/schemas/EDI214Appointment'
+                  datetime:
+                    type: string
+                    format: datetime with timezone ISO 8601
   /edi/990/outbound/accept:
     get:
       summary: Accept Load Tender
+      operationId: acceptLoadTender
       description: >-
-        this will be sent out, do not make a call to this endpoint, you will
-        recieve a 404 error
+        This endpoint is designed for development purposes only.  It will
+        generate a sample payload for a specific load tender described by query
+        parameters.
       tags:
         - EDI
-      operationId: acceptLoadTender
+      parameters:
+        - name: reference
+          required: true
+          allowEmptyValue: false
+          description: The reference number of a load tender.
+          in: query
+        - name: partner
+          required: true
+          allowEmptyValue: false
+          description: The partner ID provided when creating a load tender.
+          in: query
       responses:
         '200':
-          description: Return this status code if the request was accepted
+          description: Sample outbound 990 accept payload.
           content:
             application/json:
               schema:
@@ -159,15 +267,27 @@ paths:
   /edi/990/outbound/reject:
     get:
       summary: Reject Load Tender
+      operationId: rejectLoadTender
       description: >-
-        this will be sent out, do not make a call to this endpoint, you will
-        recieve a 404 error
+        This endpoint is designed for development purposes only.  It will
+        generate a sample payload for a specific load tender described by query
+        parameters.
       tags:
         - EDI
-      operationId: rejectLoadTender
+      parameters:
+        - name: reference
+          required: true
+          allowEmptyValue: false
+          description: The reference number of a load tender
+          in: query
+        - name: partner
+          required: true
+          allowEmptyValue: false
+          description: The partner ID provided when creating a load tender
+          in: query
       responses:
         '200':
-          description: Return this status code if the request was accepted
+          description: Sample outbound 990 reject payload.
           content:
             application/json:
               schema:
@@ -193,6 +313,10 @@ paths:
                     enum:
                       - accept
                       - decline
+                  reason:
+                    description: The reason for rejecting the EDI load tender.
+                    type: string
+                    maxLength: 60
                   date:
                     description: The date the response was generated
                     type: string
@@ -507,3 +631,191 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Commodity'
+    EDI214StopStatus:
+      allOf:
+        - $ref: '#/components/schemas/EDI214Status'
+        - type: object
+          properties:
+            code:
+              description: EDI 214  AT701 appointment status code
+              enum:
+                - A3
+                - A7
+                - A9
+                - AF
+                - AG
+                - AH
+                - AI
+                - AJ
+                - AM
+                - AN
+                - AP
+                - AR
+                - AV
+                - B6
+                - BA
+                - BC
+                - C1
+                - CA
+                - CD
+                - CL
+                - CP
+                - D1
+                - I1
+                - J1
+                - K1
+                - L1
+                - OA
+                - OO
+                - P1
+                - PR
+                - R1
+                - RL
+                - S1
+                - SD
+                - X1
+                - X2
+                - X3
+                - X4
+                - X5
+                - X6
+                - X8
+                - XB
+            reason:
+              description: EDI 214 AT702 appointment status reason code
+    EDI214Appointment:
+      allOf:
+        - $ref: '#/components/schemas/EDI214Status'
+        - type: object
+          required:
+            - code
+            - type
+            - reason
+          properties:
+            type:
+              type: string
+              enum:
+                - status
+                - appointment
+            code:
+              description: EDI 214  AT703 appointment status code
+              enum:
+                - AA
+                - AB
+                - AC
+                - ED
+                - EP
+                - LD
+                - LP
+                - X9
+                - XA
+            reason:
+              description: EDI 214 AT704 appointment status reason code
+    EDI214Status:
+      type: object
+      description: Represents the status/appointment update for the load tender
+      required:
+        - code
+        - type
+        - reason
+      properties:
+        type:
+          type: string
+          enum:
+            - status
+            - appointment
+        code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        reason:
+          type: string
+          enum:
+            - A1
+            - A2
+            - A3
+            - A5
+            - A6
+            - AA
+            - AD
+            - AE
+            - AF
+            - AG
+            - AH
+            - AI
+            - AJ
+            - AK
+            - AL
+            - AM
+            - AN
+            - AO
+            - AP
+            - AQ
+            - AR
+            - AS
+            - AT
+            - AU
+            - AV
+            - AW
+            - AX
+            - AY
+            - AZ
+            - B1
+            - B2
+            - B4
+            - B5
+            - B8
+            - B9
+            - BB
+            - BC
+            - BD
+            - BE
+            - BF
+            - BG
+            - BH
+            - BI
+            - BJ
+            - BK
+            - BL
+            - BM
+            - BN
+            - BO
+            - BP
+            - BQ
+            - BR
+            - BS
+            - BT
+            - C1
+            - C2
+            - C3
+            - C4
+            - C5
+            - C6
+            - C7
+            - C8
+            - C9
+            - CA
+            - CB
+            - CC
+            - D1
+            - D2
+            - F1
+            - F2
+            - HB
+            - NA
+            - NS
+            - P1
+            - P2
+            - P3
+            - P4
+            - RC
+            - S1
+            - T1
+            - T2
+            - T3
+            - T4
+            - T5
+            - T6
+            - T7
+          minLength: 2
+          maxLength: 2
