@@ -1,6 +1,8 @@
 put:
   summary: Update a load tender status
   operationId: updateLoadTenderStatus
+  description: >-
+    Update the status or set appointment of a load tender.
   tags:
     - EDI
   requestBody:
@@ -17,20 +19,20 @@ put:
             - datetime
           properties:
             partner:
-              description: the partner that wishes to update a load tender
+              description: The partner that wishes to update a load tender
               oneOf:
                 - $ref: ..\components\schemas\SFID.yaml
                 - type: string
                   format: uuid
             reference:
               description: >-
-                the shipment/reference number from the load that was created via
+                The shipment/reference number from the load that was created via
                 EDI 204 load tender
               type: string
               maxLength: 64
             commodity:
               description: >-
-                identifier field from a commodity that was created via EDI 204
+                The identifier field from a commodity that was created via EDI 204
                 load tender
               type: string
               maxLength: 255
@@ -61,7 +63,7 @@ put:
               oneOf:
                 - $ref: ..\components\schemas\EDI214StopStatus.yaml
                 - $ref: ..\components\schemas\EDI214Appointment.yaml
-              description: Represents the status/appointment update for the load tender
+              description: Represents the status/appointment update for the load tender.
               type: object
               discriminator:
                 propertyName: type
@@ -73,6 +75,6 @@ put:
               format: datetime with timezone ISO 8601
   responses:
     '200':
-      description: Inbound Load Tender Update
+      description: Updated Load Tender status.
       content:
         application/json: {}
