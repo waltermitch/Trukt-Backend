@@ -633,7 +633,8 @@ class OrderService
 
     static addFilterPickups(baseQuery, pickups)
     {
-        return pickups ? baseQuery.whereExists(
+        const doesPickupsHaveElements = pickups?.length > 0 ? true : false;
+        return doesPickupsHaveElements ? baseQuery.whereExists(
             Order.relatedQuery('stops').where('stopType', 'pickup').whereExists(
                 OrderService.basePickupDeliveryFilterQuery(pickups)
             )
@@ -642,7 +643,8 @@ class OrderService
 
     static addFilterDeliveries(baseQuery, deliveries)
     {
-        if (!deliveries)
+        const isDeliveriesEmpty = deliveries?.length > 0 ? false : true;
+        if (isDeliveriesEmpty)
             return baseQuery;
 
         const deliveryQuery = Order.query().select('guid').whereExists(
@@ -676,27 +678,35 @@ class OrderService
 
     static addFilterStatus(baseQuery, statusList)
     {
-        return statusList ? baseQuery.whereIn('status', statusList) : baseQuery;
+        const doesStatusListHaveElements = statusList?.length > 0 ? true : false;
+        return doesStatusListHaveElements ?
+            baseQuery.whereIn('status', statusList) : baseQuery;
     }
 
     static addFilterCustomer(baseQuery, customerList)
     {
-        return customerList ? baseQuery.whereIn('clientGuid', customerList) : baseQuery;
+        const doesCustomerListHaveElements = customerList?.length > 0 ? true : false;
+        return doesCustomerListHaveElements ?
+            baseQuery.whereIn('clientGuid', customerList) : baseQuery;
     }
 
     static addFilterDispatcher(baseQuery, dispatcherList)
     {
-        return dispatcherList ? baseQuery.whereIn('dispatcherGuid', dispatcherList) : baseQuery;
+        const doesDispatcherListHaveElements = dispatcherList?.length > 0 ? true : false;
+        return doesDispatcherListHaveElements ?
+            baseQuery.whereIn('dispatcherGuid', dispatcherList) : baseQuery;
     }
 
     static addFilterSalesperson(baseQuery, salespersonList)
     {
-        return salespersonList ? baseQuery.whereIn('salespersonGuid', salespersonList) : baseQuery;
+        const doesSalespersonListHaveElements = salespersonList?.length > 0 ? true : false;
+        return doesSalespersonListHaveElements ? baseQuery.whereIn('salespersonGuid', salespersonList) : baseQuery;
     }
 
     static addFilterDates(baseQuery, dateList)
     {
-        if (!dateList)
+        const isDateListEmpty = dateList?.length > 0 ? false : true;
+        if (isDateListEmpty)
             return baseQuery;
 
         const datesQuery = dateList.reduce((query, { date, status, comparison }, index) =>
@@ -715,8 +725,10 @@ class OrderService
 
     static addFilterCarrier(baseQuery, carrierList)
     {
-        return carrierList ? baseQuery.whereIn('guid', Order.relatedQuery('jobs').select('orderGuid')
-            .whereIn('vendorGuid', carrierList)) : baseQuery;
+        const doesCarrierListHaveElements = carrierList?.length > 0 ? true : false;
+        return doesCarrierListHaveElements ?
+            baseQuery.whereIn('guid', Order.relatedQuery('jobs').select('orderGuid')
+                .whereIn('vendorGuid', carrierList)) : baseQuery;
     }
 
     static async getComparisonTypesCached()
