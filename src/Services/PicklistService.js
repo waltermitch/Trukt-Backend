@@ -4,6 +4,8 @@ const CommodityType = require('../Models/CommodityType');
 const knex = require('../Models/BaseModel').knex();
 const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
+const ComparisonType = require('../Models/ComparisonType');
+const StatusLogType = require('../Models/StatusLogType');
 
 const opts = {
     url: process.env['azure.loadboard.baseurl'],
@@ -116,7 +118,10 @@ class PicklistService
         const equipmentTypes = PicklistService.createPicklistObject(await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true }));
         const locksmithJobTypes = PicklistService.createPicklistObject(await InvoiceLineItem.query().whereIn('name', locksmithJobNames).andWhere({ 'is_deprecated': false }));
         const commodityTypes = PicklistService.createCommodityTypes(await CommodityType.query().select('id', 'category', 'type as name'));
-
+        const dateFilterTerms = {
+            comparisonTypes: await PicklistService.createComparisonTypesPicklist(),
+            statusTypes: await PicklistService.createStatusTypesPicklist()
+        };
         const all = enums.rows.concat(jobTypes.rows).concat(lineItems.rows);
 
         for (const row of all)
@@ -136,7 +141,8 @@ class PicklistService
             locksmithJobTypes,
             loadboardData,
             commodityTypes,
-            conditionTypes
+            conditionTypes,
+            dateFilterTerms
         });
         return picklists;
     }
@@ -241,6 +247,19 @@ class PicklistService
     {
         return str.replace(/_/g, ' ').replace(/\b(\w)/g, letter => letter.toUpperCase());
 
+    }
+
+    static async createComparisonTypesPicklist()
+    {
+        const comparisonTypesDB = await ComparisonType.query().select('label as name', 'label as id');
+        return PicklistService.createPicklistObject(comparisonTypesDB);
+    }
+
+    static async createStatusTypesPicklist()
+    {
+        const statusTypesDB = await StatusLogType.query().select('id', 'orderFilterLabel as name')
+            .whereNotNull('orderFilterLabel');
+        return PicklistService.createPicklistObject(statusTypesDB);
     }
 }
 
