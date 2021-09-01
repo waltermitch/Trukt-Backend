@@ -20,10 +20,14 @@ const jobNumberRegex = /^[A-Z]{2}\d{5}[A-Z]$/;
 // also removes the modifiers at the end (i.e. /i /g /m )
 const toStringRegex = /^\/|\/\w*$/g;
 
+// matches records by salesforce ids
+const salesforceIdRegex = /[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18}/g;
+
 module.exports = {
     uuidRegex,
     orderNumberRegex,
     jobNumberRegex,
     toStringRegex,
-    uuidRegexStr
+    uuidRegexStr,
+    salesforceIdRegex
 };
