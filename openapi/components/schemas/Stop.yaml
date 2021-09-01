@@ -1,0 +1,99 @@
+type: object
+required:
+  - sequence
+  - stopType
+  - terminal
+  - commodities
+properties:
+  guid:
+    type: string
+    format: uuid
+  index:
+    description: >-
+      A unique arbitrary string that will be used to reference this stop record
+      inside of other objects.
+    type: string
+  sequence:
+    type: integer
+  stopType:
+    description: >-
+      Describes the type of stop, use pickup to indicate that the stop is for
+      picking up commodities, use delivery for dropping off commodities.
+    type: string
+    enum:
+      - delivery
+      - pickup
+  notes:
+    description: Used to convey any instructions about the stops.
+    type: string
+  dateRequestedStart:
+    description: >-
+      This date is requested by the customer. The earliest date this stop should
+      be worked.
+    type: string
+    format: datetime with timezone ISO 8601
+  dateRequestedEnd:
+    description: >-
+      This date is requested by the customer. The latest date this stop should
+      be worked.
+    type: string
+    format: datetime with timezone ISO 8601
+  dateRequestedType:
+    description: Defines the type of requested date the customer requested.
+    type: string
+    enum:
+      - exactly
+      - estimated
+      - no later than
+      - no earlier than
+  dateEstimatedStart:
+    description: >-
+      This date is submitted by the carrier/vendor. The earliest date this stop
+      could be worked.
+    type: string
+    format: datetime with timezone ISO 8601
+  dateEstimatedEnd:
+    description: >-
+      This date is submitted by the carrier/vendor. The latest date this stop
+      could be worked.
+    type: string
+    format: datetime with timezone ISO 8601
+  dateEstimatedType:
+    description: Defines the type of estimated date the carrier/vendor submitted.
+    type: string
+    enum:
+      - exactly
+      - estimated
+      - no later than
+      - no earlier than
+  dateScheduledStart:
+    description: >-
+      This date is submitted by the dispatcher. The earliest date this stop will
+      be worked
+    type: string
+    format: datetime with timezone ISO 8601
+  dateScheduledEnd:
+    description: >-
+      This date is submitted by the dispatcher. The latest date this stop will
+      be worked
+    type: string
+    format: datetime with timezone ISO 8601
+  dateScheduledType:
+    description: Defined the type of scheduled date the dispatcher submitted.
+    type: string
+    enum:
+      - exactly
+      - estimated
+      - no later than
+      - no earlier than
+  primaryContact:
+    $ref: .\Contact.yaml
+  alternativeContact:
+    $ref: .\Contact.yaml
+  terminal:
+    $ref: .\Terminal.yaml
+  commodities:
+    type: array
+    minLength: 1
+    items:
+      $ref: .\Commodity.yaml

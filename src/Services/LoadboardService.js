@@ -1,8 +1,9 @@
-require('../../local.settings');
 const Loadboard = require('../Models/Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 const LoadboardContact = require('../Models/LoadboardContact');
 const Job = require('../Models/OrderJob');
+
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 // this is imported here because the file needs to be imported somewhere
 // in order for it to be able to listen to incoming events from service bus
@@ -92,6 +93,7 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
+        LoadboardService.registerLoadboardStatusManager(posts, job.order.guid, currentUser, 2);
     }
 
     static async unpostPostings(jobId, posts, currentUser)
@@ -121,6 +123,8 @@ class LoadboardService
         {
             throw new Error(e.toString());
         }
+
+        LoadboardService.registerLoadboardStatusManager(posts, job.order.guid, currentUser, 3);
     }
 
     static async updatePostings(jobId)
@@ -326,6 +330,28 @@ class LoadboardService
             o[`${lineType}`] = match;
             return match ? acc.concat({ ...o }) : acc;
         }, []);
+    }
+
+    static getLoadboardNames(loadboardPosts)
+    {
+        return loadboardPosts.map(post => post?.loadboard);
+    }
+
+    /**
+     * @param loadboardPosts required, json with the loadboards names sended by the client
+     * @param userGuid required
+     * @param orderGuid required
+     * @param statusId required, 4 => Posted to a loadboard, 5 => Un-posted from loadboard
+     */
+    static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, statusId)
+    {
+        const loadboardNames = LoadboardService.getLoadboardNames(loadboardPosts);
+        return StatusManagerHandler.registerStatus({
+            orderGuid,
+            userGuid,
+            statusId,
+            extraAnnotations: { 'loadboards': loadboardNames }
+        });
     }
 }
 

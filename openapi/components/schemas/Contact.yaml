@@ -1,0 +1,21 @@
+type: object
+required:
+  - name
+  - phoneNumber
+properties:
+  guid:
+    type: string
+    format: uuid
+  name:
+    type: string
+    minLength: 1
+    maxLength: 121
+  email:
+    type: string
+    format: email
+  phoneNumber:
+    type: string
+    format: phone
+  mobileNumber:
+    type: string
+    format: phone
