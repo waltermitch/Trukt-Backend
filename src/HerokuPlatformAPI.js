@@ -4,9 +4,6 @@ let api;
 
 class Heroku
 {
-    constructor()
-    { }
-
     static async getConfig()
     {
         // ensure connection

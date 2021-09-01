@@ -14,8 +14,6 @@ let db;
 
 class Mongo
 {
-    constructor() { }
-
     static async connect()
     {
         if (!db)
