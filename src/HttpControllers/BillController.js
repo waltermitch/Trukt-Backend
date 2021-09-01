@@ -1,7 +1,6 @@
-const HttpRouteController = require('./HttpRouteController');
 const BillService = require('../Services/BillService');
 
-class BillController extends HttpRouteController
+class BillController
 {
     static async getBill(req, res)
     {
@@ -30,6 +29,4 @@ class BillController extends HttpRouteController
     }
 }
 
-const controller = new BillController();
-
-module.exports = controller;
+module.exports = BillController;
