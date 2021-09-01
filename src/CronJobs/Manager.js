@@ -1,9 +1,9 @@
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const EventHandler = require('../EventManager/Handler');
 const Triumph = require('../Triumph/API');
 const QBO = require('../QuickBooks/API');
 const Super = require('../Super/API');
 const Cron = require('node-cron');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const expressions =
 {
