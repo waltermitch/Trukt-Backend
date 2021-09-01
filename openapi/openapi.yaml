@@ -7,13 +7,26 @@ info:
     name: Private
     url: there is no url
 servers:
-  - url: 'https://truktbackend-dev.rcgauto.p.azurewebsites.net'
+  - url: "https://truktbackend-dev.rcgauto.p.azurewebsites.net"
     description: Development server
-  - url: 'https://truktbackend-staging.rcgauto.p.azurewebsites.net'
+  - url: "https://truktbackend-staging.rcgauto.p.azurewebsites.net"
     description: Staging server
-  - url: 'https://truktbackend.rcgauto.p.azurewebsites.net'
+  - url: "https://truktbackend.rcgauto.p.azurewebsites.net"
     description: Production server
 paths:
+  /attachments:
+    post:
+      $ref: paths\attachments\post.yaml
+  /attachments/search:
+    get:
+      $ref: paths\attachments\search.yaml
+  /attachments/{guid}:
+    get:
+      $ref: paths\attachments\get.yaml
+    delete:
+      $ref: paths\attachments\delete.yaml
+    patch:
+      $ref: paths\attachments\patch.yaml
   /edi/204/inbound:
     $ref: paths\edi@204@inbound.yaml
   /edi/214/inbound:

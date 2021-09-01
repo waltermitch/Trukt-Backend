@@ -14,6 +14,95 @@ servers:
   - url: 'https://truktbackend.rcgauto.p.azurewebsites.net'
     description: Production server
 paths:
+  /attachments:
+    post:
+      summary: Add An Attachment
+      operationId: createAttachment
+      description: Add Attachment to a given job/order
+      tags:
+        - Attachments
+      parameters:
+        - in: query
+          schema:
+            $ref: '#/components/schemas/AttachmentParams'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/File'
+      responses:
+        '201':
+          description: Created Attachment
+          content:
+            application/json: {}
+  /attachments/search:
+    get:
+      summary: Search Attachments
+      operationId: searchAttachments
+      description: Search For Attachments of a given job/order
+      tags:
+        - Attachments
+      parameters:
+        - in: query
+          schema:
+            $ref: '#/components/schemas/AttachmentParams'
+      responses:
+        '201':
+          description: Found Attachments
+          content:
+            application/json: {}
+  '/attachments/{guid}':
+    get:
+      summary: Get Attachment
+      operationId: getAttachment
+      description: Get Attachment by guid
+      tags:
+        - Attachments
+      parameters:
+        - in: path
+          name: guid
+          format: uuid
+          required: true
+      responses:
+        '200':
+          description: Attachment
+          content:
+            application/json: {}
+    delete:
+      summary: Delete Attachment
+      operationId: deleteAttachment
+      description: Delete Attachment of a given job/order
+      tags:
+        - Attachments
+      parameters:
+        - in: path
+          name: guid
+          format: uuid
+          required: true
+      responses:
+        '204':
+          description: Deleted Attachment
+    patch:
+      summary: Update Attachment
+      operationId: updateAttachment
+      description: Update Attachment of a given job/order
+      tags:
+        - Attachments
+      parameters:
+        - in: path
+          name: guid
+          format: uuid
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Attachment'
+      responses:
+        '204':
+          description: updated Attachment
   /edi/204/inbound:
     post:
       summary: Create a load tender
@@ -327,6 +416,73 @@ paths:
                     format: scac
 components:
   schemas:
+    AttachmentParams:
+      description: The parameters required for attachments
+      type: object
+      title: AttachmentParams
+      required:
+        - parent
+        - parentType
+      properties:
+        parent:
+          required: true
+          allowEmptyValue: false
+          description: The guid of the parent object
+        parentType:
+          required: true
+          allowEmptyValue: false
+          description: 'The type of the parent object (i.e job, order)'
+          enum:
+            - jobs
+        attachmentType:
+          required: false
+          allowEmptyValue: true
+          description: 'The type of attachment (i.e. photo, billOfLading, etc)'
+          enum:
+            - photo
+          default: undefined
+        visibility:
+          type: array
+          items:
+            type: string
+            enum:
+              - carrier
+              - client
+              - internal
+            default:
+              - internal
+          required: false
+          explode: false
+          allowEmptyValue: true
+          description: 'The visibility of the attachment (i.e. carrier, internal)'
+    File:
+      type: string
+      format: binary
+      required: true
+    Attachment:
+      type: object
+      properties:
+        type:
+          required: false
+          allowEmptyValue: true
+          description: 'The type of attachment (i.e. photo, billOfLading, etc)'
+          enum:
+            - photo
+          default: undefined
+        visibility:
+          type: array
+          items:
+            type: string
+            enum:
+              - carrier
+              - client
+              - internal
+            default:
+              - internal
+          required: false
+          explode: false
+          allowEmptyValue: true
+          description: 'The visibility of the attachment (i.e. carrier, internal)'
     SFID:
       type: string
       format: id

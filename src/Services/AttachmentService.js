@@ -6,20 +6,45 @@ const baseURL = AzureStorage.getBaseUrl();
 
 class AttachmentService
 {
-    static async searchByParent(parent, parentType, attachmentType)
+
+    static async get(guid)
+    {
+        const attachment = await Attachment.query().findById(guid);
+
+        // get sas
+        const sas = AzureStorage.getSAS();
+
+        // append security key
+        attachment.url += sas;
+
+        // convert visbililty to array
+        attachment.visibility = AttachmentService.convertArray(attachment.visibility);
+
+        return attachment;
+    }
+
+    static async searchByParent({ parent, parentType, attachmentType, visibility })
     {
         const attachments = await Attachment.query().where('parent', '=', `${parent}`).where('parent_table', '=', `${parentType}`).where(builder =>
         {
             if (attachmentType)
                 builder.where('type', '=', `${attachmentType}`);
+
+            if (visibility)
+                builder.where('visibility', '=', `${visibility.split(',')}`);
         });
 
         // get sas
         const sas = AzureStorage.getSAS();
 
         // append security key
-        for (const atchs of attachments)
-            atchs.url += sas;
+        for (const atch of attachments)
+        {
+            atch.visibility = AttachmentService.convertArray(atch.visibility);
+            atch.url += sas;
+        }
+
+        console.log(attachments);
 
         return attachments;
     }
@@ -50,7 +75,8 @@ class AttachmentService
                 'extension': files[i].mimetype,
                 'name': files[i].originalname,
                 'parent': opts.parent,
-                'parent_table': opts.parentType
+                'parent_table': opts.parentType,
+                'visibility': opts.visibility?.split(',')
             };
 
             // compose full path of file
@@ -62,6 +88,37 @@ class AttachmentService
         }
 
         return urls;
+    }
+
+    static async update(guid, data)
+    {
+        const payload =
+        {
+            type: data?.type,
+            visibility: Array.isArray(data?.visibility) ? data?.visibility : data?.visibility?.split(',')
+        };
+
+        const res = await Attachment.query().patchAndFetchById(guid, payload);
+
+        // convert visibility to array
+        res.visibility = AttachmentService.convertArray(res.visibility);
+
+        return res;
+    }
+
+    static async delete(guid)
+    {
+        const res = await Attachment.query().deleteById(guid);
+
+        return res;
+    }
+
+    // converts PostGres String array to JS array
+    static convertArray(string)
+    {
+        string = string.replace(/{|}/g, '');
+
+        return string.split(',');
     }
 }
 
