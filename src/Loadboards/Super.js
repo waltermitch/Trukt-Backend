@@ -33,7 +33,7 @@ class Super extends Loadboard
                 contact_mobile_phone: this.data.order.clientContact?.mobileNumber,
                 contact_email: this.data.order.clientContact?.email,
                 name: this.data.order.client.name,
-                business_type: this.data.order.client.type,
+                business_type: this.setBusinessType(this.data.order.client.type),
                 email: this.data.order.client?.email,
                 phone: this.data.order.client?.phone,
                 counterparty_guid: this.data.order.client.sdGuid,
@@ -136,7 +136,7 @@ class Super extends Loadboard
             case 'auction':
                 rcgType.toUpperCase();
             default:
-                return 'business';
+                return 'BUSINESS';
         }
     }
 
@@ -163,26 +163,24 @@ class Super extends Loadboard
 
     formatCommodities(commodities)
     {
-        return commodities.map(x =>
+        const vehicles = [];
+        for (const com of commodities)
         {
-            if (x.vehicle === null)
-            {
-                x.vehicle = { year: '', make: 'make', model: x.description };
-            }
-            const veh = {
-                'year': x.vehicle.year,
-                'make': x.vehicle.make,
-                'model': x.vehicle.model,
-                'type': this.setVehicleType(x.commType.type),
-                'is_inoperable': false,
-                'lot_number': x.lotNumber,
-                'price': x.bill.amount,
-                'tariff': x.invoice.amount,
-                'guid': x.extraExternalData?.sdGuid,
-                'vin': x.identifier
-            };
-            return veh;
-        });
+            vehicles.push({
+                'year': com.vehicle?.year || 2005,
+                'make': com.vehicle?.make || 'make',
+                'model': com.vehicle?.model || com.description || 'model',
+                'type': this.setVehicleType(com.commType.type),
+                'is_inoperable': com.inoperable == 'yes' || com.inoperable == 'unknown ' ? false : true,
+                'lot_number': com.lotNumber,
+                'price': com.bill.amount,
+                'tariff': com.invoice.amount,
+                'guid': com.extraExternalData?.sdGuid,
+                'vin': com.identifier || 'vin'
+            });
+        }
+
+        return vehicles;
     }
 
     setVehicleType(vehicleType)
@@ -395,8 +393,8 @@ class Super extends Loadboard
         {
             const commodity = newCommodities[i];
             const newName = commodity.vin + ' ' + commodity.year + ' ' + commodity.make + ' ' + commodity.model;
-            const comDescription = com.description == null ? com.vehicle?.year + ' ' + com.vehicle?.make + ' ' + com.vehicle?.model : com.description;
-            const comName = com.identifier + ' ' + comDescription;
+            const comDescription = (com.vehicle?.year || '2005') + ' ' + (com.vehicle?.make || 'make') + ' ' + (com.vehicle?.model || com.description || 'model');
+            const comName = (com.identifier || 'vin') + ' ' + comDescription;
             if (comName === newName)
             {
                 if (com.extraExternalData == undefined)
