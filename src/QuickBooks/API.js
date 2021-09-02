@@ -1,6 +1,5 @@
 const InvoicePaymentMethod = require('../Models/InvoicePaymentMethod');
 const InvoicePaymentTerm = require('../Models/InvoicePaymentTerm');
-const VariableService = require('../Services/VariableService');
 const LineItemMdl = require('../Models/InvoiceLineItem');
 const OrderStop = require('../Models/OrderStop');
 const HTTPS = require('../AuthController');
@@ -10,6 +9,7 @@ const Vendor = require('./Vendor');
 const Client = require('./Client');
 const axios = require('axios');
 const Bill = require('./Bill');
+const Mongo = require('../Mongo');
 
 const authConfig = { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': process.env['quickbooks.basicAuth'] } };
 const authUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -29,7 +29,7 @@ class QBO
         {
             const opts = { url, tokenName: 'qb_access_token' };
 
-            const token = await VariableService.get(tokenName);
+            const token = await Mongo.getSecret(tokenName);
 
             if (!qb?.instance)
             {
@@ -362,7 +362,7 @@ class QBO
     static async refreshToken()
     {
         // get refrsh token
-        const refreshToken = await VariableService.get('qb_refresh_token');
+        const refreshToken = await Mongo.getSecret('qb_refresh_token');
 
         const payload = `grant_type=refresh_token&refresh_token=${refreshToken.value}`;
 
@@ -383,7 +383,7 @@ class QBO
             'value': res.data.refresh_token
         };
 
-        await Promise.all([VariableService.update(ATData.name, ATData), VariableService.update(RTData.name, RTData)]);
+        await Promise.all([Mongo.updateSecret(ATData.name, ATData), Mongo.updateSecret(RTData.name, RTData)]);
     }
 
     static composeDescription(pTerminal, dTerminal, lineItem)

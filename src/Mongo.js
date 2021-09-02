@@ -55,6 +55,9 @@ class Mongo
 
     static async getSecret(query)
     {
+        if (typeof query === 'string')
+            query = { name: query };
+
         const db = await Mongo.connect();
 
         const res = await db.collection('secrets').findOne(query, { projection: { _id: 0 } });
