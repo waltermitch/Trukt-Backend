@@ -1,3 +1,6 @@
+const R = require('ramda');
+const NodeCache = require('node-cache');
+
 const Order = require('../Models/Order');
 const OrderStop = require('../Models/OrderStop');
 const OrderStopLink = require('../Models/OrderStopLink');
@@ -11,31 +14,48 @@ const CommodityType = require('../Models/CommodityType');
 const Vehicle = require('../Models/Vehicle');
 const Terminal = require('../Models/Terminal');
 const Contact = require('../Models/TerminalContact');
-const User = require('../Models/User');
 const InvoiceBill = require('../Models/InvoiceBill');
 const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Expense = require('../Models/Expense');
-const R = require('ramda');
-const { MilesToMeters } = require('./../Utils');
-
+const ComparisonType = require('../Models/ComparisonType');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
+const { MilesToMeters } = require('./../Utils');
+
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
+const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
+
+let dateFilterComparisonTypes;
 
 class OrderService
 {
-    static async getOrders({ pickup, delivery }, page, rowCount)
+    static async getOrders({
+        pickup,
+        delivery,
+        status,
+        customer,
+        carrier,
+        dispatcher,
+        salesperson,
+        dates
+    }, page, rowCount)
     {
-        let ordersQuery = Order.query().page(page, rowCount);
 
-        if (pickup)
-            ordersQuery = OrderService.addFilterPickups(ordersQuery, pickup);
+        dateFilterComparisonTypes = dates && await OrderService.getComparisonTypesCached();
 
-        if (delivery)
-            ordersQuery = OrderService.addFilterDeliveries(ordersQuery, delivery);
+        const baseOrderQuery = Order.query().page(page, rowCount);
 
-        const orders = await ordersQuery.orderBy('number', 'ASC');
+        const queryFilterPickup = OrderService.addFilterPickups(baseOrderQuery, pickup);
+        const queryFilterDelivery = OrderService.addFilterDeliveries(queryFilterPickup, delivery);
+        const queryFilterStatus = OrderService.addFilterStatus(queryFilterDelivery, status);
+        const queryFilterCustomer = OrderService.addFilterCustomer(queryFilterStatus, customer);
+        const queryFilterDispatcher = OrderService.addFilterDispatcher(queryFilterCustomer, dispatcher);
+        const queryFilterSalesperson = OrderService.addFilterSalesperson(queryFilterDispatcher, salesperson);
+        const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
+        const queryAllFilters = OrderService.addFilterDates(queryFilterCarrier, dates);
+
+        const orders = await queryAllFilters.orderBy('number', 'ASC');
 
         orders.page = page;
         orders.rowCount = rowCount;
@@ -613,15 +633,18 @@ class OrderService
 
     static addFilterPickups(baseQuery, pickups)
     {
-        return baseQuery.whereExists(
+        return pickups ? baseQuery.whereExists(
             Order.relatedQuery('stops').where('stopType', 'pickup').whereExists(
                 OrderService.basePickupDeliveryFilterQuery(pickups)
             )
-        );
+        ) : baseQuery;
     }
 
     static addFilterDeliveries(baseQuery, deliveries)
     {
+        if (!deliveries)
+            return baseQuery;
+
         const deliveryQuery = Order.query().select('guid').whereExists(
             Order.relatedQuery('stops').where('stopType', 'delivery').whereExists(
                 OrderService.basePickupDeliveryFilterQuery(deliveries)
@@ -636,25 +659,79 @@ class OrderService
         {
             return coordinatesList.reduce((query, coordinates, index) =>
             {
-                // NOT add orWhere clause if it is the first element
-                if (index === 0)
-                    return this.where(
-                        OrderService.getSTWithin(
-                            coordinates.latitude,
-                            coordinates.longitude,
-                            coordinates.radius
-                        )
-                    );
+                const getSTWithinFunction = OrderService.getSTWithin(
+                    coordinates.latitude,
+                    coordinates.longitude,
+                    coordinates.radius);
 
-                return query.orWhere(
-                    OrderService.getSTWithin(
-                        coordinates.latitude,
-                        coordinates.longitude,
-                        coordinates.radius)
+                return index === 0 ? this.where(
+                    getSTWithinFunction
+                ) : query.orWhere(
+                    getSTWithinFunction
                 );
             }, undefined);
         }
         );
+    }
+
+    static addFilterStatus(baseQuery, statusList)
+    {
+        return statusList ? baseQuery.whereIn('status', statusList) : baseQuery;
+    }
+
+    static addFilterCustomer(baseQuery, customerList)
+    {
+        return customerList ? baseQuery.whereIn('clientGuid', customerList) : baseQuery;
+    }
+
+    static addFilterDispatcher(baseQuery, dispatcherList)
+    {
+        return dispatcherList ? baseQuery.whereIn('dispatcherGuid', dispatcherList) : baseQuery;
+    }
+
+    static addFilterSalesperson(baseQuery, salespersonList)
+    {
+        return salespersonList ? baseQuery.whereIn('salespersonGuid', salespersonList) : baseQuery;
+    }
+
+    static addFilterDates(baseQuery, dateList)
+    {
+        if (!dateList)
+            return baseQuery;
+
+        const datesQuery = dateList.reduce((query, { date, status, comparison }, index) =>
+        {
+            const comparisonValue = dateFilterComparisonTypes[comparison] || dateFilterComparisonTypes.equal;
+            const comparisonDateAndStatus = function ()
+            {
+                this.whereRaw(`date_created::date ${comparisonValue} ?`, [date]).
+                    andWhere('statusId', status);
+            };
+            return index === 0 ? query.where(comparisonDateAndStatus) : query.orWhere(comparisonDateAndStatus);
+        }, Order.relatedQuery('statusLogs').select('orderGuid'));
+
+        return baseQuery.whereIn('guid', datesQuery);
+    }
+
+    static addFilterCarrier(baseQuery, carrierList)
+    {
+        return carrierList ? baseQuery.whereIn('guid', Order.relatedQuery('jobs').select('orderGuid')
+            .whereIn('vendorGuid', carrierList)) : baseQuery;
+    }
+
+    static async getComparisonTypesCached()
+    {
+        if (!cache.has('comparisonTypes'))
+        {
+            const comparisonTypesDB = await ComparisonType.query().select('label', 'value');
+            const comparisonTypes = comparisonTypesDB.reduce((comparisonObj, { label, value }) =>
+            {
+                comparisonObj[label] = value;
+                return comparisonObj;
+            }, {});
+            cache.set('comparisonTypes', comparisonTypes);
+        }
+        return cache.get('comparisonTypes');
     }
 }
 
