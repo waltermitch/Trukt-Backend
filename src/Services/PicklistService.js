@@ -1,18 +1,11 @@
 const LoadboardContact = require('../Models/LoadboardContact');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
-const CommodityType = require('../Models/CommodityType');
-const knex = require('../Models/BaseModel').knex();
-const HTTPS = require('../AuthController');
-const NodeCache = require('node-cache');
 const ComparisonType = require('../Models/ComparisonType');
+const CommodityType = require('../Models/CommodityType');
 const StatusLogType = require('../Models/StatusLogType');
-
-const opts = {
-    url: process.env['azure.loadboard.baseurl'],
-    params: { code: process.env['azure.loadboard.funcCode'] }
-};
-
-const lbConn = new HTTPS(opts).connect();
+const knex = require('../Models/BaseModel').knex();
+const Loadboards = require('../Loadboards/API');
+const NodeCache = require('node-cache');
 
 const cache = new NodeCache({ stdTTL: 60 * 60, deleteOnExpire: true });
 
@@ -98,7 +91,7 @@ class PicklistService
         // this api endpoint calls the loadboards function app that
         // gathers loadboard picklist information and sends it back
         // as a response.
-        const loadboardData = (await lbConn.get('/equipmenttypes')).data;
+        const loadboardData = await Loadboards.getEquipmentTypes();
 
         for (const contact of (await LoadboardContact.query()))
         {
