@@ -14,7 +14,7 @@ const loadboardClasses = require('../Loadboards/LoadboardsList');
 const { ServiceBusClient } = require('@azure/service-bus');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
-const queueName = 'loadboard_posts_outgoing';
+const queueName = 'test_queue';
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
 
