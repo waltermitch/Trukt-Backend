@@ -183,6 +183,7 @@ CREATE TABLE salesforce.account (
     sfid character varying(18) COLLATE pg_catalog.ucs_basic,
     id integer NOT NULL,
     sync_in_super__c boolean,
+    sc_id__c character varying(255),
     _hc_lastop character varying(32),
     _hc_err text
 );
