@@ -171,7 +171,7 @@ class Super extends Loadboard
                 'make': com.vehicle?.make || 'make',
                 'model': com.vehicle?.model || com.description || 'model',
                 'type': this.setVehicleType(com.commType.type),
-                'is_inoperable': com.inoperable == 'yes' || com.inoperable == 'unknown ' ? false : true,
+                'is_inoperable': com.inoperable == 'yes' ? true : false,
                 'lot_number': com.lotNumber,
                 'price': com.bill.amount,
                 'tariff': com.invoice.amount,
