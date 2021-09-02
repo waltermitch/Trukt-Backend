@@ -68,18 +68,14 @@ class ShipCars extends Loadboard
         const vehicles = [];
         for (const com of commodities)
         {
-            if (com.vehicle === null)
-            {
-                com.vehicle = { year: 2000, make: 'make', model: com.description };
-            }
             vehicles.push({
+                vin: com.identifier || 'vin',
+                year: com.vehicle?.year || 2005,
+                make: com.vehicle?.make || 'make',
+                model: com.vehicle?.model || com.description || 'model',
                 type: this.setVehicleType(com.commType.type),
-                year: com.vehicle.year,
-                make: com.vehicle.make,
-                model: com.vehicle.model,
-                vin: com.identifier !== null ? com.identifier.substring(0, 19) : null,
                 lot_number: com.lotNumber,
-                operable: com.inoperable === 'no' ? false : true,
+                operable: com.inoperable === 'no' || com.inoperable === 'unknown',
                 id: com.extraExternalData?.scGuid,
                 load_id: this.postObject.externalGuid
             });
@@ -322,8 +318,8 @@ class ShipCars extends Loadboard
         {
             const commodity = newCommodities[i];
             const newName = commodity.vin + ' ' + commodity.year + ' ' + commodity.make + ' ' + commodity.model;
-            const comDescription = com.description == null ? com.vehicle?.year + ' ' + com.vehicle?.make + ' ' + com.vehicle?.model : com.description;
-            const comName = com.identifier + ' ' + comDescription;
+            const comDescription = (com.vehicle?.year || '2005') + ' ' + (com.vehicle?.make || 'make') + ' ' + (com.vehicle?.model || com.description || 'model');
+            const comName = (com.identifier || 'vin') + ' ' + comDescription;
             if (comName === newName)
             {
                 if (com.extraExternalData == undefined)

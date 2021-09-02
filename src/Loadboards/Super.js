@@ -167,16 +167,16 @@ class Super extends Loadboard
         for (const com of commodities)
         {
             vehicles.push({
-                'year': com.vehicle?.year || 2005,
-                'make': com.vehicle?.make || 'make',
-                'model': com.vehicle?.model || com.description || 'model',
-                'type': this.setVehicleType(com.commType.type),
-                'is_inoperable': com.inoperable == 'yes' ? true : false,
-                'lot_number': com.lotNumber,
-                'price': com.bill.amount,
-                'tariff': com.invoice.amount,
-                'guid': com.extraExternalData?.sdGuid,
-                'vin': com.identifier || 'vin'
+                vin: com.identifier || 'vin',
+                year: com.vehicle?.year || 2005,
+                make: com.vehicle?.make || 'make',
+                model: com.vehicle?.model || com.description || 'model',
+                type: this.setVehicleType(com.commType.type),
+                is_inoperable: com.inoperable === 'yes',
+                lot_number: com.lotNumber,
+                price: com.bill.amount,
+                tariff: com.invoice.amount,
+                guid: com.extraExternalData?.sdGuid
             });
         }
 
