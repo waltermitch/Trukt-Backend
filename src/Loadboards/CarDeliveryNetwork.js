@@ -23,7 +23,7 @@ class CarDeliveryNetwork extends Loadboard
             PaymentTerm: 2,
             BuyPrice: this.data.estimatedExpense,
             ServiceRequired: 1,
-            JobInitiator: this.data.order.dispatcher.name,
+            JobInitiator: this.data.dispatcher?.name || 'Brad Marinov',
             Customer: {
                 AddressLines: '9300 Tech Center Drive',
                 City: 'Sacramento',
@@ -37,11 +37,11 @@ class CarDeliveryNetwork extends Loadboard
                 Destination: {
                     AddressLines: this.data.pickup.terminal.street1,
                     City: this.data.pickup.terminal.city,
-                    Contact: this.data.pickup.primaryContact?.name,
-                    Phone: this.data.pickup.primaryContact?.phone,
-                    MobilePhone: this.data.pickup.primaryContact?.mobilePhone,
+                    Contact: this.data.pickup?.primaryContact?.name,
+                    Phone: this.data.pickup?.primaryContact?.phoneNumber,
+                    MobilePhone: this.data.pickup?.primaryContact?.mobilePhone,
                     OrganisationName: this.data.pickup.terminal.name,
-                    QuickCode: null,
+                    QuickCode: this.data.pickup.terminal.guid,
                     StateRegion: this.getStateCode(this.data.pickup.terminal.state),
                     ZipPostCode: this.data.pickup.terminal.zipCode
                 },
@@ -51,11 +51,11 @@ class CarDeliveryNetwork extends Loadboard
                 Destination: {
                     AddressLines: this.data.delivery.terminal.street1,
                     City: this.data.delivery.terminal.city,
-                    Contact: this.data.delivery.primaryContact?.name,
-                    Phone: this.data.delivery.primaryContact?.phone,
-                    MobilePhone: this.data.delivery.primaryContact?.mobilePhone,
+                    Contact: this.data.delivery?.primaryContact?.name,
+                    Phone: this.data.delivery?.primaryContact?.phoneNumber,
+                    MobilePhone: this.data.delivery?.primaryContact?.mobilePhone,
                     OrganisationName: this.data.delivery.terminal.name,
-                    QuickCode: null,
+                    QuickCode: this.data.delivery.guid,
                     StateRegion: this.getStateCode(this.data.delivery.terminal.state),
                     ZipPostCode: this.data.delivery.terminal.zipCode
                 },
@@ -79,11 +79,12 @@ class CarDeliveryNetwork extends Loadboard
             }
             com.identifier = com.identifier !== null ? com.identifier.substring(0, 17) : null;
             vehicles.push({
-                Make: com.vehicle.make,
-                Model: com.vehicle.model,
-                Registration: com.vehicle.year,
-                Vin: com.identifier,
-                Variant: com.commType?.type
+                Vin: com.identifier || 'vinNumber',
+                Registration: com.vehicle?.year || 2005,
+                Make: com.vehicle?.make || 'make',
+                Model: com.vehicle?.model || com.description || 'model',
+                Variant: com.commType?.type,
+                Location: com.lotNumber
             });
         }
 
