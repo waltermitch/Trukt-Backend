@@ -174,8 +174,8 @@ class Super extends Loadboard
                 type: this.setVehicleType(com.commType.type),
                 is_inoperable: com.inoperable === 'yes',
                 lot_number: com.lotNumber,
-                price: com.bill.amount,
-                tariff: com.invoice.amount,
+                price: com.bill?.amount,
+                tariff: com.invoice?.amount,
                 guid: com.extraExternalData?.sdGuid
             });
         }
