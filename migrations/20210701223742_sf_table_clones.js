@@ -85,9 +85,11 @@ exports.up = function (knex)
             systemmodstamp as system_mod_stamp,
             truckstop_username__c as truckstop_username,
             type as type,
+            user_role__c as user_role,
             vendor_type__c as vendor_type,
             website as website,
-            sync_in_super__c as sync_in_super
+            sync_in_super__c as sync_in_super,
+            sc_id__c as sc_id
             FROM salesforce.account;
             
             CREATE OR REPLACE VIEW salesforce.contacts AS
