@@ -1,42 +1,15 @@
 const PicklistService = require('../Services/PicklistService');
-const fs = require('fs');
-
-const localPicklistPath = './localdata/picklists.json';
-let picklists;
 
 class PicklistController
 {
-    static async getAll(req, res)
+    static async get(req, res)
     {
-        // first check if the picklist is in memory
-        if (!picklists)
-        {
-            if (!fs.existsSync(localPicklistPath))
-            {
-                // fetch from database
-                picklists = await PicklistService.updatePicklists();
-            }
-            else
-            {
-                // fetch from file
-                picklists = JSON.parse(fs.readFileSync(localPicklistPath, 'utf8'));
-            }
-        }
+        const result = await PicklistService.getPicklists();
 
-        res.status(200).json(picklists);
-    }
-
-    static async update(req, res)
-    {
-        try
-        {
-            await PicklistService.updatePicklists();
-            res.status(201).send();
-        }
-        catch (err)
-        {
-            res.status(500).send(err);
-        }
+        if (result)
+            res.status(200).json(result);
+        else
+            res.status(500).send();
     }
 }
 
