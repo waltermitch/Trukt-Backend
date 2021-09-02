@@ -23,8 +23,8 @@ class ShipCars extends Loadboard
         {
             pickup_name: this.data.pickup.terminal.name,
             pickup_contact: this.data.pickup?.primaryContact?.name,
-            pickup_phone_1: this.data.pickup?.primaryContact?.phoneNumber?.substring(0, 19),
-            pickup_phone_2: this.data.pickup?.primaryContact?.mobileNumber?.substring(0, 19),
+            pickup_phone_1: this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.phoneNumber),
+            pickup_phone_2: this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.mobileNumber),
             pickup_address: this.data.pickup.terminal.street1,
             pickup_city: this.data.pickup.terminal.city,
             pickup_state: this.getStateCode(this.data.pickup.terminal.state),
@@ -34,8 +34,8 @@ class ShipCars extends Loadboard
 
             delivery_name: this.data.delivery.terminal.name,
             delivery_contact: this.data.delivery?.primaryContact?.name,
-            delivery_phone_1: this.data.delivery?.primaryContact?.phoneNumber?.substring(0, 19),
-            delivery_phone_2: this.data.delivery?.primaryContact?.mobileNumber?.substring(0, 19),
+            delivery_phone_1: this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.phoneNumber),
+            delivery_phone_2: this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.mobileNumber),
             delivery_address: this.data.delivery.terminal.street1,
             delivery_city: this.data.delivery.terminal.city,
             delivery_state: this.getStateCode(this.data.delivery.terminal.state),
@@ -155,6 +155,34 @@ class ShipCars extends Loadboard
             default:
                 return null;
         }
+    }
+
+    cleanUpPhoneNumber(phone)
+    {
+        if (!phone)
+        {
+            return undefined;
+        }
+
+        // 0. clean up non-alphanumeric characters
+        phone = phone.replace(/[^\w]|_/g, '');
+
+        // 1. remove extensions
+        phone = phone.replace(/[a-zA-Z]+\d*/, '');
+
+        // 2. count the number of digits
+        if (phone.length === 11 || phone.length === 10)
+        {
+            // 4. construct new phone string
+            const matches = phone.match(/\d?(\d{3})(\d{3})(\d{4})/);
+            phone = `(${matches[1]}) ${matches[2]}-${matches[3]}`;
+        }
+        else
+        {
+            phone = undefined;
+        }
+
+        return phone;
     }
 
     static async handlecreate(post, response)
