@@ -87,6 +87,7 @@ class DAT extends Loadboard
                 objectionPost.externalGuid = response.id;
                 objectionPost.externalPostGuid = response.id;
                 objectionPost.status = 'posted';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }

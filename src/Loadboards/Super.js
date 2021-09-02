@@ -262,6 +262,7 @@ class Super extends Loadboard
 
                 objectionPost.externalGuid = response.guid;
                 objectionPost.status = 'created';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
             objectionPost.setUpdatedBy(anonUser);
@@ -315,6 +316,7 @@ class Super extends Loadboard
                 objectionPost.externalGuid = response.guid;
                 objectionPost.externalPostGuid = response.guid;
                 objectionPost.status = 'posted';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
