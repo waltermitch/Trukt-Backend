@@ -93,7 +93,7 @@ class DAT extends Loadboard
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
         }
         catch (err)
@@ -127,7 +127,7 @@ class DAT extends Loadboard
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
         }
         catch (err)
