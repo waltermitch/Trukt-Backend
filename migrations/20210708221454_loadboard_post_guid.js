@@ -30,6 +30,6 @@ exports.down = function (knex)
         {
             table.increments('id', { primaryKey: true });
             table.string('api_error', 3000).comment('error that is returned from the loadboard api').alter();
-        }).raw('DROP TRIGGER rcg_loadboard_posts_guid ON rcg_tms.loadboard_posts');
+        }).raw('DROP TRIGGER IF EXISTS rcg_loadboard_posts_guid ON rcg_tms.loadboard_posts');
     });
 };
