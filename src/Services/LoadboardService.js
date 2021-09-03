@@ -85,7 +85,7 @@ class LoadboardService
             // than have a single new transaction for each posting
             if (payloads.length != 0)
             {
-                // await sender.sendMessages({ body: payloads });
+                await sender.sendMessages({ body: payloads });
             }
         }
         catch (e)
