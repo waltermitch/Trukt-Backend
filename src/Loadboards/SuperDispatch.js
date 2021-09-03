@@ -1,6 +1,5 @@
 const AuthController = require('../AuthController');
 const ErrorHandler = require('../ErrorHandler');
-const Order = require('../Azure/Order');
 
 // SD singleton
 let sd;
@@ -53,34 +52,6 @@ class Super
 
         // returing objects array
         return res.data.data.objects;
-    }
-
-    static async createOrder(payload)
-    {
-        // validate
-        // const errors = Validator.validate('order', payload);
-
-        // if (errors.length > 0)
-        //     throw { 'status': 400, 'data': errors };
-
-        // get customer info
-        const customer = await Super.getCustomerByExternalId(payload?.customerId);
-
-        // if there are multiple cutomers chose first
-        if (customer?.length > 0)
-            payload.customerGUID = customer[0]?.guid;
-
-        // get Super
-        const sd = await Super.getSuper();
-
-        // create order
-        const order = new Order(payload);
-
-        // create order
-        const res = await sd.post('/v1/public/orders', order.toJSON());
-
-        // return object
-        return res.data.data.object;
     }
 
     static async getCarriersByDOT(USDOT)
