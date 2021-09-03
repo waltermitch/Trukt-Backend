@@ -197,7 +197,7 @@ class ShipCars extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
+                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const vehicles = this.updateCommodity(job.commodities, response.vehicles);
                 for (const vehicle of vehicles)
                 {
@@ -239,7 +239,7 @@ class ShipCars extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted)]');
+                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const vehicles = this.updateCommodity(job.commodities, response.vehicles);
                 for (const vehicle of vehicles)
                 {
