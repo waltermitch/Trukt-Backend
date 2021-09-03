@@ -243,7 +243,7 @@ class Super extends Loadboard
             else
             {
                 const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
-                    order.[client], commodities(distinct, isNotDeleted)
+                    order.[client], commodities(distinct, isNotDeleted).[vehicle]
                 ]`);
 
                 const vehicles = this.updateCommodity(job.commodities, response.vehicles);
