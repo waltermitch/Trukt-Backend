@@ -85,7 +85,7 @@ class LoadboardService
             // than have a single new transaction for each posting
             if (payloads.length != 0)
             {
-                await sender.sendMessages({ body: payloads });
+                // await sender.sendMessages({ body: payloads });
             }
         }
         catch (e)
@@ -272,20 +272,14 @@ class LoadboardService
         const errors = [];
         if (posts.length === 0)
         {
-            const data = {
-                message: `a loadboard is required in order to post, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`
-            };
-            errors.push(data);
+            errors.push(new Error(`a loadboard is required in order to post, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
         }
         for (const post of posts)
         {
             const lbName = post.loadboard;
             if (!(lbName in dbLoadboardNames))
             {
-                const data = {
-                    message: `the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`
-                };
-                throw data;
+                throw new Error(`the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
             }
             if (dbLoadboardNames[lbName].requiresOptions)
             {
