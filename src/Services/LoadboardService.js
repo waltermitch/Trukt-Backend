@@ -245,8 +245,8 @@ class LoadboardService
                 }
                 else
                 {
-                    job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].id, {
-                        id: job.postObjects[`${post.loadboard}`].id,
+                    job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].guid, {
+                        guid: job.postObjects[`${post.loadboard}`].guid,
                         jobGuid: job.guid,
                         loadboard: post.loadboard,
                         instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
