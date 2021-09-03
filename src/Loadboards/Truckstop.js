@@ -114,6 +114,7 @@ class Truckstop extends Loadboard
                 objectionPost.externalGuid = response.loadId;
                 objectionPost.externalPostGuid = response.loadId;
                 objectionPost.status = 'posted';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
                 objectionPost.hasError = false;

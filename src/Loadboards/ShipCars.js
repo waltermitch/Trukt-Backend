@@ -23,8 +23,8 @@ class ShipCars extends Loadboard
         {
             pickup_name: this.data.pickup.terminal.name,
             pickup_contact: this.data.pickup?.primaryContact?.name,
-            pickup_phone_1: this.data.pickup?.primaryContact?.phoneNumber?.substring(0, 19),
-            pickup_phone_2: this.data.pickup?.primaryContact?.mobileNumber?.substring(0, 19),
+            pickup_phone_1: this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.phoneNumber),
+            pickup_phone_2: this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.mobileNumber),
             pickup_address: this.data.pickup.terminal.street1,
             pickup_city: this.data.pickup.terminal.city,
             pickup_state: this.getStateCode(this.data.pickup.terminal.state),
@@ -34,8 +34,8 @@ class ShipCars extends Loadboard
 
             delivery_name: this.data.delivery.terminal.name,
             delivery_contact: this.data.delivery?.primaryContact?.name,
-            delivery_phone_1: this.data.delivery?.primaryContact?.phoneNumber?.substring(0, 19),
-            delivery_phone_2: this.data.delivery?.primaryContact?.mobileNumber?.substring(0, 19),
+            delivery_phone_1: this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.phoneNumber),
+            delivery_phone_2: this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.mobileNumber),
             delivery_address: this.data.delivery.terminal.street1,
             delivery_city: this.data.delivery.terminal.city,
             delivery_state: this.getStateCode(this.data.delivery.terminal.state),
@@ -68,18 +68,14 @@ class ShipCars extends Loadboard
         const vehicles = [];
         for (const com of commodities)
         {
-            if (com.vehicle === null)
-            {
-                com.vehicle = { year: 2000, make: 'make', model: com.description };
-            }
             vehicles.push({
+                vin: com.identifier || 'vin',
+                year: com.vehicle?.year || 2005,
+                make: com.vehicle?.make || 'make',
+                model: com.vehicle?.model || com.description || 'model',
                 type: this.setVehicleType(com.commType.type),
-                year: com.vehicle.year,
-                make: com.vehicle.make,
-                model: com.vehicle.model,
-                vin: com.identifier !== null ? com.identifier.substring(0, 19) : null,
                 lot_number: com.lotNumber,
-                operable: com.inoperable === 'no' ? false : true,
+                operable: com.inoperable === 'no' || com.inoperable === 'unknown',
                 id: com.extraExternalData?.scGuid,
                 load_id: this.postObject.externalGuid
             });
@@ -157,6 +153,34 @@ class ShipCars extends Loadboard
         }
     }
 
+    cleanUpPhoneNumber(phone)
+    {
+        if (!phone)
+        {
+            return undefined;
+        }
+
+        // 0. clean up non-alphanumeric characters
+        phone = phone.replace(/[^\w]|_/g, '');
+
+        // 1. remove extensions
+        phone = phone.replace(/[a-zA-Z]+\d*/, '');
+
+        // 2. count the number of digits
+        if (phone.length === 11 || phone.length === 10)
+        {
+            // 4. construct new phone string
+            const matches = phone.match(/\d?(\d{3})(\d{3})(\d{4})/);
+            phone = `(${matches[1]}) ${matches[2]}-${matches[3]}`;
+        }
+        else
+        {
+            phone = undefined;
+        }
+
+        return phone;
+    }
+
     static async handlecreate(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
@@ -182,6 +206,7 @@ class ShipCars extends Loadboard
                 }
                 objectionPost.externalGuid = response.id;
                 objectionPost.status = 'created';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
             objectionPost.setUpdatedBy(anonUser);
@@ -224,6 +249,7 @@ class ShipCars extends Loadboard
                 objectionPost.externalGuid = response.id;
                 objectionPost.externalPostGuid = response.id;
                 objectionPost.status = 'posted';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
@@ -294,8 +320,8 @@ class ShipCars extends Loadboard
         {
             const commodity = newCommodities[i];
             const newName = commodity.vin + ' ' + commodity.year + ' ' + commodity.make + ' ' + commodity.model;
-            const comDescription = com.description == null ? com.vehicle?.year + ' ' + com.vehicle?.make + ' ' + com.vehicle?.model : com.description;
-            const comName = com.identifier + ' ' + comDescription;
+            const comDescription = (com.vehicle?.year || '2005') + ' ' + (com.vehicle?.make || 'make') + ' ' + (com.vehicle?.model || com.description || 'model');
+            const comName = (com.identifier || 'vin') + ' ' + comDescription;
             if (comName === newName)
             {
                 if (com.extraExternalData == undefined)
