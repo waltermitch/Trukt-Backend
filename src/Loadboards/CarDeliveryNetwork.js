@@ -45,7 +45,7 @@ class CarDeliveryNetwork extends Loadboard
                     StateRegion: this.getStateCode(this.data.pickup.terminal.state),
                     ZipPostCode: this.data.pickup.terminal.zipCode
                 },
-                RequestedDate: this.data.pickup.dateScheduledStart
+                RequestedDate: this.data.pickup.dateRequestedStart
             },
             Dropoff: {
                 Destination: {
@@ -55,11 +55,11 @@ class CarDeliveryNetwork extends Loadboard
                     Phone: this.data.delivery?.primaryContact?.phoneNumber,
                     MobilePhone: this.data.delivery?.primaryContact?.mobilePhone,
                     OrganisationName: this.data.delivery.terminal.name,
-                    QuickCode: this.data.delivery.guid,
+                    QuickCode: this.data.delivery.terminal.guid,
                     StateRegion: this.getStateCode(this.data.delivery.terminal.state),
                     ZipPostCode: this.data.delivery.terminal.zipCode
                 },
-                RequestedDate: this.data.delivery.dateScheduledStart,
+                RequestedDate: this.data.delivery.dateRequestedStart,
                 RequestedDateIsExact: true
             },
             Vehicles: this.formatCommodities(this.data.commodities)
@@ -73,10 +73,6 @@ class CarDeliveryNetwork extends Loadboard
         const vehicles = [];
         for (const com of commodities)
         {
-            if (com.vehicle === null)
-            {
-                com.vehicle = { year: '', make: 'make', model: com.description };
-            }
             com.identifier = com.identifier !== null ? com.identifier.substring(0, 17) : null;
             vehicles.push({
                 Vin: com.identifier || 'vinNumber',
