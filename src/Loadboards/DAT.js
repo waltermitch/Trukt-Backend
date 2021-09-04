@@ -87,12 +87,13 @@ class DAT extends Loadboard
                 objectionPost.externalGuid = response.id;
                 objectionPost.externalPostGuid = response.id;
                 objectionPost.status = 'posted';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
         }
         catch (err)
@@ -126,7 +127,7 @@ class DAT extends Loadboard
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
         }
         catch (err)

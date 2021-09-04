@@ -135,6 +135,14 @@ class Order extends BaseModel
                     from: 'rcgTms.orders.salespersonGuid',
                     to: 'salesforce.accounts.guid'
                 }
+            },
+            statusLogs: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./StatusLog'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    to: 'rcgTms.statusLogs.orderGuid'
+                }
             }
         };
         Object.assign(relations, AuthorRelationMappings('rcgTms.orders'));

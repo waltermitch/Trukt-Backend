@@ -93,7 +93,7 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
-        LoadboardService.registerLoadboardStatusManager(posts, job.order.guid, currentUser, 2);
+        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2);
     }
 
     static async unpostPostings(jobId, posts, currentUser)
@@ -124,7 +124,7 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
-        LoadboardService.registerLoadboardStatusManager(posts, job.order.guid, currentUser, 3);
+        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3);
     }
 
     static async updatePostings(jobId)
@@ -245,8 +245,7 @@ class LoadboardService
                 }
                 else
                 {
-                    job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].id, {
-                        id: job.postObjects[`${post.loadboard}`].id,
+                    job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].guid, {
                         jobGuid: job.guid,
                         loadboard: post.loadboard,
                         instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
@@ -273,20 +272,14 @@ class LoadboardService
         const errors = [];
         if (posts.length === 0)
         {
-            const data = {
-                message: `a loadboard is required in order to post, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`
-            };
-            errors.push(data);
+            errors.push(new Error(`a loadboard is required in order to post, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
         }
         for (const post of posts)
         {
             const lbName = post.loadboard;
             if (!(lbName in dbLoadboardNames))
             {
-                const data = {
-                    message: `the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`
-                };
-                throw data;
+                throw new Error(`the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
             }
             if (dbLoadboardNames[lbName].requiresOptions)
             {
