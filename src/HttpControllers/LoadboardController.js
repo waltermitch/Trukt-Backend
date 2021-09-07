@@ -40,7 +40,6 @@ class LoadboardController extends HttpRouteController
         }
         catch (e)
         {
-            console.log(e);
             next({
                 status: 500,
                 data: { message: e.toString() || 'Internal server error' }
