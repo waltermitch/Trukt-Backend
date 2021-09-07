@@ -1,6 +1,10 @@
 const HttpRouteController = require('./HttpRouteController');
 const LoadboardService = require('../Services/LoadboardService');
 
+// this is imported here because the file needs to be imported somewhere
+// in order for it to be able to listen to incoming events from service bus
+const LoadboardHandler = require('../Loadboards/LoadboardHandler');
+
 class LoadboardController extends HttpRouteController
 {
     static async createJobPost(req, res, next)
@@ -36,6 +40,7 @@ class LoadboardController extends HttpRouteController
         }
         catch (e)
         {
+            console.log(e);
             next({
                 status: 500,
                 data: { message: e.toString() || 'Internal server error' }
