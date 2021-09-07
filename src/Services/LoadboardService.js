@@ -224,7 +224,7 @@ class LoadboardService
             {
                 if (post.values != null)
                 {
-                    const lbContact = await LoadboardContact.query().findById(post.values.contact).where({ loadboard: post.loadboard });
+                    const lbContact = await LoadboardContact.query().findById(post.values.contactId).where({ loadboard: post.loadboard });
                     post.values.contact = lbContact;
                 }
                 if (!(post.loadboard in job.postObjects))
