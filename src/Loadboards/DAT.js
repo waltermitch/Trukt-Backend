@@ -62,7 +62,8 @@ class DAT extends Loadboard
                 transactionDetails: {
                     loadOfferRateUsd: this.data.estimatedExpense
                 }
-            }
+            },
+            referenceId: this.data.number
         };
 
         return payload;
