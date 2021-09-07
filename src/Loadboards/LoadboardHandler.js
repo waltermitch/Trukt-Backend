@@ -1,6 +1,7 @@
 const Knex = require('knex');
 const knexfile = require('../../knexfile');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
+const LoadboardService = require('../Services/LoadboardService');
 
 const { ServiceBusClient } = require('@azure/service-bus');
 
@@ -15,15 +16,14 @@ const myMessageHandler = async (message) =>
 {
     const responses = message.body;
     const jobGuid = responses[0].payloadMetadata.post.jobGuid;
-    const posts = {};
 
     for (const res of responses)
     {
         const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
-        const post = await lbClass[`handle${res.payloadMetadata.action}`](res.payloadMetadata.post, res[`${res.payloadMetadata.action}`]);
-
-        posts[`${post.loadboard}`] = post;
+        await lbClass[`handle${res.payloadMetadata.action}`](res.payloadMetadata.post, res[`${res.payloadMetadata.action}`]);
     }
+
+    const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
 
     // publish to a group that is named after the the jobGuid which
     // should be listening on messages posted to the group
