@@ -4,18 +4,14 @@ required:
   - phoneNumber
 properties:
   guid:
-    type: string
-    format: uuid
+    $ref: '.\Common.yaml#/guid'
   name:
     type: string
     minLength: 1
     maxLength: 121
   email:
-    type: string
-    format: email
+    $ref: '.\Common.yaml#/email'
   phoneNumber:
-    type: string
-    format: phone
+    $ref: '.\Common.yaml#/phoneNumber'
   mobileNumber:
-    type: string
-    format: phone
+    $ref: '.\Common.yaml#/phoneNumber'

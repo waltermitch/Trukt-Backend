@@ -1,0 +1,21 @@
+summary: Update expense
+operationId: patchExpense
+description: Update expense
+tags:
+  - Expense
+parameters:
+  - in: path
+    name: expenseId
+    schema:
+      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        $ref: '..\..\..\components\schemas\Expense.yaml#/expense'
+responses:
+  200:
+    description: expense
+    content:
+      application/json: {}

@@ -1,0 +1,17 @@
+summary: Get next job index number
+operationId: getJobIndex
+description: Get next job index number
+tags:
+  - Index
+  - Job
+parameters:
+  - in: query
+    name: order
+    schema:
+      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: job number
+    content:
+      application/json: {}

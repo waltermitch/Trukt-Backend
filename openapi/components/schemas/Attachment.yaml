@@ -1,8 +1,6 @@
 type: object
 properties:
   type:
-    required: false
-    allowEmptyValue: true
     description: The type of attachment (i.e. photo, billOfLading, etc)
     enum: [photo]
     default: undefined
@@ -12,7 +10,4 @@ properties:
       type: string
       enum: [carrier, client, internal]
       default: [internal]
-    required: false
-    explode: false
-    allowEmptyValue: true
     description: The visibility of the attachment (i.e. carrier, internal)
