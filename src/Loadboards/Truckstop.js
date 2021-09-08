@@ -114,6 +114,7 @@ class Truckstop extends Loadboard
                 objectionPost.externalGuid = response.loadId;
                 objectionPost.externalPostGuid = response.loadId;
                 objectionPost.status = 'posted';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
                 objectionPost.hasError = false;
@@ -122,7 +123,7 @@ class Truckstop extends Loadboard
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
         }
         catch (err)
@@ -158,7 +159,7 @@ class Truckstop extends Loadboard
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
         }
         catch (err)

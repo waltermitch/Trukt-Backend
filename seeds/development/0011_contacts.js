@@ -18,8 +18,8 @@ exports.seed = async function (knex)
 
                     contacts.push({
                         name: faker.name.firstName() + ' ' + faker.name.lastName(),
-                        phone_number: faker.phone.phoneNumber(),
-                        mobile_number: faker.phone.phoneNumber(),
+                        phone_number: faker.phone.phoneNumber('(###) ###-####'),
+                        mobile_number: faker.phone.phoneNumber('(###) ###-####'),
                         email: faker.internet.email(),
                         terminal_guid: terminal.guid,
                         created_by_guid: test_user

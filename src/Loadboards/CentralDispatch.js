@@ -65,14 +65,10 @@ class CentralDispatch extends Loadboard
 
         for (const com of this.data.commodities)
         {
-            if (com.vehicle === null)
-            {
-                com.vehicle = { year: '', make: 'make', model: com.description };
-            }
             const vehicle = [
-                `${com.vehicle.year}`,
-                com.vehicle.make,
-                com.vehicle.model,
+                `${com.vehicle?.year || 2005}`,
+                `${com.vehicle?.make || 'make'}`,
+                `${com.vehicle?.model || com.description || 'model'}`,
                 this.setVehicleType(com.commType.type)
             ].map(it =>
             {
@@ -137,12 +133,13 @@ class CentralDispatch extends Loadboard
                 objectionPost.externalGuid = response.id;
                 objectionPost.externalPostGuid = response.id;
                 objectionPost.status = 'posted';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
         }
         catch (err)
@@ -176,7 +173,7 @@ class CentralDispatch extends Loadboard
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
         }
         catch (err)
