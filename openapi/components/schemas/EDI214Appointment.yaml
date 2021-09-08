@@ -7,21 +7,8 @@ allOf:
       - reason
     properties:
       type:
-        type: string
-        enum:
-          - status
-          - appointment
+        $ref: '.\Common.yaml#/Enums/edi214Type'
       code:
-        description: EDI 214  AT703 appointment status code
-        enum:
-          - AA
-          - AB
-          - AC
-          - ED
-          - EP
-          - LD
-          - LP
-          - X9
-          - XA
+        $ref: '.\Common.yaml#/Enums/edi214AppointmentCodeType'
       reason:
         description: EDI 214 AT704 appointment status reason code

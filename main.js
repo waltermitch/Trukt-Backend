@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+const openApiValidator = require('express-openapi-validator');
 
 require('./local.settings');
 require('./src/HttpControllers/HttpRouteController');
@@ -54,6 +55,15 @@ const app = express();
 app.use(domain);
 app.use(session(sessionConfig));
 app.use(express.json());
+app.use(
+    openApiValidator.middleware({
+        apiSpec: './openApi/openapi.yaml',
+        ignorePaths: path => path.startsWith('/api/docs'),
+        $refParser: {
+            mode: 'dereference'
+        }
+    })
+);
 
 // TODO: temp solution for created-by requirement
 // grabs the user id and adds it to the session

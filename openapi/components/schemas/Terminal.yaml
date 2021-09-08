@@ -3,8 +3,7 @@ required:
   - zipCode
 properties:
   guid:
-    type: string
-    format: uuid
+    $ref: '.\Common.yaml#/guid'
   index:
     description: >-
       A unique arbitrary string that will be used to reference this terminal
@@ -27,15 +26,8 @@ properties:
     type: string
     maxLength: 64
   zipCode:
-    type: string
-    maxLength: 16
+    $ref: '.\Common.yaml#/zipCode'
   latitude:
-    type: number
-    format: float
-    minimum: -180
-    maximum: 180
+    $ref: '.\Common.yaml#/latitude'
   longitude:
-    type: number
-    format: float
-    minimum: -180
-    maximum: 180
+     $ref: '.\Common.yaml#/longitude'

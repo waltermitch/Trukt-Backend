@@ -5,7 +5,6 @@ info:
   description: Transportation management system
   license:
     name: Private
-    url: there is no url
 servers:
   - url: 'https://truktbackend-dev.rcgauto.p.azurewebsites.net'
     description: Development server
@@ -23,14 +22,58 @@ paths:
         - Attachments
       parameters:
         - in: query
+          name: parent
+          required: true
+          allowEmptyValue: false
           schema:
-            $ref: '#/components/schemas/AttachmentParams'
+            $ref: '#/components/schemas/guid'
+          description: The guid of the parent object
+        - in: query
+          name: parentType
+          required: true
+          allowEmptyValue: false
+          description: 'The type of the parent object (i.e job, order)'
+          schema:
+            enum:
+              - jobs
+        - in: query
+          name: attachmentType
+          required: false
+          allowEmptyValue: true
+          description: 'The type of attachment (i.e. photo, billOfLading, etc)'
+          schema:
+            enum:
+              - photo
+            default: undefined
+        - in: query
+          name: visibility
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - carrier
+                - client
+                - internal
+              default:
+                - internal
+          required: false
+          explode: false
+          allowEmptyValue: true
+          description: 'The visibility of the attachment (i.e. carrier, internal)'
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/File'
+              type: object
+              properties:
+                filename:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/File'
+              required:
+                - filename
       responses:
         '201':
           description: Created Attachment
@@ -45,8 +88,45 @@ paths:
         - Attachments
       parameters:
         - in: query
+          name: parent
+          required: true
+          allowEmptyValue: false
           schema:
-            $ref: '#/components/schemas/AttachmentParams'
+            $ref: '#/components/schemas/guid'
+          description: The guid of the parent object
+        - in: query
+          name: parentType
+          required: true
+          allowEmptyValue: false
+          description: 'The type of the parent object (i.e job, order)'
+          schema:
+            enum:
+              - jobs
+        - in: query
+          name: attachmentType
+          required: false
+          allowEmptyValue: true
+          description: 'The type of attachment (i.e. photo, billOfLading, etc)'
+          schema:
+            enum:
+              - photo
+            default: undefined
+        - in: query
+          name: visibility
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - carrier
+                - client
+                - internal
+              default:
+                - internal
+          required: false
+          explode: false
+          allowEmptyValue: true
+          description: 'The visibility of the attachment (i.e. carrier, internal)'
       responses:
         '201':
           description: Found Attachments
@@ -62,7 +142,8 @@ paths:
       parameters:
         - in: path
           name: guid
-          format: uuid
+          schema:
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
         '200':
@@ -78,7 +159,8 @@ paths:
       parameters:
         - in: path
           name: guid
-          format: uuid
+          schema:
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
         '204':
@@ -92,7 +174,8 @@ paths:
       parameters:
         - in: path
           name: guid
-          format: uuid
+          schema:
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         required: true
@@ -173,15 +256,9 @@ paths:
                       type: string
                       maxLength: 64
                     latitude:
-                      type: number
-                      format: float
-                      minimum: -180
-                      maximum: 180
+                      $ref: '#/components/schemas/latitude'
                     longitude:
-                      type: number
-                      format: float
-                      minimum: -180
-                      maximum: 180
+                      $ref: '#/components/schemas/longitude'
                 status:
                   oneOf:
                     - $ref: '#/components/schemas/EDI214StopStatus'
@@ -196,8 +273,7 @@ paths:
                       status: '#/components/schemas/EDI214StopStatus'
                       appointment: '#/components/schemas/EDI214Appointment'
                 datetime:
-                  type: string
-                  format: datetime with timezone ISO 8601
+                  $ref: '#/components/schemas/dateTime'
       responses:
         '200':
           description: Updated Load Tender status.
@@ -215,6 +291,8 @@ paths:
         - EDI
       parameters:
         - name: reference
+          schema:
+            type: number
           required: true
           allowEmptyValue: false
           description: The reference number of a load tender
@@ -271,15 +349,9 @@ paths:
                         type: string
                         maxLength: 64
                       latitude:
-                        type: number
-                        format: float
-                        minimum: -180
-                        maximum: 180
+                        $ref: '#/components/schemas/latitude'
                       longitude:
-                        type: number
-                        format: float
-                        minimum: -180
-                        maximum: 180
+                        $ref: '#/components/schemas/longitude'
                   status:
                     oneOf:
                       - $ref: '#/components/schemas/EDI214StopStatus'
@@ -294,8 +366,7 @@ paths:
                         status: '#/components/schemas/EDI214StopStatus'
                         appointment: '#/components/schemas/EDI214Appointment'
                   datetime:
-                    type: string
-                    format: datetime with timezone ISO 8601
+                    $ref: '#/components/schemas/dateTime'
   /edi/990/outbound/accept:
     get:
       summary: Accept Load Tender
@@ -308,11 +379,15 @@ paths:
         - EDI
       parameters:
         - name: reference
+          schema:
+            type: number
           required: true
           allowEmptyValue: false
           description: The reference number of a load tender.
           in: query
         - name: partner
+          schema:
+            type: string
           required: true
           allowEmptyValue: false
           description: The partner ID provided when creating a load tender.
@@ -327,8 +402,7 @@ paths:
                 properties:
                   order:
                     description: The EDI load tender guid inside of RCG database
-                    type: string
-                    format: uuid
+                    $ref: '#/components/schemas/guid'
                   partner:
                     description: >-
                       The EDI load tender client guid that was used when
@@ -341,14 +415,10 @@ paths:
                     type: string
                   action:
                     description: The action to take with the EDI load tender.
-                    type: string
-                    enum:
-                      - accept
-                      - decline
+                    $ref: '#/components/schemas/ediActionType'
                   date:
                     description: The date the response was generated
-                    type: string
-                    format: datetime with timezone ISO 8601
+                    $ref: '#/components/schemas/dateTime'
                   scac:
                     description: The scac number
                     type: string
@@ -365,11 +435,15 @@ paths:
         - EDI
       parameters:
         - name: reference
+          schema:
+            type: number
           required: true
           allowEmptyValue: false
           description: The reference number of a load tender
           in: query
         - name: partner
+          schema:
+            type: string
           required: true
           allowEmptyValue: false
           description: The partner ID provided when creating a load tender
@@ -384,8 +458,7 @@ paths:
                 properties:
                   order:
                     description: The EDI load tender guid inside of RCG database
-                    type: string
-                    format: uuid
+                    $ref: '#/components/schemas/guid'
                   partner:
                     description: >-
                       The EDI load tender client guid that was used when
@@ -398,73 +471,952 @@ paths:
                     type: string
                   action:
                     description: The action to take with the EDI load tender.
-                    type: string
-                    enum:
-                      - accept
-                      - decline
+                    $ref: '#/components/schemas/ediActionType'
                   reason:
                     description: The reason for rejecting the EDI load tender.
                     type: string
                     maxLength: 60
                   date:
                     description: The date the response was generated
-                    type: string
-                    format: datetime with timezone ISO 8601
+                    $ref: '#/components/schemas/dateTime'
                   scac:
                     description: The scac number
                     type: string
                     format: scac
+  /order:
+    get:
+      summary: Get orders
+      operationId: getOrders
+      description: Get all orders
+      tags:
+        - Order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                page:
+                  $ref: '#/components/schemas/page'
+                rowCount:
+                  $ref: '#/components/schemas/rowCount'
+                filters:
+                  description: Request filters to apply
+                  type: object
+                  properties:
+                    pickup:
+                      description: Coordinates on which to search for order pickups
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          longitude:
+                            $ref: '#/components/schemas/longitude'
+                          latitude:
+                            $ref: '#/components/schemas/latitude'
+                          radius:
+                            description: Search maximun radius for coordinates
+                            type: integer
+                            default: 1
+                        required:
+                          - longitude
+                          - latitude
+                    delivery:
+                      description: Coordinates on which to search for delivery pickups
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          longitude:
+                            $ref: '#/components/schemas/longitude'
+                          latitude:
+                            $ref: '#/components/schemas/latitude'
+                          radius:
+                            description: Search maximun radius for coordinates
+                            type: integer
+                            default: 1
+                        required:
+                          - longitude
+                          - latitude
+                    status:
+                      description: Filter for order status
+                      type: array
+                      items:
+                        type: string
+                        example: new
+                    customer:
+                      description: Filter for order customer guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    carrier:
+                      description: Filter for order carrier guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    dispatcher:
+                      description: Filter for order dispatcher guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    salesperson:
+                      description: Filter for order salesperson guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    dates:
+                      description: Filter for status in a specific date
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          status:
+                            description: Order status
+                            type: number
+                            example: 1
+                          date:
+                            $ref: '#/components/schemas/date'
+                          comparison:
+                            description: Type of restriction in the date search
+                            type: string
+                            default: equal
+                        required:
+                          - status
+                          - date
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json: {}
+    post:
+      summary: Create order
+      operationId: postOrder
+      description: Create order
+      tags:
+        - Order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                referenceNumber:
+                  type: string
+                  maxLength: 64
+                inspectionType:
+                  type: string
+                instructions:
+                  type: string
+                estimatedRevenue:
+                  type: number
+                estimatedExpense:
+                  type: number
+                estimatedDistance:
+                  type: number
+                client:
+                  $ref: '#/components/schemas/guidObject'
+                consignee:
+                  $ref: '#/components/schemas/guidObject'
+                clientContact:
+                  type: object
+                  properties:
+                    guid:
+                      $ref: '#/components/schemas/guid'
+                    name:
+                      type: string
+                    firstName:
+                      type: string
+                    lastName:
+                      type: string
+                    email:
+                      $ref: '#/components/schemas/email'
+                  required:
+                    - guid
+                    - name
+                    - firstName
+                    - lastName
+                    - email
+                jobs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      index:
+                        type: string
+                      loadType:
+                        type: string
+                      inspectionType:
+                        $ref: '#/components/schemas/inspectionType'
+                      category:
+                        $ref: '#/components/schemas/jobCategoryType'
+                      type:
+                        $ref: '#/components/schemas/jobType'
+                      vendor:
+                        $ref: '#/components/schemas/guidObject'
+                      vendorContact:
+                        $ref: '#/components/schemas/guidObject'
+                      vendorAgent:
+                        $ref: '#/components/schemas/guidObject'
+                      dispatcher:
+                        $ref: '#/components/schemas/guidObject'
+                      stops:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            index:
+                              type: string
+                          required:
+                            - index
+                    required:
+                      - index
+                      - loadType
+                      - inspectionType
+                      - category
+                      - type
+                      - stops
+                expenses:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      job:
+                        type: string
+                      account:
+                        type: string
+                      item:
+                        type: string
+                      amount:
+                        type: number
+                      commodity:
+                        type: string
+                    required:
+                      - account
+                      - item
+                      - amount
+                      - commodity
+                stops:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      index:
+                        type: string
+                      stopType:
+                        $ref: '#/components/schemas/stopType'
+                      terminal:
+                        type: string
+                      sequence:
+                        type: number
+                      dateRequestedStart:
+                        $ref: '#/components/schemas/dateTime'
+                      dateRequestedEnd:
+                        $ref: '#/components/schemas/dateTime'
+                      dateRequestedType:
+                        $ref: '#/components/schemas/stopDateType'
+                      commodities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            index:
+                              type: string
+                          required:
+                            - index
+                    required:
+                      - index
+                      - stopType
+                      - terminal
+                      - sequence
+                      - dateRequestedStart
+                      - dateRequestedEnd
+                      - dateRequestedType
+                      - commodities
+                terminals:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      index:
+                        type: string
+                      name:
+                        type: string
+                      locationType:
+                        oneOf:
+                          - $ref: '#/components/schemas/stringNullable'
+                          - $ref: '#/components/schemas/terminalLocationType'
+                      street1:
+                        type: string
+                      street2:
+                        $ref: '#/components/schemas/stringNullable'
+                      state:
+                        type: string
+                      city:
+                        type: string
+                      country:
+                        type: string
+                      zipCode:
+                        $ref: '#/components/schemas/zipCode'
+                      latitude:
+                        $ref: '#/components/schemas/latitude'
+                      longitude:
+                        $ref: '#/components/schemas/longitude'
+                    required:
+                      - index
+                      - name
+                      - street1
+                      - state
+                      - city
+                      - country
+                      - zipCode
+                      - latitude
+                      - longitude
+                commodities:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      index:
+                        type: string
+                      capacity:
+                        type: string
+                      damaged:
+                        type: string
+                      inoperable:
+                        type: string
+                      length:
+                        $ref: '#/components/schemas/numberNullable'
+                      weight:
+                        $ref: '#/components/schemas/numberNullable'
+                      quantity:
+                        $ref: '#/components/schemas/numberNullable'
+                      description:
+                        $ref: '#/components/schemas/stringNullable'
+                      identifier:
+                        type: string
+                      extraExternalData:
+                        $ref: '#/components/schemas/stringNullable'
+                      year:
+                        type: integer
+                      make:
+                        type: string
+                      model:
+                        type: string
+                      trim:
+                        $ref: '#/components/schemas/stringNullable'
+                      typeId:
+                        type: integer
+                      category:
+                        $ref: '#/components/schemas/commodityCategoryType'
+                      type:
+                        $ref: '#/components/schemas/commodityType'
+                    required:
+                      - index
+                      - capacity
+                      - damaged
+                      - inoperable
+                      - identifier
+                      - year
+                      - make
+                      - model
+                      - typeId
+                      - category
+                      - type
+                distance:
+                  type: number
+                isDummy:
+                  type: boolean
+                quotedRevenue:
+                  type: number
+                dateExpectedCompleteBy:
+                  $ref: '#/components/schemas/dateTime'
+                isTender:
+                  type: boolean
+                bol:
+                  type: string
+                dispatcher:
+                  $ref: '#/components/schemas/guidObject'
+                referrer:
+                  $ref: '#/components/schemas/guidObject'
+                salesperson:
+                  $ref: '#/components/schemas/guidObject'
+              required:
+                - referenceNumber
+                - inspectionType
+                - estimatedRevenue
+                - estimatedExpense
+                - estimatedDistance
+                - client
+                - jobs
+                - expenses
+                - stops
+                - terminals
+                - commodities
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json: {}
+  '/order/{guid}':
+    get:
+      summary: Get order by guid
+      operationId: getOrder
+      description: Get order by guid
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: guid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: order
+          content:
+            application/json: {}
+  /picklist/options:
+    get:
+      summary: Get picklist options
+      operationId: getPicklist
+      description: Get all picklist options
+      tags:
+        - Picklist
+      responses:
+        '200':
+          description: picklist
+          content:
+            application/json: {}
+  '/statusmanager/{guid}':
+    get:
+      summary: Get status log by order guid
+      operationId: getStatusLog
+      description: Get status log by order guid
+      tags:
+        - Statusmanager
+      parameters:
+        - in: path
+          name: guid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: query
+          name: pg
+          schema:
+            $ref: '#/components/schemas/page'
+        - in: query
+          name: rc
+          schema:
+            $ref: '#/components/schemas/rowCount'
+      responses:
+        '200':
+          description: status log
+          content:
+            application/json: {}
+  /terminal:
+    get:
+      summary: Get list of terminals
+      operationId: searchTerminals
+      description: Get list of terminals
+      tags:
+        - Terminals
+      parameters:
+        - in: query
+          name: pg
+          schema:
+            $ref: '#/components/schemas/page'
+        - in: query
+          name: rc
+          schema:
+            $ref: '#/components/schemas/rowCount'
+        - in: query
+          name: name
+          schema:
+            type: string
+        - in: query
+          name: address
+          schema:
+            type: string
+        - in: query
+          name: city
+          schema:
+            type: string
+        - in: query
+          name: state
+          schema:
+            type: string
+        - in: query
+          name: country
+          schema:
+            type: string
+      responses:
+        '200':
+          description: terminals
+          content:
+            application/json: {}
+  '/terminal/{terminalGuid}':
+    get:
+      summary: Get terminal by guid
+      operationId: getTerminals
+      description: Get terminal by guid
+      tags:
+        - Terminals
+      parameters:
+        - in: path
+          name: terminalGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: terminal
+          content:
+            application/json: {}
+  '/variables/{name}':
+    get:
+      summary: Get variable by name
+      operationId: getVariable
+      description: Get variable by name
+      tags:
+        - Variable
+      parameters:
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: variable
+          content:
+            application/json: {}
+  /variable:
+    post:
+      summary: Create variable
+      operationId: postVariable
+      description: Create variable
+      tags:
+        - Variable
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                value:
+                  type: string
+              required:
+                - name
+                - value
+      responses:
+        '200':
+          description: variable
+          content:
+            application/json: {}
+  /pubsub/token:
+    get:
+      summary: Get pubsub credentials
+      operationId: getPubsub
+      description: Get pubsub credentials
+      tags:
+        - Pubsub
+      responses:
+        '200':
+          description: pubsub
+          content:
+            application/json: {}
+  '/loadboard/{jobId}':
+    put:
+      summary: Publish loadboard
+      operationId: putLoadboard
+      description: Publish loadboard
+      tags:
+        - Loadboard
+      parameters:
+        - in: path
+          name: jobId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                posts:
+                  description: List of loadboard to publish on
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      loadboard:
+                        description: Name of the loadboard
+                        type: string
+                      loadboardInstructions:
+                        description: instructions to pusblish
+                        type: string
+                    required:
+                      - loadboard
+                      - loadboardInstructions
+      responses:
+        '200':
+          description: loadboards
+          content:
+            application/json: {}
+    get:
+      summary: Get loadboard by jobId
+      operationId: getLoadboard
+      description: Get loadboard by jobId
+      tags:
+        - Loadboard
+      parameters:
+        - in: path
+          name: jobId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: loadboards
+          content:
+            application/json: {}
+    delete:
+      summary: Un-post loadboard
+      operationId: delete Loadboard
+      description: Un-post loadboard
+      tags:
+        - Loadboard
+      parameters:
+        - in: path
+          name: jobId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                posts:
+                  description: List of loadboard to un-post from
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      loadboard:
+                        description: Name of the loadboard
+                        type: string
+                    required:
+                      - loadboard
+      responses:
+        '200':
+          description: loadboards
+          content:
+            application/json: {}
+    post:
+      summary: Create loadboard
+      operationId: postLoadboard
+      description: Create loadboard
+      tags:
+        - Loadboard
+      parameters:
+        - in: path
+          name: jobId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                posts:
+                  description: List of loadboard to create
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      loadboard:
+                        description: Name of the loadboard
+                        type: string
+                    required:
+                      - loadboard
+      responses:
+        '200':
+          description: loadboards
+          content:
+            application/json: {}
+  '/invoice/{invoiceId}':
+    get:
+      summary: Get invoice by invoiceId
+      operationId: getInvoice
+      description: Get invoice by invoiceId
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: invoiceId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: invoice
+          content:
+            application/json: {}
+        '404':
+          description: Invoice not found
+          content:
+            application/json: {}
+  /invoice:
+    post:
+      summary: Create invoice
+      operationId: postInvoice
+      description: Create invoice
+      tags:
+        - Invoice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: List of order guids
+              properties:
+                orders:
+                  type: array
+                  items:
+                    description: order guid
+                    $ref: '#/components/schemas/guid'
+                  minItems: 1
+              required:
+                - orders
+      responses:
+        '200':
+          description: invocies
+          content:
+            application/json: {}
+  /index/order/number:
+    get:
+      summary: Get next order index number
+      operationId: getOrderIndex
+      description: Get next order index number
+      tags:
+        - Index
+        - Order
+      responses:
+        '200':
+          description: index
+          content:
+            application/json: {}
+  /index/job/number:
+    get:
+      summary: Get next job index number
+      operationId: getJobIndex
+      description: Get next job index number
+      tags:
+        - Index
+        - Job
+      parameters:
+        - in: query
+          name: order
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: job number
+          content:
+            application/json: {}
+  '/expense/{expenseId}':
+    get:
+      summary: Get expense by guid
+      operationId: getExpense
+      description: Get expense by guid
+      tags:
+        - Expense
+      parameters:
+        - in: path
+          name: expenseId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: expense
+          content:
+            application/json: {}
+    patch:
+      summary: Update expense
+      operationId: patchExpense
+      description: Update expense
+      tags:
+        - Expense
+      parameters:
+        - in: path
+          name: expenseId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/expense'
+      responses:
+        '200':
+          description: expense
+          content:
+            application/json: {}
+  /expense:
+    post:
+      summary: Create bill
+      operationId: postBill
+      description: Create bill
+      tags:
+        - Bill
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: List of order guids
+              properties:
+                orders:
+                  type: array
+                  items:
+                    description: order guid
+                    $ref: '#/components/schemas/guid'
+                  minItems: 1
+              required:
+                - orders
+      responses:
+        '200':
+          description: invocies
+          content:
+            application/json: {}
+    patch:
+      summary: Update expense
+      operationId: patchExpense
+      description: Update expense
+      tags:
+        - Expense
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/expense'
+      responses:
+        '200':
+          description: expense
+          content:
+            application/json: {}
+  '/bill/{billId}':
+    get:
+      summary: Get bill by guid
+      operationId: getBill
+      description: Get bill by guid
+      tags:
+        - Bill
+      parameters:
+        - in: path
+          name: billId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: Bill
+          content:
+            application/json: {}
+  /bill:
+    post:
+      summary: Get bill by guid
+      operationId: getBill
+      description: Get bill by guid
+      tags:
+        - Bill
+      parameters:
+        - in: path
+          name: billId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: Bill
+          content:
+            application/json: {}
+  '/account/{accountType}':
+    get:
+      summary: Get account by type
+      operationId: getAccountByType
+      description: Get account by type
+      tags:
+        - Account
+      parameters:
+        - in: path
+          name: accountType
+          schema:
+            $ref: '#/components/schemas/accountType'
+          required: true
+        - in: query
+          name: pg
+          schema:
+            $ref: '#/components/schemas/page'
+        - in: query
+          name: rc
+          schema:
+            $ref: '#/components/schemas/rowCount'
+        - in: query
+          name: search
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Account
+          content:
+            application/json: {}
+  '/account/{accountType}/{accountId}':
+    get:
+      summary: Get account by id and type
+      operationId: getAccountById
+      description: Get account by id and type
+      tags:
+        - Account
+      parameters:
+        - in: path
+          name: accountType
+          schema:
+            $ref: '#/components/schemas/accountType'
+          required: true
+        - in: path
+          name: accountId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: Account
+          content:
+            application/json: {}
 components:
   schemas:
-    AttachmentParams:
-      description: The parameters required for attachments
-      type: object
-      title: AttachmentParams
-      required:
-        - parent
-        - parentType
-      properties:
-        parent:
-          required: true
-          allowEmptyValue: false
-          description: The guid of the parent object
-        parentType:
-          required: true
-          allowEmptyValue: false
-          description: 'The type of the parent object (i.e job, order)'
-          enum:
-            - jobs
-        attachmentType:
-          required: false
-          allowEmptyValue: true
-          description: 'The type of attachment (i.e. photo, billOfLading, etc)'
-          enum:
-            - photo
-          default: undefined
-        visibility:
-          type: array
-          items:
-            type: string
-            enum:
-              - carrier
-              - client
-              - internal
-            default:
-              - internal
-          required: false
-          explode: false
-          allowEmptyValue: true
-          description: 'The visibility of the attachment (i.e. carrier, internal)'
+    guid:
+      type: string
+      format: uuid
     File:
       type: string
       format: binary
-      required: true
     Attachment:
       type: object
       properties:
         type:
-          required: false
-          allowEmptyValue: true
           description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           enum:
             - photo
@@ -479,9 +1431,6 @@ components:
               - internal
             default:
               - internal
-          required: false
-          explode: false
-          allowEmptyValue: true
           description: 'The visibility of the attachment (i.e. carrier, internal)'
     SFID:
       type: string
@@ -501,6 +1450,12 @@ components:
               format: uuid
         name:
           type: string
+    email:
+      type: string
+      format: email
+    phoneNumber:
+      type: string
+      format: phone
     Contact:
       type: object
       required:
@@ -508,29 +1463,54 @@ components:
         - phoneNumber
       properties:
         guid:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/guid'
         name:
           type: string
           minLength: 1
           maxLength: 121
         email:
-          type: string
-          format: email
+          $ref: '#/components/schemas/email'
         phoneNumber:
-          type: string
-          format: phone
+          $ref: '#/components/schemas/phoneNumber'
         mobileNumber:
-          type: string
-          format: phone
+          $ref: '#/components/schemas/phoneNumber'
+    stopType:
+      description: >-
+        Describes the type of stop, use pickup to indicate that the stop is for
+        picking up commodities, use delivery for dropping off commodities.
+      type: string
+      enum:
+        - pickup
+        - delivery
+    dateTime:
+      description: Date with timezone ISO 8601
+      type: string
+      format: date-time
+      example: '2021-08-10T07:59:59.000Z'
+    stopDateType:
+      type: string
+      enum:
+        - estimated
+        - exactly
+        - no later than
+        - no earlier than
+    zipCode:
+      type: string
+    latitude:
+      description: Number describing the coordinates latitude
+      example: 12.5372125
+      type: number
+    longitude:
+      description: Number describing the coordinates longitude
+      example: 45.6208283
+      type: number
     Terminal:
       type: object
       required:
         - zipCode
       properties:
         guid:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/guid'
         index:
           description: >-
             A unique arbitrary string that will be used to reference this
@@ -555,18 +1535,42 @@ components:
           type: string
           maxLength: 64
         zipCode:
-          type: string
-          maxLength: 16
+          $ref: '#/components/schemas/zipCode'
         latitude:
-          type: number
-          format: float
-          minimum: -180
-          maximum: 180
+          $ref: '#/components/schemas/latitude'
         longitude:
-          type: number
-          format: float
-          minimum: -180
-          maximum: 180
+          $ref: '#/components/schemas/longitude'
+    commodityCategoryType:
+      type: string
+      enum:
+        - vehicle
+        - freight
+    commodityType:
+      type: string
+      enum:
+        - coupe
+        - convertible
+        - sedan
+        - SUV
+        - minivan
+        - pickup truck (2 door)
+        - pickup truck (4 door)
+        - pickup dually
+        - motorcycle
+        - ATV
+        - boat
+        - RV
+        - trailer (5th wheel)
+        - trailer (bumper pull)
+        - trailer (gooseneck)
+        - cargo van
+        - box truck
+        - day cab
+        - sleeper cab
+        - other
+        - bulk
+        - crushed cars
+        - other
     Commodity:
       description: >-
         The real world item(s) that need to be transported between two real
@@ -578,8 +1582,7 @@ components:
         - category
       properties:
         guid:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/guid'
         index:
           description: >-
             A unique arbitrary string that will be used to reference this
@@ -589,36 +1592,9 @@ components:
           type: string
           maxLength: 255
         category:
-          type: string
-          enum:
-            - vehicle
-            - freight
+          $ref: '#/components/schemas/commodityCategoryType'
         type:
-          type: string
-          enum:
-            - coupe
-            - convertible
-            - sedan
-            - SUV
-            - minivan
-            - pickup truck (2 door)
-            - pickup truck (4 door)
-            - pickup dually
-            - motorcycle
-            - ATV
-            - boat
-            - RV
-            - trailer (5th wheel)
-            - trailer (bumper pull)
-            - trailer (gooseneck)
-            - cargo van
-            - box truck
-            - day cab
-            - sleeper cab
-            - other
-            - bulk
-            - crushed cars
-            - other
+          $ref: '#/components/schemas/commodityType'
         description:
           description: A breif description of the commodity.
           type: string
@@ -652,8 +1628,7 @@ components:
         - commodities
       properties:
         guid:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/guid'
         index:
           description: >-
             A unique arbitrary string that will be used to reference this stop
@@ -662,14 +1637,7 @@ components:
         sequence:
           type: integer
         stopType:
-          description: >-
-            Describes the type of stop, use pickup to indicate that the stop is
-            for picking up commodities, use delivery for dropping off
-            commodities.
-          type: string
-          enum:
-            - delivery
-            - pickup
+          $ref: '#/components/schemas/stopType'
         notes:
           description: Used to convey any instructions about the stops.
           type: string
@@ -677,62 +1645,41 @@ components:
           description: >-
             This date is requested by the customer. The earliest date this stop
             should be worked.
-          type: string
-          format: datetime with timezone ISO 8601
+          $ref: '#/components/schemas/dateTime'
         dateRequestedEnd:
           description: >-
             This date is requested by the customer. The latest date this stop
             should be worked.
-          type: string
-          format: datetime with timezone ISO 8601
+          $ref: '#/components/schemas/dateTime'
         dateRequestedType:
           description: Defines the type of requested date the customer requested.
-          type: string
-          enum:
-            - exactly
-            - estimated
-            - no later than
-            - no earlier than
+          $ref: '#/components/schemas/stopDateType'
         dateEstimatedStart:
           description: >-
             This date is submitted by the carrier/vendor. The earliest date this
             stop could be worked.
-          type: string
-          format: datetime with timezone ISO 8601
+          $ref: '#/components/schemas/dateTime'
         dateEstimatedEnd:
           description: >-
             This date is submitted by the carrier/vendor. The latest date this
             stop could be worked.
-          type: string
-          format: datetime with timezone ISO 8601
+          $ref: '#/components/schemas/dateTime'
         dateEstimatedType:
           description: Defines the type of estimated date the carrier/vendor submitted.
-          type: string
-          enum:
-            - exactly
-            - estimated
-            - no later than
-            - no earlier than
+          $ref: '#/components/schemas/stopDateType'
         dateScheduledStart:
           description: >-
             This date is submitted by the dispatcher. The earliest date this
             stop will be worked
-          type: string
-          format: datetime with timezone ISO 8601
+          $ref: '#/components/schemas/dateTime'
         dateScheduledEnd:
           description: >-
             This date is submitted by the dispatcher. The latest date this stop
             will be worked
-          type: string
-          format: datetime with timezone ISO 8601
+          $ref: '#/components/schemas/dateTime'
         dateScheduledType:
           description: Defined the type of scheduled date the dispatcher submitted.
-          type: string
-          enum:
-            - exactly
-            - estimated
-            - no later than
-            - no earlier than
+          $ref: '#/components/schemas/stopDateType'
         primaryContact:
           $ref: '#/components/schemas/Contact'
         alternativeContact:
@@ -793,50 +1740,7 @@ components:
         - type: object
           properties:
             code:
-              description: EDI 214  AT701 appointment status code
-              enum:
-                - A3
-                - A7
-                - A9
-                - AF
-                - AG
-                - AH
-                - AI
-                - AJ
-                - AM
-                - AN
-                - AP
-                - AR
-                - AV
-                - B6
-                - BA
-                - BC
-                - C1
-                - CA
-                - CD
-                - CL
-                - CP
-                - D1
-                - I1
-                - J1
-                - K1
-                - L1
-                - OA
-                - OO
-                - P1
-                - PR
-                - R1
-                - RL
-                - S1
-                - SD
-                - X1
-                - X2
-                - X3
-                - X4
-                - X5
-                - X6
-                - X8
-                - XB
+              $ref: '#/components/schemas/edi214StopCodeType'
             reason:
               description: EDI 214 AT702 appointment status reason code
     EDI214Appointment:
@@ -849,24 +1753,107 @@ components:
             - reason
           properties:
             type:
-              type: string
-              enum:
-                - status
-                - appointment
+              $ref: '#/components/schemas/edi214Type'
             code:
-              description: EDI 214  AT703 appointment status code
-              enum:
-                - AA
-                - AB
-                - AC
-                - ED
-                - EP
-                - LD
-                - LP
-                - X9
-                - XA
+              $ref: '#/components/schemas/edi214AppointmentCodeType'
             reason:
               description: EDI 214 AT704 appointment status reason code
+    edi214Type:
+      type: string
+      enum:
+        - status
+        - appointment
+    edi214StatusReasonType:
+      type: string
+      enum:
+        - A1
+        - A2
+        - A3
+        - A5
+        - A6
+        - AA
+        - AD
+        - AE
+        - AF
+        - AG
+        - AH
+        - AI
+        - AJ
+        - AK
+        - AL
+        - AM
+        - AN
+        - AO
+        - AP
+        - AQ
+        - AR
+        - AS
+        - AT
+        - AU
+        - AV
+        - AW
+        - AX
+        - AY
+        - AZ
+        - B1
+        - B2
+        - B4
+        - B5
+        - B8
+        - B9
+        - BB
+        - BC
+        - BD
+        - BE
+        - BF
+        - BG
+        - BH
+        - BI
+        - BJ
+        - BK
+        - BL
+        - BM
+        - BN
+        - BO
+        - BP
+        - BQ
+        - BR
+        - BS
+        - BT
+        - C1
+        - C2
+        - C3
+        - C4
+        - C5
+        - C6
+        - C7
+        - C8
+        - C9
+        - CA
+        - CB
+        - CC
+        - D1
+        - D2
+        - F1
+        - F2
+        - HB
+        - NA
+        - NS
+        - P1
+        - P2
+        - P3
+        - P4
+        - RC
+        - S1
+        - T1
+        - T2
+        - T3
+        - T4
+        - T5
+        - T6
+        - T7
+      minLength: 2
+      maxLength: 2
     EDI214Status:
       type: object
       description: Represents the status/appointment update for the load tender
@@ -876,102 +1863,155 @@ components:
         - reason
       properties:
         type:
-          type: string
-          enum:
-            - status
-            - appointment
+          $ref: '#/components/schemas/edi214Type'
         code:
           type: string
           minLength: 2
           maxLength: 2
         reason:
+          $ref: '#/components/schemas/edi214StatusReasonType'
+    edi214StopCodeType:
+      description: EDI 214  AT701 appointment status code
+      type: string
+      enum:
+        - A3
+        - A7
+        - A9
+        - AF
+        - AG
+        - AH
+        - AI
+        - AJ
+        - AM
+        - AN
+        - AP
+        - AR
+        - AV
+        - B6
+        - BA
+        - BC
+        - C1
+        - CA
+        - CD
+        - CL
+        - CP
+        - D1
+        - I1
+        - J1
+        - K1
+        - L1
+        - OA
+        - OO
+        - P1
+        - PR
+        - R1
+        - RL
+        - S1
+        - SD
+        - X1
+        - X2
+        - X3
+        - X4
+        - X5
+        - X6
+        - X8
+        - XB
+    edi214AppointmentCodeType:
+      description: EDI 214  AT703 appointment status code
+      type: string
+      enum:
+        - AA
+        - AB
+        - AC
+        - ED
+        - EP
+        - LD
+        - LP
+        - X9
+        - XA
+    ediActionType:
+      type: string
+      enum:
+        - accept
+        - decline
+    page:
+      description: 'For pagination purposes, page to return'
+      type: integer
+      default: 0
+    rowCount:
+      description: 'For pagination purposes, number of entries per page'
+      type: integer
+      default: 25
+    date:
+      description: Date as YYYY-MM-DD
+      type: string
+      format: date
+      example: '2021-12-31'
+    guidObject:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+    inspectionType:
+      type: string
+      enum:
+        - standard
+        - advanced
+    jobCategoryType:
+      type: string
+      enum:
+        - transport
+        - service
+    jobType:
+      type: string
+      enum:
+        - transport
+        - locksmith
+        - unloading
+        - loading
+        - repair
+        - diagnostics
+        - dry run
+    stringNullable:
+      type: string
+      nullable: true
+    terminalLocationType:
+      type: string
+      enum:
+        - dealer
+        - private
+        - auction
+        - repo yard
+        - port
+        - business
+    numberNullable:
+      type: number
+      nullable: true
+    expense:
+      type: object
+      properties:
+        notes:
+          description: Optional notes
           type: string
-          enum:
-            - A1
-            - A2
-            - A3
-            - A5
-            - A6
-            - AA
-            - AD
-            - AE
-            - AF
-            - AG
-            - AH
-            - AI
-            - AJ
-            - AK
-            - AL
-            - AM
-            - AN
-            - AO
-            - AP
-            - AQ
-            - AR
-            - AS
-            - AT
-            - AU
-            - AV
-            - AW
-            - AX
-            - AY
-            - AZ
-            - B1
-            - B2
-            - B4
-            - B5
-            - B8
-            - B9
-            - BB
-            - BC
-            - BD
-            - BE
-            - BF
-            - BG
-            - BH
-            - BI
-            - BJ
-            - BK
-            - BL
-            - BM
-            - BN
-            - BO
-            - BP
-            - BQ
-            - BR
-            - BS
-            - BT
-            - C1
-            - C2
-            - C3
-            - C4
-            - C5
-            - C6
-            - C7
-            - C8
-            - C9
-            - CA
-            - CB
-            - CC
-            - D1
-            - D2
-            - F1
-            - F2
-            - HB
-            - NA
-            - NS
-            - P1
-            - P2
-            - P3
-            - P4
-            - RC
-            - S1
-            - T1
-            - T2
-            - T3
-            - T4
-            - T5
-            - T6
-            - T7
-          minLength: 2
-          maxLength: 2
+        amount:
+          description: New expense amount
+          type: number
+        itemId:
+          description: New item id
+          type: number
+        commodityGuid:
+          description: New commodity guid
+          type: string
+          format: uuid
+        guid:
+          $ref: '#/components/schemas/guid'
+      required:
+        - guid
+    accountType:
+      type: string
+      enum:
+        - client
+        - carrier
+        - referrer
+        - employee
+        - dispatcher

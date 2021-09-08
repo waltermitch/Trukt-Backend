@@ -1,0 +1,17 @@
+summary: Get order by guid
+operationId: getOrder
+description: Get order by guid
+tags:
+  - Order
+parameters:
+  - in: path
+    name: guid
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+      
+responses:
+  200:
+    description: order
+    content:
+      application/json: {}

@@ -1,0 +1,29 @@
+summary: Get account by type
+operationId: getAccountByType
+description: Get account by type
+tags:
+  - Account
+parameters:
+  - in: path
+    name: accountType
+    schema:
+      $ref: '..\..\components\schemas\common.yaml#/Enums/accountType'
+    required: true  
+  - in: query
+    name: pg
+    schema: 
+      $ref: '..\..\components\schemas\Common.yaml#/page'
+  - in: query
+    name: rc
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/rowCount'
+  - in: query
+    name: search
+    schema:
+      type: string
+    required: true
+responses:
+  200:
+    description: Account
+    content:
+      application/json: {}
