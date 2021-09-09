@@ -16,7 +16,7 @@ get:
       in: query
     - name: partner
       schema:
-        type: string
+        $ref: ..\components\schemas\SFID.yaml
       required: true
       allowEmptyValue: false
       description: The partner ID provided when creating a load tender.
