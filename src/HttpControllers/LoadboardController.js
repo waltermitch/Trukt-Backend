@@ -85,6 +85,42 @@ class LoadboardController extends HttpRouteController
             });
         }
     }
+
+    static async dispatchJob(req, res, next)
+    {
+        try
+        {
+            const dispatch = await LoadboardService.dispatchInternally(req.params.jobId, req.body);
+            res.json(dispatch);
+            res.status(200);
+        }
+        catch (err)
+        {
+            console.log('this is error ', err);
+            next({
+                status: 400,
+                data: { message: err.toString() }
+            });
+        }
+    }
+
+    static async cancelDispatch(req, res, next)
+    {
+        try
+        {
+            const dispatch = await LoadboardService.cancelDispatch(req.params.jobId);
+            res.json(dispatch);
+            res.status(200);
+        }
+        catch (err)
+        {
+            console.log('this is error ', err);
+            next({
+                status: 400,
+                data: { message: err.toString() }
+            });
+        }
+    }
 }
 
 const controller = new LoadboardController();
