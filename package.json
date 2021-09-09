@@ -28,6 +28,8 @@
         "express-formidable": "^1.2.0",
         "express-openapi-validator": "^4.13.0",
         "express-session": "^1.17.2",
+        "jsonwebtoken": "^8.5.1",
+        "jwk-to-pem": "^2.0.5",
         "knex": "^0.95.6",
         "knex-postgis": "^0.14.1",
         "luxon": "^1.26.0",
