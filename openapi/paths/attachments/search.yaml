@@ -4,9 +4,8 @@ description: Search For Attachments of a given job/order
 tags:
   - Attachments
 parameters:
-  - in: query
-    schema:
-      $ref: ..\..\components\schemas\AttachmentParams.yaml
+  $ref: '..\..\components\schemas\AttachmentParams.yaml#/properties'
+
 responses:
   "201":
     description: Found Attachments

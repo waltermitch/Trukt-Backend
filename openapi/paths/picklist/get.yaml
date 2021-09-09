@@ -1,0 +1,10 @@
+summary: Get picklist options
+operationId: getPicklist
+description: Get all picklist options
+tags:
+  - Picklist
+responses:
+  200:
+    description: picklist
+    content:
+      application/json: {}

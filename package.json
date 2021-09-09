@@ -26,6 +26,7 @@
         "currency.js": "^2.0.4",
         "express": "^4.17.1",
         "express-formidable": "^1.2.0",
+        "express-openapi-validator": "^4.13.0",
         "express-session": "^1.17.2",
         "knex": "^0.95.6",
         "knex-postgis": "^0.14.1",

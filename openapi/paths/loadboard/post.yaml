@@ -1,0 +1,33 @@
+summary: Create job post
+operationId: postLoadboard
+description: Create job post
+tags:
+  - Loadboard
+parameters:
+  - in: path
+    name: jobId
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          posts: 
+            description: List of loadboard to create
+            type: array
+            items: 
+              type: object
+              properties: 
+                loadboard: 
+                  description: Name of the loadboard
+                  type: string
+              required:
+                - loadboard
+responses:
+  200:
+    description: loadboards
+    content:
+      application/json: {}

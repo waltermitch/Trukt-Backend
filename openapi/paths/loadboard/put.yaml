@@ -1,0 +1,38 @@
+summary: Post job
+operationId: putLoadboard
+description: Post job
+tags:
+  - Loadboard
+parameters:
+  - in: path
+    name: jobId
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          posts: 
+            description: List of loadboards to post on
+            type: array
+            items: 
+              type: object
+              properties: 
+                loadboard: 
+                  description: Name of the loadboard
+                  type: string
+                  enum: [SUPERDISPATCH, SHIPCARS, CENTRALDISPATCH, CARDELIVERYNETWORK, TRUCKSTOP, DAT]
+                loadboardInstructions: 
+                  description: Instructions to publish
+                  type: string
+                  maxLength: 60
+              required:
+                - loadboard
+responses:
+  204:
+    description: loadboards
+    content:
+      application/json: {}

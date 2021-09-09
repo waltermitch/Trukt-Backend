@@ -6,7 +6,8 @@ tags:
 parameters:
   - in: path
     name: guid
-    format: uuid
+    schema:
+      $ref: '..\..\components\schemas\common.yaml#/guid'
     required: true
 requestBody:
   required: true
