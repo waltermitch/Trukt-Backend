@@ -16,7 +16,7 @@ requestBody:
         type: object
         properties:
           posts: 
-            description: List of loadboard to publish on
+            description: List of loadboards to post on
             type: array
             items: 
               type: object
@@ -24,14 +24,15 @@ requestBody:
                 loadboard: 
                   description: Name of the loadboard
                   type: string
+                  enum: [SUPERDISPATCH, SHIPCARS, CENTRALDISPATCH, CARDELIVERYNETWORK, TRUCKSTOP, DAT]
                 loadboardInstructions: 
-                  description: instructions to pusblish
+                  description: Instructions to publish
                   type: string
+                  maxLength: 60
               required:
                 - loadboard
-                - loadboardInstructions
 responses:
-  200:
+  204:
     description: loadboards
     content:
       application/json: {}

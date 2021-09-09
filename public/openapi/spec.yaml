@@ -380,7 +380,7 @@ paths:
       parameters:
         - name: reference
           schema:
-            type: number
+            type: string
           required: true
           allowEmptyValue: false
           description: The reference number of a load tender.
@@ -401,8 +401,17 @@ paths:
                 type: object
                 properties:
                   order:
-                    description: The EDI load tender guid inside of RCG database
-                    $ref: '#/components/schemas/guid'
+                    type: object
+                    properties:
+                      guid:
+                        description: The EDI load tender guid inside of RCG database
+                        $ref: '#/components/schemas/guid'
+                      number:
+                        description: The RCG internal load number
+                        type: string
+                        pattern: '[A-Z]{2}[0-9]{5}'
+                        maxLength: 30
+                        minLength: 7
                   partner:
                     description: >-
                       The EDI load tender client guid that was used when
@@ -436,7 +445,7 @@ paths:
       parameters:
         - name: reference
           schema:
-            type: number
+            type: string
           required: true
           allowEmptyValue: false
           description: The reference number of a load tender
@@ -457,8 +466,17 @@ paths:
                 type: object
                 properties:
                   order:
-                    description: The EDI load tender guid inside of RCG database
-                    $ref: '#/components/schemas/guid'
+                    type: object
+                    properties:
+                      guid:
+                        description: The EDI load tender guid inside of RCG database
+                        $ref: '#/components/schemas/guid'
+                      number:
+                        description: The RCG internal load number
+                        type: string
+                        pattern: '[A-Z]{2}[0-9]{5}'
+                        maxLength: 30
+                        minLength: 7
                   partner:
                     description: >-
                       The EDI load tender client guid that was used when
@@ -484,110 +502,6 @@ paths:
                     type: string
                     format: scac
   /order:
-    get:
-      summary: Get orders
-      operationId: getOrders
-      description: Get all orders
-      tags:
-        - Order
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                page:
-                  $ref: '#/components/schemas/page'
-                rowCount:
-                  $ref: '#/components/schemas/rowCount'
-                filters:
-                  description: Request filters to apply
-                  type: object
-                  properties:
-                    pickup:
-                      description: Coordinates on which to search for order pickups
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          longitude:
-                            $ref: '#/components/schemas/longitude'
-                          latitude:
-                            $ref: '#/components/schemas/latitude'
-                          radius:
-                            description: Search maximun radius for coordinates
-                            type: integer
-                            default: 1
-                        required:
-                          - longitude
-                          - latitude
-                    delivery:
-                      description: Coordinates on which to search for delivery pickups
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          longitude:
-                            $ref: '#/components/schemas/longitude'
-                          latitude:
-                            $ref: '#/components/schemas/latitude'
-                          radius:
-                            description: Search maximun radius for coordinates
-                            type: integer
-                            default: 1
-                        required:
-                          - longitude
-                          - latitude
-                    status:
-                      description: Filter for order status
-                      type: array
-                      items:
-                        type: string
-                        example: new
-                    customer:
-                      description: Filter for order customer guid
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/guid'
-                    carrier:
-                      description: Filter for order carrier guid
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/guid'
-                    dispatcher:
-                      description: Filter for order dispatcher guid
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/guid'
-                    salesperson:
-                      description: Filter for order salesperson guid
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/guid'
-                    dates:
-                      description: Filter for status in a specific date
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          status:
-                            description: Order status
-                            type: number
-                            example: 1
-                          date:
-                            $ref: '#/components/schemas/date'
-                          comparison:
-                            description: Type of restriction in the date search
-                            type: string
-                            default: equal
-                        required:
-                          - status
-                          - date
-      responses:
-        '200':
-          description: Orders
-          content:
-            application/json: {}
     post:
       summary: Create order
       operationId: postOrder
@@ -857,6 +771,111 @@ paths:
           description: Orders
           content:
             application/json: {}
+  /order/getorders:
+    post:
+      summary: Search orders
+      operationId: getOrders
+      description: Search all orders
+      tags:
+        - Order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                page:
+                  $ref: '#/components/schemas/page'
+                rowCount:
+                  $ref: '#/components/schemas/rowCount'
+                filters:
+                  description: Request filters to apply
+                  type: object
+                  properties:
+                    pickup:
+                      description: Coordinates on which to search for order pickups
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          longitude:
+                            $ref: '#/components/schemas/longitude'
+                          latitude:
+                            $ref: '#/components/schemas/latitude'
+                          radius:
+                            description: Search maximun radius for coordinates
+                            type: integer
+                            default: 1
+                        required:
+                          - longitude
+                          - latitude
+                    delivery:
+                      description: Coordinates on which to search for delivery pickups
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          longitude:
+                            $ref: '#/components/schemas/longitude'
+                          latitude:
+                            $ref: '#/components/schemas/latitude'
+                          radius:
+                            description: Search maximun radius for coordinates
+                            type: integer
+                            default: 1
+                        required:
+                          - longitude
+                          - latitude
+                    status:
+                      description: Filter for order status
+                      type: array
+                      items:
+                        type: string
+                        example: new
+                    customer:
+                      description: Filter for order customer guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    carrier:
+                      description: Filter for order carrier guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    dispatcher:
+                      description: Filter for order dispatcher guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    salesperson:
+                      description: Filter for order salesperson guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    dates:
+                      description: Filter for status in a specific date
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          status:
+                            description: Order status
+                            type: number
+                            example: 1
+                          date:
+                            $ref: '#/components/schemas/date'
+                          comparison:
+                            description: Type of restriction in the date search
+                            type: string
+                            default: equal
+                        required:
+                          - status
+                          - date
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json: {}
   '/order/{guid}':
     get:
       summary: Get order by guid
@@ -1029,9 +1048,9 @@ paths:
             application/json: {}
   '/loadboard/{jobId}':
     put:
-      summary: Publish loadboard
+      summary: Post job
       operationId: putLoadboard
-      description: Publish loadboard
+      description: Post job
       tags:
         - Loadboard
       parameters:
@@ -1047,7 +1066,7 @@ paths:
               type: object
               properties:
                 posts:
-                  description: List of loadboard to publish on
+                  description: List of loadboards to post on
                   type: array
                   items:
                     type: object
@@ -1055,14 +1074,21 @@ paths:
                       loadboard:
                         description: Name of the loadboard
                         type: string
+                        enum:
+                          - SUPERDISPATCH
+                          - SHIPCARS
+                          - CENTRALDISPATCH
+                          - CARDELIVERYNETWORK
+                          - TRUCKSTOP
+                          - DAT
                       loadboardInstructions:
-                        description: instructions to pusblish
+                        description: Instructions to publish
                         type: string
+                        maxLength: 60
                     required:
                       - loadboard
-                      - loadboardInstructions
       responses:
-        '200':
+        '204':
           description: loadboards
           content:
             application/json: {}
@@ -1102,7 +1128,7 @@ paths:
               type: object
               properties:
                 posts:
-                  description: List of loadboard to un-post from
+                  description: List of loadboards to un-post from
                   type: array
                   items:
                     type: object
@@ -1110,17 +1136,24 @@ paths:
                       loadboard:
                         description: Name of the loadboard
                         type: string
+                        enum:
+                          - SUPERDISPATCH
+                          - SHIPCARS
+                          - CENTRALDISPATCH
+                          - CARDELIVERYNETWORK
+                          - TRUCKSTOP
+                          - DAT
                     required:
                       - loadboard
       responses:
-        '200':
+        '204':
           description: loadboards
           content:
             application/json: {}
     post:
-      summary: Create loadboard
+      summary: Create job post
       operationId: postLoadboard
-      description: Create loadboard
+      description: Create job post
       tags:
         - Loadboard
       parameters:
@@ -1934,19 +1967,6 @@ components:
       enum:
         - accept
         - decline
-    page:
-      description: 'For pagination purposes, page to return'
-      type: integer
-      default: 0
-    rowCount:
-      description: 'For pagination purposes, number of entries per page'
-      type: integer
-      default: 25
-    date:
-      description: Date as YYYY-MM-DD
-      type: string
-      format: date
-      example: '2021-12-31'
     guidObject:
       type: object
       properties:
@@ -1987,6 +2007,19 @@ components:
     numberNullable:
       type: number
       nullable: true
+    page:
+      description: 'For pagination purposes, page to return'
+      type: integer
+      default: 0
+    rowCount:
+      description: 'For pagination purposes, number of entries per page'
+      type: integer
+      default: 25
+    date:
+      description: Date as YYYY-MM-DD
+      type: string
+      format: date
+      example: '2021-12-31'
     expense:
       type: object
       properties:

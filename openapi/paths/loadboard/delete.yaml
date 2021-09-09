@@ -16,7 +16,7 @@ requestBody:
         type: object
         properties:
           posts: 
-            description: List of loadboard to un-post from
+            description: List of loadboards to un-post from
             type: array
             items: 
               type: object
@@ -24,10 +24,11 @@ requestBody:
                 loadboard: 
                   description: Name of the loadboard
                   type: string
+                  enum: [SUPERDISPATCH, SHIPCARS, CENTRALDISPATCH, CARDELIVERYNETWORK, TRUCKSTOP, DAT]
               required:
                 - loadboard
 responses:
-  200:
+  204:
     description: loadboards
     content:
       application/json: {}
