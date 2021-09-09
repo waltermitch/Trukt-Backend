@@ -19,7 +19,7 @@ class Auth
 
         // oid is the unique identifier for the user
         // aud is the audience for the token (groupId)
-        if (!decoded || !decoded.payload?.oid || !decoded.payload?.aud != groupId)
+        if (!decoded || !decoded.payload?.oid || decoded.payload?.aud != groupId)
             throw invalidToken;
 
         // get keys
