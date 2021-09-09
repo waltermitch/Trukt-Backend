@@ -8,7 +8,7 @@ exports.up = function (knex)
     {
         table.uuid('guid').primary();
         table.uuid('job_guid').notNullable();
-        table.integer('loadboard_post_id');
+        table.uuid('loadboard_post_guid');
         table.string('vendor_guid', 100).notNullable().comment('The account completing the job for the company, usually a carrier account');
         table.string('vendor_contact_guid', 100).comment('The vendor\'s primary contact');
         table.string('vendor_agent_guid', 100).comment('The vendor\'s agent that will be doing the job, usually a driver or another worker');
@@ -21,9 +21,10 @@ exports.up = function (knex)
 
         table.foreign('payment_term').references('id').inTable('rcg_tms.invoice_bill_payment_terms');
         table.foreign('payment_method').references('id').inTable('rcg_tms.invoice_bill_payment_methods');
+        table.foreign('loadboard_post_guid').references('guid').inTable('rcg_tms.loadboard_posts');
         migration_tools.timestamps(table);
         migration_tools.authors(table);
-    });
+    }).raw(migration_tools.guid_function(table_name));
 };
 
 exports.down = function (knex)
