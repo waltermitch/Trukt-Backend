@@ -1,7 +1,6 @@
-const HttpRouteController = require('./HttpRouteController');
 const VariableService = require('../Services/VariableService');
 
-class VariableController extends HttpRouteController
+class VariableController
 {
     static async get(req, res)
     {
@@ -21,5 +20,4 @@ class VariableController extends HttpRouteController
     }
 }
 
-const controller = new VariableController();
-module.exports = controller;
+module.exports = VariableController;
