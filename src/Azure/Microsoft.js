@@ -35,6 +35,20 @@ class Microsoft
 
         return cache.get('keys');
     }
+
+    static async getTokenROPC(clientId, clientSecret, username, password, scope = 'user.read openid profile offline_access')
+    {
+        const res = await api.post(`/${tenantId}/oauth2/v2.0/token`, {
+            'grant_type': 'password',
+            'client_id': clientId,
+            'client_secret': clientSecret,
+            'username': username,
+            'password': password,
+            'scope': scope
+        }, { 'Content-Type': 'application/x-www-form-urlencoded' });
+
+        return res.data;
+    }
 }
 
 module.exports = Microsoft;
