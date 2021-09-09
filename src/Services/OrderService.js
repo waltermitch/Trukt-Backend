@@ -55,11 +55,17 @@ class OrderService
         const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
         const queryAllFilters = OrderService.addFilterDates(queryFilterCarrier, dates);
 
-        const orders = await queryAllFilters.orderBy('number', 'ASC');
+        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
 
-        orders.page = page;
-        orders.rowCount = rowCount;
-        return orders;
+        const { total, results } = await queryWithGraphModifiers.orderBy('number', 'ASC');
+        const ordersWithDeliveryAddress = {
+            results: OrderService.addDeliveryAddress(results),
+            page,
+            rowCount,
+            total
+        };
+
+        return ordersWithDeliveryAddress;
     }
 
     static async getOrderByGuid(orderGuid)
@@ -744,6 +750,104 @@ class OrderService
             cache.set('comparisonTypes', comparisonTypes);
         }
         return cache.get('comparisonTypes');
+    }
+
+    static addGraphModifiers(baseQuery)
+    {
+        return baseQuery
+            .withGraphFetched({
+                client: true,
+                clientContact: true,
+                salesperson: true,
+                dispatcher: true,
+                stops: {
+                    terminal: true,
+                    commodities: {
+                        commType: true,
+                        vehicle: true
+                    }
+                },
+                jobs: {
+                    loadboardPosts: true,
+                    vendor: true
+                }
+            })
+
+            /**
+             * Is necessary to use modifyGraph on stops and
+             * stops.commodities to avoid duplicate rows
+             */
+            .modifyGraph('client', builder => builder.select(
+                'guid', 'name'
+            ))
+            .modifyGraph('clientContact', builder => builder.select(
+                'guid',
+                'name',
+                'phone'
+            ))
+            .modifyGraph('salesperson', builder => builder.select(
+                'guid', 'name'
+            ))
+            .modifyGraph('dispatcher', builder => builder.select(
+                'guid', 'name'
+            ))
+            .modifyGraph('stops', builder => builder.select(
+                'guid',
+                'stopType',
+                'status',
+                'dateScheduledStart',
+                'dateScheduledEnd',
+                'dateScheduledType',
+                'dateRequestedStart',
+                'dateRequestedEnd',
+                'dateRequestedType',
+                'lotNumber'
+            ).distinct('guid'))
+            .modifyGraph('stops.commodities', builder => builder.select().distinct(
+                'guid',
+                'damaged',
+                'inoperable',
+                'identifier',
+                'lotNumber',
+                'typeId'
+            ))
+            .modifyGraph('stops.terminal', builder => builder.select(
+                'name',
+                'guid',
+                'street1',
+                'street2',
+                'state',
+                'city',
+                'country',
+                'zipCode'
+            ).distinct())
+            .modifyGraph('jobs', builder => builder.select(
+                'guid',
+                'number'
+            ).distinct())
+            .modifyGraph('jobs.loadboardPosts', builder => builder.select('loadboard', 'isPosted', 'status').distinct())
+            .modifyGraph('jobs.vendor', builder => builder.select('guid', 'name').distinct());
+
+    }
+
+    static addDeliveryAddress(ordersArray)
+    {
+        return ordersArray.map(order =>
+        {
+            const { terminal } = order.stops.length > 0 && order.stops.reduce((acumulatorStop, stop) =>
+            {
+                return OrderService.getLastDeliveryBetweenStops(acumulatorStop, stop);
+            });
+            order.deliveryAddress = terminal || null;
+            return order;
+        });
+    }
+
+    static getLastDeliveryBetweenStops(firstStop, secondStop)
+    {
+        if (secondStop.stopType === 'delivery' && firstStop.sequence < secondStop.sequence)
+            return secondStop;
+        return firstStop;
     }
 }
 
