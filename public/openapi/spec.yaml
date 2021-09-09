@@ -387,7 +387,7 @@ paths:
           in: query
         - name: partner
           schema:
-            type: string
+            $ref: '#/components/schemas/SFID'
           required: true
           allowEmptyValue: false
           description: The partner ID provided when creating a load tender.
@@ -452,7 +452,7 @@ paths:
           in: query
         - name: partner
           schema:
-            type: string
+            $ref: '#/components/schemas/SFID'
           required: true
           allowEmptyValue: false
           description: The partner ID provided when creating a load tender
