@@ -1,7 +1,7 @@
 const Microsoft = require('../Azure/Microsoft');
 const jwt = require('jsonwebtoken');
 
-const groupId = process.env['azure.ad.groupId'];
+const appId = process.env['azure.ad.appId'];
 const invalidToken = { 'status': 401, 'data': 'Invalid Token' };
 
 class Auth
@@ -19,7 +19,7 @@ class Auth
 
         // oid is the unique identifier for the user
         // aud is the audience for the token (groupId)
-        if (!decoded || !decoded.payload?.oid || decoded.payload?.aud != groupId)
+        if (!decoded || !decoded.payload?.oid || decoded.payload?.aud != appId)
             throw invalidToken;
 
         // get keys

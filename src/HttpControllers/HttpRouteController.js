@@ -8,7 +8,7 @@ class HttpRouteController
         try
         {
             // add auth step in here eventually
-            req.session = await Auth.verifyJWT(req.headers?.authorization);
+            req.session.user = await Auth.verifyJWT(req.headers?.authorization);
 
             await next(req, res);
         }

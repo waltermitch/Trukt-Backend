@@ -38,14 +38,16 @@ class Microsoft
 
     static async getTokenROPC(clientId, clientSecret, username, password, scope = 'user.read openid profile offline_access')
     {
-        const res = await api.post(`/${tenantId}/oauth2/v2.0/token`, {
-            'grant_type': 'password',
-            'client_id': clientId,
-            'client_secret': clientSecret,
-            'username': username,
-            'password': password,
-            'scope': scope
-        }, { 'Content-Type': 'application/x-www-form-urlencoded' });
+        const params = new URLSearchParams();
+
+        params.append('grant_type', 'password');
+        params.append('scope', scope);
+        params.append('client_id', clientId);
+        params.append('client_secret', clientSecret);
+        params.append('username', username);
+        params.append('password', password);
+
+        const res = await api.post(`/${tenantId}/oauth2/v2.0/token`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
 
         return res.data;
     }

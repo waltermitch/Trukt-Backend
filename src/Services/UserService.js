@@ -26,25 +26,23 @@ class UserService
         const usersFromDB = await User.query();
 
         // map db users to map
-        const dbUsers = new Map(usersFromDB.map((user, i) => [user.guid, i]));
+        const dbUsers = new Map(usersFromDB.map((user) => [user.guid, user]));
 
         // for each user upser it to the database
         for (const user of usersFromAD)
         {
-            // remove the user from the map
-            dbUsers.delete(user.id);
-
             const payload = { name: user.displayName, email: user.mail, guid: user.id };
 
             await User.query().insert(payload).onConflict('guid').merge();
         }
 
-        console.log(dbUsers.size);
-
         // for all the leftover users - mark as deleted
-        for (const user of dbUsers.values())
+        while (dbUsers.size > 0)
         {
-            await User.query().patchAndFetchById(user.guid, { is_deleted: true });
+            const value = dbUsers.values().next().value;
+            dbUsers.delete(value.guid);
+            await User.query().patchAndFetchById(value.guid, { is_deleted: true });
+
         }
     }
 }
