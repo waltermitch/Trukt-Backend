@@ -1,6 +1,6 @@
-summary: New summary
+summary: Undispatch job
 operationId: putLoadboardDispatch
-description: New description
+description: Undispatches a load from a carrier
 tags:
   - Loadboard
 parameters:
