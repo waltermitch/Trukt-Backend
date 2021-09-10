@@ -48,6 +48,25 @@ class OrderJobDispatch extends BaseModel
                     from: 'rcgTms.orderJobDispatches.vendorAgentGuid',
                     to: 'salesforce.contacts.guid'
                 }
+            },
+            loadboardPost: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./LoadboardPost'),
+                join: {
+                    from: 'rcgTms.orderJobDispatches.loadboardPostGuid',
+                    to: 'rcgTms.loadboardPosts.guid'
+                }
+            }
+        };
+    }
+
+    static get modifiers()
+    {
+        return {
+            // returns a single active dispatch record
+            activeDispatch(builder)
+            {
+                builder.where({ isActive: true, isCanceled: false }).limit(1);
             }
         };
     }
