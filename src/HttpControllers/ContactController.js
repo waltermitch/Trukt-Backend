@@ -1,6 +1,4 @@
-const HttpRouteController = require('./HttpRouteController');
-
-class ContactController extends HttpRouteController
+class ContactController
 {
 
 }
