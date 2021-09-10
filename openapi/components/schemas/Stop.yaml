@@ -8,53 +8,75 @@ properties:
   guid:
     $ref: '.\Common.yaml#/guid'
   index:
-    description: >-
+    description: >
       A unique arbitrary string that will be used to reference this stop record
       inside of other objects.
     type: string
+    nullable: true
   sequence:
     type: integer
+    description: The order in which the stops need to be visited. This number should be assigned in increasing order. Magnitude is arbitrary.
+    nullable: false
   stopType:
     $ref: '.\Common.yaml#/Enums/stopType'
   notes:
     description: Used to convey any instructions about the stops.
     type: string
+    nullable: true
   dateRequestedStart:
-    description: >-
+    description: >
       This date is requested by the customer. The earliest date this stop should
       be worked.
-    $ref: '.\Common.yaml#/dateTime'
+    type: string
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateRequestedEnd:
-    description: >-
+    description: >
       This date is requested by the customer. The latest date this stop should
       be worked.
-    $ref: '.\Common.yaml#/dateTime'
+    type: string
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateRequestedType:
     description: Defines the type of requested date the customer requested.
     $ref: '.\Common.yaml#/Enums/stopDateType'
   dateEstimatedStart:
-    description: >-
+    description: >
       This date is submitted by the carrier/vendor. The earliest date this stop
       could be worked.
-    $ref: '.\Common.yaml#/dateTime'
+    type: string
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateEstimatedEnd:
-    description: >-
+    description: >
       This date is submitted by the carrier/vendor. The latest date this stop
       could be worked.
-    $ref: '.\Common.yaml#/dateTime'
+    type: string
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateEstimatedType:
     description: Defines the type of estimated date the carrier/vendor submitted.
     $ref: '.\Common.yaml#/Enums/stopDateType'
   dateScheduledStart:
-    description: >-
+    description: >
       This date is submitted by the dispatcher. The earliest date this stop will
       be worked
-    $ref: '.\Common.yaml#/dateTime'
+    type: string
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateScheduledEnd:
-    description: >-
+    description: >
       This date is submitted by the dispatcher. The latest date this stop will
       be worked
-    $ref: '.\Common.yaml#/dateTime'
+    type: string
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateScheduledType:
     description: Defined the type of scheduled date the dispatcher submitted.
     $ref: '.\Common.yaml#/Enums/stopDateType'
@@ -63,9 +85,20 @@ properties:
   alternativeContact:
     $ref: .\Contact.yaml
   terminal:
-    $ref: .\Terminal.yaml
+    type: string
+    description: The value of the index field from a Terminal in this payload.
+    nullable: false
   commodities:
     type: array
     minLength: 1
     items:
-      $ref: .\Commodity.yaml
+      type: object
+      properties:
+        index:
+          type: string
+          description: The value of the index field from a Commodity in this payload.
+        lotNumber:
+          type: string
+          description: The lot number for this commodity at this stop.
+      required:
+        - index

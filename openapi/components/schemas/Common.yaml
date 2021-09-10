@@ -1,13 +1,15 @@
+currency:
+  type: string
+  example: '12345.67'
+  pattern: ^(?:[1-9][0-9]+|0)\.[0-9]{2}$
 date:
-  description: Date as YYYY-MM-DD
   type: string
   format: date
-  example: "2021-12-31"
+  example: '2021-12-31'
 dateTime:
-  description: Date with timezone ISO 8601
   type: string
   format: date-time
-  example: "2021-08-10T07:59:59.000Z"
+  example: '2021-08-10T07:59:59.000Z'
 page:
   description: For pagination purposes, page to return
   type: integer
@@ -16,30 +18,39 @@ rowCount:
   description: For pagination purposes, number of entries per page
   type: integer
   default: 25
-longitude: 
+longitude:
   description: Number describing the coordinates longitude
   example: 45.6208283
   type: number
-latitude: 
+  format: float
+  minimum: -180
+  maximum: 180
+latitude:
   description: Number describing the coordinates latitude
   example: 12.5372125
   type: number
+  format: float
+  minimum: -90
+  maximum: 90
 guid:
   type: string
   format: uuid
+  pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
 zipCode:
   type: string
 email:
   type: string
   format: email
-guidObject: 
+guidObject:
   type: object
+  required:
+    - guid
   properties:
     guid:
       $ref: '#/guid'
 phoneNumber:
   type: string
-  format: phone
+  pattern: \d+
 stringNullable:
   type: string
   nullable: true
