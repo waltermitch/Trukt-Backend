@@ -64,3 +64,5 @@ test.js
 *.data
 /secrets
 /localdata
+TestController.js
+Test.js

@@ -9,7 +9,7 @@ get:
   parameters:
     - name: reference
       schema:
-        type: number
+        type: string
       required: true
       allowEmptyValue: false
       description: The reference number of a load tender
@@ -30,8 +30,17 @@ get:
             type: object
             properties:
               order:
-                description: The EDI load tender guid inside of RCG database
-                $ref: '..\components\schemas\Common.yaml#/guid'
+                type: object
+                properties:
+                  guid:
+                    description: The EDI load tender guid inside of RCG database
+                    $ref: '..\components\schemas\Common.yaml#/guid'
+                  number:
+                    description: The RCG internal load number
+                    type: string
+                    pattern: '[A-Z]{2}[0-9]{5}'
+                    maxLength: 30
+                    minLength: 7
               partner:
                 description: >-
                   The EDI load tender client guid that was used when creating a
