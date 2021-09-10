@@ -1,6 +1,7 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const LoadboardPost = require('../Models/LoadboardPost');
+const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
@@ -101,6 +102,25 @@ class Super extends Loadboard
             vehicles: this.formatCommodities(this.data.commodities),
 
             guid: this.postObject.externalGuid
+        };
+
+        return payload;
+    }
+
+    dispatchJSON()
+    {
+        const payload = {
+            carrier_guid: this.data.vendor.sdGuid,
+            carrier_usdot: this.data.vendor.dotNumber,
+            price: this.data.dispatch.price,
+            pickup: {
+                date_type: this.setDateType(this.data.pickup.dateScheduledType),
+                date_requested: this.data.pickup.dateScheduledStart
+            },
+            delivery: {
+                date_type: this.setDateType(this.data.delivery.dateScheduledType),
+                date_requested: this.data.delivery.dateScheduledStart
+            }
         };
 
         return payload;
