@@ -57,6 +57,38 @@ class Loadboard
         return { payload: this.toJSON(), payloadMetadata };
     }
 
+    dispatch()
+    {
+        const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
+        const payload = {};
+
+        // if the posting already exists, then just send the dispatch payload
+        // otherwise send in the order payload and the dispatch payload
+        if (this.postObject.externalGuid == null)
+        {
+            console.log('creating new order because no guid');
+            payload.order = this.toJSON();
+        }
+        payload.dispatch = this.dispatchJSON();
+        payloadMetadata.action = 'dispatch';
+        payloadMetadata.user = returnTo;
+        return { payload, payloadMetadata };
+    }
+
+    undispatch()
+    {
+        const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
+        const payload = {};
+
+        // sending the order because ship cars archives orders that are canceled
+        // so they will need to be recreated
+        payload.order = this.toJSON();
+        payload.dispatch = { externalLoadGuid: this.postObject.externalGuid, externalDispatchGuid: this.data.dispatch.externalGuid };
+        payloadMetadata.action = 'undispatch';
+        payloadMetadata.user = returnTo;
+        return { payload, payloadMetadata };
+    }
+
     toStringDate(input)
     {
         const date = DateTime.fromJSDate(input).c;
