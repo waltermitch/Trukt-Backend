@@ -484,110 +484,6 @@ paths:
                     type: string
                     format: scac
   /order:
-    get:
-      summary: Get orders
-      operationId: getOrders
-      description: Get all orders
-      tags:
-        - Order
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                page:
-                  $ref: '#/components/schemas/page'
-                rowCount:
-                  $ref: '#/components/schemas/rowCount'
-                filters:
-                  description: Request filters to apply
-                  type: object
-                  properties:
-                    pickup:
-                      description: Coordinates on which to search for order pickups
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          longitude:
-                            $ref: '#/components/schemas/longitude'
-                          latitude:
-                            $ref: '#/components/schemas/latitude'
-                          radius:
-                            description: Search maximun radius for coordinates
-                            type: integer
-                            default: 1
-                        required:
-                          - longitude
-                          - latitude
-                    delivery:
-                      description: Coordinates on which to search for delivery pickups
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          longitude:
-                            $ref: '#/components/schemas/longitude'
-                          latitude:
-                            $ref: '#/components/schemas/latitude'
-                          radius:
-                            description: Search maximun radius for coordinates
-                            type: integer
-                            default: 1
-                        required:
-                          - longitude
-                          - latitude
-                    status:
-                      description: Filter for order status
-                      type: array
-                      items:
-                        type: string
-                        example: new
-                    customer:
-                      description: Filter for order customer guid
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/guid'
-                    carrier:
-                      description: Filter for order carrier guid
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/guid'
-                    dispatcher:
-                      description: Filter for order dispatcher guid
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/guid'
-                    salesperson:
-                      description: Filter for order salesperson guid
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/guid'
-                    dates:
-                      description: Filter for status in a specific date
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          status:
-                            description: Order status
-                            type: number
-                            example: 1
-                          date:
-                            $ref: '#/components/schemas/date'
-                          comparison:
-                            description: Type of restriction in the date search
-                            type: string
-                            default: equal
-                        required:
-                          - status
-                          - date
-      responses:
-        '200':
-          description: Orders
-          content:
-            application/json: {}
     post:
       summary: Create order
       operationId: postOrder
@@ -857,6 +753,111 @@ paths:
           description: Orders
           content:
             application/json: {}
+  /order/getorders:
+    post:
+      summary: Search orders
+      operationId: getOrders
+      description: Search all orders
+      tags:
+        - Order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                page:
+                  $ref: '#/components/schemas/page'
+                rowCount:
+                  $ref: '#/components/schemas/rowCount'
+                filters:
+                  description: Request filters to apply
+                  type: object
+                  properties:
+                    pickup:
+                      description: Coordinates on which to search for order pickups
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          longitude:
+                            $ref: '#/components/schemas/longitude'
+                          latitude:
+                            $ref: '#/components/schemas/latitude'
+                          radius:
+                            description: Search maximun radius for coordinates
+                            type: integer
+                            default: 1
+                        required:
+                          - longitude
+                          - latitude
+                    delivery:
+                      description: Coordinates on which to search for delivery pickups
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          longitude:
+                            $ref: '#/components/schemas/longitude'
+                          latitude:
+                            $ref: '#/components/schemas/latitude'
+                          radius:
+                            description: Search maximun radius for coordinates
+                            type: integer
+                            default: 1
+                        required:
+                          - longitude
+                          - latitude
+                    status:
+                      description: Filter for order status
+                      type: array
+                      items:
+                        type: string
+                        example: new
+                    customer:
+                      description: Filter for order customer guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    carrier:
+                      description: Filter for order carrier guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    dispatcher:
+                      description: Filter for order dispatcher guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    salesperson:
+                      description: Filter for order salesperson guid
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
+                    dates:
+                      description: Filter for status in a specific date
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          status:
+                            description: Order status
+                            type: number
+                            example: 1
+                          date:
+                            $ref: '#/components/schemas/date'
+                          comparison:
+                            description: Type of restriction in the date search
+                            type: string
+                            default: equal
+                        required:
+                          - status
+                          - date
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json: {}
   '/order/{guid}':
     get:
       summary: Get order by guid
@@ -1029,9 +1030,9 @@ paths:
             application/json: {}
   '/loadboard/{jobId}':
     put:
-      summary: Publish loadboard
+      summary: Post job
       operationId: putLoadboard
-      description: Publish loadboard
+      description: Post job
       tags:
         - Loadboard
       parameters:
@@ -1047,7 +1048,7 @@ paths:
               type: object
               properties:
                 posts:
-                  description: List of loadboard to publish on
+                  description: List of loadboards to post on
                   type: array
                   items:
                     type: object
@@ -1055,14 +1056,21 @@ paths:
                       loadboard:
                         description: Name of the loadboard
                         type: string
+                        enum:
+                          - SUPERDISPATCH
+                          - SHIPCARS
+                          - CENTRALDISPATCH
+                          - CARDELIVERYNETWORK
+                          - TRUCKSTOP
+                          - DAT
                       loadboardInstructions:
-                        description: instructions to pusblish
+                        description: Instructions to publish
                         type: string
+                        maxLength: 60
                     required:
                       - loadboard
-                      - loadboardInstructions
       responses:
-        '200':
+        '204':
           description: loadboards
           content:
             application/json: {}
@@ -1102,7 +1110,7 @@ paths:
               type: object
               properties:
                 posts:
-                  description: List of loadboard to un-post from
+                  description: List of loadboards to un-post from
                   type: array
                   items:
                     type: object
@@ -1110,17 +1118,24 @@ paths:
                       loadboard:
                         description: Name of the loadboard
                         type: string
+                        enum:
+                          - SUPERDISPATCH
+                          - SHIPCARS
+                          - CENTRALDISPATCH
+                          - CARDELIVERYNETWORK
+                          - TRUCKSTOP
+                          - DAT
                     required:
                       - loadboard
       responses:
-        '200':
+        '204':
           description: loadboards
           content:
             application/json: {}
     post:
-      summary: Create loadboard
+      summary: Create job post
       operationId: postLoadboard
-      description: Create loadboard
+      description: Create job post
       tags:
         - Loadboard
       parameters:
@@ -1146,6 +1161,136 @@ paths:
                         type: string
                     required:
                       - loadboard
+      responses:
+        '200':
+          description: loadboards
+          content:
+            application/json: {}
+  '/loadboard/{jobId}/dispatch':
+    post:
+      summary: Dispatch Job
+      operationId: postLoadboardDispatch
+      description: Dispatch job internally or to loadboard
+      tags:
+        - Loadboard
+      parameters:
+        - in: path
+          name: jobId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                loadboard:
+                  description: loadboard to dispatch to
+                  type: string
+                  enum:
+                    - SUPERDISPATCH
+                    - SHIPCARS
+                carrier:
+                  type: object
+                  description: carrier to dispatch to
+                  properties:
+                    guid:
+                      description: guid or salesforce id of carrier
+                      type: string
+                      example: 5003000000D8cuI or 61bf88c9-ff63-4f8d-a184-0e9e11bb2408
+                  required:
+                    - guid
+                driver:
+                  type: object
+                  description: driver assigned to transport the load
+                  properties:
+                    guid:
+                      description: guid or salesforce id of driver
+                      type: string
+                      example: 5003000000D8cuI or 61bf88c9-ff63-4f8d-a184-0e9e11bb2408
+                    name:
+                      description: name of driver contact
+                      type: string
+                      example: Brad Marinov
+                    email:
+                      description: email of driver contact
+                      type: string
+                      example: bmarinov@rcglogistics.com
+                    phoneNumber:
+                      description: phone number of driver contact
+                      type: string
+                      example: (916) 999-1234
+                pickup:
+                  type: object
+                  description: >-
+                    the date type and the possible start and end dates of the
+                    pickup
+                  properties:
+                    dateType:
+                      $ref: '#/components/schemas/stopDateType'
+                    startDate:
+                      $ref: '#/components/schemas/dateTime'
+                      description: the earliest date time the load can be picked up
+                    endDate:
+                      $ref: '#/components/schemas/dateTime'
+                      description: the latest date time the load can be picked up
+                  required:
+                    - dateType
+                    - startDate
+                delivery:
+                  type: object
+                  description: >-
+                    the date type and the possible start and end dates of the
+                    pickup
+                  properties:
+                    dateType:
+                      $ref: '#/components/schemas/stopDateType'
+                    startDate:
+                      $ref: '#/components/schemas/dateTime'
+                      description: the earliest date time the load can be delivered
+                    endDate:
+                      $ref: '#/components/schemas/dateTime'
+                      description: the latest date time the load can be delivered
+                  required:
+                    - dateType
+                    - startDate
+                paymentTerm:
+                  type: number
+                  description: payment term id used for paying carrier
+                paymentMethod:
+                  type: number
+                  description: payment method id used for paying carrier
+                price:
+                  type: number
+                  description: >-
+                    new amount owed to the carrier for transporting, will evenly
+                    split price across all commodities
+                  example: 1234.56
+              required:
+                - carrier
+                - driver
+                - pickup
+                - delivery
+                - paymentTerm
+                - paymentMethod
+      responses:
+        '200':
+          description: loadboards
+          content:
+            application/json: {}
+    put:
+      summary: Undispatch job
+      operationId: putLoadboardDispatch
+      description: Undispatches a load from a carrier
+      tags:
+        - Loadboard
+      parameters:
+        - in: path
+          name: jobId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
       responses:
         '200':
           description: loadboards
@@ -1934,19 +2079,6 @@ components:
       enum:
         - accept
         - decline
-    page:
-      description: 'For pagination purposes, page to return'
-      type: integer
-      default: 0
-    rowCount:
-      description: 'For pagination purposes, number of entries per page'
-      type: integer
-      default: 25
-    date:
-      description: Date as YYYY-MM-DD
-      type: string
-      format: date
-      example: '2021-12-31'
     guidObject:
       type: object
       properties:
@@ -1987,6 +2119,19 @@ components:
     numberNullable:
       type: number
       nullable: true
+    page:
+      description: 'For pagination purposes, page to return'
+      type: integer
+      default: 0
+    rowCount:
+      description: 'For pagination purposes, number of entries per page'
+      type: integer
+      default: 25
+    date:
+      description: Date as YYYY-MM-DD
+      type: string
+      format: date
+      example: '2021-12-31'
     expense:
       type: object
       properties:
