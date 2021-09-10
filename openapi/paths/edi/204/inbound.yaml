@@ -9,7 +9,7 @@ post:
     content:
       application/json:
         schema:
-          $ref: ..\components\schemas\Order.yaml
+          $ref: ..\..\..\components\schemas\edi\Order.yaml
   responses:
     '201':
       description: Created load tender.
