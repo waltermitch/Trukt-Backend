@@ -1,7 +1,6 @@
-const HttpRouteController = require('./HttpRouteController');
 const InvoiceService = require('../Services/InvoiceService');
 
-class InvoiceController extends HttpRouteController
+class InvoiceController
 {
     static async getInvoice(req, res)
     {
@@ -45,6 +44,4 @@ class InvoiceController extends HttpRouteController
     }
 }
 
-const controller = new InvoiceController();
-
-module.exports = controller;
+module.exports = InvoiceController;
