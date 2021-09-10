@@ -1,5 +1,6 @@
 type: object
 required:
+  - name
   - zipCode
 properties:
   guid:
@@ -16,6 +17,10 @@ properties:
   street1:
     type: string
     maxLength: 64
+  street2:
+    type: string
+    maxLength: 64
+    nullable: true
   state:
     type: string
     maxLength: 100
@@ -30,4 +35,4 @@ properties:
   latitude:
     $ref: '.\Common.yaml#/latitude'
   longitude:
-     $ref: '.\Common.yaml#/longitude'
+    $ref: '.\Common.yaml#/longitude'
