@@ -61,7 +61,8 @@ app.use(
         ignorePaths: path => path.startsWith('/api/docs'),
         $refParser: {
             mode: 'dereference'
-        }
+        },
+        formats: require('./openapi/customFormats.js')
     })
 );
 
