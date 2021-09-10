@@ -25,22 +25,27 @@ properties:
     description: A breif description of the commodity.
     type: string
     maxLength: 255
+    nullable: true
   quantity:
     description: The number of peices of the commodity to be transported.
     type: integer
+    nullable: true
   length:
     description: The number of feet the commodity is length-wise.
     type: integer
     minimum: 0
+    nullable: true
   weight:
     description: The number of US pounds the commodity weighs.
     type: integer
     minimum: 0
+    nullable: true
   extraExternalData:
     description: >-
       Any information about the commodity that is stored in external systems.
       This is a free response json field.
     type: object
+    nullable: true
   cost:
     description: Only used for EDI
     type: string
