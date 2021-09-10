@@ -141,6 +141,14 @@ class OrderJob extends BaseModel
                     },
                     to: 'rcgTms.invoiceBills.guid'
                 }
+            },
+            dispatches: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./OrderJobDispatch'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    to: 'rcgTms.orderJobDispatches.jobGuid'
+                }
             }
         };
     }
