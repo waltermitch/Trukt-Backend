@@ -396,6 +396,31 @@ class Super extends Loadboard
         post.isPosted = true;
     }
 
+    static async handledispatch(payloadMetadata, response)
+    {
+        console.log(payloadMetadata.post);
+
+        // console.log(payloadMetadata.dispatch);
+        console.log(response.guid);
+        const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
+        dispatch.externalGuid = response.guid;
+        dispatch.setUpdatedBy(anonUser);
+        console.log(dispatch);
+        await OrderJobDispatch.query().patch(dispatch).findById(dispatch.guid);
+    }
+
+    static async handleundispatch(payloadMetadata, response)
+    {
+        console.log('CANCELING DISPATCH');
+        const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
+        dispatch.externalGuid = null;
+        dispatch.isActive = false;
+        dispatch.isCanceled = true;
+        dispatch.setUpdatedBy(anonUser);
+        console.log(dispatch);
+        await OrderJobDispatch.query().patch(dispatch).findById(dispatch.guid);
+    }
+
     static updateCommodity(ogCommodities, newCommodities)
     {
         const comsToUpdate = [];
