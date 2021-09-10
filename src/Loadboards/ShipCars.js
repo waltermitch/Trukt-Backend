@@ -1,5 +1,5 @@
 const Loadboard = require('./Loadboard');
-const states = require('us-state-codes');
+const DateTime = require('luxon').DateTime;
 const LoadboardPost = require('../Models/LoadboardPost');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
@@ -58,6 +58,17 @@ class ShipCars extends Loadboard
             payment_to_carrier: this.data.estimatedExpense,
             payment_term_begins: 'delivery',
             payment_term_business_days: 2
+        };
+
+        return payload;
+    }
+
+    dispatchJSON()
+    {
+        const payload = {
+            'carrier': this.data.vendor.scId,
+            'carrier_dot': this.data.vendor.dotNumber,
+            'experation_time': DateTime.now().plus({ hours: 12 })
         };
 
         return payload;
