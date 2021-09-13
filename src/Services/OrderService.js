@@ -783,7 +783,7 @@ class OrderService
             .modifyGraph('clientContact', builder => builder.select(
                 'guid',
                 'name',
-                'phone'
+                'phone_number'
             ))
             .modifyGraph('salesperson', builder => builder.select(
                 'guid', 'name'
