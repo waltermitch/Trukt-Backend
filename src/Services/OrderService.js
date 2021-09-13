@@ -428,6 +428,8 @@ class OrderService
                 status: 'new',
                 instructions: orderObj.instructions || 'no instructions provided',
                 referenceNumber: orderObj.referenceNumber,
+                bol: orderObj.bol,
+                bolUrl: orderObj.bolUrl,
                 estimatedDistance: orderObj.estimatedDistance,
                 isDummy: orderObj.isDummy || false,
 
