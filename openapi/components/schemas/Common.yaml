@@ -71,6 +71,7 @@ Enums:
     enum:
       - standard
       - advanced
+    default: standard
   jobCategoryType:
     type: string
     enum:
@@ -111,11 +112,13 @@ Enums:
       - port
       - business
   commodityCategoryType:
+    description: The category of the commodity.
     type: string
     enum:
       - vehicle
       - freight
   commodityType:
+    description: The type of the commodity. Not all of these types can be matched to a category.
     type: string
     enum:
       - coupe
@@ -137,7 +140,6 @@ Enums:
       - box truck
       - day cab
       - sleeper cab
-      - other
       - bulk
       - crushed cars
       - other
