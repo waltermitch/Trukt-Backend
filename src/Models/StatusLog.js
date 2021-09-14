@@ -17,6 +17,7 @@ class StatusLogs extends BaseModel
         const StatusLogType = require('./StatusLogType');
         const User = require('./User');
         const Order = require('./Order');
+        const OrderJob = require('./OrderJob');
 
         return {
             status: {
@@ -41,6 +42,14 @@ class StatusLogs extends BaseModel
                 join: {
                     from: 'rcgTms.statusLogs.orderGuid',
                     to: 'rcgTms.orders.guid'
+                }
+            },
+            job: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: OrderJob,
+                join: {
+                    from: 'rcgTms.statusLogs.jobGuid',
+                    to: 'rcgTms.orderJobs.guid'
                 }
             }
         };

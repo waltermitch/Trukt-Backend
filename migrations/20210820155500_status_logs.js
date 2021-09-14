@@ -10,6 +10,7 @@ exports.up = function (knex)
     {
         const userGuid = 'user_guid';
         const orderGuid = 'order_guid';
+        const jobId = 'job_guid';
         const statusId = 'status_id';
 
         table.increments('id', { primaryKey: true }).notNullable();
@@ -19,6 +20,9 @@ exports.up = function (knex)
 
         table.uuid(orderGuid);
         table.foreign(orderGuid).references('guid').inTable(`${SCHEMA_NAME}.orders`);
+
+        table.uuid(jobId);
+        table.foreign(jobId).references('guid').inTable(`${SCHEMA_NAME}.order_jobs`);
 
         table.integer(statusId).unsigned();
         table.foreign(statusId).references('id').inTable(`${SCHEMA_NAME}.status_log_types`);
