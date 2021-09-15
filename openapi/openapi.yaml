@@ -51,6 +51,9 @@ paths:
   /statusmanager/{guid}:
     get:
       $ref: paths\statusmanager\get.yaml
+  /statusmanager/{guid}/{jobGuid}:
+    get:
+      $ref: paths\statusmanager\jobGuid\get.yaml
   /terminal:
     get:
       $ref: paths\terminal\search.yaml

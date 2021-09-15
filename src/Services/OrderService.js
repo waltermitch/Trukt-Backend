@@ -544,12 +544,6 @@ class OrderService
 
             await trx.commit();
 
-            StatusManagerHandler.registerStatus({
-                orderGuid: order.guid,
-                userGuid: currentUser,
-                statusId: 1
-            });
-
             return order;
         }
         catch (err)
@@ -850,6 +844,20 @@ class OrderService
         if (secondStop.stopType === 'delivery' && firstStop.sequence < secondStop.sequence)
             return secondStop;
         return firstStop;
+    }
+
+    static registerCreateOrderStatusManager(order, currentUser)
+    {
+        for (const orderJob of order.jobs)
+        {
+            StatusManagerHandler.registerStatus({
+                orderGuid: order.guid,
+                userGuid: currentUser,
+                jobGuid: orderJob.guid,
+                statusId: 1
+            });
+        }
+
     }
 }
 

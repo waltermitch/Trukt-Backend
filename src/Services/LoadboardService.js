@@ -88,7 +88,7 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
-        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2);
+        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
     }
 
     static async unpostPostings(jobId, posts, currentUser)
@@ -119,7 +119,7 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
-        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3);
+        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3, jobId);
     }
 
     static async updatePostings(jobId)
@@ -330,14 +330,16 @@ class LoadboardService
      * @param userGuid required
      * @param orderGuid required
      * @param statusId required, 4 => Posted to a loadboard, 5 => Un-posted from loadboard
-     */
-    static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, statusId)
+     * @param jobGuid required
+    */
+    static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, statusId, jobGuid)
     {
         const loadboardNames = LoadboardService.getLoadboardNames(loadboardPosts);
         return StatusManagerHandler.registerStatus({
             orderGuid,
             userGuid,
             statusId,
+            jobGuid,
             extraAnnotations: { 'loadboards': loadboardNames }
         });
     }
