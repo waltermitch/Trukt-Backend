@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+const openApiValidator = require('express-openapi-validator');
 
 require('./local.settings');
 require('./src/HttpControllers/HttpRouteController');
@@ -10,6 +11,7 @@ const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
 const PGListener = require('./src/EventManager/PGListener');
 const HttpErrorHandler = require('./src/HttpErrorHandler');
+const Auth = require('./src/HttpControllers/Auth');
 const Mongo = require('./src/Mongo');
 require('./src/CronJobs/Manager');
 
@@ -55,12 +57,24 @@ app.use(domain);
 app.use(session(sessionConfig));
 app.use(express.json());
 
+app.use(
+    openApiValidator.middleware({
+        apiSpec: './openApi/openapi.yaml',
+        ignorePaths: path => path.startsWith('/api/docs'),
+        $refParser: {
+            mode: 'dereference'
+        },
+        formats: require('./openapi/customFormats.js')
+    })
+);
+
 // TODO: temp solution for created-by requirement
 // grabs the user id and adds it to the session
-app.use((req, res, next) =>
+app.use(async (req, res, next) =>
 {
-    if ('x-test-user' in req.headers && !req.session?.userGuid)
+    // req.session.user = await Auth.verifyJWT(req.headers?.authorization)
 
+    if ('x-test-user' in req.headers && !req.session?.oid)
         req.session.userGuid = req.headers['x-test-user'];
 
     next();
@@ -71,7 +85,7 @@ const filepaths = fs.readdirSync('./src/Routes');
 for (const filepath of filepaths)
 {
     const router = require(`./src/Routes/${filepath}`);
-    initRoutes(filepath, router);
+    app.use(router);
 }
 
 app.all('*', (req, res) => { res.status(404).send(); });
@@ -83,13 +97,13 @@ app.listen(process.env.PORT, async (err) =>
     console.log('listening on port ', process.env.PORT);
 });
 
-// sexy function for printing routes
-function initRoutes(fileName, router)
-{
-    if (Object.keys(router).length > 0)
-    {
-        console.log('\x1b[1m\x1b[3m\x1b[31m%s\x1b[0m', `\n ${fileName.split('.')[0].toUpperCase()}`);
-        app.use(router);
-        router?.stack?.forEach((e) => { console.log('\x1b[32m%s\x1b[0m\x1b[36m%s\x1b[0m', `\n${Object.keys(e.route.methods).pop().toUpperCase()}`, ` ${e.route.path}`); });
-    }
-}
+// used to be sexy function for printing routes
+// function initRoutes(fileName, router)
+// {
+//     if (Object.keys(router).length > 0)
+//     {
+//         console.log('\x1b[1m\x1b[3m\x1b[31m%s\x1b[0m', `\n ${fileName.split('.')[0].toUpperCase()}`);
+//         app.use(router);
+//         router?.stack?.forEach((e) => { console.log('\x1b[32m%s\x1b[0m\x1b[36m%s\x1b[0m', `\n${Object.keys(e.route.methods).pop().toUpperCase()}`, ` ${e.route.path}`); });
+//     }
+// }

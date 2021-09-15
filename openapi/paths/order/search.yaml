@@ -1,0 +1,103 @@
+summary: Search orders
+operationId: getOrders
+description: Search all orders
+tags:
+  - Order
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          page:
+            $ref: ..\..\components\schemas\Common.yaml#/page
+          rowCount:
+            $ref: ..\..\components\schemas\Common.yaml#/rowCount
+          filters:
+            description: Request filters to apply
+            type: object
+            properties:
+              pickup: 
+                description: Coordinates on which to search for order pickups
+                type: array
+                items: 
+                  type: object
+                  properties: 
+                    longitude: 
+                      $ref: ..\..\components\schemas\Common.yaml#/longitude
+                    latitude: 
+                      $ref: ..\..\components\schemas\Common.yaml#/latitude
+                    radius: 
+                      description: Search maximun radius for coordinates
+                      type: integer
+                      default: 1
+                  required:
+                    - longitude
+                    - latitude
+              delivery: 
+                description: Coordinates on which to search for delivery pickups
+                type: array
+                items: 
+                  type: object
+                  properties: 
+                    longitude: 
+                      $ref: ..\..\components\schemas\Common.yaml#/longitude
+                    latitude: 
+                      $ref: ..\..\components\schemas\Common.yaml#/latitude
+                    radius: 
+                      description: Search maximun radius for coordinates
+                      type: integer
+                      default: 1
+                  required:
+                    - longitude
+                    - latitude
+              status: 
+                description: Filter for order status
+                type: array
+                items: 
+                  type: string
+                  example: new
+              customer: 
+                description: Filter for order customer guid
+                type: array
+                items: 
+                  $ref: '..\..\components\schemas\common.yaml#/guid'
+              carrier: 
+                description: Filter for order carrier guid
+                type: array
+                items: 
+                  $ref: '..\..\components\schemas\common.yaml#/guid'
+              dispatcher: 
+                description: Filter for order dispatcher guid
+                type: array
+                items: 
+                  $ref: '..\..\components\schemas\common.yaml#/guid'
+              salesperson: 
+                description: Filter for order salesperson guid
+                type: array
+                items: 
+                  $ref: '..\..\components\schemas\common.yaml#/guid'
+              dates:
+                description: Filter for status in a specific date
+                type: array
+                items: 
+                  type: object
+                  properties: 
+                    status: 
+                      description: Order status
+                      type: number
+                      example: 1
+                    date: 
+                      $ref: ..\..\components\schemas\Common.yaml#/date
+                    comparison: 
+                      description: Type of restriction in the date search
+                      type: string
+                      default: equal
+                  required:
+                    - status
+                    - date
+responses:
+  200:
+    description: Orders
+    content:
+      application/json: {}

@@ -1,0 +1,25 @@
+summary: Create invoice
+operationId: postInvoice
+description: Create invoice
+tags:
+  - Invoice
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        description: List of order guids
+        properties:
+          orders: 
+            type: array
+            items: 
+              description: order guid
+              $ref: '..\..\components\schemas\common.yaml#/guid'
+            minItems: 1
+        required:
+          - orders
+responses:
+  200:
+    description: invocies
+    content:
+      application/json: {}

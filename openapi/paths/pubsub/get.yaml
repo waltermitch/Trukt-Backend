@@ -1,0 +1,10 @@
+summary: Get pubsub credentials
+operationId: getPubsub
+description: Get pubsub credentials
+tags:
+  - Pubsub
+responses:
+  200:
+    description: pubsub
+    content:
+      application/json: {}
