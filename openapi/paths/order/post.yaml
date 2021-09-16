@@ -80,69 +80,64 @@ requestBody:
             type: array
             description: All of the jobs that will be worked by vendors for this order.
             items:
-              type: object
-              properties:
-                index:
-                  description: Arbitrary string used for referencing this job in the payload.
-                  type: string
-                loadType:
-                  type: string
-                  enum:
-                    - full truck load
-                    - partial truck load
-                inspectionType:
-                  allOf:
-                    - $ref: '..\..\components\schemas\Common.yaml#/Enums/inspectionType'
-                    - description: This field currently has not use.
-                category:
-                  type: string
-                  enum:
-                    - transport
-                    - service
-                type:
-                  type: string
-                  enum:
-                    - transport
-                    - locksmith
-                    - unloading
-                    - loading
-                    - repair
-                    - diagnostics
-                    - dry run
-                vendor:
-                  allOf:
-                    - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
-                    - description: The vendor or carrier responsible for completing this job.
-                vendorContact:
-                  allOf:
-                    - $ref: '..\..\components\schemas\Contact.yaml'
-                    - description: The vendor or carrier contact that can be contacted if any questions arise.
-                vendorAgent:
-                  allOf:
-                    - $ref: '..\..\components\schemas\Contact.yaml'
-                    - description: The vendor or carrier employee that will be completing the job. Usually for carriers this is the driver.
-                dispatcher:
-                  allOf:
-                    - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
-                    - description: The dispatcher who is responsible for managing this job.
-                stops:
-                  type: array
-                  items:
-                    oneOf:
-                      - type: object
-                        properties:
-                          index:
-                            type: string
-                            description: The index field inside of the stops array in the payload
-                        required:
-                          - index
-                      - $ref: ..\..\components\schemas\Stop.yaml
-              required:
-                - index
-                - loadType
-                - category
-                - type
-                - stops
+              allOf:
+                - $ref: ..\..\components\schemas\OrderJob.yaml#/Job
+                - type: object
+                  properties:
+                    index:
+                      description: Arbitrary string used for referencing this job in the payload.
+                      type: string
+                    loadType:
+                      type: string
+                      enum:
+                        - full truck load
+                        - partial truck load
+                    inspectionType:
+                      allOf:
+                        - $ref: '..\..\components\schemas\Common.yaml#/Enums/inspectionType'
+                        - description: This field currently has not use.
+                    vendor:
+                      allOf:
+                        - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                        - description: The vendor or carrier responsible for completing this job.
+                    vendorContact:
+                      allOf:
+                        - $ref: '..\..\components\schemas\Contact.yaml'
+                        - description: The vendor or carrier contact that can be contacted if any questions arise.
+                    vendorAgent:
+                      allOf:
+                        - $ref: '..\..\components\schemas\Contact.yaml'
+                        - description: The vendor or carrier employee that will be completing the job. Usually for carriers this is the driver.
+                    dispatcher:
+                      allOf:
+                        - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                        - description: The dispatcher who is responsible for managing this job.
+                    stops:
+                      type: array
+                      items:
+                        oneOf:
+                          - type: object
+                            properties:
+                              index:
+                                type: string
+                                description: The index field inside of the stops array in the payload
+                              commodities:
+                                type: array
+                                items:
+                                  allOf:
+                                    - $ref: ..\..\components\schemas\Common.yaml#/indexObject
+                                    - type: object
+                                      properties:
+                                        lotNumber:
+                                          description: The lot number for this commodity at this stop.
+                                          type: string
+                            required:
+                              - index
+                          - $ref: ..\..\components\schemas\Stop.yaml
+                  required:
+                    - index
+                    - loadType
+                    - stops
           expenses:
             type: array
             items:
@@ -162,7 +157,7 @@ requestBody:
           commodities:
             type: array
             items:
-              $ref: '..\..\components\schemas\Commodity.yaml'
+              $ref: '..\..\components\schemas\Commodity.yaml#/CommodityInbound'
         required:
           - client
           - stops
@@ -295,9 +290,7 @@ responses:
                           - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
                           - $ref: ..\..\components\schemas\Terminal.yaml
                       commodities:
-                        allOf:
-                          - $ref: ..\..\components\schemas\Common.yaml#/guidObject
-                          - $ref: '#/requestBody/content/application~1json/schema/properties/commodities/items'
+                        $ref: ..\..\components\schemas\Commodity.yaml#/CommodityOutbound
             terminals:
               type: array
               items:
