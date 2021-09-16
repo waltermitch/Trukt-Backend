@@ -344,3 +344,17 @@ Enums:
     enum:
       - accept
       - decline
+  orderStatus:
+    type: string
+    enum:
+      - New
+      - On Hold
+      - Ready
+      - Posted
+      - Requests
+      - Pending
+      - Declined
+      - Picked Up
+      - Delivered
+      - Canceled
+      - Deleted
