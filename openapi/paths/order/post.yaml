@@ -29,7 +29,8 @@ requestBody:
             format: currency
             description: The amount owed to the vendors.
           quotedRevenue:
-            type: number
+            type: string
+            format: currency
             description: The amount quoted to the client for this order.
           estimatedDistance:
             type: number
