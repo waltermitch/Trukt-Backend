@@ -4,7 +4,7 @@ class PubSubController
 {
     static async get(req, res)
     {
-        const result = await PubSub.getSubToken(req.session.userId);
+        const result = await PubSub.getSubToken(req.session.user.oid);
 
         if (result)
         {

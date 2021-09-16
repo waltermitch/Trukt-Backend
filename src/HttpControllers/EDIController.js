@@ -275,7 +275,10 @@ class EDIController
 
             const payload = {
                 'action': action,
-                'order': order.guid,
+                'order': {
+                    guid: order.guid,
+                    number: order.number
+                },
                 'reference': req.query.reference,
                 'partner': req.query.partner,
                 'date': DateTime.now().toISO(),

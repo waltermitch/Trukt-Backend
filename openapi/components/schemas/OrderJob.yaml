@@ -1,0 +1,65 @@
+Job:
+  oneOf:
+    - $ref: '#/Job with Type ID'
+    - $ref: '#/Job with Category and Type'
+
+Job with Type ID:
+  type: object
+  properties:
+    typeId:
+      type: integer
+      description: >
+        Available Values:
+          * `1` - "transport": "transport" 
+          * `2` - "service": "locksmith" 
+          * `3` - "service": "unloading" 
+          * `4` - "service": "loading" 
+          * `5` - "service": "repair" 
+          * `6` - "service": "diagnostics" 
+          * `7` - "service": "dry run"
+      minimum: 1
+      maximum: 7
+  required:
+    - typeId
+
+Job with Category and Type:
+  allOf:
+    - $ref: '#/JobCategoryBase'
+    - type: object
+      required:
+        - category
+        - type
+
+JobCategoryBase:
+  oneOf:
+    - $ref: '#/Job Transport'
+    - $ref: '#/Job Service'
+
+Job Transport:
+  type: object
+  properties:
+    category:
+      type: string
+      enum:
+        - transport
+    type:
+      type: string
+      enum:
+        - transport
+
+Job Service:
+  type: object
+  properties:
+    category:
+      type: string
+      enum:
+        - service
+    type:
+      type: string
+      enum:
+        - locksmith
+        - unloading
+        - loading
+        - repair
+        - diagnostics
+        - dry run

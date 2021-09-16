@@ -1,0 +1,87 @@
+post:
+  summary: Create a load tender
+  operationId: createLoadTender
+  description: Create a load tender that will eventually be accepted or rejected.
+  tags:
+    - EDI
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - client
+            - stops
+            - terminals
+            - commodities
+          properties:
+            instructions:
+              type: string
+              description: The instructions for the load provided by the client.
+            estimatedDistance:
+              type: number
+              description: The distance required to travel to complete the full load in miles.
+              nullable: true
+              minimum: 0
+              maximum: 9999999.9
+            referenceNumber:
+              type: string
+              maxLength: 64
+              description: The external identification number the client uses for this load tender.
+            bol:
+              type: string
+              maxLength: 64
+              description: The Bill of Lading reference number for this load.
+            bolUrl:
+              type: string
+              maxLength: 1024
+              description: The URL to the Bill of Lading for this load.
+            totalCost:
+              description: The total cost of the order in USD. This should match the sum of the cost of all of the commodities.
+              type: string
+              format: currency
+            client:
+              allOf:
+                - $ref: ..\..\..\components\schemas\Account.yaml#/account
+                - description: The client/customer that is placing the order.
+            consignee:
+              allOf:
+                - $ref: ..\..\..\components\schemas\Account.yaml#/account
+                - description: The party that is responsible for paying for the order.
+            clientContact:
+              allOf:
+                - $ref: ..\..\..\components\schemas\Contact.yaml
+                - description: The contact information of the client.
+            stops:
+              type: array
+              items:
+                $ref: ..\..\..\components\schemas\Stop.yaml
+              minLength: 1
+            terminals:
+              type: array
+              items:
+                $ref: ..\..\..\components\schemas\Terminal.yaml
+              minLength: 1
+            commodities:
+              type: array
+              items:
+                allOf:
+                  - $ref: ..\..\..\components\schemas\Commodity.yaml#/Commodity
+                  - type: object
+                    properties:
+                      extraExternalData:
+                        description: Any information about the commodity that is stored in external systems. This is a free response json field.
+                        type: object
+                        nullable: true
+                      cost:
+                        description: The price to ship this commodity in USD.
+                        example: '100.00'
+                        type: string
+                        format: currency
+                        minLength: 1
+  responses:
+    '201':
+      description: Created load tender.
+      content:
+        application/json: {}

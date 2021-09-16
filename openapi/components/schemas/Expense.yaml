@@ -18,3 +18,29 @@ expense:
       $ref: '.\Common.yaml#/guid'
   required:
     - guid
+orderExpense:
+  type: object
+  properties:
+    account:
+      type: string
+      enum:
+        - client
+        - vendor
+        - salesperson
+        - referrer
+        - dispatcher
+    amount:
+      allOf:
+        - $ref: ..\..\components\schemas\Common.yaml#/currency
+        - description: The amount that is owed for this expense.
+          minimum: 0
+    item:
+      description: The invoice line item name that this expense references.
+      type: string
+    commodity:
+      description: The index field in the commodities array in this payload.
+      type: string
+  required:
+    - account
+    - amount
+    - item

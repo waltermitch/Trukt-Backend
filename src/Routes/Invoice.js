@@ -5,7 +5,7 @@ const router = require('express').Router();
 const prefix = '/invoice';
 
 router
-    .get(`${prefix}/:invoiceId(${uuidRegexStr})`, controller.constructor.getInvoice)
-    .post(`${prefix}`, controller.constructor.createInvoices);
+    .get(`${prefix}/:invoiceId(${uuidRegexStr})`, (req, res) => http(req, res, controller.getInvoice))
+    .post(`${prefix}`, (req, res) => http(req, res, controller.createInvoices));
 
 module.exports = router;

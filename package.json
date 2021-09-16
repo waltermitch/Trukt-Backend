@@ -11,7 +11,7 @@
         "setup": "bash ./tools/git_setup.sh && bash ./tools/decrypt.sh './local.settings.enc' './local.settings.json'",
         "merge-settings": "node ./tools/merge_settings.js",
         "knex-debug": "set DEBUG=knex* && node main.js",
-        "api-bundle": "openapi bundle main --output public/openapi/spec.yaml"
+        "api-bundle": "openapi lint && openapi bundle main --output public/openapi/spec.yaml"
     },
     "author": "",
     "license": "ISC",
@@ -28,6 +28,8 @@
         "express-formidable": "^1.2.0",
         "express-openapi-validator": "^4.13.0",
         "express-session": "^1.17.2",
+        "jsonwebtoken": "^8.5.1",
+        "jwk-to-pem": "^2.0.5",
         "knex": "^0.95.6",
         "knex-postgis": "^0.14.1",
         "luxon": "^1.26.0",
