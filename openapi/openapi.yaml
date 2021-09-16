@@ -3,8 +3,6 @@ info:
   version: 0.0.1
   title: Trukt
   description: Transportation management system
-  license:
-    name: Private
 servers:
   - url: 'https://truktbackend-dev.rcgauto.p.azurewebsites.net'
     description: Development server
