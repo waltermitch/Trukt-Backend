@@ -67,7 +67,7 @@ post:
               type: array
               items:
                 allOf:
-                  - $ref: ..\..\..\components\schemas\Commodity.yaml
+                  - $ref: ..\..\..\components\schemas\Commodity.yaml#/Commodity
                   - type: object
                     properties:
                       extraExternalData:

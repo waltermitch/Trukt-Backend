@@ -618,7 +618,8 @@ paths:
                   format: currency
                   description: The amount owed to the vendors.
                 quotedRevenue:
-                  type: number
+                  type: string
+                  format: currency
                   description: The amount quoted to the client for this order.
                 estimatedDistance:
                   type: number
@@ -673,82 +674,79 @@ paths:
                     All of the jobs that will be worked by vendors for this
                     order.
                   items:
-                    type: object
-                    properties:
-                      index:
-                        description: >-
-                          Arbitrary string used for referencing this job in the
-                          payload.
-                        type: string
-                      loadType:
-                        type: string
-                        enum:
-                          - full truck load
-                          - partial truck load
-                      inspectionType:
-                        allOf:
-                          - $ref: '#/components/schemas/inspectionType'
-                          - description: This field currently has not use.
-                      category:
-                        type: string
-                        enum:
-                          - transport
-                          - service
-                      type:
-                        type: string
-                        enum:
-                          - transport
-                          - locksmith
-                          - unloading
-                          - loading
-                          - repair
-                          - diagnostics
-                          - dry run
-                      vendor:
-                        allOf:
-                          - $ref: '#/components/schemas/guidObject'
-                          - description: >-
-                              The vendor or carrier responsible for completing
-                              this job.
-                      vendorContact:
-                        allOf:
-                          - $ref: '#/components/schemas/Contact'
-                          - description: >-
-                              The vendor or carrier contact that can be
-                              contacted if any questions arise.
-                      vendorAgent:
-                        allOf:
-                          - $ref: '#/components/schemas/Contact'
-                          - description: >-
-                              The vendor or carrier employee that will be
-                              completing the job. Usually for carriers this is
-                              the driver.
-                      dispatcher:
-                        allOf:
-                          - $ref: '#/components/schemas/guidObject'
-                          - description: >-
-                              The dispatcher who is responsible for managing
-                              this job.
-                      stops:
-                        type: array
-                        items:
-                          oneOf:
-                            - type: object
-                              properties:
-                                index:
-                                  type: string
-                                  description: >-
-                                    The index field inside of the stops array in
-                                    the payload
-                              required:
-                                - index
-                            - $ref: '#/components/schemas/Stop'
-                    required:
-                      - index
-                      - loadType
-                      - category
-                      - type
-                      - stops
+                    allOf:
+                      - $ref: '#/components/schemas/Job'
+                      - type: object
+                        properties:
+                          index:
+                            description: >-
+                              Arbitrary string used for referencing this job in
+                              the payload.
+                            type: string
+                          loadType:
+                            type: string
+                            enum:
+                              - full truck load
+                              - partial truck load
+                          inspectionType:
+                            allOf:
+                              - $ref: '#/components/schemas/inspectionType'
+                              - description: This field currently has not use.
+                          vendor:
+                            allOf:
+                              - $ref: '#/components/schemas/guidObject'
+                              - description: >-
+                                  The vendor or carrier responsible for
+                                  completing this job.
+                          vendorContact:
+                            allOf:
+                              - $ref: '#/components/schemas/Contact'
+                              - description: >-
+                                  The vendor or carrier contact that can be
+                                  contacted if any questions arise.
+                          vendorAgent:
+                            allOf:
+                              - $ref: '#/components/schemas/Contact'
+                              - description: >-
+                                  The vendor or carrier employee that will be
+                                  completing the job. Usually for carriers this
+                                  is the driver.
+                          dispatcher:
+                            allOf:
+                              - $ref: '#/components/schemas/guidObject'
+                              - description: >-
+                                  The dispatcher who is responsible for managing
+                                  this job.
+                          stops:
+                            type: array
+                            items:
+                              oneOf:
+                                - type: object
+                                  properties:
+                                    index:
+                                      type: string
+                                      description: >-
+                                        The index field inside of the stops
+                                        array in the payload
+                                    commodities:
+                                      type: array
+                                      items:
+                                        allOf:
+                                          - $ref: '#/components/schemas/indexObject'
+                                          - type: object
+                                            properties:
+                                              lotNumber:
+                                                description: >-
+                                                  The lot number for this commodity at
+                                                  this stop.
+                                                type: string
+                                  required:
+                                    - index
+                                - $ref: '#/components/schemas/Stop'
+                        required:
+                          - index
+                          - loadType
+                          - stops
                 expenses:
                   type: array
                   items:
@@ -768,7 +766,7 @@ paths:
                 commodities:
                   type: array
                   items:
-                    $ref: '#/components/schemas/Commodity'
+                    $ref: '#/components/schemas/CommodityInbound'
               required:
                 - client
                 - stops
@@ -905,9 +903,7 @@ paths:
                                 - $ref: '#/components/schemas/guidObject'
                                 - $ref: '#/components/schemas/Terminal'
                             commodities:
-                              allOf:
-                                - $ref: '#/components/schemas/guidObject'
-                                - $ref: '#/components/schemas/Commodity'
+                              $ref: '#/components/schemas/CommodityOutbound'
                   terminals:
                     type: array
                     items:
@@ -1849,64 +1845,19 @@ components:
           $ref: '#/components/schemas/latitude'
         longitude:
           $ref: '#/components/schemas/longitude'
-    commodityCategoryType:
-      description: The category of the commodity.
-      type: string
-      enum:
-        - vehicle
-        - freight
-    commodityType:
+    CommodityBase:
       description: >-
-        The type of the commodity. Not all of these types can be matched to a
-        category.
-      type: string
-      enum:
-        - coupe
-        - convertible
-        - sedan
-        - SUV
-        - minivan
-        - pickup truck (2 door)
-        - pickup truck (4 door)
-        - pickup dually
-        - motorcycle
-        - ATV
-        - boat
-        - RV
-        - trailer (5th wheel)
-        - trailer (bumper pull)
-        - trailer (gooseneck)
-        - cargo van
-        - box truck
-        - day cab
-        - sleeper cab
-        - bulk
-        - crushed cars
-        - other
-    Commodity:
-      description: >
         The real world item(s) that need to be transported between two real
         world locations
       type: object
       required:
         - identifier
-        - type
-        - category
       properties:
-        guid:
-          $ref: '#/components/schemas/guid'
-        index:
-          description: >-
-            A unique arbitrary string that will be used to reference this
-            commodity record inside of other objects.
-          type: string
         identifier:
+          description: An Identifying string like a VIN or Serial number.
           type: string
           maxLength: 255
-        category:
-          $ref: '#/components/schemas/commodityCategoryType'
-        type:
-          $ref: '#/components/schemas/commodityType'
+          example: ABC1234-GF56-DEADBEEF
         description:
           description: A breif description of the commodity.
           type: string
@@ -1932,6 +1883,104 @@ components:
             systems. This is a free response json field.
           type: object
           nullable: true
+    Commodity with Type ID:
+      allOf:
+        - type: object
+          properties:
+            typeId:
+              description: |
+                Available Values:
+                  * `1` - vehicle: coupe
+                  * `2` - vehicle: convertible
+                  * `3` - vehicle: sedan
+                  * `4` - vehicle: SUV
+                  * `5` - vehicle: minivan
+                  * `6` - vehicle: pickup truck (2 door)
+                  * `7` - vehicle: pickup truck (4 door)
+                  * `8` - vehicle: pickup dually
+                  * `9` - vehicle: motorcycle
+                  * `10` - vehicle: ATV
+                  * `11` - vehicle: boat
+                  * `12` - vehicle: RV
+                  * `13` - vehicle: trailer (5th wheel)
+                  * `14` - vehicle: trailer (bumper pull)
+                  * `15` - vehicle: trailer (gooseneck)
+                  * `16` - vehicle: cargo van
+                  * `17` - vehicle: box truck
+                  * `18` - vehicle: day cab
+                  * `19` - vehicle: sleeper cab
+                  * `20` - vehicle: other
+                  * `21` - freight: bulk
+                  * `22` - freight: crushed cars
+                  * `23` - freight: other
+              type: integer
+              minimum: 1
+              maximum: 23
+          required:
+            - typeId
+        - $ref: '#/components/schemas/CommodityBase'
+    Commodity Freight:
+      type: object
+      properties:
+        category:
+          type: string
+          enum:
+            - freight
+        type:
+          type: string
+          enum:
+            - bulk
+            - crushed cars
+            - other
+    Commodity Vehicle:
+      type: object
+      properties:
+        category:
+          type: string
+          enum:
+            - vehicle
+        type:
+          type: string
+          enum:
+            - coupe
+            - convertible
+            - sedan
+            - SUV
+            - minivan
+            - pickup truck (2 door)
+            - pickup truck (4 door)
+            - pickup dually
+            - motorcycle
+            - ATV
+            - boat
+            - RV
+            - trailer (5th wheel)
+            - trailer (bumper pull)
+            - trailer (gooseneck)
+            - cargo van
+            - box truck
+            - day cab
+            - sleeper cab
+            - other
+    CommodityCategoryBase:
+      oneOf:
+        - $ref: '#/components/schemas/Commodity Freight'
+        - $ref: '#/components/schemas/Commodity Vehicle'
+    CommodityCategory:
+      allOf:
+        - $ref: '#/components/schemas/CommodityCategoryBase'
+        - type: object
+          required:
+            - category
+            - type
+    Commodity with Category and Type:
+      allOf:
+        - $ref: '#/components/schemas/CommodityCategory'
+        - $ref: '#/components/schemas/CommodityBase'
+    Commodity:
+      oneOf:
+        - $ref: '#/components/schemas/Commodity with Type ID'
+        - $ref: '#/components/schemas/Commodity with Category and Type'
     EDI214StopStatus:
       allOf:
         - $ref: '#/components/schemas/EDI214Status'
@@ -2145,10 +2194,83 @@ components:
       properties:
         guid:
           $ref: '#/components/schemas/guid'
+    Job with Type ID:
+      type: object
+      properties:
+        typeId:
+          type: integer
+          description: |
+            Available Values:
+              * `1` - "transport": "transport" 
+              * `2` - "service": "locksmith" 
+              * `3` - "service": "unloading" 
+              * `4` - "service": "loading" 
+              * `5` - "service": "repair" 
+              * `6` - "service": "diagnostics" 
+              * `7` - "service": "dry run"
+          minimum: 1
+          maximum: 7
+      required:
+        - typeId
+    Job Transport:
+      type: object
+      properties:
+        category:
+          type: string
+          enum:
+            - transport
+        type:
+          type: string
+          enum:
+            - transport
+    Job Service:
+      type: object
+      properties:
+        category:
+          type: string
+          enum:
+            - service
+        type:
+          type: string
+          enum:
+            - locksmith
+            - unloading
+            - loading
+            - repair
+            - diagnostics
+            - dry run
+    JobCategoryBase:
+      oneOf:
+        - $ref: '#/components/schemas/Job Transport'
+        - $ref: '#/components/schemas/Job Service'
+    Job with Category and Type:
+      allOf:
+        - $ref: '#/components/schemas/JobCategoryBase'
+        - type: object
+          required:
+            - category
+            - type
+    Job:
+      oneOf:
+        - $ref: '#/components/schemas/Job with Type ID'
+        - $ref: '#/components/schemas/Job with Category and Type'
+    index:
+      type: string
+      description: >-
+        A unique and arbitrary string that will be used to reference this record
+        in this payload.
+      example: record_1234
+    indexObject:
+      type: object
+      properties:
+        index:
+          $ref: '#/components/schemas/index'
+      required:
+        - index
     currency:
       type: string
       format: currency
-      pattern: '^(?:[1-9][0-9]+|0)\.[0-9]{2}$'
+      pattern: '^(?:[1-9][0-9]*|0)\.[0-9]{2}$'
       example: '12345.67'
     orderExpense:
       type: object
@@ -2176,19 +2298,10 @@ components:
         - account
         - amount
         - item
-    index:
-      type: string
-      description: >-
-        A unique and arbitrary string that will be used to reference this record
-        in this payload.
-      example: record_1234
-    indexObject:
-      type: object
-      properties:
-        index:
-          $ref: '#/components/schemas/index'
-      required:
-        - index
+    CommodityInbound:
+      allOf:
+        - $ref: '#/components/schemas/indexObject'
+        - $ref: '#/components/schemas/Commodity'
     instructions:
       type: string
       description: The instructions for the order provided by the client.
@@ -2215,7 +2328,8 @@ components:
       format: currency
       description: The amount owed by the client.
     quotedRevenue:
-      type: number
+      type: string
+      format: currency
       description: The amount quoted to the client for this order.
     dateExpectedCompleteBy:
       type: string
@@ -2349,6 +2463,11 @@ components:
       allOf:
         - description: The party that is responsible for paying for the order
         - $ref: '#/components/schemas/account'
+    CommodityOutbound:
+      allOf:
+        - $ref: '#/components/schemas/guidObject'
+        - $ref: '#/components/schemas/Commodity with Type ID'
+        - $ref: '#/components/schemas/Commodity with Category and Type'
     page:
       description: 'For pagination purposes, page to return.'
       type: integer
