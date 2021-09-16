@@ -3,13 +3,6 @@ required:
   - name
   - zipCode
 properties:
-  guid:
-    $ref: '.\Common.yaml#/guid'
-  index:
-    description: >-
-      A unique arbitrary string that will be used to reference this terminal
-      record inside of other objects.
-    type: string
   name:
     description: A non-unique name for this terminal that will be displayed to the users.
     type: string

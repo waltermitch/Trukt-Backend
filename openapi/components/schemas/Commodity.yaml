@@ -1,4 +1,4 @@
-description: >-
+description: >
   The real world item(s) that need to be transported between two real world
   locations
 type: object
@@ -10,9 +10,7 @@ properties:
   guid:
     $ref: '.\Common.yaml#/guid'
   index:
-    description: >-
-      A unique arbitrary string that will be used to reference this commodity
-      record inside of other objects.
+    description: A unique arbitrary string that will be used to reference this commodity record inside of other objects.
     type: string
   identifier:
     type: string
@@ -27,26 +25,20 @@ properties:
     maxLength: 255
     nullable: true
   quantity:
-    description: The number of peices of the commodity to be transported.
+    description: The number of separate pieces in this commodity.
     type: integer
     nullable: true
   length:
-    description: The number of feet the commodity is length-wise.
+    description: The length of the commodity in US feet.
     type: integer
     minimum: 0
     nullable: true
   weight:
-    description: The number of US pounds the commodity weighs.
+    description: The weight of the commodity in US pounds.
     type: integer
     minimum: 0
     nullable: true
   extraExternalData:
-    description: >-
-      Any information about the commodity that is stored in external systems.
-      This is a free response json field.
+    description: Any information about the commodity that is stored in external systems. This is a free response json field.
     type: object
     nullable: true
-  cost:
-    description: Only used for EDI
-    type: string
-    format: currency

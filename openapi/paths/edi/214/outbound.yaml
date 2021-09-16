@@ -1,7 +1,7 @@
 get:
   summary: Update a load tender status
   operationId: notifyLoadTenderStatus
-  description: >-
+  description: >
     This endpoint is designed for development purposes only. 
     It will generate a sample payload for a specific load tender described by query parameters.
   tags:
@@ -35,17 +35,17 @@ get:
               partner:
                 description: The partner that wishes to update a load tender
                 oneOf:
-                  - $ref: ..\components\schemas\SFID.yaml
+                  - $ref: ..\..\..\components\schemas\SFID.yaml
                   - type: string
                     format: uuid
               reference:
-                description: >-
+                description: >
                   The shipment/reference number from the load that was created via
                   EDI 204 load tender
                 type: string
                 maxLength: 64
               commodity:
-                description: >-
+                description: >
                   The identifier field from a commodity that was created via EDI 204 load tender
                 type: string
                 maxLength: 255
@@ -63,19 +63,20 @@ get:
                     type: string
                     maxLength: 64
                   latitude:
-                    $ref: '..\components\schemas\Common.yaml#/latitude'
+                    $ref: '..\..\..\components\schemas\Common.yaml#/latitude'
                   longitude:
-                    $ref: '..\components\schemas\Common.yaml#/longitude'
+                    $ref: '..\..\..\components\schemas\Common.yaml#/longitude'
               status:
                 oneOf:
-                  - $ref: ..\components\schemas\EDI214StopStatus.yaml
-                  - $ref: ..\components\schemas\EDI214Appointment.yaml
+                  - $ref: ..\..\..\components\schemas\EDI214StopStatus.yaml
+                  - $ref: ..\..\..\components\schemas\EDI214Appointment.yaml
                 description: Represents the status/appointment update for the load tender
                 type: object
                 discriminator:
                   propertyName: type
                   mapping:
-                    status: ..\components\schemas\EDI214StopStatus.yaml
-                    appointment: ..\components\schemas\EDI214Appointment.yaml
+                    status: ..\..\..\components\schemas\EDI214StopStatus.yaml
+                    appointment: ..\..\..\components\schemas\EDI214Appointment.yaml
               datetime:
-                $ref: '..\components\schemas\Common.yaml#/dateTime'
+                type: string
+                format: date-time
