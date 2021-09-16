@@ -756,16 +756,19 @@ class OrderService
                 clientContact: true,
                 salesperson: true,
                 dispatcher: true,
-                stops: {
-                    terminal: true,
-                    commodities: {
-                        commType: true,
-                        vehicle: true
-                    }
-                },
                 jobs: {
                     loadboardPosts: true,
-                    vendor: true
+                    vendor: {
+                        rectype: true
+                    },
+                    jobType: true,
+                    stops: {
+                        terminal: true,
+                        commodities: {
+                            commType: true,
+                            vehicle: true
+                        }
+                    }
                 }
             })
 
@@ -779,7 +782,8 @@ class OrderService
             .modifyGraph('clientContact', builder => builder.select(
                 'guid',
                 'name',
-                'phone_number'
+                'phone_number',
+                'email'
             ))
             .modifyGraph('salesperson', builder => builder.select(
                 'guid', 'name'
@@ -787,7 +791,7 @@ class OrderService
             .modifyGraph('dispatcher', builder => builder.select(
                 'guid', 'name'
             ))
-            .modifyGraph('stops', builder => builder.select(
+            .modifyGraph('jobs.stops', builder => builder.select(
                 'guid',
                 'stopType',
                 'status',
@@ -796,18 +800,22 @@ class OrderService
                 'dateScheduledType',
                 'dateRequestedStart',
                 'dateRequestedEnd',
-                'dateRequestedType',
-                'lotNumber'
+                'dateRequestedType'
             ).distinct('guid'))
-            .modifyGraph('stops.commodities', builder => builder.select().distinct(
+            .modifyGraph('jobs.stops.commodities', builder => builder.select(
                 'guid',
                 'damaged',
                 'inoperable',
                 'identifier',
                 'lotNumber',
                 'typeId'
-            ))
-            .modifyGraph('stops.terminal', builder => builder.select(
+            )
+                .whereNotNull('jobGuid')
+                .distinct(
+                    'guid'
+                )
+            )
+            .modifyGraph('jobs.stops.terminal', builder => builder.select(
                 'name',
                 'guid',
                 'street1',
@@ -819,22 +827,31 @@ class OrderService
             ).distinct())
             .modifyGraph('jobs', builder => builder.select(
                 'guid',
-                'number'
+                'number',
+                'estimatedExpense',
+                'estimatedRevenue',
+                'status'
             ).distinct())
             .modifyGraph('jobs.loadboardPosts', builder => builder.select('loadboard', 'isPosted', 'status').distinct())
-            .modifyGraph('jobs.vendor', builder => builder.select('guid', 'name').distinct());
+            .modifyGraph('jobs.vendor', builder => builder.select('guid', 'name').distinct())
+            .modifyGraph('jobs.vendor.rectype', builder => builder.select('name').distinct());
 
     }
 
     static addDeliveryAddress(ordersArray)
     {
-        return ordersArray.map(order =>
+        return ordersArray.map((order) =>
         {
-            const { terminal } = order.stops.length > 0 && order.stops.reduce((acumulatorStop, stop) =>
+            const jobsWithDeliveryAddress = order.jobs.map((job) =>
             {
-                return OrderService.getLastDeliveryBetweenStops(acumulatorStop, stop);
+                const { terminal } = job.stops.length > 0 && job.stops.reduce((acumulatorStop, stop) =>
+                {
+                    return OrderService.getLastDeliveryBetweenStops(acumulatorStop, stop);
+                });
+                job.deliveryAddress = terminal || null;
+                return job;
             });
-            order.deliveryAddress = terminal || null;
+            order.jobs = jobsWithDeliveryAddress;
             return order;
         });
     }
