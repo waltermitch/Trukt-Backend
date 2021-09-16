@@ -137,7 +137,6 @@ requestBody:
                           - $ref: ..\..\components\schemas\Stop.yaml
                   required:
                     - index
-                    - loadType
                     - stops
           expenses:
             type: array
