@@ -10,6 +10,18 @@ const status_log_type_records = [
     },
     {
         id: 3, category: 'order', name: 'Un-Posted from', order_filter_label: null
+    },
+    {
+        id: 4, category: 'loadRequest', name: 'Created', order_filter_label: null
+    },
+    {
+        id: 5, category: 'loadRequest', name: 'Canceled', order_filter_label: null
+    },
+    {
+        id: 6, category: 'loadRequest', name: 'Accpeted', order_filter_label: null
+    },
+    {
+        id: 7, category: 'loadRequest', name: 'Declined', order_filter_label: null
     }
 ];
 
