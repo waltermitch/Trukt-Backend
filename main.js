@@ -60,7 +60,7 @@ app.use(express.json());
 app.use(
     openApiValidator.middleware({
         apiSpec: './openApi/openapi.yaml',
-        ignorePaths: path => path.startsWith('/api/docs'),
+        ignorePaths: path => { return path.startsWith('/api/docs') || path.startsWith('/loadboard'); },
         $refParser: {
             mode: 'dereference'
         },
@@ -86,6 +86,8 @@ for (const filepath of filepaths)
 {
     const router = require(`./src/Routes/${filepath}`);
     app.use(router);
+
+    // initRoutes(filepath, router);
 }
 
 app.all('*', (req, res) => { res.status(404).send(); });
@@ -97,7 +99,7 @@ app.listen(process.env.PORT, async (err) =>
     console.log('listening on port ', process.env.PORT);
 });
 
-// used to be sexy function for printing routes
+// sexy function for printing routes
 // function initRoutes(fileName, router)
 // {
 //     if (Object.keys(router).length > 0)
