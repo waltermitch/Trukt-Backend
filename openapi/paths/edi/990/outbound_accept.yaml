@@ -1,7 +1,7 @@
 get:
-  summary: Reject Load Tender
-  operationId: rejectLoadTender
-  description: >-
+  summary: Accept Load Tender
+  operationId: acceptLoadTender
+  description: >
     This endpoint is designed for development purposes only. 
     It will generate a sample payload for a specific load tender described by query parameters.
   tags:
@@ -12,18 +12,18 @@ get:
         type: string
       required: true
       allowEmptyValue: false
-      description: The reference number of a load tender
+      description: The reference number of a load tender.
       in: query
     - name: partner
       schema:
         type: string
       required: true
       allowEmptyValue: false
-      description: The partner ID provided when creating a load tender
+      description: The partner ID provided when creating a load tender.
       in: query
   responses:
     '200':
-      description: Sample outbound 990 reject payload.
+      description: Sample outbound 990 accept payload.
       content:
         application/json:
           schema:
@@ -34,7 +34,7 @@ get:
                 properties:
                   guid:
                     description: The EDI load tender guid inside of RCG database
-                    $ref: '..\components\schemas\Common.yaml#/guid'
+                    $ref: '..\..\..\components\schemas\Common.yaml#/guid'
                   number:
                     description: The RCG internal load number
                     type: string
@@ -42,25 +42,22 @@ get:
                     maxLength: 30
                     minLength: 7
               partner:
-                description: >-
+                description: >
                   The EDI load tender client guid that was used when creating a
                   load tender in our system.
-                $ref: ..\components\schemas\SFID.yaml
+                $ref: ..\..\..\components\schemas\SFID.yaml
               reference:
-                description: >-
+                description: >
                   The EDI load tender reference number used when creating a load
                   tender in our system.
                 type: string
               action:
                 description: The action to take with the EDI load tender.
-                $ref: '..\components\schemas\Common.yaml#/Enums/ediActionType'
-              reason:
-                description: The reason for rejecting the EDI load tender.
-                type: string
-                maxLength: 60
+                $ref: '..\..\..\components\schemas\Common.yaml#/Enums/ediActionType'
               date:
+                type: string
+                format: date-time
                 description: The date the response was generated
-                $ref: '..\components\schemas\Common.yaml#/dateTime'
               scac:
                 description: The scac number
                 type: string
