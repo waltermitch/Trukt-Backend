@@ -40,6 +40,17 @@ dateTime:
   type: string
   format: date-time
   example: '2021-08-10T07:59:59.000Z'
+indexObject:
+  type: object
+  properties:
+    index:
+      $ref: '#/index'
+  required:
+    - index
+index:
+  type: string
+  description: A unique and arbitrary string that will be used to reference this record in this payload.
+  examples: 'record_1234'
 page:
   description: For pagination purposes, page to return
   type: integer
