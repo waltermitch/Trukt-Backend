@@ -119,21 +119,6 @@ Enums:
       - standard
       - advanced
     default: standard
-  jobCategoryType:
-    type: string
-    enum:
-      - transport
-      - service
-  jobType:
-    type: string
-    enum:
-      - transport
-      - locksmith
-      - unloading
-      - loading
-      - repair
-      - diagnostics
-      - dry run
   stopType:
     description: >-
       Describes the type of stop, use pickup to indicate that the stop is for
