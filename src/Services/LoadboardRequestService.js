@@ -1,8 +1,16 @@
 const LoadboardRequest = require('../Models/LoadboardRequest');
 const LoadboardPost = require('../Models/LoadboardPost');
-const Super = require('../Loadboards/SuperDispatch');
-const SHIPCARS = require('../Loadboards/ShipCar');
-const PubSub = require('../Azure/PubSub');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const axios = require('axios');
+const https = require('https');
+const { ref } = require('objection');
+
+const lbInstance = axios.create({
+    baseURL: process.env['azure.loadboard.baseurl'],
+    httpsAgent: new https.Agent({ keepAlive: true }),
+    headers: { 'Content-Type': 'application/json' },
+    params: { code: process.env['azure.loadboard.funcCode'] }
+});
 
 class LoadboardRequestService
 {
@@ -11,7 +19,7 @@ class LoadboardRequestService
     static async getbyJobID(jobGuid)
     {
         // ask job for postings
-        const qb = await LoadboardRequest.query().withGraphJoined('posting.job(byID)').modifiers({ byID: builder => builder.findById(jobGuid) });
+        const qb = await LoadboardRequest.query().leftJoinRelated('posting').where('posting.jobGuid', jobGuid);
 
         // filter what I want to display
         return qb;
@@ -20,201 +28,194 @@ class LoadboardRequestService
     // webhook triggers this function
     static async createRequest(payload)
     {
-        // query for the order see if exists
-        let response;
-        try
+        // query our database for requests from incoming payload
+        const [lbRequest, lbPosting] = await Promise.all([
+            LoadboardRequest
+                .query()
+                .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true })
+                .where(ref('extraExternalData:guid').castText(), payload.extraExternalData.guid),
+            LoadboardPost
+                .query()
+                .findOne('externalPostGuid', payload.extraExternalData.externalOrderID)
+                .leftJoinRelated('job')
+                .select('rcgTms.loadboardPosts.*', 'job.orderGuid')
+        ]);
+
+        console.log('Query Response of Request: ', lbRequest);
+        console.log('LoadBoard Posting: ', lbPosting);
+
+        if (lbPosting == undefined)
         {
-            // query our database for requests from incoming payload
-            const queryResponse = await LoadboardRequest.query().where({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true, 'carrierIdentifier': payload.carrierIdentifier });
-
-            // no such order request exist create new request
-            if (queryResponse.length == 0)
-            {
-                // query for RCG loadboard posts where their order ID is our postGUID
-                const loadboardPost = await LoadboardPost.query().where('externalPostGuid', payload.extraExternalData.externalOrderID);
-                Object.assign(payload, {
-                    loadboardPostGuid: loadboardPost.guid,
-                    status: 'New',
-                    isSynced: true
-                });
-
-                // create row with that information
-                response = await LoadboardRequest.query().insert(payload);
-
-                // pubsub
-                await PubSub.publishToGroup(loadboardPost.jobGuid, { 'object': 'request', 'data': response });
-            }
-
-            if (queryResponse.length != 0)
-            {
-                const loadboardPost = await LoadboardPost.query().where('externalPostGuid', payload.extraExternalData.externalOrderID);
-
-                // if request exist in our loadboard Posts then update to inactive
-                // compare the loadboard post GUID vs incoming request post GUID
-                // if (loadboardPost.externalPostGuid == queryResponse[0].extraExternalData.externalOrderID)
-                if (loadboardPost)
-                {
-                    // use internal (RCG) GUID to update current post to inactive (use GUID of RCG)
-                    const res = await LoadboardRequest.query().findById(queryResponse[0].guid).patch({ isActive: false });
-                    console.log(res);
-
-                    // creating a new payload
-                    Object.assign(payload, {
-                        loadboardPostGuid: loadboardPost.guid,
-                        status: 'New',
-                        isSynced: true
-                    });
-
-                    // create table with new request information
-                    response = await LoadboardRequest.query().insert(payload);
-
-                    // pubsub groupName: jobGUID , { object: "Request", data: "" } pubSUB
-                    await PubSub.publishToGroup(loadboardPost.jobGuid, { 'object': 'request', 'data': response });
-                }
-            }
+            throw new Error('Posting Doesn\'t Exist');
         }
-        catch (error)
+
+        // if requrest by carrier exist update it to inactive
+        if (lbRequest)
         {
-            console.log(error);
+            await LoadboardRequest.query().findById(lbRequest.guid).patch({ isActive: false, isCanceled: true, status: 'Canceled' });
+
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid: lbPosting.orderGuid,
+            //     userGuid: payload.createdByGuid,
+            //     jobGuid: lbPosting.jobGuid,
+            //     statusId: 5
+            // });
         }
+
+        // updating payload for database
+        Object.assign(payload, {
+            loadboardPostGuid: lbPosting.guid,
+            status: 'New',
+            isSynced: true
+        });
+
+        // create row with that information
+        const response = await LoadboardRequest.query().insert(payload);
+
+        // update activities according to incoming request createBy
+        StatusManagerHandler.registerStatus({
+            orderGuid: lbPosting.orderGuid,
+            userGuid: payload.createdByGuid,
+            jobGuid: lbPosting.jobGuid,
+            statusId: 4
+        });
+
         return response;
     }
 
     // webhook triggers this function
     static async cancelRequests(payload)
     {
-        // query for the order see if exists
-        let response;
-        try
-        {
-            // check to see if requests exists in table
-            const queryResponse = await LoadboardRequest.query().where({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true, 'carrierIdentifier': payload.carrierIdentifier });
-            console.log(queryResponse);
+        // check to see if requests exists in table
+        const [lbRequest, lbPosting] = await Promise.all([
+            LoadboardRequest
+                .query()
+                .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true })
+                .where(ref('extraExternalData:guid').castText(), payload.extraExternalData.guid),
+            LoadboardPost
+                .query()
+                .findOne('externalPostGuid', payload.extraExternalData.externalOrderID)
+                .leftJoinRelated('job')
+                .select('rcgTms.loadboardPosts.*', 'job.orderGuid')
+        ]);
 
-            // if active request exists cancel it
-            if (queryResponse.length == 0)
-            {
-                return;
-            }
-            else if (queryResponse.length > 0)
-            {
-                // search data base by the (RCG) guid and update to canceled
-                response = LoadboardRequest.query().findById(queryResponse[0].guid).patch({
-                    status: 'Canceled',
-                    isActive: false,
-                    isCanceled: true,
-                    isSynced: true,
-                    declineReason: 'Canceled by Carrier'
-                });
-            }
-        }
-        catch (error)
-        {
-            console.log(error);
-        }
+        console.log('Cancel Request Query', lbRequest);
+
+        // search data base by the (RCG) guid and update to canceled
+        const response = await LoadboardRequest.query().findById(lbRequest.guid).patch({
+            status: 'Canceled',
+            isActive: false,
+            isCanceled: true,
+            isSynced: true,
+            declineReason: 'Canceled by Carrier'
+        });
+
+        // update status of requests
+        StatusManagerHandler.registerStatus({
+            orderGuid: lbPosting.orderGuid,
+            userGuid: payload.createdByGuid,
+            jobGuid: lbPosting.jobGuid,
+            statusId: 5
+        });
+
         return response;
     }
 
     // functions trigged by the TMS user
     static async acceptRequest(requestGuid)
     {
-        let synced = false;
-        let res;
+        // finding request to update
+        // const queryRequest = await LoadboardRequest.query().findById(requestGuid);
+        // console.log('Request to Accept', queryRequest);
 
-        const queryRequest = await LoadboardRequest.query().findById(requestGuid);
+        const queryRequest = await LoadboardRequest
+            .query()
+            .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
+            .leftJoinRelated('posting.job')
+            .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
 
-        // if loadboard is SUPER
-        if (queryRequest.loadboard == 'SUPERDISPATCH')
+        console.log('Request Magic', queryRequest);
+
+        // updating object for loadboard logic
+        Object.assign(queryRequest, {
+            status: 'Accepted',
+            isAccepted: true,
+            isDeclined: false,
+            isCanceled: false
+        });
+
+        // send API request accept request
+        const response = await lbInstance.post('/incomingLoadboardRequest', queryRequest);
+        console.log('Response from LB', response);
+        if (response.status == 200)
         {
-            // send API request SUPER to cancel request
-            const response = await Super.acceptLoadRequest(queryRequest.extraExternalData.externalOrderID, queryRequest.externalPostGuid);
-            if (response.status == 'success')
-            {
-                synced = true;
-            }
-
-            // search RCG data base by the guid and update to accepted
-            res = LoadboardRequest.query().findById(requestGuid).patch({
-                status: 'Accpeted',
-                isAccepted: true,
-                isDeclined: false,
-                isCanceled: false,
-                isSynced: synced
-            });
-
+            queryRequest.isSynced = true;
         }
-        else if (queryRequest.loadboard == 'SHIPCARS')
+        else
         {
-            // update SHIPCARS api
-            const response = SHIPCARS.acceptLoadRequest(queryRequest.externalPostGuid, { offer: queryRequest.extraExternalData.offerUrl });
-
-            if (response.status == 200)
-            {
-                synced = true;
-            }
-
-            // search data base by the guid that super provides and update to canceled
-            res = LoadboardRequest.query().findById(requestGuid).patch({
-                status: 'Accpeted',
-                isAccepted: true,
-                isDeclined: false,
-                isCanceled: false,
-                isSynced: synced
-            });
+            queryRequest.isSynced = false;
+            queryRequest.hasError = true;
+            queryRequest.externalError = response;
         }
 
-        return res;
+        // search RCG data base by the guid and update to accepted
+        await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
+
+        // update  status of request and TODO: change user createdBY
+        StatusManagerHandler.registerStatus({
+            orderGuid: queryRequest.orderGuid,
+            userGuid: queryRequest.createdByGuid,
+            jobGuid: queryRequest.jobGuid,
+            statusId: 6
+        });
+
+        return response;
     }
 
     // functions trigged by the TMS user
     static async declineRequest(requestGuid, payload)
     {
-        let synced = false;
-        let res;
-
         // find request by guid
-        const queryRequest = LoadboardRequest.query().findById(requestGuid);
+        // const queryRequest = await LoadboardRequest.query().findById(requestGuid);
 
-        // if loadboard is SHIPCARS
-        if (queryRequest.loadboard == 'SUPERDISPATCH')
+        const queryRequest = await LoadboardRequest
+            .query()
+            .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
+            .leftJoinRelated('posting.job')
+            .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
+
+        Object.assign(queryRequest, {
+            status: 'Declined',
+            isAccepted: false,
+            isDeclined: true,
+            isCanceled: false,
+            declineReason: payload?.reason
+        });
+
+        // send API request decline request
+        const response = await lbInstance.post('/incomingLoadboardRequest', queryRequest);
+        if (response.status == 200)
         {
-            // send API request SUPER to decline request
-            const response = await Super.declineLoadRequest(queryRequest.loadboardPostGuid, queryRequest.externalPostGuid, payload?.reason);
-            if (response.status == 'success')
-            {
-                synced = true;
-            }
-
-            // search data base by the guid that super provides and update to canceled
-            res = LoadboardRequest.query().findById(requestGuid).patch({
-                status: 'Declined',
-                isCanceled: false,
-                isAccepted: false,
-                isDeclined: true,
-                isSynced: synced,
-                declineReason: payload?.reason
-            });
+            queryRequest.isSynced = true;
         }
-        else if (queryRequest.loadboard == 'SHIPCARS')
+        else
         {
-            // update SHIPCARS api
-            const response = SHIPCARS.declineLoadRequest(queryRequest.externalPostGuid);
-            if (response.status == 'success')
-            {
-                synced = true;
-            }
-
-            // search data base by the (RCG) guid and update to declined
-            res = LoadboardRequest.query().findById(requestGuid).patch({
-                status: 'Declined',
-                isCanceled: false,
-                isAccepted: false,
-                isDeclined: true,
-                isSynced: synced,
-                extraExternalData: payload?.reason
-            });
+            queryRequest.isSynced = false;
+            queryRequest.hasError = true;
+            queryRequest.externalError = response;
         }
-        return res;
+
+        // search data base by the guid that super provides and update to canceled
+        await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
+
+        StatusManagerHandler.registerStatus({
+            orderGuid: queryRequest.orderGuid,
+            userGuid: queryRequest.createdByGuid,
+            jobGuid: queryRequest.jobGuid,
+            statusId: 7
+        });
+
+        return response;
     }
 }
 
