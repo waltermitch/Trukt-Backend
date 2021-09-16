@@ -28,23 +28,26 @@ post:
             referenceNumber:
               type: string
               maxLength: 64
+              description: The external identification number the client uses for this load tender.
             bol:
               type: string
               maxLength: 64
+              description: The Bill of Lading reference number for this load.
             bolUrl:
               type: string
               maxLength: 1024
+              description: The URL to the Bill of Lading for this load.
             totalCost:
               description: The total cost of the order in USD. This should match the sum of the cost of all of the commodities.
               type: string
               format: currency
             client:
               allOf:
-                - $ref: ..\..\..\components\schemas\Account.yaml
+                - $ref: ..\..\..\components\schemas\Account.yaml#/account
                 - description: The client/customer that is placing the order.
             consignee:
               allOf:
-                - $ref: ..\..\..\components\schemas\Account.yaml
+                - $ref: ..\..\..\components\schemas\Account.yaml#/account
                 - description: The party that is responsible for paying for the order.
             clientContact:
               allOf:
@@ -73,6 +76,7 @@ post:
                         nullable: true
                       cost:
                         description: The price to ship this commodity in USD.
+                        example: '100.00'
                         type: string
                         format: currency
                         minLength: 1
