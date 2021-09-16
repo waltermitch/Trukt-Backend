@@ -11,7 +11,7 @@ class LoadboardPost extends BaseModel
 
     static get idColumn()
     {
-        return 'id';
+        return 'guid';
     }
 
     static get relationMappings()

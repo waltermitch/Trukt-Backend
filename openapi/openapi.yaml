@@ -5,7 +5,6 @@ info:
   description: Transportation management system
   license:
     name: Private
-    url: there is no url
 servers:
   - url: "https://truktbackend-dev.rcgauto.p.azurewebsites.net"
     description: Development server
@@ -37,3 +36,85 @@ paths:
     $ref: paths\edi@990@outbound@accept.yaml
   /edi/990/outbound/reject:
     $ref: paths\edi@990@outbound@reject.yaml
+  /order:
+    post:
+      $ref: paths\order\post.yaml
+  /order/getorders:
+    post:
+      $ref: paths\order\search.yaml
+  /order/{guid}:
+    get:
+      $ref: paths\order\get.yaml
+  /picklist/options:
+    get:
+      $ref:  paths\picklist\get.yaml
+  /statusmanager/{guid}:
+    get:
+      $ref:  paths\statusmanager\get.yaml
+  /statusmanager/{guid}/{jobGuid}:
+    get:
+      $ref:  paths\statusmanager\jobGuid\get.yaml
+  /terminal:
+    get:
+      $ref:  paths\terminal\search.yaml
+  /terminal/{terminalGuid}:
+    get:
+      $ref:  paths\terminal\get.yaml
+  /variables/{name}:
+    get:
+      $ref:  paths\variable\get.yaml
+  /variable:
+    post:
+      $ref:  paths\variable\post.yaml
+  /pubsub/token:
+    get:
+      $ref:  paths\pubsub\get.yaml
+  /loadboard/{jobId}:
+    put:
+      $ref:  paths\loadboard\put.yaml
+    get:
+      $ref:  paths\loadboard\get.yaml
+    delete:
+      $ref:  paths\loadboard\delete.yaml
+    post:
+      $ref:  paths\loadboard\post.yaml
+  /invoice/{invoiceId}:
+    get:
+      $ref:  paths\invoice\get.yaml
+  /invoice:
+    post:
+      $ref:  paths\invoice\post.yaml
+  /index/order/number:
+    get:
+      $ref:  paths\index\order\get.yaml
+  /index/job/number:
+    get:
+      $ref:  paths\index\job\get.yaml
+  /expense/{expenseId}:
+    get:
+      $ref:  paths\expense\expenseId\get.yaml
+    patch:
+      $ref:  paths\expense\expenseId\patch.yaml
+  /expense:
+    post:
+      $ref:  paths\expense\post.yaml
+    patch:
+      $ref:  paths\expense\patch.yaml
+  /bill/{billId}:
+    get:
+      $ref:  paths\bill\get.yaml
+  /bill:
+    post:
+      $ref:  paths\bill\post.yaml
+  /account/{accountType}:
+    get:
+      $ref: paths\account\search.yaml
+  /account/{accountType}/{accountId}:
+    get:
+      $ref: paths\account\get.yaml
+  
+    
+
+
+
+

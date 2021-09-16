@@ -4,11 +4,6 @@ const LoadboardContact = require('../Models/LoadboardContact');
 const Job = require('../Models/OrderJob');
 
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
-
-// this is imported here because the file needs to be imported somewhere
-// in order for it to be able to listen to incoming events from service bus
-const LoadboardHandler = require('../Loadboards/LoadboardHandler');
-
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 
 const { ServiceBusClient } = require('@azure/service-bus');
@@ -93,7 +88,7 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
-        LoadboardService.registerLoadboardStatusManager(posts, job.order.guid, currentUser, 2);
+        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
     }
 
     static async unpostPostings(jobId, posts, currentUser)
@@ -124,7 +119,7 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
-        LoadboardService.registerLoadboardStatusManager(posts, job.order.guid, currentUser, 3);
+        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3, jobId);
     }
 
     static async updatePostings(jobId)
@@ -229,7 +224,7 @@ class LoadboardService
             {
                 if (post.values != null)
                 {
-                    const lbContact = await LoadboardContact.query().findById(post.values.contact).where({ loadboard: post.loadboard });
+                    const lbContact = await LoadboardContact.query().findById(post.values.contactId).where({ loadboard: post.loadboard });
                     post.values.contact = lbContact;
                 }
                 if (!(post.loadboard in job.postObjects))
@@ -245,8 +240,7 @@ class LoadboardService
                 }
                 else
                 {
-                    job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].id, {
-                        id: job.postObjects[`${post.loadboard}`].id,
+                    job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].guid, {
                         jobGuid: job.guid,
                         loadboard: post.loadboard,
                         instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
@@ -273,20 +267,14 @@ class LoadboardService
         const errors = [];
         if (posts.length === 0)
         {
-            const data = {
-                message: `a loadboard is required in order to post, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`
-            };
-            errors.push(data);
+            errors.push(new Error(`a loadboard is required in order to post, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
         }
         for (const post of posts)
         {
             const lbName = post.loadboard;
             if (!(lbName in dbLoadboardNames))
             {
-                const data = {
-                    message: `the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`
-                };
-                throw data;
+                throw new Error(`the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
             }
             if (dbLoadboardNames[lbName].requiresOptions)
             {
@@ -342,14 +330,16 @@ class LoadboardService
      * @param userGuid required
      * @param orderGuid required
      * @param statusId required, 4 => Posted to a loadboard, 5 => Un-posted from loadboard
-     */
-    static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, statusId)
+     * @param jobGuid required
+    */
+    static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, statusId, jobGuid)
     {
         const loadboardNames = LoadboardService.getLoadboardNames(loadboardPosts);
         return StatusManagerHandler.registerStatus({
             orderGuid,
             userGuid,
             statusId,
+            jobGuid,
             extraAnnotations: { 'loadboards': loadboardNames }
         });
     }

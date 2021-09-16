@@ -1,5 +1,4 @@
 type: string
-format: id
 pattern: '^(:?[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$'
 maxLength: 18
 minLength: 15

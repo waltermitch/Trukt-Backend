@@ -1,0 +1,268 @@
+summary: Create order
+operationId: postOrder
+description: Create order
+tags:
+  - Order
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          referenceNumber:
+            type: string
+            maxLength: 64
+          inspectionType:
+            type: string
+          instructions: 
+            type: string
+          estimatedRevenue:
+            type: number
+          estimatedExpense:
+            type: number
+          estimatedDistance:
+            type: number
+          client:
+            $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+          consignee:
+            $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+          clientContact:
+            type: object
+            properties:
+              guid:
+                $ref: '..\..\components\schemas\Common.yaml#/guid'
+              name:
+                type: string
+              firstName:
+                type: string
+              lastName:
+                type: string
+              email:
+                $ref: '..\..\components\schemas\Common.yaml#/email'
+            required:
+              - guid
+              - name
+              - firstName
+              - lastName
+              - email
+          jobs:
+            type: array
+            items:
+              type: object
+              properties:
+                index:
+                  type: string
+                loadType:
+                  type: string
+                inspectionType:
+                  $ref: '..\..\components\schemas\Common.yaml#/Enums/inspectionType'
+                category:
+                  $ref: '..\..\components\schemas\Common.yaml#/Enums/jobCategoryType'
+                type:
+                  $ref: '..\..\components\schemas\Common.yaml#/Enums/jobType'
+                vendor:
+                  $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                vendorContact:
+                  $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                vendorAgent:
+                  $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                dispatcher:
+                  $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                stops: 
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      index:
+                        type: string
+                    required:
+                      - index
+              required:
+              - index
+              - loadType
+              - inspectionType
+              - category
+              - type
+              - stops
+          expenses:
+            type: array
+            items:
+              type: object
+              properties:
+                job:
+                  type: string
+                account:
+                  type: string
+                item:
+                  type: string
+                amount:
+                  type: number
+                commodity:
+                  type: string
+              required:
+                - account
+                - item
+                - amount
+                - commodity
+          stops:
+            type: array
+            items:
+              type: object
+              properties:
+                index:
+                  type: string
+                stopType:
+                  $ref: '..\..\components\schemas\Common.yaml#/Enums/stopType'
+                terminal:
+                  type: string
+                sequence:
+                  type: number
+                dateRequestedStart:
+                  $ref: '..\..\components\schemas\Common.yaml#/dateTime'
+                dateRequestedEnd:
+                  $ref: '..\..\components\schemas\Common.yaml#/dateTime'
+                dateRequestedType:
+                  $ref: '..\..\components\schemas\Common.yaml#/Enums/stopDateType'
+                commodities:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      index:
+                        type: string
+                    required:
+                      - index
+              required:
+                - index
+                - stopType
+                - terminal
+                - sequence
+                - dateRequestedStart
+                - dateRequestedEnd
+                - dateRequestedType
+                - commodities
+          terminals:
+            type: array
+            items:
+              type: object
+              properties:
+                index:
+                  type: string
+                name:
+                  type: string
+                locationType:
+                  oneOf:
+                    - $ref: '..\..\components\schemas\Common.yaml#/stringNullable'
+                    - $ref: '..\..\components\schemas\Common.yaml#/Enums/terminalLocationType'
+                street1:
+                  type: string
+                street2:
+                  $ref: '..\..\components\schemas\Common.yaml#/stringNullable'
+                state:
+                  type: string
+                city:
+                  type: string
+                country:
+                  type: string
+                zipCode:
+                  $ref: '..\..\components\schemas\Common.yaml#/zipCode'
+                latitude:
+                  $ref: '..\..\components\schemas\Common.yaml#/latitude'
+                longitude:
+                  $ref: '..\..\components\schemas\Common.yaml#/longitude'
+              required:
+                - index
+                - name
+                - street1
+                - state
+                - city
+                - country
+                - zipCode
+                - latitude
+                - longitude     
+          commodities:
+            type: array
+            items:
+              type: object
+              properties:
+                index:
+                  type: string
+                capacity:
+                  type: string
+                damaged:
+                  type: string
+                inoperable:
+                  type: string
+                length:
+                  $ref: '..\..\components\schemas\Common.yaml#/numberNullable'
+                weight:
+                  $ref: '..\..\components\schemas\Common.yaml#/numberNullable'
+                quantity:
+                  $ref: '..\..\components\schemas\Common.yaml#/numberNullable'
+                description:
+                  $ref: '..\..\components\schemas\Common.yaml#/stringNullable'
+                identifier:
+                  type: string
+                extraExternalData:
+                  $ref: '..\..\components\schemas\Common.yaml#/stringNullable'
+                year:
+                  type: integer
+                make:
+                  type: string
+                model: 
+                  type: string
+                trim:
+                  $ref: '..\..\components\schemas\Common.yaml#/stringNullable'
+                typeId:
+                  type: integer
+                category:
+                  $ref: '..\..\components\schemas\Common.yaml#/Enums/commodityCategoryType'
+                type:
+                  $ref: '..\..\components\schemas\Common.yaml#/Enums/commodityType'
+              required:
+                - index
+                - capacity
+                - damaged
+                - inoperable
+                - identifier
+                - year
+                - make
+                - model
+                - typeId
+                - category
+                - type
+          distance:
+            type: number
+          isDummy:
+            type: boolean
+          quotedRevenue:
+            type: number
+          dateExpectedCompleteBy:
+            $ref: '..\..\components\schemas\Common.yaml#/dateTime'          
+          isTender:
+            type: boolean
+          bol:
+            type: string
+          dispatcher:
+            $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+          referrer:
+            $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+          salesperson:
+            $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+        required:
+        - referenceNumber
+        - inspectionType
+        - estimatedRevenue
+        - estimatedExpense
+        - estimatedDistance
+        - client
+        - jobs
+        - expenses
+        - stops
+        - terminals
+        - commodities
+responses:
+  200:
+    description: Orders
+    content:
+      application/json: {}

@@ -1,0 +1,16 @@
+summary: Get loadboard by jobId
+operationId: getLoadboard
+description: Get loadboard by jobId
+tags:
+  - Loadboard
+parameters:
+  - in: path
+    name: jobId
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: loadboards
+    content:
+      application/json: {}

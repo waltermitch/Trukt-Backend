@@ -1,0 +1,34 @@
+summary: Un-post loadboard
+operationId: delete Loadboard
+description: Un-post loadboard
+tags:
+  - Loadboard
+parameters:
+  - in: path
+    name: jobId
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          posts: 
+            description: List of loadboards to un-post from
+            type: array
+            items: 
+              type: object
+              properties: 
+                loadboard: 
+                  description: Name of the loadboard
+                  type: string
+                  enum: [SUPERDISPATCH, SHIPCARS, CENTRALDISPATCH, CARDELIVERYNETWORK, TRUCKSTOP, DAT]
+              required:
+                - loadboard
+responses:
+  204:
+    description: loadboards
+    content:
+      application/json: {}

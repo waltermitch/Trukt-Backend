@@ -1,0 +1,39 @@
+summary: Get list of terminals
+operationId: searchTerminals
+description: Get list of terminals
+tags:
+  - Terminals
+parameters:
+  - in: query
+    name: pg
+    schema: 
+      $ref: '..\..\components\schemas\Common.yaml#/page'
+  - in: query
+    name: rc
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/rowCount'
+  - in: query
+    name: name  
+    schema:
+      type: string
+  - in: query
+    name: address
+    schema:
+      type: string
+  - in: query
+    name: city
+    schema:
+      type: string
+  - in: query
+    name: state
+    schema:
+      type: string
+  - in: query
+    name: country
+    schema:
+      type: string
+responses:
+  200:
+    description: terminals
+    content:
+      application/json: {}

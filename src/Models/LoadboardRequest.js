@@ -21,7 +21,7 @@ class LoadboardRequest extends BaseModel
                 modelClass: require('./LoadboardPost'),
                 join: {
                     from: 'rcgTms.loadboardRequests.loadboardPostGuid',
-                    to: 'rcgTms.loadboardPosts.id'
+                    to: 'rcgTms.loadboardPosts.guid'
                 }
             }
         };

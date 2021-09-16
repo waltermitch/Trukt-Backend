@@ -1,0 +1,20 @@
+expense:
+  type: object
+  properties:
+    notes:
+      description: Optional notes
+      type: string
+    amount:
+      description: New expense amount
+      type: number
+    itemId:
+      description: New item id
+      type: number
+    commodityGuid:
+      description: New commodity guid
+      type: string
+      format: uuid
+    guid:
+      $ref: '.\Common.yaml#/guid'
+  required:
+    - guid

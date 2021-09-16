@@ -1,0 +1,21 @@
+summary: Get account by id and type
+operationId: getAccountById
+description: Get account by id and type
+tags:
+  - Account
+parameters:
+  - in: path
+    name: accountType
+    schema:
+      $ref: '..\..\components\schemas\common.yaml#/Enums/accountType'
+    required: true
+  - in: path
+    name: accountId
+    schema:
+      $ref: '..\..\components\schemas\common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: Account
+    content:
+      application/json: {}

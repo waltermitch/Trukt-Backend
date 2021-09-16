@@ -5,7 +5,7 @@ const router = require('express').Router();
 const prefix = '/bill';
 
 router
-    .get(`${prefix}/:billId(${uuidRegexStr})`, controller.constructor.getBill)
-    .post(`${prefix}`, controller.constructor.createBills);
+    .get(`${prefix}/:billId(${uuidRegexStr})`, (req, res) => http(req, res, controller.getBill))
+    .post(`${prefix}`, (req, res) => http(req, res, controller.createBills));
 
 module.exports = router;
