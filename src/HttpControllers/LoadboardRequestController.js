@@ -1,7 +1,5 @@
 const LoadboardRequestService = require('../Services/LoadboardRequestService');
 const HttpRouteController = require('./HttpRouteController');
-const Super = require('../Loadboards/SuperDispatch');
-const ShipCars = require('../Loadboards/ShipCar');
 
 class LoadboardRequestController extends HttpRouteController
 {
@@ -21,66 +19,84 @@ class LoadboardRequestController extends HttpRouteController
 
     static async postcreateRequest(req, res, next)
     {
-        // uuidRegex.test(req?.body)
-        if (req?.body)
+        try
         {
+
             const result = await LoadboardRequestService.createRequest(req?.body);
             res.status(200);
             res.json(result);
         }
-        else
+        catch (err)
         {
-            res.status(400);
-            res.send('Unable to create Request');
+            if (err.message == 'Posting Doesn\'t Exist')
+            {
+                console.log(err.message);
+                res.status(404);
+                res.json(err.message);
+            }
+            else
+            {
+                next(err);
+            }
         }
     }
 
     static async postcancelRequest(req, res, next)
     {
-        // TODO: Move SUPER to this level
-        // uuidRegex.test(req?.body)
-        if (req?.body)
+        try
         {
-            const result = await LoadboardRequestService.cancelRequests(req?.body);
+            await LoadboardRequestService.cancelRequests(req?.body);
             res.status(200);
-            res.json(result);
+            res.json('Payload Canceled');
         }
-        else
+        catch (error)
         {
             res.status(400);
-            res.send('Unable to cancel Request');
-        }
-    }
-
-    // add function to accept and decline request
-    static async declineLoadRequest(req, res, next)
-    {
-        if (req?.body)
-        {
-            const result = await LoadboardRequestService.declineRequest(req?.query?.param, req.body);
-            res.status(200);
-            res.status(result);
-        }
-        else
-        {
-            res.status(400);
-            res.send('Unable to decline Request');
+            res.send(error);
         }
     }
 
     static async acceptLoadRequest(req, res, next)
     {
-        if (req?.query?.param)
+        try
         {
-            // handle HTTP calls
-            const result = await LoadboardRequestService.acceptRequest(req?.query?.param, req.body);
-            res.status(200);
-            res.status(result);
+            if (req?.params?.requestGuid)
+            {
+                const result = await LoadboardRequestService.acceptRequest(req?.params?.requestGuid);
+                res.status(200);
+                res.status(result);
+            }
+            else
+            {
+                res.status(400);
+                res.send('Unable to accept Request or no Guid');
+            }
         }
-        else
+        catch (error)
         {
-            res.status(400);
-            res.send('Unable to accept Request');
+            next(error);
+        }
+    }
+
+    static async declineLoadRequest(req, res, next)
+    {
+        try
+        {
+            if (req?.body)
+            {
+                const result = await LoadboardRequestService.declineRequest(req?.params?.requestGuid, req.body);
+                res.status(200);
+                res.status(result);
+            }
+            else
+            {
+                res.status(400);
+                res.send('Unable to decline Request, missing reason');
+            }
+        }
+        catch (error)
+        {
+            next(error);
         }
     }
 
