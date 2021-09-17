@@ -14,14 +14,12 @@ const lbInstance = axios.create({
 
 class LoadboardRequestService
 {
-
     // query requests by thier guid
     static async getbyJobID(jobGuid)
     {
         // ask job for postings
         const qb = await LoadboardRequest.query().leftJoinRelated('posting').where('posting.jobGuid', jobGuid);
 
-        // filter what I want to display
         return qb;
     }
 
@@ -40,9 +38,6 @@ class LoadboardRequestService
                 .leftJoinRelated('job')
                 .select('rcgTms.loadboardPosts.*', 'job.orderGuid')
         ]);
-
-        console.log('Query Response of Request: ', lbRequest);
-        console.log('LoadBoard Posting: ', lbPosting);
 
         if (lbPosting == undefined)
         {
@@ -73,7 +68,7 @@ class LoadboardRequestService
         const response = await LoadboardRequest.query().insert(payload);
 
         // update activities according to incoming request createBy
-        StatusManagerHandler.registerStatus({
+        await StatusManagerHandler.registerStatus({
             orderGuid: lbPosting.orderGuid,
             userGuid: payload.createdByGuid,
             jobGuid: lbPosting.jobGuid,
@@ -99,8 +94,6 @@ class LoadboardRequestService
                 .select('rcgTms.loadboardPosts.*', 'job.orderGuid')
         ]);
 
-        console.log('Cancel Request Query', lbRequest);
-
         // search data base by the (RCG) guid and update to canceled
         const response = await LoadboardRequest.query().findById(lbRequest.guid).patch({
             status: 'Canceled',
@@ -110,8 +103,8 @@ class LoadboardRequestService
             declineReason: 'Canceled by Carrier'
         });
 
-        // update status of requests
-        StatusManagerHandler.registerStatus({
+        // update status of requests in status manger
+        await StatusManagerHandler.registerStatus({
             orderGuid: lbPosting.orderGuid,
             userGuid: payload.createdByGuid,
             jobGuid: lbPosting.jobGuid,
@@ -124,17 +117,12 @@ class LoadboardRequestService
     // functions trigged by the TMS user
     static async acceptRequest(requestGuid)
     {
-        // finding request to update
-        // const queryRequest = await LoadboardRequest.query().findById(requestGuid);
-        // console.log('Request to Accept', queryRequest);
-
+        // finding request to update and attach orderGUID and jobGUID
         const queryRequest = await LoadboardRequest
             .query()
             .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
             .leftJoinRelated('posting.job')
             .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
-
-        console.log('Request Magic', queryRequest);
 
         // updating object for loadboard logic
         Object.assign(queryRequest, {
@@ -144,9 +132,8 @@ class LoadboardRequestService
             isCanceled: false
         });
 
-        // send API request accept request
+        // send API request accept request and updating payload accordingly
         const response = await lbInstance.post('/incomingLoadboardRequest', queryRequest);
-        console.log('Response from LB', response);
         if (response.status == 200)
         {
             queryRequest.isSynced = true;
@@ -158,32 +145,35 @@ class LoadboardRequestService
             queryRequest.externalError = response;
         }
 
-        // search RCG data base by the guid and update to accepted
-        await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
-
         // update  status of request and TODO: change user createdBY
-        StatusManagerHandler.registerStatus({
+        await StatusManagerHandler.registerStatus({
             orderGuid: queryRequest.orderGuid,
             userGuid: queryRequest.createdByGuid,
             jobGuid: queryRequest.jobGuid,
             statusId: 6
         });
 
-        return response;
+        // remove fields that do not exist to update table correctly
+        delete queryRequest.jobGuid;
+        delete queryRequest.orderGuid;
+
+        // search RCG data base by the guid and update to accepted
+        await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
+
+        return queryRequest;
     }
 
     // functions trigged by the TMS user
     static async declineRequest(requestGuid, payload)
     {
         // find request by guid
-        // const queryRequest = await LoadboardRequest.query().findById(requestGuid);
-
         const queryRequest = await LoadboardRequest
             .query()
             .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
             .leftJoinRelated('posting.job')
             .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
 
+        // updating object with proper statuses
         Object.assign(queryRequest, {
             status: 'Declined',
             isAccepted: false,
@@ -192,7 +182,7 @@ class LoadboardRequestService
             declineReason: payload?.reason
         });
 
-        // send API request decline request
+        // send API request decline request and updating payload accordingly
         const response = await lbInstance.post('/incomingLoadboardRequest', queryRequest);
         if (response.status == 200)
         {
@@ -205,17 +195,22 @@ class LoadboardRequestService
             queryRequest.externalError = response;
         }
 
-        // search data base by the guid that super provides and update to canceled
-        await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
-
-        StatusManagerHandler.registerStatus({
+        // pushing status notifications
+        await StatusManagerHandler.registerStatus({
             orderGuid: queryRequest.orderGuid,
             userGuid: queryRequest.createdByGuid,
             jobGuid: queryRequest.jobGuid,
             statusId: 7
         });
 
-        return response;
+        // remove fields that do not exist to update table correctly
+        delete queryRequest.jobGuid;
+        delete queryRequest.orderGuid;
+
+        // search data base by the guid that super provides and update to canceled
+        await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
+
+        return queryRequest;
     }
 }
 
