@@ -3,7 +3,7 @@ const HttpRouteController = require('./HttpRouteController');
 
 class LoadboardRequestController extends HttpRouteController
 {
-    static async getByJobGuid(req, res, next)
+    static async getByJobGuid(req, res)
     {
         const result = await LoadboardRequestService.getbyJobID(req?.params?.jobGuid);
         if (result)
@@ -49,10 +49,18 @@ class LoadboardRequestController extends HttpRouteController
             res.status(200);
             res.json('Payload Canceled');
         }
-        catch (error)
+        catch (err)
         {
-            res.status(400);
-            res.send(error);
+            if (err.message == 'Posting Doesn\'t Exist')
+            {
+                console.log(err.message);
+                res.status(404);
+                res.json(err.message);
+            }
+            else
+            {
+                next(err);
+            }
         }
     }
 
@@ -64,7 +72,7 @@ class LoadboardRequestController extends HttpRouteController
             {
                 const result = await LoadboardRequestService.acceptRequest(req?.params?.requestGuid);
                 res.status(200);
-                res.status(result);
+                res.json(result);
             }
             else
             {
@@ -85,8 +93,8 @@ class LoadboardRequestController extends HttpRouteController
             if (req?.body)
             {
                 const result = await LoadboardRequestService.declineRequest(req?.params?.requestGuid, req.body);
-                res.status(200);
-                res.status(result);
+                res.status(204);
+                res.json(result);
             }
             else
             {
