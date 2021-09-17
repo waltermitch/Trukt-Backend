@@ -1,0 +1,107 @@
+summary: Get requests by jobGuid
+operationId: getLoadboardRequests
+description: Get loadboard postings request by job GUID
+tags:
+  - Loadboard
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: requests
+    content:
+      application/json: 
+        schema:
+          type: array
+          description: Array of request that exist
+          items: 
+            type: object
+            properties: 
+              guid:
+                $ref: ..\..\..\components\schemas\Common.yaml#/guid
+              price:
+                type: number
+                example: 125.00
+              externalPostGuid: 
+                type: string
+                example: 1dcbfa2d-2ecf-4d86-9373-7a7feb838243
+              dateOfferSent: 
+                type: string
+                format: date-time
+                example: '2021-09-14T18:10:21.866Z'
+              datePickupStart:
+                type: string
+                format: date-time
+                example: '2021-09-14T14:00:00.000Z'
+              datePickupEnd:
+                type: string
+                format: date-time
+                nullable: true
+                example: '2021-09-14T14:00:00.000Z'
+              dateDeliveryStart:
+                type: string
+                format: date-time
+                nullable: true
+                example: '2021-09-14T14:00:00.000Z'
+              dateDeliveryEnd":
+                type: string
+                format: date-time
+                nullable: true
+                example: '2021-09-14T14:00:00.000Z'
+              carrierIdentifier:
+                type: string
+                nullable: true
+                maxLength: 32
+              declineReason:
+                type: string
+                example: 'Becasuse you are cheap.'
+              loadboard: 
+                $ref: '..\..\..\components\schemas\Common.yaml#/Enums/Loadboard Name'
+              createdByGuid: 
+                $ref: ..\..\..\components\schemas\Common.yaml#/createdByGuid
+              extraExternalData:
+                $ref: ..\..\..\components\schemas\LoadboardRequest.yaml#/extraExternalData 
+                type: string
+                example: "/api/offers/m2e4/"
+              isActive: 
+                type: boolean
+                example: false
+              isAccepted: 
+                type: boolean
+                example: false
+              isDeclined: 
+                type: boolean
+                example: false
+              isCanceled: 
+                type: boolean
+                example: true
+              isSynced: 
+                type: boolean
+                example: true
+              hasError: 
+                type: boolean
+                example: false
+              externalError: 
+                type: string
+                example: null
+              dateCreated: 
+                type: string
+                example: "2021-09-14T22:13:48.680Z"
+              dateUpdated: 
+                type: string
+                example: "2021-09-14T22:21:28.704Z"
+              dateDeleted: 
+                type: string
+                example: null
+              isDeleted: 
+                type: boolean
+                example: false
+              updatedByGuid: 
+                $ref: ..\..\..\components\schemas\Common.yaml#/updatedByGuid
+              deletedByGuid: 
+                $ref: ..\..\..\components\schemas\Common.yaml#/deletedByGuid
+  404:
+    description: request do not exist
