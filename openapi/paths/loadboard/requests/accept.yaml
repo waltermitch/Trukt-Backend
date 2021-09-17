@@ -1,0 +1,100 @@
+summary: Accept Loadboard Request
+operationId: acceptLoadboardRequest
+description: Accept loaboard request by requestGuid
+tags:
+  - Loadboard
+parameters:
+  - in: path
+    name: requestGuid
+    schema:
+      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: Request has been accepted
+    content:
+      application/json: 
+        schema:
+          type: object
+          properties:
+            guid:
+              $ref: '..\..\..\components\schemas\Common.yaml#/postingGuid'
+            status:
+              type: string
+              example: "Accepted"
+            price:
+              type: string
+              example: "141.00"
+            externalPostGuid:
+              $ref: ..\..\..\components\schemas\Common.yaml#/postingGuid
+            loadboard:
+              $ref: '..\..\..\components\schemas\Common.yaml#/Enums/Loadboard Name'
+            loadboardPostGuid:
+              $ref: ..\..\..\components\schemas\Common.yaml#/postingGuid
+            dateOfferSent:
+              $ref: ..\..\..\components\schemas\LoadboardRequest.yaml#/shipcarsReponse/dateOfferSent
+            datePickupStart:
+              $ref: ..\..\..\components\schemas\LoadboardRequest.yaml#/shipcarsReponse/datePickupStart
+            datePickupEnd:
+              $ref: ..\..\..\components\schemas\LoadboardRequest.yaml#/shipcarsReponse/datePickupEnd
+            dateDeliveryStart:
+              $ref: ..\..\..\components\schemas\LoadboardRequest.yaml#/shipcarsReponse/dateDeliveryStart
+            dateDeliveryEnd:
+              $ref: ..\..\..\components\schemas\LoadboardRequest.yaml#/shipcarsReponse/dateDeliveryEnd
+            carrierIdentifier:
+              $ref: ..\..\..\components\schemas\LoadboardRequest.yaml#/shipcarsReponse/carrierIdentifier
+            extraExternalData:
+              $ref: ..\..\..\components\schemas\LoadboardRequest.yaml#/shipcarsReponse/extraExternalData
+            isActive:
+              type: boolean
+              example: true
+            isAccepted:
+              type: boolean
+              example: true
+            isDeclined:
+              type: boolean
+              example: false
+            isCanceled:
+              type: boolean
+              example: false
+            isSynced:
+              type: boolean
+              example: true
+            hasError:
+              type: boolean
+              example: false
+            externalError:
+              type: string
+              example: This might be a huge Error
+            dateCreated:
+              $ref: ..\..\..\components\schemas\Common.yaml#/dateCreated
+            dateUpdated:
+              $ref: ..\..\..\components\schemas\Common.yaml#/dateUpdated
+            dateDeleted:
+              $ref: ..\..\..\components\schemas\Common.yaml#/dateDeleted
+            isDeleted:
+              type: boolean
+              example: false
+            createdByGuid:
+              $ref: ..\..\..\components\schemas\Common.yaml#/createdByGuid
+            updatedByGuid:
+              $ref: ..\..\..\components\schemas\Common.yaml#/updatedByGuid
+            deletedByGuid:
+              $ref: ..\..\..\components\schemas\Common.yaml#/deletedByGuid
+
+  404:
+    description: Unable to accept request or missing request GUID
+    content: 
+      application/json: 
+        schema:
+          type: object
+          properties:
+            status: 
+              type: number
+              example: 404
+            data: 
+              type: object
+              properties:
+                detail:
+                  type: string  
+                  example: Not Found  
