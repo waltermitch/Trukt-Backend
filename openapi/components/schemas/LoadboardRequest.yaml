@@ -1,0 +1,122 @@
+extraExternalData:
+   type: object
+   description: extra data that varries depending incoming posting
+   properties:
+     type:
+       type: string 
+       description: simple explantation of what object contains (useless) 
+     guid: 
+       type: string
+       description: ID or GUID of the carrier   
+     name: 
+       type: string
+       description: name of the carrier  
+     externalOrderID:   
+       type: string
+       description: order GUID
+   required:
+     - type
+     - guid
+     - name
+     - externalOrderID
+postRequestPayload:
+  price:
+    type: number
+    description: Price offered by carrier for job.
+  externalPostGuid: 
+    type: string
+    description: Loadboards external GUID for identifying the request.
+  dateOfferSent: 
+    type: string
+    format: date-time
+    description: When the request was created by the carrier.
+  datePickupStart:
+    type: string
+    format: date-time
+    description: Earliest date carrier can pick up load.
+  datePickupEnd:
+    type: string
+    format: date-time
+    nullable: true
+    description: Latest date the carrier can pick up load.
+  dateDeliveryStart:
+    type: string
+    format: date-time
+    nullable: true
+    description: Earliest date the carrier can deliver load.
+  dateDeliveryEnd":
+    type: string
+    format: date-time
+    nullable: true
+    description: Latest date the carrier can deliver load.
+  carrierIdentifier:
+    type: string
+    nullable: true
+    maxLength: 32
+    description: Number identifying the carrier ie. MC, DOT.
+  loadboard:
+    $ref: '.\Common.yaml#/Enums/Loadboard Name'
+  createdByGuid: 
+    $ref: Common.yaml#/createdByGuid
+  extraExternalData:
+    $ref: '#/extraExternalData'
+shipcarsReponse:
+  price: 
+    type: string
+    example: '141.01'
+  externalPostGuid: 
+    type: string
+    example: 'zvw9'
+  dateOfferSent: 
+    type: string
+    example: '2021-09-17T22:19:22.865700+00:00'
+  datePickupStart: 
+    type: string
+    example: '2021-09-15T19:17:10.778Z'
+  datePickupEnd: 
+    type: string
+    example: '2021-09-15T19:17:10.778Z'
+  dateDeliveryStart:
+    type: string
+    example: '2021-09-15T19:17:10.778Z'
+  dateDeliveryEnd:
+    type: string
+    example: '2021-09-15T19:17:10.778Z'
+  carrierIdentifier: 
+    type: string
+    example: '373722'
+  loadboard: 
+    $ref: 'Common.yaml#/Enums/Loadboard Name'
+  createdByGuid: 
+     $ref: Common.yaml#/createdByGuid
+  extraExternalData:
+    type: object
+    properties: 
+      type:
+        type: string
+        example: "carrierMisc"
+      guid:
+        type: string
+        example: "oqg3"
+      name:
+        type: string
+        example: "RCG Logistics Carrier"
+      offerUrl:
+        type: string
+        example: "/api/offers/yyqd/"
+      carrierUrl:
+        type: string
+        example: "/api/companies/oqg3/"
+      externalOrderID:
+        type: string
+        example: "3xkq4"
+  loadboardPostGuid: 
+    $ref: Common.yaml#/postingGuid
+  status:
+    type: string
+    example: "New"
+  isSynced:
+    type: boolean
+    example: true
+  guid:
+    $ref: Common.yaml#/internalGuid 
