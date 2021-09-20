@@ -60,18 +60,11 @@ paths:
           allowEmptyValue: true
           description: 'The visibility of the attachment (i.e. carrier, internal)'
       requestBody:
-        required: true
         content:
-          multipart/form-data:
+          multipart/*:
             schema:
-              type: object
-              properties:
-                filename:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/File'
-              required:
-                - filename
+              type: string
+              format: binary
       responses:
         '201':
           description: Created Attachment
@@ -1719,9 +1712,6 @@ components:
       format: uuid
       pattern: '^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$'
       example: 00000000-0000-0000-0000-000000000000
-    File:
-      type: string
-      format: binary
     Attachment:
       type: object
       properties:

@@ -7,21 +7,14 @@ parameters:
   $ref: '..\..\components\schemas\AttachmentParams.yaml#/properties'
 
 requestBody:
-  required: true
   content:
-    multipart/form-data:
+    multipart/*:
       schema:
-        type: object
-        properties:
-          filename:
-            type: array
-            items:
-              $ref: ..\..\components\schemas\File.yaml
-        required: 
-          - filename
+        type: string
+        format: binary
 
 responses:
-  '201':
+  "201":
     description: Created Attachment
     content:
       application/json: {}
