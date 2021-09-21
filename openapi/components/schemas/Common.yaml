@@ -19,7 +19,7 @@ dateDeleted:
     - $ref: '#/dateTime'
     - type: string
       format: date-time
-      description: The date this record was last updated.
+      description: The date this record was deleted.
       readOnly: true
       nullable: false
 createdByGuid:
@@ -40,7 +40,7 @@ deletedByGuid:
   allOf:
     - $ref: '#/guid'
     - type: string
-      description: The TMS User account that last updated this record.
+      description: The TMS User account that last deleted this record.
       readOnly: true
       nullable: false
 currency:
@@ -96,16 +96,6 @@ guid:
   format: uuid
   pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
   example: '00000000-0000-0000-0000-000000000000'
-postingGuid:
-  type: string
-  format: uuid
-  pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
-  example: '86363b7d-a970-4237-919d-bcfe89325818'
-internalGuid:
-  type: string
-  format: uuid
-  pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
-  example: 'a8b8672a-c2c4-481f-821d-2f329b53f748'
 zipCode:
   type: string
   example: '98765'
@@ -381,3 +371,10 @@ Enums:
       - CENTRALDISPATCH
       - SHIPCARS
       - CARDELIVERYNETWORK
+  LoadBoard Request Status:
+    type: string
+    enum: 
+      - Accepted
+      - Canceled
+      - New
+      - Declined

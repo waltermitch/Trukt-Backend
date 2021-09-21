@@ -4,16 +4,16 @@ extraExternalData:
    properties:
      type:
        type: string 
-       description: simple explantation of what object contains (useless) 
+       description: Simple explantation of what object contains (useless) 
      guid: 
        type: string
        description: ID or GUID of the carrier   
      name: 
        type: string
-       description: name of the carrier  
+       description: Name of the carrier  
      externalOrderID:   
        type: string
-       description: order GUID
+       description: order GUID of external post
    required:
      - type
      - guid
@@ -21,7 +21,8 @@ extraExternalData:
      - externalOrderID
 postRequestPayload:
   price:
-    type: number
+    type: string
+    format: currency
     description: Price offered by carrier for job.
   externalPostGuid: 
     type: string
@@ -60,35 +61,50 @@ postRequestPayload:
     $ref: Common.yaml#/createdByGuid
   extraExternalData:
     $ref: '#/extraExternalData'
-shipcarsReponse:
-  price: 
+mainResponsePayload:
+  guid:
+    $ref: Common.yaml#/guid
+  status: 
+    $ref: 'Common.yaml#/Enums/LoadBoard Request Status'
+    example: Accepted
+  price:
     type: string
-    example: '141.01'
+    format: currency
+    example: 125.00
   externalPostGuid: 
-    type: string
-    example: 'zvw9'
-  dateOfferSent: 
-    type: string
-    example: '2021-09-17T22:19:22.865700+00:00'
-  datePickupStart: 
-    type: string
-    example: '2021-09-15T19:17:10.778Z'
-  datePickupEnd: 
-    type: string
-    example: '2021-09-15T19:17:10.778Z'
-  dateDeliveryStart:
-    type: string
-    example: '2021-09-15T19:17:10.778Z'
-  dateDeliveryEnd:
-    type: string
-    example: '2021-09-15T19:17:10.778Z'
-  carrierIdentifier: 
-    type: string
-    example: '373722'
+    $ref: Common.yaml#/guid
   loadboard: 
     $ref: 'Common.yaml#/Enums/Loadboard Name'
-  createdByGuid: 
-     $ref: Common.yaml#/createdByGuid
+  dateOfferSent: 
+    type: string
+    format: date-time
+    example: '2021-09-14T18:10:21.866Z'
+  datePickupStart:
+    type: string
+    format: date-time
+    example: '2021-09-14T14:00:00.000Z'
+  datePickupEnd:
+    type: string
+    format: date-time
+    nullable: true
+    example: '2021-09-14T14:00:00.000Z'
+  dateDeliveryStart:
+    type: string
+    format: date-time
+    example: '2021-09-14T14:00:00.000Z'
+  dateDeliveryEnd":
+    type: string
+    format: date-time
+    nullable: true
+    example: '2021-09-14T14:00:00.000Z'
+  carrierIdentifier:
+    type: string
+    nullable: true
+    maxLength: 32
+    example: 373722
+  declineReason:
+    type: string
+    example: 'Becasuse you are cheap.'
   extraExternalData:
     type: object
     properties: 
@@ -110,13 +126,48 @@ shipcarsReponse:
       externalOrderID:
         type: string
         example: "3xkq4"
-  loadboardPostGuid: 
-    $ref: Common.yaml#/postingGuid
-  status:
-    type: string
-    example: "New"
-  isSynced:
+  isActive: 
     type: boolean
     example: true
-  guid:
-    $ref: Common.yaml#/internalGuid 
+  isAccepted: 
+    type: boolean
+    example: false
+  isDeclined: 
+    type: boolean
+    example: false
+  isCanceled: 
+    type: boolean
+    example: true
+  isSynced: 
+    type: boolean
+    example: true
+  isDeleted: 
+    type: boolean
+    example: false
+  hasError: 
+    type: boolean
+    example: false
+  externalError: 
+    type: string
+    example: null
+  dateCreated: 
+    type: string
+    format: date-time
+    nullable: true
+    example: '2021-09-14T14:00:00.000Z'
+  dateUpdated: 
+    type: string
+    format: date-time
+    nullable: true
+    example: '2021-09-14T14:00:00.000Z'
+  dateDeleted: 
+    type: string
+    format: date-time
+    nullable: true
+    example: '2021-09-14T14:00:00.000Z'
+  createdByGuid: 
+    $ref: Common.yaml#/createdByGuid
+  updatedByGuid: 
+    $ref: Common.yaml#/updatedByGuid
+  deletedByGuid: 
+    $ref: Common.yaml#/deletedByGuid
