@@ -56,6 +56,22 @@ class OrderJobDispatch extends BaseModel
                     from: 'rcgTms.orderJobDispatches.loadboardPostGuid',
                     to: 'rcgTms.loadboardPosts.guid'
                 }
+            },
+            paymentMethod: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./InvoicePaymentMethod'),
+                join: {
+                    from: 'rcgTms.orderJobDispatches.paymentMethodId',
+                    to: 'rcgTms.invoiceBillPaymentMethods.id'
+                }
+            },
+            paymentTerm: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./InvoicePaymentTerm'),
+                join: {
+                    from: 'rcgTms.orderJobDispatches.paymentTermId',
+                    to: 'rcgTms.invoiceBillPaymentTerms.id'
+                }
             }
         };
     }
@@ -66,7 +82,7 @@ class OrderJobDispatch extends BaseModel
             // returns a single active dispatch record
             activeDispatch(builder)
             {
-                builder.where({ isActive: true, isCanceled: false }).limit(1);
+                builder.where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
             }
         };
     }
