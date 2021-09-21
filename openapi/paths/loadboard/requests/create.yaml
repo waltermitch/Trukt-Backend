@@ -28,7 +28,7 @@ responses:
         schema:
           type: object
           properties:
-            $ref: ../../../components/schemas/LoadboardRequest.yaml#/shipcarsReponse
+            $ref: ../../../components/schemas/LoadboardRequest.yaml#/mainResponsePayload
   404:
     description: Posting doesn't exist
     content:
