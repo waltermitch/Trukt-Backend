@@ -75,9 +75,13 @@ class LoadboardService
         const job = await LoadboardService.getAllPostingData(jobId, posts);
         const payloads = [];
         let lbPayload;
-
+        const dispatches = await OrderJobDispatch.query().where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
         try
         {
+            if (dispatches != 0)
+            {
+                throw 'Cannot post load with active dispatch offers';
+            }
             for (const post of posts)
             {
                 lbPayload = new loadboardClasses[`${post.loadboard}`](job);
@@ -152,6 +156,36 @@ class LoadboardService
         const trx = await OrderJobDispatch.startTransaction();
         try
         {
+            if (body.loadboard != null && !dispatchableLoadboards.includes(body.loadboard))
+            {
+                throw new Error(`${body.loadboard} cannot be dispatched to, you can only dispatch to ${dispatchableLoadboards}`);
+            }
+            let job = {};
+
+            // if dispatching internally, no need to worry about making sure the load is in
+            // another loadboard, otherwise first create a posting record and dispatch
+            if (!body.loadboard)
+            {
+                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills.lines(isNotDeleted, transportOnly).item, dispatches(activeDispatch)]');
+                const stops = await this.getFirstAndLastStops(job.stops);
+                Object.assign(job, stops);
+            }
+            else
+            {
+                job = await this.getAllPostingData(jobId, [{ loadboard: body.loadboard }]);
+                job.dispatches = await OrderJobDispatch.query(trx).where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
+            }
+
+            if (job.isDummy)
+            {
+                throw new Error('Cannot dispatch dummy job');
+            }
+
+            if (job.dispatches.length != 0)
+            {
+                throw new Error('Cannot dispatch with already active load offer');
+            }
+
             const carrier = await SFAccount.query(trx).modify('byId', body.carrier.guid).modify('carrier').first();
             const driver = body.driver;
             if (!carrier)
@@ -183,36 +217,6 @@ class LoadboardService
                 {
                     throw new Error('Please pass in valid driver for carrier');
                 }
-            }
-
-            if (body.loadboard != null && !dispatchableLoadboards.includes(body.loadboard))
-            {
-                throw new Error(`${body.loadboard} cannot be dispatched to, you can only dispatch to ${dispatchableLoadboards}`);
-            }
-            let job = {};
-
-            // if dispatching internally, no need to worry about making sure the load is in
-            // another loadboard, otherwise first create a posting record and dispatch
-            if (!body.loadboard)
-            {
-                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills.lines(isNotDeleted, transportOnly).item, dispatches(activeDispatch)]');
-                const stops = await this.getFirstAndLastStops(job.stops);
-                Object.assign(job, stops);
-            }
-            else
-            {
-                job = await this.getAllPostingData(jobId, [{ loadboard: body.loadboard }]);
-                job.dispatches = await OrderJobDispatch.query(trx).where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
-            }
-
-            if (job.isDummy)
-            {
-                throw new Error('Cannot dispatch dummy job');
-            }
-
-            if (job.dispatches.length != 0)
-            {
-                throw new Error('Cannot dispatch with already active load offer');
             }
 
             job.vendorGuid = carrier.guid;
