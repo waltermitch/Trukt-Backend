@@ -30,10 +30,10 @@ class AttachmentController
 
     static async store(req, res)
     {
-        if (!req.query?.parent || !req.query?.parentType || !req?.query?.attachmentType)
+        if (!req.query?.parent || !req.query?.parentType)
         {
             res.status(400);
-            res.json({ 'error': 'Missing parent and/or parentType and/or attachmentType' });
+            res.json({ 'error': 'Missing parent and/or parentType' });
             return;
         }
         else if (!req.files)
