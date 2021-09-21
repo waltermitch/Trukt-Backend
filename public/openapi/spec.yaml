@@ -60,18 +60,11 @@ paths:
           allowEmptyValue: true
           description: 'The visibility of the attachment (i.e. carrier, internal)'
       requestBody:
-        required: true
         content:
-          multipart/form-data:
+          multipart/*:
             schema:
-              type: object
-              properties:
-                filename:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/File'
-              required:
-                - filename
+              type: string
+              format: binary
       responses:
         '201':
           description: Created Attachment
@@ -745,7 +738,6 @@ paths:
                                 - $ref: '#/components/schemas/Stop'
                         required:
                           - index
-                          - loadType
                           - stops
                 expenses:
                   type: array
@@ -1104,45 +1096,133 @@ paths:
             application/json: {}
   /terminal:
     get:
-      summary: Get list of terminals
+      summary: Get list of Terminals
       operationId: searchTerminals
-      description: Get list of terminals
+      description: Searches for Terminals given the specified query parameters.
       tags:
         - Terminals
       parameters:
         - in: query
           name: pg
           schema:
-            $ref: '#/components/schemas/page'
+            description: |
+              For pagination purposes, page number to return, zero indexed.
+            type: integer
+            minimum: 0
+            default: 0
+            example: 123
         - in: query
           name: rc
           schema:
-            $ref: '#/components/schemas/rowCount'
+            description: |
+              For pagination purposes, number of entries to include per page.
+            type: integer
+            minimum: 1
+            default: 10
+            example: 100
         - in: query
           name: name
           schema:
+            description: >
+              Search by the name of the Terminal.  The value will be searched in
+              the entire name string of the Terminal.
             type: string
         - in: query
           name: address
           schema:
+            description: >
+              Search by the street address of the Terminal. The value will be
+              searched in the entire street address string of the Terminal.
             type: string
         - in: query
           name: city
           schema:
+            description: >
+              Search by the city name of the Terminal. The value will be
+              searched in the entire city name string of the Terminal.
+            type: string
+        - in: query
+          name: zip
+          schema:
+            description: >
+              Search by the zip code of the Terminal. The value will be searched
+              in the entire zip code string of the Terminal.
             type: string
         - in: query
           name: state
           schema:
+            description: >
+              Search by the state name of the Terminal. The value will be
+              searched in the entire state name string of the Terminal.
             type: string
         - in: query
           name: country
           schema:
+            description: >
+              Search by the country name of the Terminal. The value will be
+              searched in the entire country name string of the Terminal.
             type: string
+        - in: query
+          name: lat
+          schema:
+            type: number
+            format: float
+            minimum: -90
+            maximum: 90
+            example: 34.324135
+            description: >
+              Search by the latitude of the Terminal. Results will only include
+              Terminals with an exact match of the latitude value.
+        - in: query
+          name: long
+          schema:
+            type: number
+            format: float
+            minimum: -180
+            maximum: 180
+            example: 134.324135
+            description: >
+              Search by the longitude of the Terminal. Results will only include
+              Terminals with an exact match of the longitude value.
+        - in: query
+          name: search
+          schema:
+            type: string
+            description: >
+              Searches the name, street address, city name, state name, country
+              name, and zip code of the Terminal. The value will search in the
+              entire keyword string value of the Terminal. Results will be more
+              constrained when paired with other search keywords.
       responses:
         '200':
           description: terminals
           content:
-            application/json: {}
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/guidObject'
+                    - $ref: '#/components/schemas/Terminal'
+                    - type: object
+                      properties:
+                        locationType:
+                          type: string
+                          enum:
+                            - dealer
+                            - private
+                            - auction
+                            - repo yard
+                            - port
+                            - business
+                        primaryContact:
+                          $ref: '#/components/schemas/Contact'
+                        alternativeContact:
+                          $ref: '#/components/schemas/Contact'
+                        contacts:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/Contact'
   '/terminal/{terminalGuid}':
     get:
       summary: Get terminal by guid
@@ -1158,9 +1238,32 @@ paths:
           required: true
       responses:
         '200':
-          description: terminal
+          description: terminals
           content:
-            application/json: {}
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/guidObject'
+                  - $ref: '#/components/schemas/Terminal'
+                  - type: object
+                    properties:
+                      locationType:
+                        type: string
+                        enum:
+                          - dealer
+                          - private
+                          - auction
+                          - repo yard
+                          - port
+                          - business
+                      primaryContact:
+                        $ref: '#/components/schemas/Contact'
+                      alternativeContact:
+                        $ref: '#/components/schemas/Contact'
+                      contacts:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Contact'
   '/variables/{name}':
     get:
       summary: Get variable by name
@@ -2301,15 +2404,35 @@ components:
       format: uuid
       pattern: '^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$'
       example: 00000000-0000-0000-0000-000000000000
-    File:
-      type: string
-      format: binary
     Attachment:
       type: object
       properties:
         type:
           description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           enum:
+            - undefined
+            - vendorInvoice
+            - billOfLading
+            - proofOfDelivery
+            - lumperTicket
+            - scaleTicket
+            - inGateTicket
+            - outGateTicket
+            - miscellaneous
+            - accessorialAgreement
+            - rateConfirmation
+            - loadTender
+            - invoice
+            - customsDocuments
+            - invoiceWithPaperwork
+            - detentionLoading
+            - detentionUnloading
+            - palletReceipt
+            - spotApproval
+            - truckNotUsed
+            - exitPass
+            - balanceDue
+            - packingList
             - photo
           default: undefined
         visibility:
