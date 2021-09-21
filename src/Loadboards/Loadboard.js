@@ -62,13 +62,9 @@ class Loadboard
         const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
         const payload = {};
 
-        // if the posting already exists, then just send the dispatch payload
-        // otherwise send in the order payload and the dispatch payload
-        if (this.postObject.externalGuid == null)
-        {
-            console.log('creating new order because no guid');
-            payload.order = this.toJSON();
-        }
+        // send the order payload because the load may not exist in the loadboard
+        // or it needs to be updated after dispatching
+        payload.order = this.toJSON();
         payload.dispatch = this.dispatchJSON();
         payloadMetadata.action = 'dispatch';
         payloadMetadata.user = returnTo;
@@ -77,7 +73,7 @@ class Loadboard
 
     undispatch()
     {
-        const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
+        const payloadMetadata = { dispatch: this.data.dispatch, loadboard: this.loadboardName };
         const payload = {};
 
         // sending the order because ship cars archives orders that are canceled
