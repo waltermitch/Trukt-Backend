@@ -28,7 +28,6 @@ properties:
     schema:
       enum:
         [
-          undefined,
           vendorInvoice,
           billOfLading,
           proofOfDelivery,
@@ -51,9 +50,8 @@ properties:
           exitPass,
           balanceDue,
           packingList,
-          photo
+          photo,
         ]
-      default: undefined
   - in: query
     name: visibility
     schema:

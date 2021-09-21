@@ -4,7 +4,6 @@ properties:
     description: The type of attachment (i.e. photo, billOfLading, etc)
     enum:
       [
-        undefined,
         vendorInvoice,
         billOfLading,
         proofOfDelivery,
@@ -27,9 +26,8 @@ properties:
         exitPass,
         balanceDue,
         packingList,
-        photo
+        photo,
       ]
-    default: undefined
   visibility:
     type: array
     items:

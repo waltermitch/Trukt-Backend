@@ -25,14 +25,15 @@ class AttachmentService
 
     static async searchByParent({ parent, parentType, attachmentType, visibility })
     {
-        const attachments = await Attachment.query().where('parent', '=', `${parent}`).where('parent_table', '=', `${parentType}`).where(builder =>
-        {
-            if (attachmentType)
-                builder.where('type', '=', `${attachmentType}`);
+        const builder = Attachment.query().where('parent', '=', `${parent}`).where('parent_table', '=', `${parentType}`);
 
-            if (visibility)
-                builder.where('visibility', '=', `${visibility.split(',')}`);
-        });
+        if (attachmentType)
+            builder.where('type', '=', attachmentType);
+
+        if (visibility)
+            builder.where('visibility', '@>', visibility);
+
+        const attachments = await builder;
 
         // get sas
         const sas = AzureStorage.getSAS();
@@ -43,8 +44,6 @@ class AttachmentService
             atch.visibility = AttachmentService.convertArray(atch.visibility);
             atch.url += sas;
         }
-
-        console.log(attachments);
 
         return attachments;
     }
