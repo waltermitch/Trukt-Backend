@@ -60,7 +60,7 @@ app.use(express.json());
 app.use(
     openApiValidator.middleware({
         apiSpec: './openApi/openapi.yaml',
-        ignorePaths: path => { return path.startsWith('/api/docs') || path.startsWith('/loadboard'); },
+        ignorePaths: path => path.startsWith('/api/docs'),
         $refParser: {
             mode: 'dereference'
         },
