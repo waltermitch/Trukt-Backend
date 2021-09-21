@@ -147,12 +147,7 @@ class LoadboardService
         return payloads;
     }
 
-    static async dispatchToLoadboard(jobId, body)
-    {
-
-    }
-
-    static async dispatchInternally(jobId, body, currentUser)
+    static async dispatchJob(jobId, body, currentUser)
     {
         const trx = await OrderJobDispatch.startTransaction();
         try
