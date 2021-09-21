@@ -49,7 +49,7 @@ class AttachmentService
         return attachments;
     }
 
-    static async insert(files, headers, opts)
+    static async insert(files, opts)
     {
         if (['job'].includes(opts.parentType))
             return { 'status': 400, 'data': 'Not An Allowed parentType' };
@@ -76,7 +76,7 @@ class AttachmentService
                 'name': files[i].originalname,
                 'parent': opts.parent,
                 'parent_table': opts.parentType,
-                'visibility': opts.visibility?.split(',')
+                'visibility': opts.visibility
             };
 
             // compose full path of file

@@ -44,7 +44,7 @@ class AttachmentController
         }
         else
         {
-            const result = await AttachmentService.insert(req.files, req.headers, req.query);
+            const result = await AttachmentService.insert(req.files, req.query);
             res.status(201);
             res.json(result);
         }
