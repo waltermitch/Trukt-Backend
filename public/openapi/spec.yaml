@@ -1718,6 +1718,29 @@ components:
         type:
           description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           enum:
+            - undefined
+            - vendorInvoice
+            - billOfLading
+            - proofOfDelivery
+            - lumperTicket
+            - scaleTicket
+            - inGateTicket
+            - outGateTicket
+            - miscellaneous
+            - accessorialAgreement
+            - rateConfirmation
+            - loadTender
+            - invoice
+            - customsDocuments
+            - invoiceWithPaperwork
+            - detentionLoading
+            - detentionUnloading
+            - palletReceipt
+            - spotApproval
+            - truckNotUsed
+            - exitPass
+            - balanceDue
+            - packingList
             - photo
           default: undefined
         visibility:
