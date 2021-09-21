@@ -90,13 +90,12 @@ class LoadboardController extends HttpRouteController
     {
         try
         {
-            const dispatch = await LoadboardService.dispatchInternally(req.params.jobId, req.body);
+            const dispatch = await LoadboardService.dispatchJob(req.params.jobId, req.body, req.session.userGuid);
             res.json(dispatch);
             res.status(200);
         }
         catch (err)
         {
-            console.log('this is error ', err);
             next({
                 status: 400,
                 data: { message: err.toString() }
@@ -108,13 +107,12 @@ class LoadboardController extends HttpRouteController
     {
         try
         {
-            const dispatch = await LoadboardService.cancelDispatch(req.params.jobId);
+            const dispatch = await LoadboardService.cancelDispatch(req.params.jobId, req.session.userGuid);
             res.json(dispatch);
             res.status(200);
         }
         catch (err)
         {
-            console.log('this is error ', err);
             next({
                 status: 400,
                 data: { message: err.toString() }
