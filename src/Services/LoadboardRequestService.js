@@ -24,7 +24,7 @@ class LoadboardRequestService
     }
 
     // webhook triggers this function
-    static async createRequest(payload)
+    static async createRequest(payload, currentUser)
     {
         // query our database for requests from incoming payload
         const [lbRequest, lbPosting] = await Promise.all([
@@ -49,17 +49,25 @@ class LoadboardRequestService
         {
             await LoadboardRequest.query().findById(lbRequest.guid).patch({ isActive: false, isCanceled: true, status: 'Canceled' });
 
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid: lbPosting.orderGuid,
-            //     userGuid: payload.createdByGuid,
-            //     jobGuid: lbPosting.jobGuid,
-            //     statusId: 5
-            // });
+            await StatusManagerHandler.registerStatus({
+                orderGuid: lbPosting.orderGuid,
+                userGuid: payload.createdByGuid,
+                jobGuid: lbPosting.jobGuid,
+                statusId: 5,
+                extraAnnotations: {
+                    loadboard: payload.loadboard,
+                    carrier: {
+                        guid: payload.extraExternalData.guid,
+                        name: payload.extraExternalData.name
+                    }
+                }
+            });
         }
 
         // updating payload for database
         Object.assign(payload, {
             loadboardPostGuid: lbPosting.guid,
+            createdByGuid: currentUser,
             status: 'New',
             isSynced: true
         });
@@ -70,16 +78,23 @@ class LoadboardRequestService
         // update activities according to incoming request createBy
         await StatusManagerHandler.registerStatus({
             orderGuid: lbPosting.orderGuid,
-            userGuid: payload.createdByGuid,
+            userGuid: currentUser,
             jobGuid: lbPosting.jobGuid,
-            statusId: 4
+            statusId: 4,
+            extraAnnotations: {
+                loadboard: payload.loadboard,
+                carrier: {
+                    guid: payload.extraExternalData.guid,
+                    name: payload.extraExternalData.name
+                }
+            }
         });
 
         return response;
     }
 
     // webhook triggers this function
-    static async cancelRequests(payload)
+    static async cancelRequests(payload, currentUser)
     {
         // check to see if requests exists in table
         const [lbRequest, lbPosting] = await Promise.all([
@@ -100,22 +115,30 @@ class LoadboardRequestService
             isActive: false,
             isCanceled: true,
             isSynced: true,
+            updatedByGuid: currentUser,
             declineReason: 'Canceled by Carrier'
         });
 
         // update status of requests in status manger
         await StatusManagerHandler.registerStatus({
             orderGuid: lbPosting.orderGuid,
-            userGuid: payload.createdByGuid,
+            userGuid: currentUser,
             jobGuid: lbPosting.jobGuid,
-            statusId: 5
+            statusId: 5,
+            extraAnnotations: {
+                loadboard: payload.loadboard,
+                carrier: {
+                    guid: payload.extraExternalData.guid,
+                    name: payload.extraExternalData.name
+                }
+            }
         });
 
         return response;
     }
 
     // functions trigged by the TMS user
-    static async acceptRequest(requestGuid)
+    static async acceptRequest(requestGuid, currentUser)
     {
         // finding request to update and attach orderGUID and jobGUID
         const queryRequest = await LoadboardRequest
@@ -129,7 +152,8 @@ class LoadboardRequestService
             status: 'Accepted',
             isAccepted: true,
             isDeclined: false,
-            isCanceled: false
+            isCanceled: false,
+            updatedByGuid: currentUser
         });
 
         // send API request accept request and updating payload accordingly
@@ -148,9 +172,16 @@ class LoadboardRequestService
         // update  status of request and TODO: change user createdBY
         await StatusManagerHandler.registerStatus({
             orderGuid: queryRequest.orderGuid,
-            userGuid: queryRequest.createdByGuid,
+            userGuid: currentUser,
             jobGuid: queryRequest.jobGuid,
-            statusId: 6
+            statusId: 6,
+            extraAnnotations: {
+                loadboard: queryRequest.loadboard,
+                carrier: {
+                    guid: queryRequest.extraExternalData.guid,
+                    name: queryRequest.extraExternalData.name
+                }
+            }
         });
 
         // remove fields that do not exist to update table correctly
@@ -164,7 +195,7 @@ class LoadboardRequestService
     }
 
     // functions trigged by the TMS user
-    static async declineRequest(requestGuid, payload)
+    static async declineRequest(requestGuid, payload, currentUser)
     {
         // find request by guid
         const queryRequest = await LoadboardRequest
@@ -179,7 +210,8 @@ class LoadboardRequestService
             isAccepted: false,
             isDeclined: true,
             isCanceled: false,
-            declineReason: payload?.reason
+            declineReason: payload?.reason,
+            updatedByGuid: currentUser
         });
 
         // send API request decline request and updating payload accordingly
@@ -198,9 +230,16 @@ class LoadboardRequestService
         // pushing status notifications
         await StatusManagerHandler.registerStatus({
             orderGuid: queryRequest.orderGuid,
-            userGuid: queryRequest.createdByGuid,
+            userGuid: currentUser,
             jobGuid: queryRequest.jobGuid,
-            statusId: 7
+            statusId: 7,
+            extraAnnotations: {
+                loadboard: queryRequest.loadboard,
+                carrier: {
+                    guid: queryRequest.extraExternalData.guid,
+                    name: queryRequest.extraExternalData.name
+                }
+            }
         });
 
         // remove fields that do not exist to update table correctly
