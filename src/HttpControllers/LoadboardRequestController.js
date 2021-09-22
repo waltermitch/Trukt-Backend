@@ -21,8 +21,7 @@ class LoadboardRequestController extends HttpRouteController
     {
         try
         {
-
-            const result = await LoadboardRequestService.createRequest(req?.body);
+            const result = await LoadboardRequestService.createRequest(req?.body, req.session.userGuid);
             res.status(200);
             res.json(result);
         }
@@ -45,7 +44,7 @@ class LoadboardRequestController extends HttpRouteController
     {
         try
         {
-            await LoadboardRequestService.cancelRequests(req?.body);
+            await LoadboardRequestService.cancelRequests(req?.body, req.session.userGuid);
             res.status(200);
             res.json('Payload Canceled');
         }
@@ -70,7 +69,7 @@ class LoadboardRequestController extends HttpRouteController
         {
             if (req?.params?.requestGuid)
             {
-                const result = await LoadboardRequestService.acceptRequest(req?.params?.requestGuid);
+                const result = await LoadboardRequestService.acceptRequest(req?.params?.requestGuid, req.session.userGuid);
                 res.status(200);
                 res.json(result);
             }
@@ -92,7 +91,7 @@ class LoadboardRequestController extends HttpRouteController
         {
             if (req?.body)
             {
-                const result = await LoadboardRequestService.declineRequest(req?.params?.requestGuid, req.body);
+                const result = await LoadboardRequestService.declineRequest(req?.params?.requestGuid, req.body, req.session.userGuid);
                 res.status(204);
                 res.json(result);
             }
@@ -107,7 +106,6 @@ class LoadboardRequestController extends HttpRouteController
             next(error);
         }
     }
-
 }
 
 const controller = new LoadboardRequestController();
