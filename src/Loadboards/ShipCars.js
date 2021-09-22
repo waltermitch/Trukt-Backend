@@ -64,8 +64,8 @@ class ShipCars extends Loadboard
             id: this.postObject.externalGuid,
 
             payment_method: 'ach',
-            total_payment_to_carrier: this.data.estimatedExpense,
-            payment_to_carrier: this.data.estimatedExpense,
+            total_payment_to_carrier: this.data.actualExpense || 0,
+            payment_to_carrier: this.data.actualExpense || 0,
             payment_term_begins: 'delivery',
             payment_term_business_days: 2
         };

@@ -60,7 +60,7 @@ class DAT extends Loadboard
                 endWhen: this.minusMinutes(this.data.pickup.dateRequestedEnd, 30),
                 preferredContactMethod: 'PRIMARY_PHONE',
                 transactionDetails: {
-                    loadOfferRateUsd: this.data.estimatedExpense
+                    loadOfferRateUsd: this.data.actualExpense
                 }
             },
             referenceId: this.data.number

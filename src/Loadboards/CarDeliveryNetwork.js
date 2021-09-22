@@ -21,7 +21,7 @@ class CarDeliveryNetwork extends Loadboard
             AdvertiseType: 'Both',
             JobNumberSuffix: 'RC',
             PaymentTerm: 2,
-            BuyPrice: this.data.estimatedExpense,
+            BuyPrice: this.data.actualExpense,
             ServiceRequired: 1,
             JobInitiator: this.data.dispatcher?.name || 'Brad Marinov',
             Customer: {

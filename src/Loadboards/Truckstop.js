@@ -79,7 +79,7 @@ class Truckstop extends Loadboard
             note: this.postObject.instructions || this.data.loadboardInstructions,
             freightClassId: 1,
             loadNumber: this.data.number,
-            rateAttributes: { postedAllInRate: { amount: currency(this.data.estimatedExpense).value } },
+            rateAttributes: { postedAllInRate: { amount: currency(this.data.actualExpense).value } },
             dimensional: {
                 length: this.postObject.values.length,
                 weight: this.postObject.values.weight,
