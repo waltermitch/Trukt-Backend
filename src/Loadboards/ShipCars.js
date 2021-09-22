@@ -1,8 +1,14 @@
 const Loadboard = require('./Loadboard');
 const DateTime = require('luxon').DateTime;
 const LoadboardPost = require('../Models/LoadboardPost');
+const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const OrderStop = require('../Models/OrderStop');
+const OrderStopLink = require('../Models/OrderStopLink');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
+const SFAccount = require('../Models/SFAccount');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const knex = require('../Models/BaseModel').knex();
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
 
@@ -30,7 +36,10 @@ class ShipCars extends Loadboard
             pickup_state: this.getStateCode(this.data.pickup.terminal.state),
             pickup_zip: this.data.pickup.terminal.zipCode,
             pickup_notes: this.data.pickup?.notes ? this.pickup?.notes : ' ',
-            pickup_estimate_type: this.setDateType(this.data.pickup.dateScheduledType),
+            pickup_estimate_type: this.setDateType(this.data.pickup.dateRequestedType),
+            pickup_requested_date_start_type: this.setDateType(this.data.pickup.dateRequestedType),
+            pickup_requested_date_start: DateTime.fromISO(this.data.pickup.dateRequestedStart).toISODate(),
+            pickup_requested_date_end: DateTime.fromISO(this.data.pickup.dateRequestedEnd).toISODate(),
 
             delivery_name: this.data.delivery.terminal.name,
             delivery_contact: this.data.delivery?.primaryContact?.name,
@@ -40,10 +49,13 @@ class ShipCars extends Loadboard
             delivery_city: this.data.delivery.terminal.city,
             delivery_state: this.getStateCode(this.data.delivery.terminal.state),
             delivery_zip: this.data.delivery.terminal.zipCode,
-            delivery_estimate_type: this.setDateType(this.data.delivery.dateScheduledType),
+            delivery_estimate_type: this.setDateType(this.data.delivery.dateRequestedType),
+            delivery_requested_date_start_type: this.setDateType(this.data.delivery.dateRequestedType),
+            delivery_requested_date_start: DateTime.fromISO(this.data.delivery.dateRequestedStart),
+            delivery_requested_date_end: DateTime.fromISO(this.data.delivery.dateRequestedEnd),
             delivery_notes: this.data.delivery?.notes ? this.data.delivery?.notes : ' ',
 
-            first_available_date: this.toStringDate(this.data.pickup.dateScheduledStart),
+            first_available_date: this.toStringDate(this.data.pickup.dateRequestedStart),
             shipper_load_id: process.env.NODE_ENV != 'prod' || process.env.NODE_ENV != 'production' ? this.saltOrderNumber(this.data.number) : this.data.number,
             instructions: this.data.loadboardInstructions,
             specific_load_requirements: this.postObject.instructions,
@@ -52,8 +64,6 @@ class ShipCars extends Loadboard
             id: this.postObject.externalGuid,
 
             payment_method: 'ach',
-            payment_on_pickup_method: 'cash',
-            payment_on_delivery_method: 'uship',
             total_payment_to_carrier: this.data.estimatedExpense,
             payment_to_carrier: this.data.estimatedExpense,
             payment_term_begins: 'delivery',
@@ -67,8 +77,9 @@ class ShipCars extends Loadboard
     {
         const payload = {
             'carrier': this.data.vendor.scId,
-            'carrier_dot': this.data.vendor.dotNumber,
-            'experation_time': DateTime.now().plus({ hours: 12 })
+
+            // 'carrier_dot': this.data.vendor.dotNumber,
+            'expiration_time': DateTime.now().plus({ hours: 12 }).toString()
         };
 
         return payload;
@@ -88,7 +99,8 @@ class ShipCars extends Loadboard
                 lot_number: com.lotNumber,
                 operable: com.inoperable === 'no' || com.inoperable === 'unknown',
                 id: com.extraExternalData?.scGuid,
-                load_id: this.postObject.externalGuid
+                load_id: this.postObject.externalGuid,
+                shipper_vehicle_id: com.guid
             });
         }
         return vehicles;
@@ -192,7 +204,7 @@ class ShipCars extends Loadboard
         return phone;
     }
 
-    static async handlecreate(post, response)
+    static async handleCreate(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(post);
@@ -234,10 +246,10 @@ class ShipCars extends Loadboard
         return objectionPost;
     }
 
-    static async handlepost(post, response)
+    static async handlePost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -278,10 +290,10 @@ class ShipCars extends Loadboard
         return objectionPost;
     }
 
-    static async handleunpost(post, response)
+    static async handleUnpost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
