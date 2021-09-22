@@ -20,154 +20,164 @@ extraExternalData:
      - name
      - externalOrderID
 postRequestPayload:
-  price:
-    type: string
-    format: currency
-    description: Price offered by carrier for job.
-  externalPostGuid: 
-    type: string
-    description: Loadboards external GUID for identifying the request.
-  dateOfferSent: 
-    type: string
-    format: date-time
-    description: When the request was created by the carrier.
-  datePickupStart:
-    type: string
-    format: date-time
-    description: Earliest date carrier can pick up load.
-  datePickupEnd:
-    type: string
-    format: date-time
-    nullable: true
-    description: Latest date the carrier can pick up load.
-  dateDeliveryStart:
-    type: string
-    format: date-time
-    nullable: true
-    description: Earliest date the carrier can deliver load.
-  dateDeliveryEnd":
-    type: string
-    format: date-time
-    nullable: true
-    description: Latest date the carrier can deliver load.
-  carrierIdentifier:
-    type: string
-    nullable: true
-    maxLength: 32
-    description: Number identifying the carrier ie. MC, DOT.
-  loadboard:
-    $ref: '.\Common.yaml#/Enums/Loadboard Name'
-  createdByGuid: 
-    $ref: Common.yaml#/createdByGuid
-  extraExternalData:
-    $ref: '#/extraExternalData'
+  type: object
+  properties:
+    price:
+      type: string
+      format: currency
+      description: Price offered by carrier for job.
+    externalPostGuid: 
+      type: string
+      description: Loadboards external GUID for identifying the request.
+    dateOfferSent: 
+      type: string
+      format: date-time
+      description: When the request was created by the carrier.
+    datePickupStart:
+      type: string
+      format: date-time
+      description: Earliest date carrier can pick up load.
+    datePickupEnd:
+      type: string
+      format: date-time
+      nullable: true
+      description: Latest date the carrier can pick up load.
+    dateDeliveryStart:
+      type: string
+      format: date-time
+      nullable: true
+      description: Earliest date the carrier can deliver load.
+    dateDeliveryEnd":
+      type: string
+      format: date-time
+      nullable: true
+      description: Latest date the carrier can deliver load.
+    carrierIdentifier:
+      type: string
+      nullable: true
+      maxLength: 32
+      description: Number identifying the carrier ie. MC, DOT.
+    loadboard:
+      $ref: '.\Common.yaml#/Enums/Loadboard Name'
+    extraExternalData:
+      $ref: '#/extraExternalData'
+  required:
+    - price
+    - externalPostGuid
+    - dateOfferSent
+    - datePickupStart
+    - dateDeliveryStart
+    - loadboard
+    - extraExternalData
 mainResponsePayload:
-  guid:
-    $ref: Common.yaml#/guid
-  status: 
-    $ref: 'Common.yaml#/Enums/LoadBoard Request Status'
-    example: Accepted
-  price:
-    type: string
-    format: currency
-    example: 125.00
-  externalPostGuid: 
-    $ref: Common.yaml#/guid
-  loadboard: 
-    $ref: 'Common.yaml#/Enums/Loadboard Name'
-  dateOfferSent: 
-    type: string
-    format: date-time
-    example: '2021-09-14T18:10:21.866Z'
-  datePickupStart:
-    type: string
-    format: date-time
-    example: '2021-09-14T14:00:00.000Z'
-  datePickupEnd:
-    type: string
-    format: date-time
-    nullable: true
-    example: '2021-09-14T14:00:00.000Z'
-  dateDeliveryStart:
-    type: string
-    format: date-time
-    example: '2021-09-14T14:00:00.000Z'
-  dateDeliveryEnd":
-    type: string
-    format: date-time
-    nullable: true
-    example: '2021-09-14T14:00:00.000Z'
-  carrierIdentifier:
-    type: string
-    nullable: true
-    maxLength: 32
-    example: 373722
-  declineReason:
-    type: string
-    example: 'Becasuse you are cheap.'
-  extraExternalData:
-    type: object
-    properties: 
-      type:
-        type: string
-        example: "carrierMisc"
-      guid:
-        type: string
-        example: "oqg3"
-      name:
-        type: string
-        example: "RCG Logistics Carrier"
-      offerUrl:
-        type: string
-        example: "/api/offers/yyqd/"
-      carrierUrl:
-        type: string
-        example: "/api/companies/oqg3/"
-      externalOrderID:
-        type: string
-        example: "3xkq4"
-  isActive: 
-    type: boolean
-    example: true
-  isAccepted: 
-    type: boolean
-    example: false
-  isDeclined: 
-    type: boolean
-    example: false
-  isCanceled: 
-    type: boolean
-    example: true
-  isSynced: 
-    type: boolean
-    example: true
-  isDeleted: 
-    type: boolean
-    example: false
-  hasError: 
-    type: boolean
-    example: false
-  externalError: 
-    type: string
-    example: null
-  dateCreated: 
-    type: string
-    format: date-time
-    nullable: true
-    example: '2021-09-14T14:00:00.000Z'
-  dateUpdated: 
-    type: string
-    format: date-time
-    nullable: true
-    example: '2021-09-14T14:00:00.000Z'
-  dateDeleted: 
-    type: string
-    format: date-time
-    nullable: true
-    example: '2021-09-14T14:00:00.000Z'
-  createdByGuid: 
-    $ref: Common.yaml#/createdByGuid
-  updatedByGuid: 
-    $ref: Common.yaml#/updatedByGuid
-  deletedByGuid: 
-    $ref: Common.yaml#/deletedByGuid
+  type: object
+  properties:
+    guid:
+      $ref: Common.yaml#/guid
+    status: 
+      $ref: 'Common.yaml#/Enums/LoadBoard Request Status'
+      example: Accepted
+    price:
+      type: string
+      format: currency
+      example: 125.00
+    externalPostGuid: 
+      $ref: Common.yaml#/guid
+    loadboard: 
+      $ref: 'Common.yaml#/Enums/Loadboard Name'
+    dateOfferSent: 
+      type: string
+      format: date-time
+      example: '2021-09-14T18:10:21.866Z'
+    datePickupStart:
+      type: string
+      format: date-time
+      example: '2021-09-14T14:00:00.000Z'
+    datePickupEnd:
+      type: string
+      format: date-time
+      nullable: true
+      example: '2021-09-14T14:00:00.000Z'
+    dateDeliveryStart:
+      type: string
+      format: date-time
+      example: '2021-09-14T14:00:00.000Z'
+    dateDeliveryEnd":
+      type: string
+      format: date-time
+      nullable: true
+      example: '2021-09-14T14:00:00.000Z'
+    carrierIdentifier:
+      type: string
+      nullable: true
+      maxLength: 32
+      example: 373722
+    declineReason:
+      type: string
+      example: 'Becasuse you are cheap.'
+    extraExternalData:
+      type: object
+      properties: 
+        type:
+          type: string
+          example: "carrierMisc"
+        guid:
+          type: string
+          example: "oqg3"
+        name:
+          type: string
+          example: "RCG Logistics Carrier"
+        offerUrl:
+          type: string
+          example: "/api/offers/yyqd/"
+        carrierUrl:
+          type: string
+          example: "/api/companies/oqg3/"
+        externalOrderID:
+          type: string
+          example: "3xkq4"
+    isActive: 
+      type: boolean
+      example: true
+    isAccepted: 
+      type: boolean
+      example: false
+    isDeclined: 
+      type: boolean
+      example: false
+    isCanceled: 
+      type: boolean
+      example: true
+    isSynced: 
+      type: boolean
+      example: true
+    isDeleted: 
+      type: boolean
+      example: false
+    hasError: 
+      type: boolean
+      example: false
+    externalError: 
+      type: string
+      example: null
+    dateCreated: 
+      type: string
+      format: date-time
+      nullable: true
+      example: '2021-09-14T14:00:00.000Z'
+    dateUpdated: 
+      type: string
+      format: date-time
+      nullable: true
+      example: '2021-09-14T14:00:00.000Z'
+    dateDeleted: 
+      type: string
+      format: date-time
+      nullable: true
+      example: '2021-09-14T14:00:00.000Z'
+    createdByGuid: 
+      $ref: Common.yaml#/createdByGuid
+    updatedByGuid: 
+      $ref: Common.yaml#/updatedByGuid
+    deletedByGuid: 
+      $ref: Common.yaml#/deletedByGuid

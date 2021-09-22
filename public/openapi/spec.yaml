@@ -41,6 +41,29 @@ paths:
           description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           schema:
             enum:
+              - undefined
+              - vendorInvoice
+              - billOfLading
+              - proofOfDelivery
+              - lumperTicket
+              - scaleTicket
+              - inGateTicket
+              - outGateTicket
+              - miscellaneous
+              - accessorialAgreement
+              - rateConfirmation
+              - loadTender
+              - invoice
+              - customsDocuments
+              - invoiceWithPaperwork
+              - detentionLoading
+              - detentionUnloading
+              - palletReceipt
+              - spotApproval
+              - truckNotUsed
+              - exitPass
+              - balanceDue
+              - packingList
               - photo
             default: undefined
         - in: query
@@ -100,6 +123,29 @@ paths:
           description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           schema:
             enum:
+              - undefined
+              - vendorInvoice
+              - billOfLading
+              - proofOfDelivery
+              - lumperTicket
+              - scaleTicket
+              - inGateTicket
+              - outGateTicket
+              - miscellaneous
+              - accessorialAgreement
+              - rateConfirmation
+              - loadTender
+              - invoice
+              - customsDocuments
+              - invoiceWithPaperwork
+              - detentionLoading
+              - detentionUnloading
+              - palletReceipt
+              - spotApproval
+              - truckNotUsed
+              - exitPass
+              - balanceDue
+              - packingList
               - photo
             default: undefined
         - in: query
@@ -1727,117 +1773,7 @@ paths:
                 type: array
                 description: Array of request that exist
                 items:
-                  type: object
-                  properties:
-                    guid:
-                      $ref: '#/components/schemas/guid'
-                    status:
-                      $ref: '#/components/schemas/LoadBoard Request Status'
-                      example: Accepted
-                    price:
-                      type: string
-                      format: currency
-                      example: 125
-                    externalPostGuid:
-                      $ref: '#/components/schemas/guid'
-                    loadboard:
-                      $ref: '#/components/schemas/Loadboard Name'
-                    dateOfferSent:
-                      type: string
-                      format: date-time
-                      example: '2021-09-14T18:10:21.866Z'
-                    datePickupStart:
-                      type: string
-                      format: date-time
-                      example: '2021-09-14T14:00:00.000Z'
-                    datePickupEnd:
-                      type: string
-                      format: date-time
-                      nullable: true
-                      example: '2021-09-14T14:00:00.000Z'
-                    dateDeliveryStart:
-                      type: string
-                      format: date-time
-                      example: '2021-09-14T14:00:00.000Z'
-                    dateDeliveryEnd":
-                      type: string
-                      format: date-time
-                      nullable: true
-                      example: '2021-09-14T14:00:00.000Z'
-                    carrierIdentifier:
-                      type: string
-                      nullable: true
-                      maxLength: 32
-                      example: 373722
-                    declineReason:
-                      type: string
-                      example: Becasuse you are cheap.
-                    extraExternalData:
-                      type: object
-                      properties:
-                        type:
-                          type: string
-                          example: carrierMisc
-                        guid:
-                          type: string
-                          example: oqg3
-                        name:
-                          type: string
-                          example: RCG Logistics Carrier
-                        offerUrl:
-                          type: string
-                          example: /api/offers/yyqd/
-                        carrierUrl:
-                          type: string
-                          example: /api/companies/oqg3/
-                        externalOrderID:
-                          type: string
-                          example: 3xkq4
-                    isActive:
-                      type: boolean
-                      example: true
-                    isAccepted:
-                      type: boolean
-                      example: false
-                    isDeclined:
-                      type: boolean
-                      example: false
-                    isCanceled:
-                      type: boolean
-                      example: true
-                    isSynced:
-                      type: boolean
-                      example: true
-                    isDeleted:
-                      type: boolean
-                      example: false
-                    hasError:
-                      type: boolean
-                      example: false
-                    externalError:
-                      type: string
-                      example: null
-                    dateCreated:
-                      type: string
-                      format: date-time
-                      nullable: true
-                      example: '2021-09-14T14:00:00.000Z'
-                    dateUpdated:
-                      type: string
-                      format: date-time
-                      nullable: true
-                      example: '2021-09-14T14:00:00.000Z'
-                    dateDeleted:
-                      type: string
-                      format: date-time
-                      nullable: true
-                      example: '2021-09-14T14:00:00.000Z'
-                    createdByGuid:
-                      $ref: '#/components/schemas/createdByGuid'
-                    updatedByGuid:
-                      $ref: '#/components/schemas/updatedByGuid'
-                    deletedByGuid:
-                      $ref: '#/components/schemas/deletedByGuid'
+                  $ref: '#/components/schemas/mainResponsePayload'
         '404':
           description: request do not exist
   /loadboard/requests/create:
@@ -1851,175 +1787,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                price:
-                  type: string
-                  format: currency
-                  description: Price offered by carrier for job.
-                externalPostGuid:
-                  type: string
-                  description: Loadboards external GUID for identifying the request.
-                dateOfferSent:
-                  type: string
-                  format: date-time
-                  description: When the request was created by the carrier.
-                datePickupStart:
-                  type: string
-                  format: date-time
-                  description: Earliest date carrier can pick up load.
-                datePickupEnd:
-                  type: string
-                  format: date-time
-                  nullable: true
-                  description: Latest date the carrier can pick up load.
-                dateDeliveryStart:
-                  type: string
-                  format: date-time
-                  nullable: true
-                  description: Earliest date the carrier can deliver load.
-                dateDeliveryEnd":
-                  type: string
-                  format: date-time
-                  nullable: true
-                  description: Latest date the carrier can deliver load.
-                carrierIdentifier:
-                  type: string
-                  nullable: true
-                  maxLength: 32
-                  description: 'Number identifying the carrier ie. MC, DOT.'
-                loadboard:
-                  $ref: '#/components/schemas/Loadboard Name'
-                createdByGuid:
-                  $ref: '#/components/schemas/createdByGuid'
-                extraExternalData:
-                  $ref: '#/components/schemas/extraExternalData'
-              required:
-                - price
-                - externalPostGuid
-                - dateOfferSent
-                - datePickupStart
-                - dateDeliveryStart
-                - loadboard
-                - createdByGuid
-                - extraExternalData
+              $ref: '#/components/schemas/postRequestPayload'
       responses:
         '200':
           description: Request has been created
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  guid:
-                    $ref: '#/components/schemas/guid'
-                  status:
-                    $ref: '#/components/schemas/LoadBoard Request Status'
-                    example: Accepted
-                  price:
-                    type: string
-                    format: currency
-                    example: 125
-                  externalPostGuid:
-                    $ref: '#/components/schemas/guid'
-                  loadboard:
-                    $ref: '#/components/schemas/Loadboard Name'
-                  dateOfferSent:
-                    type: string
-                    format: date-time
-                    example: '2021-09-14T18:10:21.866Z'
-                  datePickupStart:
-                    type: string
-                    format: date-time
-                    example: '2021-09-14T14:00:00.000Z'
-                  datePickupEnd:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateDeliveryStart:
-                    type: string
-                    format: date-time
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateDeliveryEnd":
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  carrierIdentifier:
-                    type: string
-                    nullable: true
-                    maxLength: 32
-                    example: 373722
-                  declineReason:
-                    type: string
-                    example: Becasuse you are cheap.
-                  extraExternalData:
-                    type: object
-                    properties:
-                      type:
-                        type: string
-                        example: carrierMisc
-                      guid:
-                        type: string
-                        example: oqg3
-                      name:
-                        type: string
-                        example: RCG Logistics Carrier
-                      offerUrl:
-                        type: string
-                        example: /api/offers/yyqd/
-                      carrierUrl:
-                        type: string
-                        example: /api/companies/oqg3/
-                      externalOrderID:
-                        type: string
-                        example: 3xkq4
-                  isActive:
-                    type: boolean
-                    example: true
-                  isAccepted:
-                    type: boolean
-                    example: false
-                  isDeclined:
-                    type: boolean
-                    example: false
-                  isCanceled:
-                    type: boolean
-                    example: true
-                  isSynced:
-                    type: boolean
-                    example: true
-                  isDeleted:
-                    type: boolean
-                    example: false
-                  hasError:
-                    type: boolean
-                    example: false
-                  externalError:
-                    type: string
-                    example: null
-                  dateCreated:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateUpdated:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateDeleted:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  createdByGuid:
-                    $ref: '#/components/schemas/createdByGuid'
-                  updatedByGuid:
-                    $ref: '#/components/schemas/updatedByGuid'
-                  deletedByGuid:
-                    $ref: '#/components/schemas/deletedByGuid'
+                $ref: '#/components/schemas/mainResponsePayload'
         '404':
           description: Posting doesn't exist
           content:
@@ -2038,58 +1813,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                price:
-                  type: string
-                  format: currency
-                  description: Price offered by carrier for job.
-                externalPostGuid:
-                  type: string
-                  description: Loadboards external GUID for identifying the request.
-                dateOfferSent:
-                  type: string
-                  format: date-time
-                  description: When the request was created by the carrier.
-                datePickupStart:
-                  type: string
-                  format: date-time
-                  description: Earliest date carrier can pick up load.
-                datePickupEnd:
-                  type: string
-                  format: date-time
-                  nullable: true
-                  description: Latest date the carrier can pick up load.
-                dateDeliveryStart:
-                  type: string
-                  format: date-time
-                  nullable: true
-                  description: Earliest date the carrier can deliver load.
-                dateDeliveryEnd":
-                  type: string
-                  format: date-time
-                  nullable: true
-                  description: Latest date the carrier can deliver load.
-                carrierIdentifier:
-                  type: string
-                  nullable: true
-                  maxLength: 32
-                  description: 'Number identifying the carrier ie. MC, DOT.'
-                loadboard:
-                  $ref: '#/components/schemas/Loadboard Name'
-                createdByGuid:
-                  $ref: '#/components/schemas/createdByGuid'
-                extraExternalData:
-                  $ref: '#/components/schemas/extraExternalData'
-              required:
-                - price
-                - externalPostGuid
-                - dateOfferSent
-                - datePickupStart
-                - dateDeliveryStart
-                - loadboard
-                - createdByGuid
-                - extraExternalData
+              $ref: '#/components/schemas/postRequestPayload'
       responses:
         '200':
           description: Request has been canceled
@@ -2124,117 +1848,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  guid:
-                    $ref: '#/components/schemas/guid'
-                  status:
-                    $ref: '#/components/schemas/LoadBoard Request Status'
-                    example: Accepted
-                  price:
-                    type: string
-                    format: currency
-                    example: 125
-                  externalPostGuid:
-                    $ref: '#/components/schemas/guid'
-                  loadboard:
-                    $ref: '#/components/schemas/Loadboard Name'
-                  dateOfferSent:
-                    type: string
-                    format: date-time
-                    example: '2021-09-14T18:10:21.866Z'
-                  datePickupStart:
-                    type: string
-                    format: date-time
-                    example: '2021-09-14T14:00:00.000Z'
-                  datePickupEnd:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateDeliveryStart:
-                    type: string
-                    format: date-time
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateDeliveryEnd":
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  carrierIdentifier:
-                    type: string
-                    nullable: true
-                    maxLength: 32
-                    example: 373722
-                  declineReason:
-                    type: string
-                    example: Becasuse you are cheap.
-                  extraExternalData:
-                    type: object
-                    properties:
-                      type:
-                        type: string
-                        example: carrierMisc
-                      guid:
-                        type: string
-                        example: oqg3
-                      name:
-                        type: string
-                        example: RCG Logistics Carrier
-                      offerUrl:
-                        type: string
-                        example: /api/offers/yyqd/
-                      carrierUrl:
-                        type: string
-                        example: /api/companies/oqg3/
-                      externalOrderID:
-                        type: string
-                        example: 3xkq4
-                  isActive:
-                    type: boolean
-                    example: true
-                  isAccepted:
-                    type: boolean
-                    example: false
-                  isDeclined:
-                    type: boolean
-                    example: false
-                  isCanceled:
-                    type: boolean
-                    example: true
-                  isSynced:
-                    type: boolean
-                    example: true
-                  isDeleted:
-                    type: boolean
-                    example: false
-                  hasError:
-                    type: boolean
-                    example: false
-                  externalError:
-                    type: string
-                    example: null
-                  dateCreated:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateUpdated:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateDeleted:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  createdByGuid:
-                    $ref: '#/components/schemas/createdByGuid'
-                  updatedByGuid:
-                    $ref: '#/components/schemas/updatedByGuid'
-                  deletedByGuid:
-                    $ref: '#/components/schemas/deletedByGuid'
+                $ref: '#/components/schemas/mainResponsePayload'
         '404':
           description: Unable to accept request or missing request GUID
           content:
@@ -2270,117 +1884,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  guid:
-                    $ref: '#/components/schemas/guid'
-                  status:
-                    $ref: '#/components/schemas/LoadBoard Request Status'
-                    example: Accepted
-                  price:
-                    type: string
-                    format: currency
-                    example: 125
-                  externalPostGuid:
-                    $ref: '#/components/schemas/guid'
-                  loadboard:
-                    $ref: '#/components/schemas/Loadboard Name'
-                  dateOfferSent:
-                    type: string
-                    format: date-time
-                    example: '2021-09-14T18:10:21.866Z'
-                  datePickupStart:
-                    type: string
-                    format: date-time
-                    example: '2021-09-14T14:00:00.000Z'
-                  datePickupEnd:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateDeliveryStart:
-                    type: string
-                    format: date-time
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateDeliveryEnd":
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  carrierIdentifier:
-                    type: string
-                    nullable: true
-                    maxLength: 32
-                    example: 373722
-                  declineReason:
-                    type: string
-                    example: Becasuse you are cheap.
-                  extraExternalData:
-                    type: object
-                    properties:
-                      type:
-                        type: string
-                        example: carrierMisc
-                      guid:
-                        type: string
-                        example: oqg3
-                      name:
-                        type: string
-                        example: RCG Logistics Carrier
-                      offerUrl:
-                        type: string
-                        example: /api/offers/yyqd/
-                      carrierUrl:
-                        type: string
-                        example: /api/companies/oqg3/
-                      externalOrderID:
-                        type: string
-                        example: 3xkq4
-                  isActive:
-                    type: boolean
-                    example: true
-                  isAccepted:
-                    type: boolean
-                    example: false
-                  isDeclined:
-                    type: boolean
-                    example: false
-                  isCanceled:
-                    type: boolean
-                    example: true
-                  isSynced:
-                    type: boolean
-                    example: true
-                  isDeleted:
-                    type: boolean
-                    example: false
-                  hasError:
-                    type: boolean
-                    example: false
-                  externalError:
-                    type: string
-                    example: null
-                  dateCreated:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateUpdated:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  dateDeleted:
-                    type: string
-                    format: date-time
-                    nullable: true
-                    example: '2021-09-14T14:00:00.000Z'
-                  createdByGuid:
-                    $ref: '#/components/schemas/createdByGuid'
-                  updatedByGuid:
-                    $ref: '#/components/schemas/updatedByGuid'
-                  deletedByGuid:
-                    $ref: '#/components/schemas/deletedByGuid'
+                $ref: '#/components/schemas/mainResponsePayload'
         '404':
           description: Unable to accpet request or missing request GUID
           content:
@@ -3346,6 +2850,118 @@ components:
           description: The TMS User account that last deleted this record.
           readOnly: true
           nullable: false
+    mainResponsePayload:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        status:
+          $ref: '#/components/schemas/LoadBoard Request Status'
+          example: Accepted
+        price:
+          type: string
+          format: currency
+          example: 125
+        externalPostGuid:
+          $ref: '#/components/schemas/guid'
+        loadboard:
+          $ref: '#/components/schemas/Loadboard Name'
+        dateOfferSent:
+          type: string
+          format: date-time
+          example: '2021-09-14T18:10:21.866Z'
+        datePickupStart:
+          type: string
+          format: date-time
+          example: '2021-09-14T14:00:00.000Z'
+        datePickupEnd:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-14T14:00:00.000Z'
+        dateDeliveryStart:
+          type: string
+          format: date-time
+          example: '2021-09-14T14:00:00.000Z'
+        dateDeliveryEnd":
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-14T14:00:00.000Z'
+        carrierIdentifier:
+          type: string
+          nullable: true
+          maxLength: 32
+          example: 373722
+        declineReason:
+          type: string
+          example: Becasuse you are cheap.
+        extraExternalData:
+          type: object
+          properties:
+            type:
+              type: string
+              example: carrierMisc
+            guid:
+              type: string
+              example: oqg3
+            name:
+              type: string
+              example: RCG Logistics Carrier
+            offerUrl:
+              type: string
+              example: /api/offers/yyqd/
+            carrierUrl:
+              type: string
+              example: /api/companies/oqg3/
+            externalOrderID:
+              type: string
+              example: 3xkq4
+        isActive:
+          type: boolean
+          example: true
+        isAccepted:
+          type: boolean
+          example: false
+        isDeclined:
+          type: boolean
+          example: false
+        isCanceled:
+          type: boolean
+          example: true
+        isSynced:
+          type: boolean
+          example: true
+        isDeleted:
+          type: boolean
+          example: false
+        hasError:
+          type: boolean
+          example: false
+        externalError:
+          type: string
+          example: null
+        dateCreated:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-14T14:00:00.000Z'
+        dateUpdated:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-14T14:00:00.000Z'
+        dateDeleted:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-14T14:00:00.000Z'
+        createdByGuid:
+          $ref: '#/components/schemas/createdByGuid'
+        updatedByGuid:
+          $ref: '#/components/schemas/updatedByGuid'
+        deletedByGuid:
+          $ref: '#/components/schemas/deletedByGuid'
     extraExternalData:
       type: object
       description: extra data that varries depending incoming posting
@@ -3367,3 +2983,53 @@ components:
         - guid
         - name
         - externalOrderID
+    postRequestPayload:
+      type: object
+      properties:
+        price:
+          type: string
+          format: currency
+          description: Price offered by carrier for job.
+        externalPostGuid:
+          type: string
+          description: Loadboards external GUID for identifying the request.
+        dateOfferSent:
+          type: string
+          format: date-time
+          description: When the request was created by the carrier.
+        datePickupStart:
+          type: string
+          format: date-time
+          description: Earliest date carrier can pick up load.
+        datePickupEnd:
+          type: string
+          format: date-time
+          nullable: true
+          description: Latest date the carrier can pick up load.
+        dateDeliveryStart:
+          type: string
+          format: date-time
+          nullable: true
+          description: Earliest date the carrier can deliver load.
+        dateDeliveryEnd":
+          type: string
+          format: date-time
+          nullable: true
+          description: Latest date the carrier can deliver load.
+        carrierIdentifier:
+          type: string
+          nullable: true
+          maxLength: 32
+          description: 'Number identifying the carrier ie. MC, DOT.'
+        loadboard:
+          $ref: '#/components/schemas/Loadboard Name'
+        extraExternalData:
+          $ref: '#/components/schemas/extraExternalData'
+      required:
+        - price
+        - externalPostGuid
+        - dateOfferSent
+        - datePickupStart
+        - dateDeliveryStart
+        - loadboard
+        - extraExternalData

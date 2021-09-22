@@ -18,9 +18,7 @@ responses:
           type: array
           description: Array of request that exist
           items: 
-            type: object
-            properties:
-              $ref:  ..\..\..\components\schemas\LoadboardRequest.yaml#/mainResponsePayload
+            $ref:  ..\..\..\components\schemas\LoadboardRequest.yaml#/mainResponsePayload
  
   404:
     description: request do not exist

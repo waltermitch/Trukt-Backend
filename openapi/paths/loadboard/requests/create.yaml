@@ -7,18 +7,7 @@ requestBody:
   content:
     application/json:
       schema:
-        type: object
-        properties:
-          $ref: ../../../components/schemas/LoadboardRequest.yaml#/postRequestPayload
-        required:
-          - price
-          - externalPostGuid
-          - dateOfferSent
-          - datePickupStart
-          - dateDeliveryStart
-          - loadboard
-          - createdByGuid
-          - extraExternalData
+        $ref: ../../../components/schemas/LoadboardRequest.yaml#/postRequestPayload
 
 responses:
   200:
@@ -26,9 +15,7 @@ responses:
     content:
       application/json: 
         schema:
-          type: object
-          properties:
-            $ref: ../../../components/schemas/LoadboardRequest.yaml#/mainResponsePayload
+          $ref: ../../../components/schemas/LoadboardRequest.yaml#/mainResponsePayload
   404:
     description: Posting doesn't exist
     content:

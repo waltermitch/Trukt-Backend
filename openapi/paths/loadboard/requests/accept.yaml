@@ -15,9 +15,7 @@ responses:
     content:
       application/json: 
         schema:
-          type: object
-          properties:
-            $ref:  ..\..\..\components\schemas\LoadboardRequest.yaml#/mainResponsePayload
+          $ref:  ..\..\..\components\schemas\LoadboardRequest.yaml#/mainResponsePayload
   404:
     description: Unable to accept request or missing request GUID
     content: 
