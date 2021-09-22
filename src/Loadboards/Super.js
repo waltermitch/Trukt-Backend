@@ -2,9 +2,13 @@ const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const OrderStop = require('../Models/OrderStop');
+const OrderStopLink = require('../Models/OrderStopLink');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
+const DateTime = require('luxon').DateTime;
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
 
@@ -47,7 +51,7 @@ class Super extends Loadboard
             number: this.data.number,
             purchase_order_number: this.data.order.referenceNumber,
             dispatcher_name: this.data.dispatcher?.name || 'Brad Marinov',
-            instructions: this.data.order.instructions,
+            instructions: this.data.order?.instructions.substring(0, 9998),
             loadboard_instructions: this.postObject.instructions || this.data.loadboardInstructions,
             transport_type: this.setEquipmentType(this.data.equipmentType?.name),
             inspection_type: this.data.order.inspectionType,
@@ -55,7 +59,7 @@ class Super extends Loadboard
             {
                 first_available_pickup_date: this.data.pickup.dateRequestedStart,
                 scheduled_at: this.data.pickup.dateScheduledStart ? this.data.pickup.dateScheduledStart : this.data.pickup.dateRequestedStart,
-                scheduled_ends_at: this.data.pickup.dateScheduledEnd ? this.data.pickup.dateScheduledEnd : this.data.pickup.dateRequestedEnd,
+                scheduled_ends_at: this.data.pickup.dateScheduledEnd || this.data.pickup.dateScheduledType != 'estimated' ? this.data.pickup.dateScheduledEnd : this.data.pickup.dateRequestedEnd,
                 scheduled_at_by_customer: this.data.pickup.dateRequestedStart,
                 scheduled_ends_at_by_customer: this.data.pickup.dateRequestedEnd,
                 date_type: this.setDateType(this.data.pickup.dateRequestedType),
@@ -72,13 +76,13 @@ class Super extends Loadboard
                     contact_email: this.data.pickup?.primaryContact?.email,
                     contact_phone: this.data.pickup?.primaryContact?.phoneNumber,
                     contact_mobile_phone: this.data.pickup?.primaryContact?.mobileNumber,
-                    date_type: this.setDateType(this.data.pickup.dateRequestedType)
+                    date_type: this.setDateType(this.data.pickup.dateScheduledType)
                 }
             },
             delivery:
             {
                 scheduled_at: this.data.delivery.dateScheduledStart ? this.data.delivery.dateScheduledStart : this.data.delivery.dateRequestedStart,
-                scheduled_ends_at: this.data.delivery.dateScheduledEnd ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
+                scheduled_ends_at: this.data.delivery.dateScheduledEnd || this.data.delivery.dateScheduledType != 'estimated' ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
                 scheduled_at_by_customer: this.data.delivery.dateRequestedStart,
                 scheduled_ends_at_by_customer: this.data.delivery.dateRequestedEnd,
                 notes: this.data.delivery.notes,
@@ -246,10 +250,10 @@ class Super extends Loadboard
         }
     }
 
-    static async handlecreate(post, response)
+    static async handleCreate(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -262,7 +266,7 @@ class Super extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
+                const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
                     order.[client], commodities(distinct, isNotDeleted).[vehicle]
                 ]`);
 
@@ -299,10 +303,10 @@ class Super extends Loadboard
         return objectionPost;
     }
 
-    static async handlepost(post, response)
+    static async handlePost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -315,7 +319,7 @@ class Super extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(post.jobGuid).withGraphFetched(`[
+                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched(`[
                     order.[client], commodities(distinct, isNotDeleted).[vehicle]
                 ]`);
 
@@ -354,10 +358,10 @@ class Super extends Loadboard
         return objectionPost;
     }
 
-    static async handleunpost(post, response)
+    static async handleUnpost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -388,21 +392,57 @@ class Super extends Loadboard
         return objectionPost;
     }
 
-    static async handleupdate(post, response)
+    static async handleUpdate(payloadMetadata, response)
     {
-        post.externalGuid = response.guid;
-        post.externalPostGuid = response.guid;
-        post.isSynced = true;
-        post.isPosted = true;
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched(`[
+                    order.[client], commodities(distinct, isNotDeleted).[vehicle]
+                ]`);
+
+                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of vehicles)
+                {
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                }
+
+                const client = job.order.client;
+                if (client.sdGuid !== response.customer.counterparty_guid)
+                {
+                    client.sdGuid = response.customer.counterparty_guid;
+                    await SFAccount.query(trx).patch(client).findById(client.guid);
+                }
+
+                objectionPost.externalGuid = response.guid;
+                objectionPost.isCreated = true;
+                objectionPost.isSynced = true;
+            }
+            objectionPost.setUpdatedBy(anonUser);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
+
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+
+        return objectionPost;
     }
-
-    static async handledispatch(payloadMetadata, response)
-    {
-        console.log(payloadMetadata.post);
-
-        // console.log(payloadMetadata.dispatch);
-        console.log(response.guid);
-        const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
         dispatch.externalGuid = response.guid;
         dispatch.setUpdatedBy(anonUser);
         console.log(dispatch);
