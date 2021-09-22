@@ -355,10 +355,18 @@ class ShipCars extends Loadboard
             }
 
             trx.commit();
+
+            // keeping this commented out until we figure out status log types
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid: dispatch.loadboardPost.jobGuid,
+            //     userGuid: anonUser,
+            //     statusId: 4,
+            //     jobGuid: objectionPost.guid,
+            //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'dispatched' }
+            // });
         }
         catch (e)
         {
-            console.log(e);
             trx.rollback();
         }
     }
@@ -432,10 +440,21 @@ class ShipCars extends Loadboard
             await OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid);
 
             await trx.commit();
+
+            // keeping this commented out until we figure out status log types
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid: dispatch.job.orderGuid,
+            //     userGuid: currentUser,
+            //     statusId: 6,
+            //     jobGuid,
+            //     extraAnnotations: {
+            //         undispatchedFrom: 'SHIPCARS',
+            //         code: 'offer canceled'
+            //     }
+            // });
         }
         catch (e)
         {
-            console.log(e);
             await trx.rollback();
         }
     }
@@ -479,18 +498,17 @@ class ShipCars extends Loadboard
 
             await trx.commit();
 
-            StatusManagerHandler.registerStatus({
-                orderGuid,
-                userGuid: anonUser,
-                statusId: 4,
-                jobGuid: dispatch.jobGuid,
-                extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
-            });
+            // keeping this commented out until we figure out status log types
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid,
+            //     userGuid: anonUser,
+            //     statusId: 4,
+            //     jobGuid: dispatch.jobGuid,
+            //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
+            // });
         }
         catch (e)
         {
-            console.log(e);
-
             await trx.rollback(e);
         }
     }
@@ -576,18 +594,18 @@ class ShipCars extends Loadboard
                 );
 
             await trx.commit(trx);
-            StatusManagerHandler.registerStatus({
-                orderGuid,
-                userGuid: anonUser,
-                statusId: 4,
-                jobGuid: dispatch.jobGuid,
-                extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
-            });
+
+            // keeping this commented out until we figure out status log types
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid,
+            //     userGuid: anonUser,
+            //     statusId: 4,
+            //     jobGuid: dispatch.jobGuid,
+            //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
+            // });
         }
         catch (e)
         {
-            console.log(e);
-
             await trx.rollback(e);
         }
 

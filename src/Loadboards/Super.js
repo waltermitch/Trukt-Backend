@@ -477,6 +477,15 @@ class Super extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
+
+            // keeping this commented out until we figure out status log types
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid: dispatch.loadboardPost.jobGuid,
+            //     userGuid: anonUser,
+            //     statusId: 4,
+            //     jobGuid: objectionPost.guid,
+            //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'dispatched' }
+            // });
         }
         catch (e)
         {
@@ -536,6 +545,18 @@ class Super extends Loadboard
             await OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid);
 
             await trx.commit();
+
+            // keeping this commented out until we figure out status log types
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid: dispatch.job.orderGuid,
+            //     userGuid: currentUser,
+            //     statusId: 6,
+            //     jobGuid,
+            //     extraAnnotations: {
+            //         undispatchedFrom: 'SUPERDISPATCH',
+            //         code: 'offer canceled'
+            //     }
+            // });
         }
         catch (e)
         {
@@ -584,13 +605,13 @@ class Super extends Loadboard
 
             await trx.commit();
 
-            StatusManagerHandler.registerStatus({
-                orderGuid,
-                userGuid: anonUser,
-                statusId: 5,
-                jobGuid: dispatch.jobGuid,
-                extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
-            });
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid,
+            //     userGuid: anonUser,
+            //     statusId: 5,
+            //     jobGuid: dispatch.jobGuid,
+            //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
+            // });
         }
         catch (e)
         {
@@ -649,13 +670,13 @@ class Super extends Loadboard
 
             await trx.commit();
 
-            StatusManagerHandler.registerStatus({
-                orderGuid,
-                userGuid: anonUser,
-                statusId: 6,
-                jobGuid: dispatch.jobGuid,
-                extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
-            });
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid,
+            //     userGuid: anonUser,
+            //     statusId: 6,
+            //     jobGuid: dispatch.jobGuid,
+            //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
+            // });
         }
         catch (e)
         {
