@@ -73,7 +73,7 @@ class Loadboard
 
     undispatch()
     {
-        const payloadMetadata = { dispatch: this.data.dispatch, loadboard: this.loadboardName };
+        const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
         const payload = {};
 
         // sending the order because ship cars archives orders that are canceled
