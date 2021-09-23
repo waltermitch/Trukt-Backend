@@ -55,11 +55,17 @@ class OrderService
         const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
         const queryAllFilters = OrderService.addFilterDates(queryFilterCarrier, dates);
 
-        const orders = await queryAllFilters.orderBy('number', 'ASC');
+        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
 
-        orders.page = page;
-        orders.rowCount = rowCount;
-        return orders;
+        const { total, results } = await queryWithGraphModifiers.orderBy('number', 'ASC');
+        const ordersWithDeliveryAddress = {
+            results: OrderService.addDeliveryAddress(results),
+            page,
+            rowCount,
+            total
+        };
+
+        return ordersWithDeliveryAddress;
     }
 
     static async getOrderByGuid(orderGuid)
@@ -422,6 +428,8 @@ class OrderService
                 status: 'new',
                 instructions: orderObj.instructions || 'no instructions provided',
                 referenceNumber: orderObj.referenceNumber,
+                bol: orderObj.bol,
+                bolUrl: orderObj.bolUrl,
                 estimatedDistance: orderObj.estimatedDistance,
                 isDummy: orderObj.isDummy || false,
 
@@ -535,12 +543,6 @@ class OrderService
                 }).returning('guid');
 
             await trx.commit();
-
-            StatusManagerHandler.registerStatus({
-                orderGuid: order.guid,
-                userGuid: currentUser,
-                statusId: 1
-            });
 
             return order;
         }
@@ -744,6 +746,135 @@ class OrderService
             cache.set('comparisonTypes', comparisonTypes);
         }
         return cache.get('comparisonTypes');
+    }
+
+    static addGraphModifiers(baseQuery)
+    {
+        return baseQuery
+            .withGraphFetched({
+                client: true,
+                clientContact: true,
+                salesperson: true,
+                dispatcher: true,
+                jobs: {
+                    loadboardPosts: true,
+                    vendor: {
+                        rectype: true
+                    },
+                    jobType: true,
+                    stops: {
+                        terminal: true,
+                        commodities: {
+                            commType: true,
+                            vehicle: true
+                        }
+                    }
+                }
+            })
+
+            /**
+             * Is necessary to use modifyGraph on stops and
+             * stops.commodities to avoid duplicate rows
+             */
+            .modifyGraph('client', builder => builder.select(
+                'guid', 'name'
+            ))
+            .modifyGraph('clientContact', builder => builder.select(
+                'guid',
+                'name',
+                'phone_number',
+                'email'
+            ))
+            .modifyGraph('salesperson', builder => builder.select(
+                'guid', 'name'
+            ))
+            .modifyGraph('dispatcher', builder => builder.select(
+                'guid', 'name'
+            ))
+            .modifyGraph('jobs.stops', builder => builder.select(
+                'guid',
+                'stopType',
+                'status',
+                'dateScheduledStart',
+                'dateScheduledEnd',
+                'dateScheduledType',
+                'dateRequestedStart',
+                'dateRequestedEnd',
+                'dateRequestedType'
+            ).distinct('guid'))
+            .modifyGraph('jobs.stops.commodities', builder => builder.select(
+                'guid',
+                'damaged',
+                'inoperable',
+                'identifier',
+                'lotNumber',
+                'typeId'
+            )
+                .whereNotNull('jobGuid')
+                .distinct(
+                    'guid'
+                )
+            )
+            .modifyGraph('jobs.stops.terminal', builder => builder.select(
+                'name',
+                'guid',
+                'street1',
+                'street2',
+                'state',
+                'city',
+                'country',
+                'zipCode'
+            ).distinct())
+            .modifyGraph('jobs', builder => builder.select(
+                'guid',
+                'number',
+                'estimatedExpense',
+                'estimatedRevenue',
+                'status'
+            ).distinct())
+            .modifyGraph('jobs.loadboardPosts', builder => builder.select('loadboard', 'isPosted', 'status').distinct())
+            .modifyGraph('jobs.vendor', builder => builder.select('guid', 'name').distinct())
+            .modifyGraph('jobs.vendor.rectype', builder => builder.select('name').distinct());
+
+    }
+
+    static addDeliveryAddress(ordersArray)
+    {
+        return ordersArray.map((order) =>
+        {
+            const jobsWithDeliveryAddress = order.jobs.map((job) =>
+            {
+                const { terminal } = job.stops.length > 0 && job.stops.reduce((acumulatorStop, stop) =>
+                {
+                    return OrderService.getLastDeliveryBetweenStops(acumulatorStop, stop);
+                });
+                job.deliveryAddress = terminal || null;
+                return job;
+            });
+            order.jobs = jobsWithDeliveryAddress;
+            return order;
+        });
+    }
+
+    static getLastDeliveryBetweenStops(firstStop, secondStop)
+    {
+        if (secondStop.stopType === 'delivery' && firstStop.sequence < secondStop.sequence)
+            return secondStop;
+        return firstStop;
+    }
+
+    static registerCreateOrderStatusManager(order, currentUser)
+    {
+        for (const orderJob of order.jobs)
+        {
+            StatusManagerHandler.registerStatus({
+                orderGuid: order.guid,
+                userGuid: currentUser,
+                jobGuid: orderJob.guid,
+                statusId: 1
+            });
+        }
+
     }
 }
 

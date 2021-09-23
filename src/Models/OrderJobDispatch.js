@@ -48,6 +48,41 @@ class OrderJobDispatch extends BaseModel
                     from: 'rcgTms.orderJobDispatches.vendorAgentGuid',
                     to: 'salesforce.contacts.guid'
                 }
+            },
+            loadboardPost: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./LoadboardPost'),
+                join: {
+                    from: 'rcgTms.orderJobDispatches.loadboardPostGuid',
+                    to: 'rcgTms.loadboardPosts.guid'
+                }
+            },
+            paymentMethod: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./InvoicePaymentMethod'),
+                join: {
+                    from: 'rcgTms.orderJobDispatches.paymentMethodId',
+                    to: 'rcgTms.invoiceBillPaymentMethods.id'
+                }
+            },
+            paymentTerm: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./InvoicePaymentTerm'),
+                join: {
+                    from: 'rcgTms.orderJobDispatches.paymentTermId',
+                    to: 'rcgTms.invoiceBillPaymentTerms.id'
+                }
+            }
+        };
+    }
+
+    static get modifiers()
+    {
+        return {
+            // returns a single active dispatch record
+            activeDispatch(builder)
+            {
+                builder.where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
             }
         };
     }

@@ -1,5 +1,6 @@
 const Attachment = require('../Models/Attachment');
 const AzureStorage = require('../Azure/Storage');
+const { DateTime } = require('luxon');
 const uuid = require('uuid');
 
 const baseURL = AzureStorage.getBaseUrl();
@@ -10,6 +11,9 @@ class AttachmentService
     static async get(guid)
     {
         const attachment = await Attachment.query().findById(guid);
+
+        if (!attachment)
+            return null;
 
         // get sas
         const sas = AzureStorage.getSAS();
@@ -25,14 +29,18 @@ class AttachmentService
 
     static async searchByParent({ parent, parentType, attachmentType, visibility })
     {
-        const attachments = await Attachment.query().where('parent', '=', `${parent}`).where('parent_table', '=', `${parentType}`).where(builder =>
-        {
-            if (attachmentType)
-                builder.where('type', '=', `${attachmentType}`);
+        const builder = Attachment.query()
+            .where('parent', '=', `${parent}`)
+            .where('parent_table', '=', `${parentType}`)
+            .where('is_deleted', '=', false);
 
-            if (visibility)
-                builder.where('visibility', '=', `${visibility.split(',')}`);
-        });
+        if (attachmentType)
+            builder.where('type', '=', attachmentType);
+
+        if (visibility)
+            builder.where('visibility', '@>', visibility);
+
+        const attachments = await builder;
 
         // get sas
         const sas = AzureStorage.getSAS();
@@ -44,12 +52,10 @@ class AttachmentService
             atch.url += sas;
         }
 
-        console.log(attachments);
-
         return attachments;
     }
 
-    static async insert(files, headers, opts)
+    static async insert(files, opts, currentUser)
     {
         if (['job'].includes(opts.parentType))
             return { 'status': 400, 'data': 'Not An Allowed parentType' };
@@ -76,26 +82,28 @@ class AttachmentService
                 'name': files[i].originalname,
                 'parent': opts.parent,
                 'parent_table': opts.parentType,
-                'visibility': opts.visibility?.split(',')
+                'visibility': opts.visibility,
+                'createdByGuid': currentUser
             };
 
             // compose full path of file
             const fullPath = `${path}/${guid}/${file.name}`;
 
-            await Promise.all([AzureStorage.storeBlob(fullPath, files[i].buffer), Attachment.query().insert(file)]);
+            const res = await Promise.all([AzureStorage.storeBlob(fullPath, files[i].buffer), Attachment.query().insert(file)]);
 
-            urls.push({ 'url': file.url + sas, 'name': file.name, 'guid': guid });
+            urls.push({ 'url': res[1].url + sas, 'name': res[1].name, 'guid': res[1].guid, 'extension': res[1].extension, 'type': res[1].type, 'visibility': res[1].visibility || ['internal'], 'createdByGuid': res[1].createdByGuid, 'dateCreated': DateTime.utc().toString() });
         }
 
         return urls;
     }
 
-    static async update(guid, data)
+    static async update(guid, data, currentUser)
     {
         const payload =
         {
             type: data?.type,
-            visibility: Array.isArray(data?.visibility) ? data?.visibility : data?.visibility?.split(',')
+            visibility: Array.isArray(data?.visibility) ? data?.visibility : data?.visibility?.split(','),
+            updatedByGuid: currentUser
         };
 
         const res = await Attachment.query().patchAndFetchById(guid, payload);
@@ -106,9 +114,15 @@ class AttachmentService
         return res;
     }
 
-    static async delete(guid)
+    static async delete(guid, currentUser)
     {
-        const res = await Attachment.query().deleteById(guid);
+        const payload =
+        {
+            deletedByGuid: currentUser,
+            is_deleted: true
+        };
+
+        const res = await Attachment.query().patchAndFetchById(guid, payload);
 
         return res;
     }

@@ -1,11 +1,59 @@
-type: object
-required:
-  - name
-properties:
-  guid:
-    oneOf:
-      - $ref: .\SFID.yaml
-      - type: string
-        format: uuid
-  name:
-    type: string
+account:
+  type: object
+  required:
+    - guid
+  properties:
+    guid:
+      oneOf:
+        - $ref: .\SFID.yaml
+        - $ref: .\Common.yaml#/guid
+    name:
+      type: string
+client:
+  type: object
+  required:
+    - guid
+  properties:
+    rtype:
+      type: string
+      readOnly: true
+      default: client
+    billingCity:
+      type: string
+    billingCountry:
+      type: string
+    billingLatitude:
+      $ref: .\Common.yaml#/latitude
+    billingLongitude:
+      type: string
+    billingPostalCode:
+      type: string
+    billingState:
+      type: string
+    billingStreet:
+      type: string
+    email:
+      type: string
+    loadboardInstructions:
+      type: string
+    name:
+      type: string
+    orderInstructions:
+      type: string
+      format: text
+    phoneNumber:
+      type: string
+    shippingCity:
+      type: string
+    shippingCountry:
+      type: string
+    shippingLatitude:
+      type: string
+    shippingLongitude:
+      type: string
+    shippingPostalCode:
+      type: string
+    shippingState:
+      type: string
+    shippingStreet:
+      type: string

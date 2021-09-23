@@ -8,7 +8,7 @@ const upload = multer({ storage: storage });
 
 const prefix = '/attachments';
 router
-    .get(`${prefix}`, (req, res) => http(req, res, controller.search))
+    .get(`${prefix}/search`, (req, res) => http(req, res, controller.search))
     .post(`${prefix}`, upload.any(), (req, res) => http(req, res, controller.store))
     .get(`${prefix}/:attachmentId(${uuidRegexStr})`, (req, res) => http(req, res, controller.get))
     .patch(`${prefix}/:attachmentId(${uuidRegexStr})`, (req, res) => http(req, res, controller.update))

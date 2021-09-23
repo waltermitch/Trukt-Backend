@@ -1,6 +1,6 @@
 summary: Un-post loadboard
-operationId: delete Loadboard
-description: Un-post loadboard
+operationId: unpostLoadboardPost
+description: Remove a posting from the loadboard
 tags:
   - Loadboard
 parameters:
@@ -15,16 +15,24 @@ requestBody:
       schema:
         type: object
         properties:
-          posts: 
+          posts:
             description: List of loadboards to un-post from
             type: array
-            items: 
+            items:
               type: object
-              properties: 
-                loadboard: 
+              properties:
+                loadboard:
                   description: Name of the loadboard
                   type: string
-                  enum: [SUPERDISPATCH, SHIPCARS, CENTRALDISPATCH, CARDELIVERYNETWORK, TRUCKSTOP, DAT]
+                  enum:
+                    [
+                      SUPERDISPATCH,
+                      SHIPCARS,
+                      CENTRALDISPATCH,
+                      CARDELIVERYNETWORK,
+                      TRUCKSTOP,
+                      DAT,
+                    ]
               required:
                 - loadboard
 responses:

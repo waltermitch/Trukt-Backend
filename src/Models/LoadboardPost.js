@@ -16,14 +16,25 @@ class LoadboardPost extends BaseModel
 
     static get relationMappings()
     {
-        return {
-            relation: BaseModel.BelongsToOneRelation,
-            modelClass: require('./OrderJob'),
-            join: {
-                from: 'rcgTms.loadboardPosts.jobGuid',
-                to: 'rcgTms.orderJobs.guid'
+        const relations = {
+            job: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./OrderJob'),
+                join: {
+                    from: 'rcgTms.loadboardPosts.jobGuid',
+                    to: 'rcgTms.orderJobs.guid'
+                }
+            },
+            dispatches: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./OrderJobDispatch'),
+                join: {
+                    from: 'rcgTms.loadboardPosts.guid',
+                    to: 'rcgTms.orderJobDispatches.loadboardPostGuid'
+                }
             }
         };
+        return relations;
     }
 
     static get modifiers()

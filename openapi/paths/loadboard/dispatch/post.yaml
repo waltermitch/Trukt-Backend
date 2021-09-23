@@ -1,6 +1,6 @@
-summary: New summary
+summary: Dispatch Job
 operationId: postLoadboardDispatch
-description: New description
+description: Dispatch job internally or to loadboard
 tags:
   - Loadboard
 parameters:
@@ -9,6 +9,93 @@ parameters:
     schema:
       $ref: '..\..\..\components\schemas\Common.yaml#/guid'
     required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          loadboard:
+            description: loadboard to dispatch to
+            type: string
+            enum: [SUPERDISPATCH, SHIPCARS]
+          carrier:
+            type: object
+            description: carrier to dispatch to
+            properties:
+              guid:
+                description: guid or salesforce id of carrier
+                type: string
+                example: 5003000000D8cuI or 61bf88c9-ff63-4f8d-a184-0e9e11bb2408
+            required:
+              - guid
+          driver:
+            type: object
+            description: driver assigned to transport the load
+            properties:
+              guid:
+                description: guid or salesforce id of driver
+                type: string
+                example: 5003000000D8cuI or 61bf88c9-ff63-4f8d-a184-0e9e11bb2408
+              name:
+                description: name of driver contact
+                type: string
+                example: Brad Marinov
+              email:
+                description: email of driver contact
+                type: string
+                example: bmarinov@rcglogistics.com
+              phoneNumber:
+                description: phone number of driver contact
+                type: string
+                example: (916) 999-1234
+          pickup:
+            type: object
+            description: the date type and the possible start and end dates of the pickup
+            properties:
+              dateType:
+                $ref: '..\..\..\components\schemas\Common.yaml#/Enums/stopDateType'
+              startDate:
+                $ref: '..\..\..\components\schemas\Common.yaml#/dateTime'
+                description: the earliest date time the load can be picked up
+              endDate:
+                $ref: '..\..\..\components\schemas\Common.yaml#/dateTime'
+                description: the latest date time the load can be picked up
+            required:
+              - dateType
+              - startDate
+          delivery:
+            type: object
+            description: the date type and the possible start and end dates of the pickup
+            properties:
+              dateType:
+                $ref: '..\..\..\components\schemas\Common.yaml#/Enums/stopDateType'
+              startDate:
+                  $ref: '..\..\..\components\schemas\Common.yaml#/dateTime'
+                  description: the earliest date time the load can be delivered
+              endDate:
+                $ref: '..\..\..\components\schemas\Common.yaml#/dateTime'
+                description: the latest date time the load can be delivered
+            required:
+              - dateType
+              - startDate
+          paymentTerm:
+            type: number
+            description: payment term id used for paying carrier
+          paymentMethod:
+            type: number
+            description: payment method id used for paying carrier
+          price:
+            type: number
+            description: new amount owed to the carrier for transporting, will evenly split price across all commodities
+            example: 1234.56
+        required:
+          - carrier
+          - driver
+          - pickup
+          - delivery
+          - paymentTerm
+          - paymentMethod
 responses:
   200:
     description: loadboards

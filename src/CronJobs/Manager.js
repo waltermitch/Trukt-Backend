@@ -32,10 +32,11 @@ Cron.schedule(expressions.thirtyMinutes, async () =>
 });
 
 // every hour
-// Cron.schedule(expressions.hourly, async () =>
-// {
-//     // do stuff here
-// });
+Cron.schedule(expressions.hourly, async () =>
+{
+    // do stuff here
+    await SystemManagementService.syncUsers();
+});
 
 // every 2 hours
 

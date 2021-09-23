@@ -1,45 +1,118 @@
+dateCreated:
+  allOf:
+    - $ref: '#/dateTime'
+    - type: string
+      description: The date this record was created.
+      readOnly: true
+      nullable: false
+      example: '2021-09-23T12:14:45.000Z'
+dateUpdated:
+  allOf:
+    - $ref: '#/dateTime'
+    - type: string
+      format: date-time
+      description: The date this record was last updated.
+      readOnly: true
+      nullable: false
+dateDeleted:
+  allOf:
+    - $ref: '#/dateTime'
+    - type: string
+      format: date-time
+      description: The date this record was deleted.
+      readOnly: true
+      nullable: false
+createdByGuid:
+  allOf:
+    - $ref: '#/guid'
+    - type: string
+      description: The TMS User account that created this record.
+      readOnly: true
+      nullable: false
+updatedByGuid:
+  allOf:
+    - $ref: '#/guid'
+    - type: string
+      description: The TMS User account that last updated this record.
+      readOnly: true
+      nullable: false
+deletedByGuid:
+  allOf:
+    - $ref: '#/guid'
+    - type: string
+      description: The TMS User account that last deleted this record.
+      readOnly: true
+      nullable: false
+currency:
+  type: string
+  format: currency
+  pattern: ^(?:[1-9][0-9]*|0)\.[0-9]{2}$
+  example: '12345.67'
 date:
-  description: Date as YYYY-MM-DD
   type: string
   format: date
-  example: "2021-12-31"
+  example: '2021-12-31'
 dateTime:
-  description: Date with timezone ISO 8601
   type: string
   format: date-time
-  example: "2021-08-10T07:59:59.000Z"
+  example: '2021-08-10T07:59:59.000Z'
+indexObject:
+  type: object
+  properties:
+    index:
+      $ref: '#/index'
+  required:
+    - index
+index:
+  type: string
+  description: A unique and arbitrary string that will be used to reference this record in this payload.
+  example: 'record_1234'
 page:
-  description: For pagination purposes, page to return
+  description: For pagination purposes, page to return.
   type: integer
+  minimum: 0
   default: 0
+  example: 1
 rowCount:
-  description: For pagination purposes, number of entries per page
+  description: For pagination purposes, number of entries per page.
   type: integer
   default: 25
-longitude: 
-  description: Number describing the coordinates longitude
+longitude:
+  description: Number describing the longitude coordinate.
   example: 45.6208283
   type: number
-latitude: 
-  description: Number describing the coordinates latitude
+  format: float
+  minimum: -180
+  maximum: 180
+latitude:
+  description: Number describing the latitude coordinate.
   example: 12.5372125
   type: number
+  format: float
+  minimum: -90
+  maximum: 90
 guid:
   type: string
   format: uuid
+  pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
+  example: '00000000-0000-0000-0000-000000000000'
 zipCode:
   type: string
+  example: '98765'
 email:
   type: string
   format: email
-guidObject: 
+guidObject:
   type: object
+  required:
+    - guid
   properties:
     guid:
       $ref: '#/guid'
 phoneNumber:
   type: string
-  format: phone
+  pattern: \d+
+  example: '(916) 999-1234'
 stringNullable:
   type: string
   nullable: true
@@ -60,21 +133,7 @@ Enums:
     enum:
       - standard
       - advanced
-  jobCategoryType:
-    type: string
-    enum:
-      - transport
-      - service
-  jobType:
-    type: string
-    enum:
-      - transport
-      - locksmith
-      - unloading
-      - loading
-      - repair
-      - diagnostics
-      - dry run
+    default: standard
   stopType:
     description: >-
       Describes the type of stop, use pickup to indicate that the stop is for
@@ -100,11 +159,13 @@ Enums:
       - port
       - business
   commodityCategoryType:
+    description: The category of the commodity.
     type: string
     enum:
       - vehicle
       - freight
   commodityType:
+    description: The type of the commodity. Not all of these types can be matched to a category.
     type: string
     enum:
       - coupe
@@ -126,7 +187,6 @@ Enums:
       - box truck
       - day cab
       - sleeper cab
-      - other
       - bulk
       - crushed cars
       - other
@@ -290,3 +350,31 @@ Enums:
     enum:
       - accept
       - decline
+  orderStatus:
+    type: string
+    enum:
+      - New
+      - On Hold
+      - Ready
+      - Posted
+      - Requests
+      - Pending
+      - Declined
+      - Picked Up
+      - Delivered
+      - Canceled
+      - Deleted
+  Loadboard Name:
+    type: string
+    enum: 
+      - SUPERDISPATCH
+      - CENTRALDISPATCH
+      - SHIPCARS
+      - CARDELIVERYNETWORK
+  LoadBoard Request Status:
+    type: string
+    enum: 
+      - Accepted
+      - Canceled
+      - New
+      - Declined

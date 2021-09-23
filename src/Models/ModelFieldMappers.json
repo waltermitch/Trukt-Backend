@@ -126,9 +126,9 @@
                     "requiresAttention",
                     "salesAccountManager",
                     "salutation",
+                    "scId",
                     "sdGuid",
                     "searchAddress",
-                    "sfId",
                     "shippingGeocodeAccuracy",
                     "sic",
                     "sicDesc",
@@ -137,7 +137,6 @@
                     "slaDays",
                     "slaExpirationDate",
                     "slaSerialNumber",
-                    "status",
                     "subIndustry",
                     "suite",
                     "systemModStamp",
@@ -167,7 +166,6 @@
             "external": {
                 "outa": [],
                 "into": [
-                    "accountId",
                     "accountingContact",
                     "assistantName",
                     "assistantPhone",
@@ -330,6 +328,17 @@
                     "updatedByGuid",
                     "deletedByGuid",
                     "terminalGuid"
+                ]
+            }
+        }
+    },
+    "Attachment": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid"
                 ]
             }
         }

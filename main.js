@@ -63,7 +63,8 @@ app.use(
         ignorePaths: path => path.startsWith('/api/docs'),
         $refParser: {
             mode: 'dereference'
-        }
+        },
+        formats: require('./openapi/customFormats.js')
     })
 );
 
@@ -71,10 +72,17 @@ app.use(
 // grabs the user id and adds it to the session
 app.use(async (req, res, next) =>
 {
-    // req.session.user = await Auth.verifyJWT(req.headers?.authorization)
+    try
+    {
+        req.session.userGuid = (await Auth.verifyJWT(req.headers?.authorization)).oid;
 
-    if ('x-test-user' in req.headers && !req.session?.oid)
-        req.session.userGuid = req.headers['x-test-user'];
+        if ('x-test-user' in req.headers && !req.session?.userGuid)
+            req.session.userGuid = req.headers['x-test-user'];
+    }
+    catch (e)
+    {
+        // do nothing
+    }
 
     next();
 });
@@ -85,6 +93,10 @@ for (const filepath of filepaths)
 {
     const router = require(`./src/Routes/${filepath}`);
     app.use(router);
+    if (process.argv.includes('--routes'))
+    {
+        printRoutes(filepath, router.stack);
+    }
 }
 
 app.all('*', (req, res) => { res.status(404).send(); });
@@ -96,13 +108,20 @@ app.listen(process.env.PORT, async (err) =>
     console.log('listening on port ', process.env.PORT);
 });
 
-// used to be sexy function for printing routes
-// function initRoutes(fileName, router)
-// {
-//     if (Object.keys(router).length > 0)
-//     {
-//         console.log('\x1b[1m\x1b[3m\x1b[31m%s\x1b[0m', `\n ${fileName.split('.')[0].toUpperCase()}`);
-//         app.use(router);
-//         router?.stack?.forEach((e) => { console.log('\x1b[32m%s\x1b[0m\x1b[36m%s\x1b[0m', `\n${Object.keys(e.route.methods).pop().toUpperCase()}`, ` ${e.route.path}`); });
-//     }
-// }
+/**
+ * Prints out the routes that are available from this application
+ * @param {String} filepath
+ * @param {Object[]} routes
+ */
+function printRoutes(filepath, routes)
+{
+    console.log('\x1b[1m\x1b[3m\x1b[31m%s\x1b[0m', `${filepath.split('.')[0]}`);
+    for (const route of routes)
+    {
+        const methods = Object.keys(route.route.methods);
+        for (const method of methods)
+        {
+            console.log('\x1b[32m%s\x1b[0m\x1b[36m%s\x1b[0m', `- ${method.toUpperCase()}`, ` ${route.route.path.replace(/\([^)]+?\)/g, '')}`);
+        }
+    }
+}

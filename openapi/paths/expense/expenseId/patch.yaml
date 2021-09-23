@@ -1,5 +1,5 @@
 summary: Update expense
-operationId: patchExpense
+operationId: patchExpenseParam
 description: Update expense
 tags:
   - Expense
