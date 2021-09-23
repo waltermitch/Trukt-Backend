@@ -13,7 +13,7 @@ class LoadboardController extends HttpRouteController
 
         try
         {
-            LoadboardService.checkLoadboardsInput(posts);
+            LoadboardService.checkLoadboardsInput(posts, 'create');
             await LoadboardService.createPostings(req.params.jobId, posts, req.session.userGuid);
 
             res.status(204).send();
@@ -33,7 +33,7 @@ class LoadboardController extends HttpRouteController
 
         try
         {
-            LoadboardService.checkLoadboardsInput(posts);
+            LoadboardService.checkLoadboardsInput(posts, 'post');
             await LoadboardService.postPostings(req.params.jobId, posts, req.session.userGuid);
 
             res.status(204).send();
@@ -54,7 +54,7 @@ class LoadboardController extends HttpRouteController
 
         try
         {
-            LoadboardService.checkLoadboardsInput(posts);
+            LoadboardService.checkLoadboardsInput(posts, 'unpost');
             await LoadboardService.unpostPostings(req.params.jobId, posts, req.session.userGuid);
 
             res.status(204).send();
