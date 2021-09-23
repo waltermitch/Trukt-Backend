@@ -1,3 +1,4 @@
+const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
 
 class Attachment extends BaseModel
@@ -12,5 +13,7 @@ class Attachment extends BaseModel
         return 'guid';
     }
 }
+
+Object.assign(Attachment.prototype, RecordAuthorMixin);
 
 module.exports = Attachment;

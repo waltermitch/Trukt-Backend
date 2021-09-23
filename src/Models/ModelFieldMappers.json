@@ -333,5 +333,16 @@
                 ]
             }
         }
+    },
+    "Attachment": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid"
+                ]
+            }
+        }
     }
 }

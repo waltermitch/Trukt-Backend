@@ -72,9 +72,9 @@ app.use(
 // grabs the user id and adds it to the session
 app.use(async (req, res, next) =>
 {
-    // req.session.user = await Auth.verifyJWT(req.headers?.authorization)
+    req.session.userGuid = (await Auth.verifyJWT(req.headers?.authorization)).oid;
 
-    if ('x-test-user' in req.headers && !req.session?.oid)
+    if ('x-test-user' in req.headers && !req.session?.userGuid)
         req.session.userGuid = req.headers['x-test-user'];
 
     next();
