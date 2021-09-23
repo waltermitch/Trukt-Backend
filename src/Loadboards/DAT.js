@@ -12,9 +12,32 @@ class DAT extends Loadboard
         this.postObject = data.postObjects[this.loadboardName];
     }
 
-    static validate(options)
+    static validate(requiredFields, values)
     {
-
+        for (const requiredField of requiredFields)
+        {
+            if (!Object.keys(values).includes(requiredField))
+            {
+                throw `${requiredField} is required`;
+            }
+            else if ((
+                requiredField == 'commodity' ||
+                requiredField == 'comment1' ||
+                requiredField == 'comment2') &&
+                (values[requiredField].length < 1 ||
+                    values[requiredField].length > 69))
+            {
+                throw `${requiredField} should be between 1 and 70 characters`;
+            }
+            else if (requiredField == 'weight' && (values[requiredField] < 1 || values[requiredField] > 999999))
+            {
+                throw `${requiredField} should be between 1 and 999999 pounds`;
+            }
+            else if (requiredField == 'length' && (values[requiredField] < 1 || values[requiredField] > 199))
+            {
+                throw `${requiredField} should be between 1 and 199 feet`;
+            }
+        }
     }
 
     toJSON()
