@@ -16,7 +16,7 @@ class LoadboardPost extends BaseModel
 
     static get relationMappings()
     {
-        return {
+        const relations = {
             job: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: require('./OrderJob'),
@@ -34,6 +34,7 @@ class LoadboardPost extends BaseModel
                 }
             }
         };
+        return relations;
     }
 
     static get modifiers()

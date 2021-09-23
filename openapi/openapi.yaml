@@ -115,3 +115,18 @@ paths:
   /account/{accountType}/{accountId}:
     get:
       $ref: paths\account\get.yaml
+  /loadboard/requests/job/{jobGuid}:
+    get:
+      $ref: paths\loadboard\requests\get.yaml
+  /loadboard/requests/create:
+    post:
+      $ref: paths\loadboard\requests\create.yaml
+  /loadboard/requests/cancel:
+    post:
+      $ref: paths\loadboard\requests\cancel.yaml
+  /loadboard/requests/{requestGuid}/accept:
+    put:
+      $ref: paths\loadboard\requests\accept.yaml
+  /loadboard/requests/{requestGuid}/decline:
+    put:
+      $ref: paths\loadboard\requests\decline.yaml
