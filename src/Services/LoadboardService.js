@@ -544,12 +544,12 @@ class LoadboardService
         return job;
     }
 
-    static checkLoadboardsInput(posts)
+    static checkLoadboardsInput(posts, action)
     {
         const errors = [];
         if (posts.length === 0)
         {
-            errors.push(new Error(`a loadboard is required in order to post, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
+            errors.push(new Error(`a loadboard is required, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
         }
         for (const post of posts)
         {
@@ -558,7 +558,7 @@ class LoadboardService
             {
                 throw new Error(`the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
             }
-            if (dbLoadboardNames[lbName].requiresOptions)
+            if (dbLoadboardNames[lbName].requiresOptions && (action == 'post' || action == 'create'))
             {
                 const requiredOptions = dbLoadboardNames[lbName].requiredFields;
                 loadboardClasses[`${lbName}`].validate(requiredOptions.requiredFields, post.values);
