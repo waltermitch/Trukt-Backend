@@ -1,5 +1,6 @@
 const Attachment = require('../Models/Attachment');
 const AzureStorage = require('../Azure/Storage');
+const { DateTime } = require('luxon');
 const uuid = require('uuid');
 
 const baseURL = AzureStorage.getBaseUrl();
@@ -90,7 +91,7 @@ class AttachmentService
 
             const res = await Promise.all([AzureStorage.storeBlob(fullPath, files[i].buffer), Attachment.query().insert(file)]);
 
-            urls.push({ 'url': res[1].url + sas, 'name': res[1].name, 'guid': res[1].guid, 'extension': res[1].extension, 'type': res[1].type, 'visibility': res[1].visibility || ['internal'], 'createdByGuid': res[1].createdByGuid, 'createdAt': res[1].dateCreated });
+            urls.push({ 'url': res[1].url + sas, 'name': res[1].name, 'guid': res[1].guid, 'extension': res[1].extension, 'type': res[1].type, 'visibility': res[1].visibility || ['internal'], 'createdByGuid': res[1].createdByGuid, 'dateCreated': DateTime.utc().toString() });
         }
 
         return urls;
