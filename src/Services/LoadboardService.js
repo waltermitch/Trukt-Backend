@@ -17,7 +17,7 @@ const OrderStopLink = require('../Models/OrderStopLink');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
-const queueName = 'test_queue';
+const queueName = 'loadboard_posts_outgoing';
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
 
@@ -503,6 +503,10 @@ class LoadboardService
                 if (post.values != null)
                 {
                     const lbContact = await LoadboardContact.query().findById(post.values.contactId).where({ loadboard: post.loadboard });
+                    if (!lbContact || lbContact.loadboard != post.loadboard)
+                    {
+                        throw 'please provide a valid loadboard contact id';
+                    }
                     post.values.contact = lbContact;
                 }
                 if (!(post.loadboard in job.postObjects))
@@ -557,6 +561,7 @@ class LoadboardService
             if (dbLoadboardNames[lbName].requiresOptions)
             {
                 const requiredOptions = dbLoadboardNames[lbName].requiredFields;
+                loadboardClasses[`${lbName}`].validate(requiredOptions.requiredFields, post.values);
             }
         }
         if (errors.length !== 0)
