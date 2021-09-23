@@ -72,6 +72,26 @@ class OrderController extends HttpRouteController
         }
 
     }
+
+    static async patchOrder(req, res, next)
+    {
+        try
+        {
+            const { body } = req;
+            const order = await OrderService.patchOrder(body, req.session.userGuid);
+
+            res.status(200);
+            res.json(order);
+        }
+        catch (error)
+        {
+            next({
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+
+    }
 }
 
 const controller = new OrderController();

@@ -36,13 +36,14 @@ class Expense
      * @param {string} commodity
      * @param {string} job
      */
-    constructor(account, item, amount, commodity, job)
+    constructor(account, item, amount, commodity, job, guid)
     {
         this.account = account;
         this.item = item;
         this.amount = amount;
         this.commodity = commodity;
         this.job = job;
+        this.guid = guid;
     }
 
     static fromInvoiceLine(orderjob, invoice, line)
@@ -81,7 +82,8 @@ class Expense
             line.item.name,
             line.amount,
             line.commodity?.guid || line.commodityGuid,
-            job
+            job,
+            line.guid
         );
     }
 }
