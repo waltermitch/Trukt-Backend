@@ -253,12 +253,27 @@ class LoadboardService
             job.delivery.updatedByGuid = currentUserGuid;
             await OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid);
 
-            await Job.query(trx).patch({ vendorGuid: carrier.guid, vendorAgentGuid: carrierContact.guid, dateStarted: DateTime.utc(), updatedByGuid: currentUserGuid }).findById(job.guid);
-            job.estimatedExpense = jobTotalPrice;
+            await Job.query(trx).patch({
+                vendorGuid: carrier.guid,
+                vendorAgentGuid: carrierContact.guid,
+                dateStarted: DateTime.utc(),
+                updatedByGuid: currentUserGuid,
+                status: 'pending',
+                actualExpense: currency(body.price).value
+            }).findById(job.guid);
+            job.actualExpense = currency(body.price).value;
             job.vendor = carrier;
             job.vendorAgent = driver;
 
-            const lbPost = body.loadboard == null ? null : job.postObjects[`${body.loadboard}`].guid;
+            let lbPost;
+            try
+            {
+                lbPost = body.loadboard == null ? null : job.postObjects[`${body.loadboard}`].guid;
+            }
+            catch (e)
+            {
+                throw `Loadboard Post for ${body.loadboard} is out of sync. Please fix the job and the resync the loadboard post before dispatching`;
+            }
             const dispatch = OrderJobDispatch.fromJson({
                 jobGuid: job.guid,
                 loadboardPostGuid: lbPost,
@@ -298,13 +313,14 @@ class LoadboardService
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
-                StatusManagerHandler.registerStatus({
-                    orderGuid: job.orderGuid,
-                    userGuid: currentUserGuid,
-                    statusId: 4,
-                    jobGuid: jobId,
-                    extraAnnotations: { dispatchedTo: 'internal' }
-                });
+                // keeping this commented out until we figure out status log types
+                // StatusManagerHandler.registerStatus({
+                //     orderGuid: job.orderGuid,
+                //     userGuid: currentUserGuid,
+                //     statusId: 4,
+                //     jobGuid: jobId,
+                //     extraAnnotations: { dispatchedTo: 'internal', code: 'dispatched' }
+                // });
             }
 
             await trx.commit();
@@ -361,20 +377,33 @@ class LoadboardService
                             .where({ 'jobGuid': jobGuid })
                             .distinctOn('stopGuid')
                     );
-                const job = Job.fromJson({ vendorGuid: null, vendorContactGuid: null, vendorAgentGuid: null, dateStarted: null });
+                const job = Job.fromJson({
+                    vendorGuid: null,
+                    vendorContactGuid: null,
+                    vendorAgentGuid: null,
+                    dateStarted: null,
+                    status: 'offer canceled'
+                });
                 job.setUpdatedBy(currentUser);
                 await Job.query(trx).patch(job).findById(dispatch.jobGuid);
-
-                StatusManagerHandler.registerStatus({
-                    orderGuid: dispatch.job.orderGuid,
-                    userGuid: currentUser,
-                    statusId: 6,
-                    jobGuid,
-                    extraAnnotations: { undispatchedFrom: 'internal', code: 'canceled' }
-                });
             }
 
             await trx.commit();
+
+            if (!dispatch.loadboardPostGuid)
+            {
+                // keeping this commented out until we figure out status log types
+                // StatusManagerHandler.registerStatus({
+                //     orderGuid: dispatch.job.orderGuid,
+                //     userGuid: currentUser,
+                //     statusId: 6,
+                //     jobGuid,
+                //     extraAnnotations: {
+                //         undispatchedFrom: 'internal',
+                //         code: 'offer canceled'
+                //     }
+                // });
+            }
 
             return dispatch;
         }
