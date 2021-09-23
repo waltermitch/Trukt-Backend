@@ -41,7 +41,7 @@ class LoadboardController extends HttpRouteController
         catch (e)
         {
             next({
-                status: 500,
+                status: 400,
                 data: { message: e.toString() || 'Internal server error' }
             });
         }
@@ -62,7 +62,7 @@ class LoadboardController extends HttpRouteController
         catch (e)
         {
             next({
-                status: 500,
+                status: 400,
                 data: { message: e.toString() || 'Internal server error' }
             });
         }
