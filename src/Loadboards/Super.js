@@ -567,126 +567,122 @@ class Super extends Loadboard
 
     static async handleCarrierAcceptDispatch(payloadMetadata, response)
     {
-        console.log('carrier has accepted the dispatch');
-        console.log(payloadMetadata);
-        console.log(response);
-        const trx = await OrderJobDispatch.startTransaction();
-        try
+        if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
         {
-            const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
-                .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+            const trx = await OrderJobDispatch.startTransaction();
+            try
+            {
+                const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                    .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
 
-            dispatch.isPending = false;
-            dispatch.isAccepted = true;
-            dispatch.setUpdatedBy(anonUser);
+                dispatch.isPending = false;
+                dispatch.isAccepted = true;
+                dispatch.setUpdatedBy(anonUser);
 
-            // move queried data into variables
-            // because they are not part of the orer_job_dispatch
-            // table and will cause dml errors
-            const orderGuid = dispatch.orderGuid;
-            const vendorName = dispatch.vendorName;
-            delete dispatch.orderGuid;
-            delete dispatch.vendorName;
+                // move queried data into variables
+                // because they are not part of the orer_job_dispatch
+                // table and will cause dml errors
+                const orderGuid = dispatch.orderGuid;
+                const vendorName = dispatch.vendorName;
+                delete dispatch.orderGuid;
+                delete dispatch.vendorName;
 
-            // have to put table name because externalGuid is also on loadboard post and not
-            // specifying it makes the query ambiguous
-            await OrderJobDispatch.query(trx).patch(dispatch).where({
-                'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
-                isPending: true,
-                isCanceled: false
-            });
+                // have to put table name because externalGuid is also on loadboard post and not
+                // specifying it makes the query ambiguous
+                await OrderJobDispatch.query(trx).patch(dispatch).where({
+                    'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
+                    isPending: true,
+                    isCanceled: false
+                });
 
-            // update the job status to accepted. It's a string, we can literally write anything to this
-            await Job.query(trx).patch({
-                status: 'accepted',
-                updatedByGuid: anonUser
-            }).findById(dispatch.jobGuid);
+                // update the job status to accepted. It's a string, we can literally write anything to this
+                await Job.query(trx).patch({
+                    status: 'accepted',
+                    updatedByGuid: anonUser
+                }).findById(dispatch.jobGuid);
 
-            await trx.commit();
+                await trx.commit();
 
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid,
-            //     userGuid: anonUser,
-            //     statusId: 5,
-            //     jobGuid: dispatch.jobGuid,
-            //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
-            // });
-        }
-        catch (e)
-        {
-            console.log(e);
-            await trx.rollback(e);
+                // StatusManagerHandler.registerStatus({
+                //     orderGuid,
+                //     userGuid: anonUser,
+                //     statusId: 5,
+                //     jobGuid: dispatch.jobGuid,
+                //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
+                // });
+            }
+            catch (e)
+            {
+                await trx.rollback(e);
+            }
         }
     }
 
     static async handleCarrierDeclineDispatch(payloadMetadata, response)
     {
-        const trx = await OrderJobDispatch.startTransaction();
-
-        try
+        if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
         {
-            // getting the dispatch record because it has the job guid, which we need in order to operate
-            // on the job
-            const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
-                .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
-
-            dispatch.isPending = false;
-            dispatch.isAccepted = false;
-            dispatch.isCanceled = true;
-            dispatch.setUpdatedBy(anonUser);
-
-            // move queried data into variables
-            // because they are not part of the orer_job_dispatch
-            // table and will cause dml errors
-            const orderGuid = dispatch.orderGuid;
-            const vendorName = dispatch.vendorName;
-            delete dispatch.orderGuid;
-            delete dispatch.vendorName;
-
-            await OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
-                .whereIn('guid',
-                    OrderStopLink.query().select('stopGuid')
-                        .where({ 'jobGuid': dispatch.jobGuid })
-                        .distinctOn('stopGuid')
-                );
-
-            const job = Job.fromJson({
-                vendorGuid: null,
-                vendorContactGuid: null,
-                vendorAgentGuid: null,
-                dateStarted: null,
-                status: 'declined'
-            });
-            job.setUpdatedBy(anonUser);
-            await Job.query(trx).patch(job).findById(dispatch.jobGuid);
-
-            // have to put table name because externalGuid is also on loadboard post and not
-            // specifying it makes the query ambiguous
-            // await OrderJobDispatch.query().patch(dispatch).where({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid, isPending: true, isAccepted: false });
-            await OrderJobDispatch.query().patch(dispatch).findById(dispatch.guid);
-
-            await trx.commit();
-
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid,
-            //     userGuid: anonUser,
-            //     statusId: 6,
-            //     jobGuid: dispatch.jobGuid,
-            //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
-            // });
-        }
-        catch (e)
-        {
-            console.log(e);
-
-            await trx.rollback(e);
-        }
-        finally
-        {
-            console.log('create status log');
+            const trx = await OrderJobDispatch.startTransaction();
+    
+            try
+            {
+                // getting the dispatch record because it has the job guid, which we need in order to operate
+                // on the job
+                const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                    .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+    
+                dispatch.isPending = false;
+                dispatch.isAccepted = false;
+                dispatch.isCanceled = true;
+                dispatch.setUpdatedBy(anonUser);
+    
+                // move queried data into variables
+                // because they are not part of the orer_job_dispatch
+                // table and will cause dml errors
+                const orderGuid = dispatch.orderGuid;
+                const vendorName = dispatch.vendorName;
+                delete dispatch.orderGuid;
+                delete dispatch.vendorName;
+    
+                await OrderStop.query(trx)
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid')
+                            .where({ 'jobGuid': dispatch.jobGuid })
+                            .distinctOn('stopGuid')
+                    );
+    
+                const job = Job.fromJson({
+                    vendorGuid: null,
+                    vendorContactGuid: null,
+                    vendorAgentGuid: null,
+                    dateStarted: null,
+                    status: 'declined'
+                });
+                job.setUpdatedBy(anonUser);
+                await Job.query(trx).patch(job).findById(dispatch.jobGuid);
+    
+                // have to put table name because externalGuid is also on loadboard post and not
+                // specifying it makes the query ambiguous
+                // await OrderJobDispatch.query().patch(dispatch).where({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid, isPending: true, isAccepted: false });
+                await OrderJobDispatch.query().patch(dispatch).findById(dispatch.guid);
+    
+                await trx.commit();
+    
+                // StatusManagerHandler.registerStatus({
+                //     orderGuid,
+                //     userGuid: anonUser,
+                //     statusId: 6,
+                //     jobGuid: dispatch.jobGuid,
+                //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
+                // });
+            }
+            catch (e)
+            {
+                await trx.rollback(e);
+            }
         }
     }
 
