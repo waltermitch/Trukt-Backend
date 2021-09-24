@@ -43,6 +43,12 @@ paths:
   /order/{guid}:
     get:
       $ref: paths\order\get.yaml
+  /order/{orderGuid}/tender/accept:
+    put:
+      $ref: paths\order\putTenderAccept.yaml
+  /order/{orderGuid}/tender/reject:
+    put:
+      $ref: paths\order\putTenderReject.yaml
   /picklist/options:
     get:
       $ref: paths\picklist\get.yaml
