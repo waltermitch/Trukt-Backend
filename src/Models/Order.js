@@ -237,6 +237,16 @@ class Order extends BaseModel
         await super.$beforeUpdate(opt, context);
         this.calculateEstimatedIncome();
     }
+
+    static filterIsTender(query, isTender)
+    {
+        return isTender !== undefined ? query.andWhere('isTender', isTender) : query;
+    }
+
+    static modifiers = {
+        filterIsTender: this.filterIsTender
+    };
+
 }
 
 Object.assign(Order.prototype, IncomeCalcs);

@@ -38,7 +38,8 @@ class OrderService
         carrier,
         dispatcher,
         salesperson,
-        dates
+        dates,
+        isTender
     }, page, rowCount)
     {
 
@@ -53,7 +54,8 @@ class OrderService
         const queryFilterDispatcher = OrderService.addFilterDispatcher(queryFilterCustomer, dispatcher);
         const queryFilterSalesperson = OrderService.addFilterSalesperson(queryFilterDispatcher, salesperson);
         const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
-        const queryAllFilters = OrderService.addFilterDates(queryFilterCarrier, dates);
+        const queryAddModifiers = OrderService.addFilterModifiers(queryFilterCarrier, isTender);
+        const queryAllFilters = OrderService.addFilterDates(queryAddModifiers, dates);
 
         const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
 
@@ -836,6 +838,11 @@ class OrderService
             .modifyGraph('jobs.vendor', builder => builder.select('guid', 'name').distinct())
             .modifyGraph('jobs.vendor.rectype', builder => builder.select('name').distinct());
 
+    }
+
+    static addFilterModifiers(baseQuery, isTender)
+    {
+        return baseQuery.modify('filterIsTender', isTender);
     }
 
     static addDeliveryAddress(ordersArray)
