@@ -212,7 +212,6 @@ class LoadboardService
             }
             else
             {
-                console.log('not creating new contact');
                 if (carrierContact.accountId != carrier.sfId)
                 {
                     throw new Error('Please pass in valid driver for carrier');

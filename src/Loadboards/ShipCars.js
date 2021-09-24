@@ -237,13 +237,13 @@ class ShipCars extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handlePost(payloadMetadata, response)
@@ -281,13 +281,13 @@ class ShipCars extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handleUnpost(payloadMetadata, response)
@@ -315,13 +315,12 @@ class ShipCars extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handleDispatch(payloadMetadata, response)
@@ -330,7 +329,6 @@ class ShipCars extends Loadboard
 
         try
         {
-            console.log(response.dispatchRes.id);
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.id;
             dispatch.setUpdatedBy(anonUser);
@@ -343,10 +341,9 @@ class ShipCars extends Loadboard
             objectionPost.isSynced = true;
             objectionPost.status = 'unposted';
             objectionPost.setUpdatedBy(anonUser);
-            console.log(objectionPost);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
-            const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+            const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
             const vehicles = this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
             for (const vehicle of vehicles)
             {
@@ -364,6 +361,8 @@ class ShipCars extends Loadboard
             //     jobGuid: objectionPost.guid,
             //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'dispatched' }
             // });
+
+            return objectionPost.jobGuid;
         }
         catch (e)
         {
@@ -402,7 +401,7 @@ class ShipCars extends Loadboard
             await OrderStop.query(trx)
                 .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
                 .whereIn('guid',
-                    OrderStopLink.query().select('stopGuid')
+                    OrderStopLink.query(trx).select('stopGuid')
                         .where({ 'jobGuid': dispatch.jobGuid })
                         .distinctOn('stopGuid')
                 );
@@ -423,7 +422,7 @@ class ShipCars extends Loadboard
             objectionPost.setUpdatedBy(anonUser);
 
             const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
-                OrderStopLink.query().select('commodityGuid')
+                OrderStopLink.query(trx).select('commodityGuid')
                     .where({ 'jobGuid': dispatch.jobGuid })
                     .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
             const vehicles = this.updateCommodity(commodities, response.vehicles);
@@ -452,6 +451,8 @@ class ShipCars extends Loadboard
             //         code: 'offer canceled'
             //     }
             // });
+
+            return objectionPost.jobGuid;
         }
         catch (e)
         {
@@ -461,154 +462,157 @@ class ShipCars extends Loadboard
 
     static async handleCarrierAcceptDispatch(payloadMetadata, response)
     {
-        console.log('carrier has accepted the dispatch');
-        console.log(payloadMetadata);
-        console.log(response);
-        const trx = await OrderJobDispatch.startTransaction();
-        try
+        if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
         {
-            const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
-                .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+            const trx = await OrderJobDispatch.startTransaction();
+            try
+            {
+                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor')
+                    .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
 
-            dispatch.isPending = false;
-            dispatch.isAccepted = true;
-            dispatch.setUpdatedBy(anonUser);
+                dispatch.isPending = false;
+                dispatch.isAccepted = true;
+                dispatch.setUpdatedBy(anonUser);
 
-            // move queried data into variables
-            // because they are not part of the orer_job_dispatch
-            // table and will cause dml errors
-            const orderGuid = dispatch.orderGuid;
-            const vendorName = dispatch.vendorName;
-            delete dispatch.orderGuid;
-            delete dispatch.vendorName;
+                // move queried data into variables
+                // because they are not part of the orer_job_dispatch
+                // table and will cause dml errors
+                const orderGuid = dispatch.orderGuid;
+                const vendorName = dispatch.vendorName;
+                delete dispatch.orderGuid;
+                delete dispatch.vendorName;
 
-            // have to put table name because externalGuid is also on loadboard post and not
-            // specifying it makes the query ambiguous
-            await OrderJobDispatch.query(trx).patch(dispatch).where({
-                'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
-                isPending: true,
-                isCanceled: false
-            });
+                // have to put table name because externalGuid is also on loadboard post and not
+                // specifying it makes the query ambiguous
+                await OrderJobDispatch.query(trx).patch(dispatch).where({
+                    'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
+                    isPending: true,
+                    isCanceled: false
+                });
 
-            await Job.query(trx).patch({
-                status: 'accepted',
-                updatedByGuid: anonUser
-            }).findById(dispatch.jobGuid);
+                await Job.query(trx).patch({
+                    status: 'accepted',
+                    updatedByGuid: anonUser
+                }).findById(dispatch.jobGuid);
 
-            await trx.commit();
+                await trx.commit();
 
-            // keeping this commented out until we figure out status log types
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid,
-            //     userGuid: anonUser,
-            //     statusId: 4,
-            //     jobGuid: dispatch.jobGuid,
-            //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
-            // });
-        }
-        catch (e)
-        {
-            await trx.rollback(e);
+                // keeping this commented out until we figure out status log types
+                // StatusManagerHandler.registerStatus({
+                //     orderGuid,
+                //     userGuid: anonUser,
+                //     statusId: 4,
+                //     jobGuid: dispatch.jobGuid,
+                //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
+                // });
+
+                return dispatch.jobGuid;
+            }
+            catch (e)
+            {
+                await trx.rollback(e);
+            }
         }
     }
 
     static async handleCarrierDeclineDispatch(payloadMetadata, response)
     {
-        console.log('carrier has declined the offer from ship cars');
-        console.log(payloadMetadata);
-        console.log(response);
-        const trx = await OrderJobDispatch.startTransaction();
-
-        try
+        if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
         {
-            // 1. Set Dispatch record to canceled
-            const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
-                .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+            const trx = await OrderJobDispatch.startTransaction();
 
-            dispatch.isPending = false;
-            dispatch.isAccepted = false;
-            dispatch.isCanceled = true;
-            dispatch.setUpdatedBy(anonUser);
-
-            // move queried data into variables
-            // because they are not part of the orer_job_dispatch
-            // table and will cause dml errors
-            const orderGuid = dispatch.orderGuid;
-            const vendorName = dispatch.vendorName;
-            delete dispatch.orderGuid;
-            delete dispatch.vendorName;
-
-            // have to put table name because externalGuid is also on loadboard post and not
-            // specifying it makes the query ambiguous
-            await OrderJobDispatch.query(trx).patch(dispatch).where({
-                'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
-                isPending: true,
-                isCanceled: false
-            });
-
-            // 2. Remove vendor fields from the job
-            const job = Job.fromJson({
-                vendorGuid: null,
-                vendorContactGuid: null,
-                vendorAgentGuid: null,
-                dateStarted: null,
-                status: 'declined'
-            });
-            job.setUpdatedBy(anonUser);
-            await Job.query().patch(job).findById(dispatch.jobGuid);
-
-            // 3. Set the loadboard post record external guid to the new
-            // load that has been created
-            const objectionPost = LoadboardPost.fromJson({
-                externalGuid: response.id,
-                externalPostGuid: null,
-                isCreated: true,
-                isSynced: true,
-                hasError: false,
-                apiError: null
-            });
-            objectionPost.setUpdatedBy(anonUser);
-            await LoadboardPost.query(trx).patch(objectionPost).findById(dispatch.loadboardPostGuid);
-
-            // 4. update the vehicle ship car ids
-            const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
-                OrderStopLink.query().select('commodityGuid')
-                    .where({ 'jobGuid': dispatch.jobGuid })
-                    .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
-            const vehicles = this.updateCommodity(commodities, response.vehicles);
-            for (const vehicle of vehicles)
+            try
             {
-                vehicle.setUpdatedBy(anonUser);
-                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
-            }
+                // 1. Set Dispatch record to canceled
+                const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                    .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
 
-            // 5. unset the stop scheduled dates
-            await OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
-                .whereIn('guid',
-                    OrderStopLink.query().select('stopGuid')
+                dispatch.isPending = false;
+                dispatch.isAccepted = false;
+                dispatch.isCanceled = true;
+                dispatch.setUpdatedBy(anonUser);
+
+                // move queried data into variables
+                // because they are not part of the orer_job_dispatch
+                // table and will cause dml errors
+                const orderGuid = dispatch.orderGuid;
+                const vendorName = dispatch.vendorName;
+                delete dispatch.orderGuid;
+                delete dispatch.vendorName;
+
+                // have to put table name because externalGuid is also on loadboard post and not
+                // specifying it makes the query ambiguous
+                await OrderJobDispatch.query(trx).patch(dispatch).where({
+                    'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
+                    isPending: true,
+                    isCanceled: false
+                });
+
+                // 2. Remove vendor fields from the job
+                const job = Job.fromJson({
+                    vendorGuid: null,
+                    vendorContactGuid: null,
+                    vendorAgentGuid: null,
+                    dateStarted: null,
+                    status: 'declined'
+                });
+                job.setUpdatedBy(anonUser);
+                await Job.query(trx).patch(job).findById(dispatch.jobGuid);
+
+                // 3. Set the loadboard post record external guid to the new
+                // load that has been created
+                const objectionPost = LoadboardPost.fromJson({
+                    externalGuid: response.id,
+                    externalPostGuid: null,
+                    isCreated: true,
+                    isSynced: true,
+                    hasError: false,
+                    apiError: null
+                });
+                objectionPost.setUpdatedBy(anonUser);
+                await LoadboardPost.query(trx).patch(objectionPost).findById(dispatch.loadboardPostGuid);
+
+                // 4. update the vehicle ship car ids
+                const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
+                    OrderStopLink.query().select('commodityGuid')
                         .where({ 'jobGuid': dispatch.jobGuid })
-                        .distinctOn('stopGuid')
-                );
+                        .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
+                const vehicles = this.updateCommodity(commodities, response.vehicles);
+                for (const vehicle of vehicles)
+                {
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                }
 
-            await trx.commit(trx);
+                // 5. unset the stop scheduled dates
+                await OrderStop.query(trx)
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid')
+                            .where({ 'jobGuid': dispatch.jobGuid })
+                            .distinctOn('stopGuid')
+                    );
 
-            // keeping this commented out until we figure out status log types
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid,
-            //     userGuid: anonUser,
-            //     statusId: 4,
-            //     jobGuid: dispatch.jobGuid,
-            //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
-            // });
+                await trx.commit();
+
+                // keeping this commented out until we figure out status log types
+                // StatusManagerHandler.registerStatus({
+                //     orderGuid,
+                //     userGuid: anonUser,
+                //     statusId: 4,
+                //     jobGuid: dispatch.jobGuid,
+                //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
+                // });
+
+                return dispatch.jobGuid;
+            }
+            catch (e)
+            {
+                await trx.rollback(e);
+            }
         }
-        catch (e)
-        {
-            await trx.rollback(e);
-        }
-
     }
 
     static updateCommodity(ogCommodities, newCommodities)

@@ -126,7 +126,6 @@ class CarDeliveryNetwork extends Loadboard
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-        console.log(response);
         try
         {
             if (response.hasErrors)
@@ -150,13 +149,13 @@ class CarDeliveryNetwork extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handleUnpost(payloadMetadata, response)
@@ -184,6 +183,8 @@ class CarDeliveryNetwork extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
