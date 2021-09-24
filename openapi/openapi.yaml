@@ -75,7 +75,12 @@ paths:
     delete:
       $ref: paths\loadboard\delete.yaml
     post:
-      $ref: paths\loadboard\post.yaml
+      $ref:  paths\loadboard\post.yaml
+  /loadboard/{jobId}/dispatch:
+    post:
+      $ref:  paths\loadboard\dispatch\post.yaml
+    put:
+      $ref:  paths\loadboard\dispatch\put.yaml
   /invoice/{invoiceId}:
     get:
       $ref: paths\invoice\get.yaml

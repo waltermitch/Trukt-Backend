@@ -2,6 +2,7 @@ const Knex = require('knex');
 const knexfile = require('../../knexfile');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
+const OrderJobDispatch = require('../Models/OrderJobDispatch');
 
 const { ServiceBusClient } = require('@azure/service-bus');
 
@@ -20,14 +21,32 @@ const myMessageHandler = async (message) =>
     for (const res of responses)
     {
         const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
-        await lbClass[`handle${res.payloadMetadata.action}`](res.payloadMetadata.post, res[`${res.payloadMetadata.action}`]);
-    }
 
-    const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
+        try
+        {
+            // make the first letter of the action uppercase so that we can call the the loadboards action
+            // handler based off this string i.e post -> Post to be handled by method handlePost
+            const action = res.payloadMetadata.action.charAt(0).toUpperCase() + res.payloadMetadata.action.slice(1);
+            await lbClass[`handle${action}`](res.payloadMetadata, res[`${res.payloadMetadata.action}`]);
+        }
+        catch (e)
+        {
+            throw new Error(e.toString());
+        }
+    }
 
     // publish to a group that is named after the the jobGuid which
     // should be listening on messages posted to the group
-    await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
+    if (responses[0].payloadMetadata.action == 'dispatch' || responses[0].payloadMetadata.action == 'undispatch')
+    {
+        const dispatch = await OrderJobDispatch.query().withGraphJoined('[vendor, vendorAgent]').findOne({ jobGuid });
+        await pubsub.publishToGroup(`${jobGuid}`, { object: 'dispatch', data: { dispatch } });
+    }
+    else
+    {
+        const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
+        await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
+    }
 };
 const myErrorHandler = async (args) =>
 {

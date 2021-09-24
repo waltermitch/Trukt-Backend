@@ -1,0 +1,16 @@
+summary: Undispatch job
+operationId: putLoadboardDispatch
+description: Undispatches a load from a carrier
+tags:
+  - Loadboard
+parameters:
+  - in: path
+    name: jobId
+    schema:
+      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: loadboards
+    content:
+      application/json: {}

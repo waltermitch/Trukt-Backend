@@ -33,10 +33,13 @@ class SystemManagementService
         // map db users to map
         const dbUsers = new Map(usersFromDB.map((user) => [user.guid, user]));
 
-        // for each user upser it to the database
+        // for each user upsert it to the database
         for (const user of usersFromAD)
         {
             const payload = { name: user.displayName, email: user.mail, guid: user.id };
+
+            // remove user from map
+            dbUsers.delete(user.id);
 
             await User.query().insert(payload).onConflict('guid').merge();
         }
