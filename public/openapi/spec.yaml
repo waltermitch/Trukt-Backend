@@ -41,7 +41,6 @@ paths:
           description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           schema:
             enum:
-              - undefined
               - vendorInvoice
               - billOfLading
               - proofOfDelivery
@@ -65,7 +64,6 @@ paths:
               - balanceDue
               - packingList
               - photo
-            default: undefined
         - in: query
           name: visibility
           schema:
@@ -123,7 +121,6 @@ paths:
           description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           schema:
             enum:
-              - undefined
               - vendorInvoice
               - billOfLading
               - proofOfDelivery
@@ -147,7 +144,6 @@ paths:
               - balanceDue
               - packingList
               - photo
-            default: undefined
         - in: query
           name: visibility
           schema:
@@ -1914,7 +1910,6 @@ components:
         type:
           description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           enum:
-            - undefined
             - vendorInvoice
             - billOfLading
             - proofOfDelivery
@@ -1938,7 +1933,6 @@ components:
             - balanceDue
             - packingList
             - photo
-          default: undefined
         visibility:
           type: array
           items:
@@ -1977,7 +1971,6 @@ components:
       type: object
       required:
         - name
-        - phoneNumber
       properties:
         guid:
           $ref: '#/components/schemas/guid'
