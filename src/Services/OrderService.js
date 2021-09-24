@@ -22,11 +22,20 @@ const ComparisonType = require('../Models/ComparisonType');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const { MilesToMeters } = require('./../Utils');
+const { DateTime } = require('luxon');
+const axios = require('axios');
+const https = require('https');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
 
 let dateFilterComparisonTypes;
+
+const logicAppInstance = axios.create({
+    baseURL: process.env['azure.logicApp.BaseUrl'],
+    httpsAgent: new https.Agent({ keepAlive: true }),
+    headers: { 'Content-Type': 'application/json' }
+});
 
 class OrderService
 {
@@ -551,6 +560,116 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static async loadTenders(action, orderGuid, reason)
+    {
+        const order = await Order.query().skipUndefined().findById(orderGuid).withGraphJoined('client');
+
+        // if order doesn't exist throw error
+        if (order == undefined)
+        {
+            throw new Error('Order doesn\'t exist');
+        }
+
+        // handling condition cases
+        if (order.isTender == false)
+        {
+            const err = new Error('Order is not a load Tender');
+            err.status = 400;
+
+            // throw new Error('Order is not a load Tender');
+            throw err;
+        }
+
+        if (order.isDeleted == true)
+        {
+            throw new Error('Order Already Rejected');
+        }
+
+        // payload for logic app
+        const logicAppPayload = {
+            order: {
+                guid: order.guid,
+                number: order.number
+            },
+            partner: order.client.sfId,
+            refrence: order.referenceNumber,
+            action: action,
+            date: DateTime.utc().toString(),
+            scac: 'RCGQ'
+        };
+
+        if (reason)
+        {
+            Object.assign(logicAppPayload, { reason: reason });
+        }
+
+        console.log('Payload', logicAppPayload);
+
+        const response = await logicAppInstance.post(process.env['azure.logicApp.params'], logicAppPayload);
+        console.log('Logic Response', response.status);
+
+        // Error
+        if (response.status == 202)
+        {
+            // await StatusManagerHandler.registerStatus({
+            // orderGuid: orderGuid,
+            // userGuid: createdByGuid,
+            // jobGuid: jobGuid,
+            // statusId:
+            // });
+            return response;
+        }
+        else
+        {
+            throw new Error('Something happened Failed');
+        }
+    }
+
+    static async acceptLoadTender(orderGuid)
+    {
+        await OrderService.loadTenders('accept', orderGuid);
+
+        // update Order and status Manager
+        await Order.query().skipUndefined().findById(orderGuid).patch({
+            isTender: false,
+            status: 'New'
+        });
+
+        // status update
+        await StatusManagerHandler.registerStatus({
+            // orderGuid: orderGuid,
+            // userGuid: createdByGuid,
+            // jobGuid: jobGuid,
+            // statusId:
+        });
+
+        return;
+    }
+
+    static async rejectLoadTender(orderGuid, reason)
+    {
+        if (!reason)
+        {
+            throw new Error('Missing reason');
+        }
+        await OrderService.loadTenders('reject', orderGuid, reason);
+
+        await Order.query().skipUndefined().findById(orderGuid).patch({
+            isDeleted: true,
+            status: 'Deleted'
+        });
+
+        // status update
+        await StatusManagerHandler.registerStatus({
+            // orderGuid: orderGuid,
+            // userGuid: createdByGuid,
+            // jobGuid: jobGuid,
+            // statusId:
+        });
+
+        return;
     }
 
     /**
