@@ -237,13 +237,13 @@ class ShipCars extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handlePost(payloadMetadata, response)
@@ -281,13 +281,13 @@ class ShipCars extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handleUnpost(payloadMetadata, response)
@@ -315,13 +315,12 @@ class ShipCars extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handleDispatch(payloadMetadata, response)
@@ -344,7 +343,7 @@ class ShipCars extends Loadboard
             objectionPost.setUpdatedBy(anonUser);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
-            const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+            const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
             const vehicles = this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
             for (const vehicle of vehicles)
             {
@@ -362,6 +361,8 @@ class ShipCars extends Loadboard
             //     jobGuid: objectionPost.guid,
             //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'dispatched' }
             // });
+
+            return objectionPost.jobGuid;
         }
         catch (e)
         {
@@ -400,7 +401,7 @@ class ShipCars extends Loadboard
             await OrderStop.query(trx)
                 .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
                 .whereIn('guid',
-                    OrderStopLink.query().select('stopGuid')
+                    OrderStopLink.query(trx).select('stopGuid')
                         .where({ 'jobGuid': dispatch.jobGuid })
                         .distinctOn('stopGuid')
                 );
@@ -421,7 +422,7 @@ class ShipCars extends Loadboard
             objectionPost.setUpdatedBy(anonUser);
 
             const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
-                OrderStopLink.query().select('commodityGuid')
+                OrderStopLink.query(trx).select('commodityGuid')
                     .where({ 'jobGuid': dispatch.jobGuid })
                     .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
             const vehicles = this.updateCommodity(commodities, response.vehicles);
@@ -450,6 +451,8 @@ class ShipCars extends Loadboard
             //         code: 'offer canceled'
             //     }
             // });
+
+            return objectionPost.jobGuid;
         }
         catch (e)
         {
@@ -464,7 +467,7 @@ class ShipCars extends Loadboard
             const trx = await OrderJobDispatch.startTransaction();
             try
             {
-                const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
 
@@ -503,6 +506,8 @@ class ShipCars extends Loadboard
                 //     jobGuid: dispatch.jobGuid,
                 //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
                 // });
+
+                return dispatch.jobGuid;
             }
             catch (e)
             {
@@ -554,7 +559,7 @@ class ShipCars extends Loadboard
                     status: 'declined'
                 });
                 job.setUpdatedBy(anonUser);
-                await Job.query().patch(job).findById(dispatch.jobGuid);
+                await Job.query(trx).patch(job).findById(dispatch.jobGuid);
 
                 // 3. Set the loadboard post record external guid to the new
                 // load that has been created
@@ -590,7 +595,7 @@ class ShipCars extends Loadboard
                             .distinctOn('stopGuid')
                     );
 
-                await trx.commit(trx);
+                await trx.commit();
 
                 // keeping this commented out until we figure out status log types
                 // StatusManagerHandler.registerStatus({
@@ -600,6 +605,8 @@ class ShipCars extends Loadboard
                 //     jobGuid: dispatch.jobGuid,
                 //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
                 // });
+
+                return dispatch.jobGuid;
             }
             catch (e)
             {

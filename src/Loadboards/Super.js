@@ -294,13 +294,13 @@ class Super extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handlePost(payloadMetadata, response)
@@ -349,13 +349,13 @@ class Super extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handleUnpost(payloadMetadata, response)
@@ -383,13 +383,12 @@ class Super extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handleUpdate(payloadMetadata, response)
@@ -435,6 +434,7 @@ class Super extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
@@ -486,6 +486,8 @@ class Super extends Loadboard
             //     jobGuid: objectionPost.guid,
             //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'dispatched' }
             // });
+
+            return dispatch.jobGuid;
         }
         catch (e)
         {
@@ -557,6 +559,7 @@ class Super extends Loadboard
             //         code: 'offer canceled'
             //     }
             // });
+            return dispatch.jobGuid;
         }
         catch (e)
         {
@@ -572,7 +575,7 @@ class Super extends Loadboard
             const trx = await OrderJobDispatch.startTransaction();
             try
             {
-                const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
 
@@ -611,6 +614,7 @@ class Super extends Loadboard
                 //     jobGuid: dispatch.jobGuid,
                 //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
                 // });
+                return dispatch.jobGuid;
             }
             catch (e)
             {
@@ -624,20 +628,20 @@ class Super extends Loadboard
         if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
         {
             const trx = await OrderJobDispatch.startTransaction();
-    
+
             try
             {
                 // getting the dispatch record because it has the job guid, which we need in order to operate
                 // on the job
-                const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
-    
+
                 dispatch.isPending = false;
                 dispatch.isAccepted = false;
                 dispatch.isCanceled = true;
                 dispatch.setUpdatedBy(anonUser);
-    
+
                 // move queried data into variables
                 // because they are not part of the orer_job_dispatch
                 // table and will cause dml errors
@@ -645,7 +649,7 @@ class Super extends Loadboard
                 const vendorName = dispatch.vendorName;
                 delete dispatch.orderGuid;
                 delete dispatch.vendorName;
-    
+
                 await OrderStop.query(trx)
                     .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
                     .whereIn('guid',
@@ -653,7 +657,7 @@ class Super extends Loadboard
                             .where({ 'jobGuid': dispatch.jobGuid })
                             .distinctOn('stopGuid')
                     );
-    
+
                 const job = Job.fromJson({
                     vendorGuid: null,
                     vendorContactGuid: null,
@@ -663,14 +667,14 @@ class Super extends Loadboard
                 });
                 job.setUpdatedBy(anonUser);
                 await Job.query(trx).patch(job).findById(dispatch.jobGuid);
-    
+
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
                 // await OrderJobDispatch.query().patch(dispatch).where({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid, isPending: true, isAccepted: false });
                 await OrderJobDispatch.query().patch(dispatch).findById(dispatch.guid);
-    
+
                 await trx.commit();
-    
+
                 // StatusManagerHandler.registerStatus({
                 //     orderGuid,
                 //     userGuid: anonUser,
@@ -678,6 +682,8 @@ class Super extends Loadboard
                 //     jobGuid: dispatch.jobGuid,
                 //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
                 // });
+
+                return dispatch.jobGuid;
             }
             catch (e)
             {
