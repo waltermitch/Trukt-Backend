@@ -10,6 +10,10 @@
         "decrypt": "bash ./tools/decrypt.sh",
         "setup": "bash ./tools/git_setup.sh && bash ./tools/decrypt.sh './local.settings.enc' './local.settings.json'",
         "merge-settings": "node ./tools/merge_settings.js",
+        "copy-settings": "bash ./tools/decrypt.sh local.settings.enc local.settings.copy.json",
+        "update-settings": "bash ./tools/encrypt.sh local.settings.copy.json local.settings.enc",
+        "check-settings": "bash ./tools/decrypt.sh local.settings.enc local.settings.copy2.json && diff local.settings.copy2.json local.settings.copy.json",
+        "postcheck-settings": "rm ./local.settings.copy2.json",
         "knex-debug": "set DEBUG=knex* && node main.js",
         "api-bundle": "openapi lint && openapi bundle main --output public/openapi/spec.yaml"
     },
