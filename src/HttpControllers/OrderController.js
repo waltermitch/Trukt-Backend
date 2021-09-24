@@ -72,6 +72,38 @@ class OrderController extends HttpRouteController
         }
 
     }
+
+    static async handleTenders(req, res, next)
+    {
+        try
+        {
+            if (req.params.action == 'accept')
+            {
+                await OrderService.acceptLoadTender(req.params.orderGuid);
+            }
+            else if (req.params.action == 'reject')
+            {
+                await OrderService.rejectLoadTender(req.params.orderGuid, req.body.reason);
+            }
+            res.status(200);
+            res.send();
+        }
+        catch (err)
+        {
+            if (err.message == 'Order doesn\'t exist')
+            {
+                res.status(404);
+                res.json(err.message);
+            }
+            else
+            {
+                res.status(400);
+                res.json(err.message);
+            }
+
+            // next(err);
+        }
+    }
 }
 
 const controller = new OrderController();
