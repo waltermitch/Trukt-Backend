@@ -330,7 +330,6 @@ class ShipCars extends Loadboard
 
         try
         {
-            console.log(response.dispatchRes.id);
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.id;
             dispatch.setUpdatedBy(anonUser);
@@ -343,7 +342,6 @@ class ShipCars extends Loadboard
             objectionPost.isSynced = true;
             objectionPost.status = 'unposted';
             objectionPost.setUpdatedBy(anonUser);
-            console.log(objectionPost);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
