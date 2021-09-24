@@ -1,0 +1,42 @@
+summary: Accept load Tenders
+operationId: rejectOrderbyGuid
+description: Accept Tender by order GUID and action type
+tags:
+  - Order
+parameters:
+  - in: path
+    name: orderGuid
+    schema:
+      $ref: '..\..\components\schemas\common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          reason:
+            type: string
+            example: Reason for declining Tender  
+        required:
+          - reason
+
+responses:
+  200:
+    description: Order
+    content:
+      application/json: {}
+  400:
+    description: Tender
+    content: 
+      application/json: 
+        schema:
+          type: string
+          example:  Order Already Rejected
+  404:
+    description: Tender
+    content: 
+      application/json: 
+        schema:
+          type: string
+          example: Order doesn't exist
