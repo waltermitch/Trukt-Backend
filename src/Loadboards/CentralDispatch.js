@@ -33,7 +33,7 @@ class CentralDispatch extends Loadboard
     {
         for (const com of this.data.commodities)
         {
-            if (com.isInoperable)
+            if (com.inoperable === 'yes')
             {
                 return 'inop';
             }
