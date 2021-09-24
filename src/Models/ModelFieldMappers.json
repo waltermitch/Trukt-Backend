@@ -119,15 +119,14 @@
                     "portfolioCode",
                     "primaryContactId",
                     "primaryContactPersonId",
-                    "qbId",
                     "rating",
                     "recordTypeId",
                     "referralCode",
                     "requiresAttention",
                     "salesAccountManager",
                     "salutation",
-                    "scId",
-                    "sdGuid",
+                    
+                    
                     "searchAddress",
                     "shippingGeocodeAccuracy",
                     "sic",
