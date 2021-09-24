@@ -35,6 +35,17 @@ class SFContact extends BaseModel
         };
     }
 
+    static modifiers = {
+        byId(query, id)
+        {
+            query.where(query =>
+            {
+                query.orWhere('salesforce.contacts.guid', id)
+                    .orWhere('salesforce.contacts.sfId', id);
+            });
+        }
+    }
+
     $parseJson(json)
     {
         json = super.$parseJson(json);
@@ -62,8 +73,17 @@ class SFContact extends BaseModel
         if (!obj.firstName && !obj.lastName && obj.name)
         {
             const names = obj.name.replace(/\s+/, ' ').trim().split(' ');
-            obj.firstName = names[0];
-            obj.lastName = names[1];
+            if (names.length < 2)
+            {
+                obj.firstName = '';
+                obj.lastName = names[0] || 'LNU';
+            }
+            else
+            {
+                obj.firstName = names[0];
+                obj.lastName = names.slice(1, names.length).join(' ');
+            }
+
             obj.name = obj.firstName + ' ' + obj.lastName;
         }
 

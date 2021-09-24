@@ -1,5 +1,5 @@
 const BaseModel = require('./BaseModel');
-const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin, isNotDeleted } = require('./Mixins/RecordAuthors');
 
 class InvoiceLine extends BaseModel
 {
@@ -33,6 +33,21 @@ class InvoiceLine extends BaseModel
                 }
             }
         };
+    }
+
+    static get modifiers()
+    {
+        const modifiers = {
+            transportOnly(builder)
+            {
+                builder.join('rcgTms.invoiceBillLineItems', 'rcgTms.InvoiceBillLines.itemId', 'rcgTms.invoiceBillLineItems.id').where(builder =>
+                {
+                    builder.where({ 'rcgTms.invoiceBillLineItems.name': 'transport', 'rcgTms.invoiceBillLineItems.type': 'revenue' });
+                });
+            }
+        };
+        Object.assign(modifiers, isNotDeleted(InvoiceLine.tableName));
+        return modifiers;
     }
 
     $parseJson(json)

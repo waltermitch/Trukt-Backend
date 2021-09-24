@@ -13,7 +13,7 @@ class LoadboardController extends HttpRouteController
 
         try
         {
-            LoadboardService.checkLoadboardsInput(posts);
+            LoadboardService.checkLoadboardsInput(posts, 'create');
             await LoadboardService.createPostings(req.params.jobId, posts, req.session.userGuid);
 
             res.status(204).send();
@@ -33,7 +33,7 @@ class LoadboardController extends HttpRouteController
 
         try
         {
-            LoadboardService.checkLoadboardsInput(posts);
+            LoadboardService.checkLoadboardsInput(posts, 'post');
             await LoadboardService.postPostings(req.params.jobId, posts, req.session.userGuid);
 
             res.status(204).send();
@@ -41,7 +41,7 @@ class LoadboardController extends HttpRouteController
         catch (e)
         {
             next({
-                status: 500,
+                status: 400,
                 data: { message: e.toString() || 'Internal server error' }
             });
         }
@@ -54,7 +54,7 @@ class LoadboardController extends HttpRouteController
 
         try
         {
-            LoadboardService.checkLoadboardsInput(posts);
+            LoadboardService.checkLoadboardsInput(posts, 'unpost');
             await LoadboardService.unpostPostings(req.params.jobId, posts, req.session.userGuid);
 
             res.status(204).send();
@@ -62,7 +62,7 @@ class LoadboardController extends HttpRouteController
         catch (e)
         {
             next({
-                status: 500,
+                status: 400,
                 data: { message: e.toString() || 'Internal server error' }
             });
         }
@@ -82,6 +82,40 @@ class LoadboardController extends HttpRouteController
             next({
                 status: 500,
                 data: { message: e.toString() || 'Internal server error' }
+            });
+        }
+    }
+
+    static async dispatchJob(req, res, next)
+    {
+        try
+        {
+            const dispatch = await LoadboardService.dispatchJob(req.params.jobId, req.body, req.session.userGuid);
+            res.json(dispatch);
+            res.status(200);
+        }
+        catch (err)
+        {
+            next({
+                status: 400,
+                data: { message: err.toString() }
+            });
+        }
+    }
+
+    static async cancelDispatch(req, res, next)
+    {
+        try
+        {
+            const dispatch = await LoadboardService.cancelDispatch(req.params.jobId, req.session.userGuid);
+            res.json(dispatch);
+            res.status(200);
+        }
+        catch (err)
+        {
+            next({
+                status: 400,
+                data: { message: err.toString() }
             });
         }
     }

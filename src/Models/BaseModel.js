@@ -3,6 +3,7 @@ const knexPostgis = require('knex-postgis');
 const Knex = require('knex');
 const knexfile = require('../../knexfile');
 const fieldMappings = require('./ModelFieldMappers.json');
+const { uuidRegex, salesforceIdRegex } = require('../Utils/Regexes');
 
 const knex = Knex(knexfile());
 
@@ -134,6 +135,11 @@ class BaseModel extends Model
             delete json.index;
         }
         return json;
+    }
+
+    static validateId(id)
+    {
+        return uuidRegex.test(id) || salesforceIdRegex.test(id);
     }
 }
 

@@ -12,9 +12,32 @@ class DAT extends Loadboard
         this.postObject = data.postObjects[this.loadboardName];
     }
 
-    static validate(options)
+    static validate(requiredFields, values)
     {
-
+        for (const requiredField of requiredFields)
+        {
+            if (!Object.keys(values).includes(requiredField))
+            {
+                throw `${requiredField} is required`;
+            }
+            else if ((
+                requiredField == 'commodity' ||
+                requiredField == 'comment1' ||
+                requiredField == 'comment2') &&
+                (values[requiredField].length < 1 ||
+                    values[requiredField].length > 69))
+            {
+                throw `${requiredField} should be between 1 and 70 characters`;
+            }
+            else if (requiredField == 'weight' && (values[requiredField] < 1 || values[requiredField] > 999999))
+            {
+                throw `${requiredField} should be between 1 and 999999 pounds`;
+            }
+            else if (requiredField == 'length' && (values[requiredField] < 1 || values[requiredField] > 199))
+            {
+                throw `${requiredField} should be between 1 and 199 feet`;
+            }
+        }
     }
 
     toJSON()
@@ -60,7 +83,7 @@ class DAT extends Loadboard
                 endWhen: this.minusMinutes(this.data.pickup.dateRequestedEnd, 30),
                 preferredContactMethod: 'PRIMARY_PHONE',
                 transactionDetails: {
-                    loadOfferRateUsd: this.data.estimatedExpense
+                    loadOfferRateUsd: this.data.actualExpense
                 }
             },
             referenceId: this.data.number
@@ -69,10 +92,10 @@ class DAT extends Loadboard
         return payload;
     }
 
-    static async handlepost(post, response)
+    static async handlePost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -105,10 +128,10 @@ class DAT extends Loadboard
         return objectionPost;
     }
 
-    static async handleunpost(post, response)
+    static async handleUnpost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
         try
         {
             if (response.hasErrors)
