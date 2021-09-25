@@ -1,6 +1,6 @@
 const faker = require('faker');
 
-const test_user = '00000000-0000-0000-0000-000000000000';
+const test_user = '91c185fd-d33a-4664-95ee-0b7d244fcb4b';
 const terminalTableName = 'terminals';
 const contactsTableName = 'terminal_contacts';
 exports.seed = function (knex)
