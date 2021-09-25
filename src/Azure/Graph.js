@@ -12,7 +12,6 @@ class Graph
 {
     static async connect()
     {
-
         if (!api?.expCheck())
         {
             // get token
