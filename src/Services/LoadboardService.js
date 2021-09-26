@@ -340,8 +340,10 @@ class LoadboardService
         {
 
             const dispatch = await OrderJobDispatch.query(trx).withGraphJoined('[loadboardPost, job(justIds)]')
-                .where({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid, isCanceled: false }).orWhere({ isAccepted: true })
-                .orWhere({ isPending: true })
+                .where({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid }).andWhere(builder =>
+                {
+                    builder.where({ isAccepted: true }).orWhere({ isPending: true });
+                })
                 .modifiers({
                     justIds(builder)
                     {

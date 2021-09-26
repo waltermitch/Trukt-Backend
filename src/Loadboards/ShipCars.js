@@ -64,8 +64,8 @@ class ShipCars extends Loadboard
             id: this.postObject.externalGuid,
 
             payment_method: 'ach',
-            total_payment_to_carrier: this.data.actualExpense || 0,
-            payment_to_carrier: this.data.actualExpense || 0,
+            total_payment_to_carrier: this.data.actualExpense || 5,
+            payment_to_carrier: this.data.actualExpense || 5,
             payment_term_begins: 'delivery',
             payment_term_business_days: 2
         };
@@ -221,8 +221,8 @@ class ShipCars extends Loadboard
             else
             {
                 const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
-                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-                for (const vehicle of vehicles)
+                this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of job.commodities)
                 {
                     vehicle.setUpdatedBy(anonUser);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
@@ -263,8 +263,9 @@ class ShipCars extends Loadboard
             else
             {
                 const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
-                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-                for (const vehicle of vehicles)
+                this.updateCommodity(job.commodities, response.vehicles);
+
+                for (const vehicle of job.commodities)
                 {
                     vehicle.setUpdatedBy(anonUser);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
@@ -335,22 +336,36 @@ class ShipCars extends Loadboard
             await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
 
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-            objectionPost.externalGuid = response.order.id;
-            objectionPost.externalPostGuid = null;
-            objectionPost.isPosted = false;
-            objectionPost.isSynced = true;
-            objectionPost.status = 'unposted';
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isCreated = true;
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+                if (objectionPost.externalGuid == null)
+                {
+                    objectionPost.externalGuid = response.order.id;
+
+                    const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                    this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
+                    for (const vehicle of job.commodities)
+                    {
+                        vehicle.setUpdatedBy(anonUser);
+                        await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                    }
+                }
+            }
             objectionPost.setUpdatedBy(anonUser);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-
-            const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
-            const vehicles = this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
-            for (const vehicle of vehicles)
-            {
-                vehicle.setUpdatedBy(anonUser);
-                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
-            }
-
+            
             trx.commit();
 
             // keeping this commented out until we figure out status log types
@@ -425,8 +440,8 @@ class ShipCars extends Loadboard
                 OrderStopLink.query(trx).select('commodityGuid')
                     .where({ 'jobGuid': dispatch.jobGuid })
                     .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
-            const vehicles = this.updateCommodity(commodities, response.vehicles);
-            for (const vehicle of vehicles)
+            this.updateCommodity(commodities, response.vehicles);
+            for (const vehicle of commodities)
             {
                 vehicle.setUpdatedBy(anonUser);
                 await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
@@ -617,34 +632,18 @@ class ShipCars extends Loadboard
 
     static updateCommodity(ogCommodities, newCommodities)
     {
-        const comsToUpdate = [];
-        while (ogCommodities.length !== 0)
-        {
-            const com = ogCommodities.shift();
-            this.commodityUpdater(com, newCommodities);
-            comsToUpdate.push(com);
-        }
+        // reducing the incoming vehicles to an object where the keys are trukt commodity guids
+        // ship cars lets partners store their own guids on commodities to make
+        // integration easier
+        const shipCarsVehicles = newCommodities.reduce((acc, curr) => (acc[curr.shipper_vehicle_id] = curr, acc), {});
 
-        return comsToUpdate;
-    }
-
-    static commodityUpdater(com, newCommodities)
-    {
-        for (let i = 0; i < newCommodities.length; i++)
+        for (const com of ogCommodities)
         {
-            const commodity = newCommodities[i];
-            const newName = commodity.vin + ' ' + commodity.year + ' ' + commodity.make + ' ' + commodity.model;
-            const comDescription = (com.vehicle?.year || '2005') + ' ' + (com.vehicle?.make || 'make') + ' ' + (com.vehicle?.model || com.description || 'model');
-            const comName = (com.identifier || 'vin') + ' ' + comDescription;
-            if (comName === newName)
+            if (com.extraExternalData == undefined)
             {
-                if (com.extraExternalData == undefined)
-                {
-                    com.extraExternalData = {};
-                }
-                com.extraExternalData.scGuid = commodity.id;
-                newCommodities.shift(i);
+                com.extraExternalData = {};
             }
+            com.extraExternalData.scGuid = shipCarsVehicles[`${com.guid}`].id;
         }
     }
 }
