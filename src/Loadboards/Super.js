@@ -44,10 +44,10 @@ class Super extends Loadboard
                 counterparty_guid: this.data.order.client.sdGuid,
                 save_as_new: this.data.order.client.sdGuid === null
             },
-            customer_payment: { tariff: currency(this.data.actualRevenue).value },
-            tariff: currency(this.data.actualRevenue).value,
+            customer_payment: { tariff: currency(this.data.actualRevenue).value || '5' },
+            tariff: currency(this.data.actualRevenue).value || '5',
             payment: { terms: 'ach' },
-            price: currency(this.data.actualExpense).value,
+            price: currency(this.data.actualExpense).value || '5',
             number: this.data.number,
             purchase_order_number: this.data.order.referenceNumber,
             dispatcher_name: this.data.dispatcher?.name || 'Brad Marinov',
