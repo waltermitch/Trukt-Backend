@@ -226,9 +226,9 @@ class Super extends Loadboard
                 return 'truck_daycab';
             case 'sleeper cab':
                 return 'truck_sleeper';
-            case 'pickup truck (4 Door)':
+            case 'pickup truck (4 door)':
                 return '4_door_pickup';
-            case 'pickup truck (2 Door)':
+            case 'pickup truck (2 door)':
             case 'pickup dually':
                 return 'pickup';
             case 'trailer (bumper pull)':
