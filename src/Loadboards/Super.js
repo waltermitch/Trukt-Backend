@@ -411,8 +411,8 @@ class Super extends Loadboard
                     order.[client], commodities(distinct, isNotDeleted).[vehicle]
                 ]`);
 
-                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-                for (const vehicle of vehicles)
+                this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of job.commodities)
                 {
                     vehicle.setUpdatedBy(anonUser);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
@@ -452,12 +452,9 @@ class Super extends Loadboard
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.guid;
             dispatch.setUpdatedBy(anonUser);
-
             await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
-            const objectionPost = LoadboardPost.fromJson({
-                isSynced: true,
-                guid: payloadMetadata.post.guid
-            });
+
+            const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
             if (response.hasErrors)
             {
                 objectionPost.isSynced = false;
@@ -469,11 +466,33 @@ class Super extends Loadboard
             {
                 objectionPost.externalPostGuid = null;
                 objectionPost.status = 'unposted';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
+                if (objectionPost.externalGuid == null)
+                {
+                    objectionPost.externalGuid = response.order.guid;
+
+                    const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
+                        order.[client], commodities(distinct, isNotDeleted).[vehicle]
+                    ]`);
+
+                    const vehicles = this.updateCommodity(job.commodities, response.order.vehicles);
+                    for (const vehicle of vehicles)
+                    {
+                        vehicle.setUpdatedBy(anonUser);
+                        await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                    }
+
+                    const client = job.order.client;
+                    if (client.sdGuid !== response.order.customer.counterparty_guid)
+                    {
+                        client.sdGuid = response.order.customer.counterparty_guid;
+                        await SFAccount.query(trx).patch(client).findById(client.guid);
+                    }
+                }
             }
             objectionPost.setUpdatedBy(anonUser);
-
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
@@ -721,6 +740,7 @@ class Super extends Loadboard
                 }
                 com.extraExternalData.sdGuid = commodity.guid;
                 newCommodities.shift(i);
+                break;
             }
         }
     }
