@@ -432,17 +432,27 @@ paths:
                   - datetime
                 properties:
                   order:
-                    description: >-
-                      The guid of the order in our system that is being updated.
-                      may be used to fetch additional information
-                    type: string
-                    format: uuid
-                  partner:
-                    description: The partner that wishes to update a load tender
-                    oneOf:
-                      - $ref: '#/components/schemas/SFID'
-                      - type: string
+                    type: object
+                    properties:
+                      guid:
+                        description: >-
+                          The guid of the order in our system that is being
+                          updated. may be used to fetch additional information
+                        type: string
                         format: uuid
+                      number:
+                        description: The RCG internal load number
+                        type: string
+                        pattern: '[A-Z]{2}[0-9]{5}'
+                        minLength: 7
+                        maxLength: 7
+                  partner:
+                    allOf:
+                      - description: The partner that wishes to update a load tender.
+                      - oneOf:
+                          - $ref: '#/components/schemas/SFID'
+                          - type: string
+                            format: uuid
                   reference:
                     description: >
                       The shipment/reference number from the load that was
@@ -450,7 +460,9 @@ paths:
                     type: string
                     maxLength: 64
                   commodity:
-                    description: An array of commodities that have a status update.
+                    description: >-
+                      An array of commodity identifier field values that have a
+                      status update.
                     type: array
                     items:
                       type: string
@@ -462,6 +474,14 @@ paths:
                     description: The load tender's stop whose status will be updated.
                     type: object
                     properties:
+                      sequence:
+                        type: integer
+                        description: The sequence number of the stop.
+                      name:
+                        type: string
+                        description: >-
+                          The name of the Terminal when creating the load
+                          tender.
                       city:
                         type: string
                         maxLength: 64
@@ -491,6 +511,10 @@ paths:
                   datetime:
                     type: string
                     format: date-time
+                  sla:
+                    description: The Service Level Agreement.
+                    type: string
+                    example: 8 days
                   edi:
                     $ref: '#/components/schemas/edi'
   /edi/990/outbound/accept:
@@ -530,27 +554,30 @@ paths:
                     type: object
                     properties:
                       guid:
-                        description: The EDI load tender guid inside of RCG database
-                        $ref: '#/components/schemas/guid'
+                        allOf:
+                          - description: The EDI load tender guid inside of RCG database
+                          - $ref: '#/components/schemas/guid'
                       number:
                         description: The RCG internal load number
                         type: string
                         pattern: '[A-Z]{2}[0-9]{5}'
-                        maxLength: 30
                         minLength: 7
+                        maxLength: 7
                   partner:
-                    description: >
-                      The EDI load tender client guid that was used when
-                      creating a load tender in our system.
-                    $ref: '#/components/schemas/SFID'
+                    allOf:
+                      - description: >
+                          The EDI load tender client guid that was used when
+                          creating a load tender in our system.
+                      - $ref: '#/components/schemas/SFID'
                   reference:
                     description: >
                       The EDI load tender reference number used when creating a
                       load tender in our system.
                     type: string
                   action:
-                    description: The action to take with the EDI load tender.
-                    $ref: '#/components/schemas/ediActionType'
+                    allOf:
+                      - description: The action to take with the EDI load tender.
+                      - $ref: '#/components/schemas/ediActionType'
                   date:
                     type: string
                     format: date-time
@@ -598,27 +625,30 @@ paths:
                     type: object
                     properties:
                       guid:
-                        description: The EDI load tender guid inside of RCG database
-                        $ref: '#/components/schemas/guid'
+                        allOf:
+                          - description: The EDI load tender guid inside of RCG database
+                          - $ref: '#/components/schemas/guid'
                       number:
                         description: The RCG internal load number
                         type: string
                         pattern: '[A-Z]{2}[0-9]{5}'
-                        maxLength: 30
                         minLength: 7
+                        maxLength: 7
                   partner:
-                    description: >-
-                      The EDI load tender client guid that was used when
-                      creating a load tender in our system.
-                    $ref: '#/components/schemas/SFID'
+                    allOf:
+                      - description: >
+                          The EDI load tender client guid that was used when
+                          creating a load tender in our system.
+                      - $ref: '#/components/schemas/SFID'
                   reference:
-                    description: >-
+                    description: >
                       The EDI load tender reference number used when creating a
                       load tender in our system.
                     type: string
                   action:
-                    description: The action to take with the EDI load tender.
-                    $ref: '#/components/schemas/ediActionType'
+                    allOf:
+                      - description: The action to take with the EDI load tender.
+                      - $ref: '#/components/schemas/ediActionType'
                   reason:
                     description: The reason for rejecting the EDI load tender.
                     type: string

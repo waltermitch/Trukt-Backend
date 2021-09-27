@@ -568,7 +568,7 @@ class EDIController
     {
         try
         {
-            const orderQuery = Order.query().where('isTender', true).withGraphJoined('[ ediData(loadTender), client, stops.[commodities, terminal] ]').limit(100);
+            const orderQuery = Order.query().where('isTender', true).withGraphJoined('[ ediData(loadTender), client, stops.[ commodities, terminal] ]').limit(100);
             if (req.query.reference)
             {
                 orderQuery.findOne('referenceNumber', req.query.reference);
@@ -593,10 +593,11 @@ class EDIController
             const stop = order.stops[Math.floor(Math.random() * order.stops.length)];
             const commodity = stop?.commodities[Math.floor(Math.random() * stop.commodities.length)];
             const payload = {
-                order: order.guid,
+                order: { guid: order.guid, number: order.number },
                 partner: order.client.sfId,
                 reference: order.referenceNumber,
                 datetime: DateTime.now().toISO(),
+                sla: order.client.sla || order.client.slaDays ? `${order.client.slaDays} days` : '10 days',
                 edi: order.ediData[0]?.data
             };
 
@@ -604,6 +605,8 @@ class EDIController
             {
                 payload.commodity = commodity?.identifier;
                 payload.location = {
+                    sequence: stop.sequence,
+                    name: stop.terminal.name,
                     city: stop?.terminal?.city,
                     state: stop?.terminal?.state,
                     country: stop?.terminal?.country,
