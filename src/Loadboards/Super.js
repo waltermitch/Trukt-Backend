@@ -524,7 +524,7 @@ class Super extends Loadboard
                 vendorContactGuid: null,
                 vendorAgentGuid: null,
                 dateStarted: null,
-                status: 'offer canceled'
+                status: 'ready'
             });
             job.setUpdatedBy(anonUser);
             await Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid);

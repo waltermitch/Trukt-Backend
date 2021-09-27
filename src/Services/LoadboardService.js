@@ -383,7 +383,7 @@ class LoadboardService
                     vendorContactGuid: null,
                     vendorAgentGuid: null,
                     dateStarted: null,
-                    status: 'offer canceled'
+                    status: 'ready'
                 });
                 job.setUpdatedBy(currentUser);
                 await Job.query(trx).patch(job).findById(dispatch.jobGuid);
@@ -401,7 +401,7 @@ class LoadboardService
                 //     jobGuid,
                 //     extraAnnotations: {
                 //         undispatchedFrom: 'internal',
-                //         code: 'offer canceled'
+                //         code: 'ready'
                 //     }
                 // });
             }
