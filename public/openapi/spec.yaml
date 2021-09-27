@@ -237,6 +237,7 @@ paths:
                 - stops
                 - terminals
                 - commodities
+                - edi
               properties:
                 instructions:
                   type: string
@@ -311,6 +312,11 @@ paths:
                             type: string
                             format: currency
                             minLength: 1
+                edi:
+                  description: >-
+                    EDI data parsed in JSON format. Do not decode/encode as JSON
+                    String.
+                  type: object
       responses:
         '201':
           description: Created load tender.
@@ -406,7 +412,7 @@ paths:
       parameters:
         - name: reference
           schema:
-            type: number
+            type: string
           required: true
           allowEmptyValue: false
           description: The reference number of a load tender
@@ -444,11 +450,14 @@ paths:
                     type: string
                     maxLength: 64
                   commodity:
-                    description: >
-                      The identifier field from a commodity that was created via
-                      EDI 204 load tender
-                    type: string
-                    maxLength: 255
+                    description: An array of commodities that have a status update.
+                    type: array
+                    items:
+                      type: string
+                      description: >-
+                        The identifier field from a commodity that was created
+                        via EDI 204 load tender
+                      maxLength: 255
                   location:
                     description: The load tender's stop whose status will be updated.
                     type: object
@@ -482,6 +491,8 @@ paths:
                   datetime:
                     type: string
                     format: date-time
+                  edi:
+                    $ref: '#/components/schemas/edi'
   /edi/990/outbound/accept:
     get:
       summary: Accept Load Tender
@@ -548,6 +559,8 @@ paths:
                     description: The scac number
                     type: string
                     format: scac
+                  edi:
+                    $ref: '#/components/schemas/edi'
   /edi/990/outbound/reject:
     get:
       summary: Reject Load Tender
@@ -618,6 +631,8 @@ paths:
                     description: The scac number
                     type: string
                     format: scac
+                  edi:
+                    $ref: '#/components/schemas/edi'
   /order:
     post:
       summary: Create order
@@ -1044,6 +1059,17 @@ paths:
                         required:
                           - status
                           - date
+                    isTender:
+                      description: Filter to select only orders that are marked as tender
+                      type: boolean
+                    jobCategory:
+                      description: >-
+                        Filter to select jobs that have one of the categories
+                        selected
+                      type: array
+                      items:
+                        type: string
+                      minItems: 1
       responses:
         '200':
           description: Orders
@@ -2618,6 +2644,9 @@ components:
         - LP
         - X9
         - XA
+    edi:
+      description: EDI data parsed in JSON format. Do not decode/encode as JSON String.
+      type: object
     ediActionType:
       type: string
       enum:

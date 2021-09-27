@@ -145,6 +145,14 @@ class Order extends BaseModel
                     from: 'rcgTms.orders.guid',
                     to: 'rcgTms.statusLogs.orderGuid'
                 }
+            },
+            ediData: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./EDIData'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    to: 'rcgTms.ediData.orderGuid'
+                }
             }
         };
         Object.assign(relations, AuthorRelationMappings('rcgTms.orders'));

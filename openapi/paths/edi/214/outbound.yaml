@@ -9,7 +9,7 @@ get:
   parameters:
     - name: reference
       schema:
-        type: number
+        type: string
       required: true
       allowEmptyValue: false
       description: The reference number of a load tender
@@ -45,10 +45,12 @@ get:
                 type: string
                 maxLength: 64
               commodity:
-                description: >
-                  The identifier field from a commodity that was created via EDI 204 load tender
-                type: string
-                maxLength: 255
+                description: An array of commodity identifier field values that have a status update.
+                type: array
+                items:
+                  type: string
+                  description: The identifier field from a commodity that was created via EDI 204 load tender
+                  maxLength: 255
               location:
                 description: The load tender's stop whose status will be updated.
                 type: object
@@ -80,3 +82,5 @@ get:
               datetime:
                 type: string
                 format: date-time
+              edi:
+                $ref: ..\204\inbound.yaml#/post/requestBody/content/application~1json/schema/properties/edi

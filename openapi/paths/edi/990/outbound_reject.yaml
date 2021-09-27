@@ -16,7 +16,7 @@ get:
       in: query
     - name: partner
       schema:
-        $ref: ..\components\schemas\SFID.yaml
+        $ref: ..\..\..\components\schemas\SFID.yaml
       required: true
       allowEmptyValue: false
       description: The partner ID provided when creating a load tender
@@ -66,3 +66,5 @@ get:
                 description: The scac number
                 type: string
                 format: scac
+              edi:
+                $ref: ..\204\inbound.yaml#/post/requestBody/content/application~1json/schema/properties/edi
