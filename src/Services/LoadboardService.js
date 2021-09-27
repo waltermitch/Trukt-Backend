@@ -72,20 +72,20 @@ class LoadboardService
     static async postPostings(jobId, posts, currentUser)
     {
         currentUserGuid = currentUser;
-        const job = await LoadboardService.getAllPostingData(jobId, posts);
-        const payloads = [];
-        let lbPayload;
         const dispatches = await OrderJobDispatch.query()
                 .where({ 'rcgTms.orderJobDispatches.jobGuid': jobId }).andWhere(builder =>
                 {
                     builder.where({ isAccepted: true }).orWhere({ isPending: true });
                 }).first();
+        if (dispatches)
+        {
+            throw new Error('Cannot post load with active dispatch offers');
+        }
+        const job = await LoadboardService.getAllPostingData(jobId, posts);
+        const payloads = [];
+        let lbPayload;
         try
         {
-            if (dispatches)
-            {
-                throw new Error('Cannot post load with active dispatch offers');
-            }
             for (const post of posts)
             {
                 lbPayload = new loadboardClasses[`${post.loadboard}`](job);
