@@ -99,6 +99,12 @@ requestBody:
               isTender:
                 description: Filter to select only orders that are marked as tender
                 type: boolean
+              jobCategory:
+                description: Filter to select jobs that have one of the categories selected
+                type: array
+                items:
+                  type: string
+                minItems: 1
 
 
 

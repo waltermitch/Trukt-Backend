@@ -39,7 +39,8 @@ class OrderService
         dispatcher,
         salesperson,
         dates,
-        isTender
+        isTender,
+        jobCategory
     }, page, rowCount)
     {
 
@@ -54,10 +55,10 @@ class OrderService
         const queryFilterDispatcher = OrderService.addFilterDispatcher(queryFilterCustomer, dispatcher);
         const queryFilterSalesperson = OrderService.addFilterSalesperson(queryFilterDispatcher, salesperson);
         const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
-        const queryAddModifiers = OrderService.addFilterModifiers(queryFilterCarrier, isTender);
-        const queryAllFilters = OrderService.addFilterDates(queryAddModifiers, dates);
+        const queryFilterDates = OrderService.addFilterDates(queryFilterCarrier, dates);
+        const queryAllFilters = OrderService.addFilterModifiers(queryFilterDates, { isTender, jobCategory });
 
-        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
+        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters, jobCategory);
 
         const { total, results } = await queryWithGraphModifiers.orderBy('number', 'ASC');
         const ordersWithDeliveryAddress = {
@@ -750,7 +751,7 @@ class OrderService
         return cache.get('comparisonTypes');
     }
 
-    static addGraphModifiers(baseQuery)
+    static addGraphModifiers(baseQuery, jobCategory = [])
     {
         return baseQuery
             .withGraphFetched({
@@ -827,22 +828,30 @@ class OrderService
                 'country',
                 'zipCode'
             ).distinct())
-            .modifyGraph('jobs', builder => builder.select(
-                'guid',
-                'number',
-                'estimatedExpense',
-                'estimatedRevenue',
-                'status'
-            ).distinct())
+            .modifyGraph('jobs', builder =>
+            {
+                const baseBuilder = builder.select(
+                    'guid',
+                    'number',
+                    'estimatedExpense',
+                    'estimatedRevenue',
+                    'status'
+                ).distinct();
+                if (jobCategory.length > 0)
+                    baseBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(jobCategory));
+            })
             .modifyGraph('jobs.loadboardPosts', builder => builder.select('loadboard', 'isPosted', 'status').distinct())
             .modifyGraph('jobs.vendor', builder => builder.select('guid', 'name').distinct())
             .modifyGraph('jobs.vendor.rectype', builder => builder.select('name').distinct());
 
     }
 
-    static addFilterModifiers(baseQuery, isTender)
+    static addFilterModifiers(baseQuery, filters)
     {
-        return baseQuery.modify('filterIsTender', isTender);
+        const { isTender, jobCategory } = filters;
+        return baseQuery
+            .modify('filterIsTender', isTender)
+            .modify('filterJobCategories', jobCategory);
     }
 
     static addDeliveryAddress(ordersArray)
