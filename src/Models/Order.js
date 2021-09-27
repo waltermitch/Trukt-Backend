@@ -218,6 +218,13 @@ class Order extends BaseModel
         };
     }
 
+    $parseDatabaseJson(json)
+    {
+        json = super.$parseDatabaseJson(json);
+        this.calculateGrossProfit(json.actualRevenue, json.actualExpense);
+        return json;
+    }
+
     static allStops(order)
     {
         let stops = order.stops;
