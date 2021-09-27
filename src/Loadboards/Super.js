@@ -620,7 +620,7 @@ class Super extends Loadboard
 
                 // update the job status to accepted. It's a string, we can literally write anything to this
                 await Job.query(trx).patch({
-                    status: 'accepted',
+                    status: 'dispatched',
                     updatedByGuid: anonUser
                 }).findById(dispatch.jobGuid);
 
@@ -631,7 +631,7 @@ class Super extends Loadboard
                 //     userGuid: anonUser,
                 //     statusId: 5,
                 //     jobGuid: dispatch.jobGuid,
-                //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
+                //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'dispatched', vendor: dispatch.vendorGuid, vendorName: vendorName }
                 // });
                 return dispatch.jobGuid;
             }
