@@ -395,7 +395,7 @@ class ShipCars extends Loadboard
                 vendorContactGuid: null,
                 vendorAgentGuid: null,
                 dateStarted: null,
-                status: 'offer canceled'
+                status: 'ready'
             });
             job.setUpdatedBy(anonUser);
             await Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid);
@@ -463,7 +463,7 @@ class ShipCars extends Loadboard
             //     jobGuid,
             //     extraAnnotations: {
             //         undispatchedFrom: 'SHIPCARS',
-            //         code: 'offer canceled'
+            //         code: 'ready'
             //     }
             // });
 
@@ -507,7 +507,7 @@ class ShipCars extends Loadboard
                 });
 
                 await Job.query(trx).patch({
-                    status: 'accepted',
+                    status: 'dispatched',
                     updatedByGuid: anonUser
                 }).findById(dispatch.jobGuid);
 
@@ -519,7 +519,7 @@ class ShipCars extends Loadboard
                 //     userGuid: anonUser,
                 //     statusId: 4,
                 //     jobGuid: dispatch.jobGuid,
-                //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
+                //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'dispatched', vendor: dispatch.vendorGuid, vendorName: vendorName }
                 // });
 
                 return dispatch.jobGuid;

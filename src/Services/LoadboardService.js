@@ -72,16 +72,20 @@ class LoadboardService
     static async postPostings(jobId, posts, currentUser)
     {
         currentUserGuid = currentUser;
+        const dispatches = await OrderJobDispatch.query()
+                .where({ 'rcgTms.orderJobDispatches.jobGuid': jobId }).andWhere(builder =>
+                {
+                    builder.where({ isAccepted: true }).orWhere({ isPending: true });
+                }).first();
+        if (dispatches)
+        {
+            throw new Error('Cannot post load with active dispatch offers');
+        }
         const job = await LoadboardService.getAllPostingData(jobId, posts);
         const payloads = [];
         let lbPayload;
-        const dispatches = await OrderJobDispatch.query().where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
         try
         {
-            if (dispatches != 0)
-            {
-                throw 'Cannot post load with active dispatch offers';
-            }
             for (const post of posts)
             {
                 lbPayload = new loadboardClasses[`${post.loadboard}`](job);
@@ -383,7 +387,7 @@ class LoadboardService
                     vendorContactGuid: null,
                     vendorAgentGuid: null,
                     dateStarted: null,
-                    status: 'offer canceled'
+                    status: 'ready'
                 });
                 job.setUpdatedBy(currentUser);
                 await Job.query(trx).patch(job).findById(dispatch.jobGuid);
@@ -401,7 +405,7 @@ class LoadboardService
                 //     jobGuid,
                 //     extraAnnotations: {
                 //         undispatchedFrom: 'internal',
-                //         code: 'offer canceled'
+                //         code: 'ready'
                 //     }
                 // });
             }
