@@ -153,6 +153,13 @@ class OrderJob extends BaseModel
         };
     }
 
+    $parseDatabaseJson(json)
+    {
+        json = super.$parseDatabaseJson(json);
+        this.calculateGrossProfit(json.actualRevenue, json.actualExpense);
+        return json;
+    }
+
     $parseJson(json)
     {
         json = super.$parseJson(json);
