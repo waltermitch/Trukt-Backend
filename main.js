@@ -77,7 +77,9 @@ app.use(async (req, res, next) =>
         req.session.userGuid = (await Auth.verifyJWT(req.headers?.authorization)).oid;
 
         if ('x-test-user' in req.headers && !req.session?.userGuid)
+        {
             req.session.userGuid = req.headers['x-test-user'];
+        }
     }
     catch (e)
     {
