@@ -1,6 +1,8 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const IncomeCalcs = require('./Mixins/IncomeCalcs');
+const OrderJob = require('./OrderJob');
+const OrderJobType = require('./OrderJobType');
 
 class Order extends BaseModel
 {
@@ -243,8 +245,23 @@ class Order extends BaseModel
         return isTender !== undefined ? query.andWhere('isTender', isTender) : query;
     }
 
+    static filterJobCategories(query, jobCategories = [])
+    {
+        if (jobCategories.length > 0)
+        {
+            const ordersWithJobsByCategory = Order.query().select('guid').whereIn('guid',
+                OrderJob.query().select('orderGuid').whereIn('typeId',
+                    OrderJobType.getJobTypesByCategories(jobCategories)
+                )
+            );
+            return query.whereIn('guid', ordersWithJobsByCategory);
+        }
+        return query;
+    }
+
     static modifiers = {
-        filterIsTender: this.filterIsTender
+        filterIsTender: this.filterIsTender,
+        filterJobCategories: this.filterJobCategories
     };
 
 }
