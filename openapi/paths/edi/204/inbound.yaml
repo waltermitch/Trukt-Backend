@@ -15,6 +15,7 @@ post:
             - stops
             - terminals
             - commodities
+            - edi
           properties:
             instructions:
               type: string
@@ -80,6 +81,9 @@ post:
                         type: string
                         format: currency
                         minLength: 1
+            edi:
+              description: EDI data parsed in JSON format. Do not decode/encode as JSON String.
+              type: object
   responses:
     '201':
       description: Created load tender.
