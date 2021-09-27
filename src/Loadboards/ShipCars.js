@@ -1,8 +1,14 @@
 const Loadboard = require('./Loadboard');
-const states = require('us-state-codes');
+const DateTime = require('luxon').DateTime;
 const LoadboardPost = require('../Models/LoadboardPost');
+const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const OrderStop = require('../Models/OrderStop');
+const OrderStopLink = require('../Models/OrderStopLink');
 const Job = require('../Models/OrderJob');
 const Commodity = require('../Models/Commodity');
+const SFAccount = require('../Models/SFAccount');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const knex = require('../Models/BaseModel').knex();
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
 
@@ -30,7 +36,10 @@ class ShipCars extends Loadboard
             pickup_state: this.getStateCode(this.data.pickup.terminal.state),
             pickup_zip: this.data.pickup.terminal.zipCode,
             pickup_notes: this.data.pickup?.notes ? this.pickup?.notes : ' ',
-            pickup_estimate_type: this.setDateType(this.data.pickup.dateScheduledType),
+            pickup_estimate_type: this.setDateType(this.data.pickup.dateRequestedType),
+            pickup_requested_date_start_type: this.setDateType(this.data.pickup.dateRequestedType),
+            pickup_requested_date_start: DateTime.fromISO(this.data.pickup.dateRequestedStart).toISODate(),
+            pickup_requested_date_end: DateTime.fromISO(this.data.pickup.dateRequestedEnd).toISODate(),
 
             delivery_name: this.data.delivery.terminal.name,
             delivery_contact: this.data.delivery?.primaryContact?.name,
@@ -40,10 +49,13 @@ class ShipCars extends Loadboard
             delivery_city: this.data.delivery.terminal.city,
             delivery_state: this.getStateCode(this.data.delivery.terminal.state),
             delivery_zip: this.data.delivery.terminal.zipCode,
-            delivery_estimate_type: this.setDateType(this.data.delivery.dateScheduledType),
+            delivery_estimate_type: this.setDateType(this.data.delivery.dateRequestedType),
+            delivery_requested_date_start_type: this.setDateType(this.data.delivery.dateRequestedType),
+            delivery_requested_date_start: DateTime.fromISO(this.data.delivery.dateRequestedStart),
+            delivery_requested_date_end: DateTime.fromISO(this.data.delivery.dateRequestedEnd),
             delivery_notes: this.data.delivery?.notes ? this.data.delivery?.notes : ' ',
 
-            first_available_date: this.toStringDate(this.data.pickup.dateScheduledStart),
+            first_available_date: this.toStringDate(this.data.pickup.dateRequestedStart),
             shipper_load_id: process.env.NODE_ENV != 'prod' || process.env.NODE_ENV != 'production' ? this.saltOrderNumber(this.data.number) : this.data.number,
             instructions: this.data.loadboardInstructions,
             specific_load_requirements: this.postObject.instructions,
@@ -52,12 +64,22 @@ class ShipCars extends Loadboard
             id: this.postObject.externalGuid,
 
             payment_method: 'ach',
-            payment_on_pickup_method: 'cash',
-            payment_on_delivery_method: 'uship',
-            total_payment_to_carrier: this.data.estimatedExpense,
-            payment_to_carrier: this.data.estimatedExpense,
+            total_payment_to_carrier: this.data.actualExpense || 5,
+            payment_to_carrier: this.data.actualExpense || 5,
             payment_term_begins: 'delivery',
             payment_term_business_days: 2
+        };
+
+        return payload;
+    }
+
+    dispatchJSON()
+    {
+        const payload = {
+            'carrier': this.data.vendor.scId,
+
+            // 'carrier_dot': this.data.vendor.dotNumber,
+            'expiration_time': DateTime.now().plus({ hours: 12 }).toString()
         };
 
         return payload;
@@ -77,7 +99,8 @@ class ShipCars extends Loadboard
                 lot_number: com.lotNumber,
                 operable: com.inoperable === 'no' || com.inoperable === 'unknown',
                 id: com.extraExternalData?.scGuid,
-                load_id: this.postObject.externalGuid
+                load_id: this.postObject.externalGuid,
+                shipper_vehicle_id: com.guid
             });
         }
         return vehicles;
@@ -181,7 +204,7 @@ class ShipCars extends Loadboard
         return phone;
     }
 
-    static async handlecreate(post, response)
+    static async handleCreate(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(post);
@@ -198,8 +221,8 @@ class ShipCars extends Loadboard
             else
             {
                 const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
-                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-                for (const vehicle of vehicles)
+                this.updateCommodity(job.commodities, response.vehicles);
+                for (const vehicle of job.commodities)
                 {
                     vehicle.setUpdatedBy(anonUser);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
@@ -214,19 +237,19 @@ class ShipCars extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
-    static async handlepost(post, response)
+    static async handlePost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -240,8 +263,9 @@ class ShipCars extends Loadboard
             else
             {
                 const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
-                const vehicles = this.updateCommodity(job.commodities, response.vehicles);
-                for (const vehicle of vehicles)
+                this.updateCommodity(job.commodities, response.vehicles);
+
+                for (const vehicle of job.commodities)
                 {
                     vehicle.setUpdatedBy(anonUser);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
@@ -258,19 +282,19 @@ class ShipCars extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
-    static async handleunpost(post, response)
+    static async handleUnpost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -292,45 +316,334 @@ class ShipCars extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
+    }
 
-        return objectionPost;
+    static async handleDispatch(payloadMetadata, response)
+    {
+        const trx = await OrderJobDispatch.startTransaction();
+
+        try
+        {
+            const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
+            dispatch.externalGuid = response.dispatchRes.id;
+            dispatch.setUpdatedBy(anonUser);
+            await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
+
+            const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalPostGuid = null;
+                objectionPost.status = 'unposted';
+                objectionPost.isCreated = true;
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+                if (objectionPost.externalGuid == null)
+                {
+                    objectionPost.externalGuid = response.order.id;
+
+                    const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                    this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
+                    for (const vehicle of job.commodities)
+                    {
+                        vehicle.setUpdatedBy(anonUser);
+                        await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                    }
+                }
+            }
+            objectionPost.setUpdatedBy(anonUser);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
+            
+            trx.commit();
+
+            // keeping this commented out until we figure out status log types
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid: dispatch.loadboardPost.jobGuid,
+            //     userGuid: anonUser,
+            //     statusId: 4,
+            //     jobGuid: objectionPost.guid,
+            //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'dispatched' }
+            // });
+
+            return objectionPost.jobGuid;
+        }
+        catch (e)
+        {
+            trx.rollback();
+        }
+    }
+
+    static async handleUndispatch(payloadMetadata, response)
+    {
+        const trx = await OrderJobDispatch.startTransaction();
+        try
+        {
+            const job = Job.fromJson({
+                vendorGuid: null,
+                vendorContactGuid: null,
+                vendorAgentGuid: null,
+                dateStarted: null,
+                status: 'offer canceled'
+            });
+            job.setUpdatedBy(anonUser);
+            await Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid);
+
+            const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
+            dispatch.isPending = false;
+            dispatch.isAccepted = false;
+            dispatch.isCanceled = true;
+            dispatch.setUpdatedBy(anonUser);
+
+            const objectionPost = dispatch.loadboardPost;
+            objectionPost.externalGuid = response.id;
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'unposted';
+            objectionPost.isPosted = false;
+            objectionPost.isSynced = true;
+
+            await OrderStop.query(trx)
+                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                .whereIn('guid',
+                    OrderStopLink.query(trx).select('stopGuid')
+                        .where({ 'jobGuid': dispatch.jobGuid })
+                        .distinctOn('stopGuid')
+                );
+
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.externalPostGuid = null;
+                objectionPost.isSynced = true;
+                objectionPost.isPosted = false;
+            }
+            objectionPost.setUpdatedBy(anonUser);
+
+            const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
+                OrderStopLink.query(trx).select('commodityGuid')
+                    .where({ 'jobGuid': dispatch.jobGuid })
+                    .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
+            this.updateCommodity(commodities, response.vehicles);
+            for (const vehicle of commodities)
+            {
+                vehicle.setUpdatedBy(anonUser);
+                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+            }
+
+            delete dispatch.job;
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
+
+            await OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid);
+
+            await trx.commit();
+
+            // keeping this commented out until we figure out status log types
+            // StatusManagerHandler.registerStatus({
+            //     orderGuid: dispatch.job.orderGuid,
+            //     userGuid: currentUser,
+            //     statusId: 6,
+            //     jobGuid,
+            //     extraAnnotations: {
+            //         undispatchedFrom: 'SHIPCARS',
+            //         code: 'offer canceled'
+            //     }
+            // });
+
+            return objectionPost.jobGuid;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+        }
+    }
+
+    static async handleCarrierAcceptDispatch(payloadMetadata, response)
+    {
+        if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
+        {
+            const trx = await OrderJobDispatch.startTransaction();
+            try
+            {
+                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor')
+                    .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+
+                dispatch.isPending = false;
+                dispatch.isAccepted = true;
+                dispatch.setUpdatedBy(anonUser);
+
+                // move queried data into variables
+                // because they are not part of the orer_job_dispatch
+                // table and will cause dml errors
+                const orderGuid = dispatch.orderGuid;
+                const vendorName = dispatch.vendorName;
+                delete dispatch.orderGuid;
+                delete dispatch.vendorName;
+
+                // have to put table name because externalGuid is also on loadboard post and not
+                // specifying it makes the query ambiguous
+                await OrderJobDispatch.query(trx).patch(dispatch).where({
+                    'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
+                    isPending: true,
+                    isCanceled: false
+                });
+
+                await Job.query(trx).patch({
+                    status: 'accepted',
+                    updatedByGuid: anonUser
+                }).findById(dispatch.jobGuid);
+
+                await trx.commit();
+
+                // keeping this commented out until we figure out status log types
+                // StatusManagerHandler.registerStatus({
+                //     orderGuid,
+                //     userGuid: anonUser,
+                //     statusId: 4,
+                //     jobGuid: dispatch.jobGuid,
+                //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'accepted', vendor: dispatch.vendorGuid, vendorName: vendorName }
+                // });
+
+                return dispatch.jobGuid;
+            }
+            catch (e)
+            {
+                await trx.rollback(e);
+            }
+        }
+    }
+
+    static async handleCarrierDeclineDispatch(payloadMetadata, response)
+    {
+        if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
+        {
+            const trx = await OrderJobDispatch.startTransaction();
+
+            try
+            {
+                // 1. Set Dispatch record to canceled
+                const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                    .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+
+                dispatch.isPending = false;
+                dispatch.isAccepted = false;
+                dispatch.isCanceled = true;
+                dispatch.setUpdatedBy(anonUser);
+
+                // move queried data into variables
+                // because they are not part of the orer_job_dispatch
+                // table and will cause dml errors
+                const orderGuid = dispatch.orderGuid;
+                const vendorName = dispatch.vendorName;
+                delete dispatch.orderGuid;
+                delete dispatch.vendorName;
+
+                // have to put table name because externalGuid is also on loadboard post and not
+                // specifying it makes the query ambiguous
+                await OrderJobDispatch.query(trx).patch(dispatch).where({
+                    'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
+                    isPending: true,
+                    isCanceled: false
+                });
+
+                // 2. Remove vendor fields from the job
+                const job = Job.fromJson({
+                    vendorGuid: null,
+                    vendorContactGuid: null,
+                    vendorAgentGuid: null,
+                    dateStarted: null,
+                    status: 'declined'
+                });
+                job.setUpdatedBy(anonUser);
+                await Job.query(trx).patch(job).findById(dispatch.jobGuid);
+
+                // 3. Set the loadboard post record external guid to the new
+                // load that has been created
+                const objectionPost = LoadboardPost.fromJson({
+                    externalGuid: response.id,
+                    externalPostGuid: null,
+                    isCreated: true,
+                    isSynced: true,
+                    hasError: false,
+                    apiError: null
+                });
+                objectionPost.setUpdatedBy(anonUser);
+                await LoadboardPost.query(trx).patch(objectionPost).findById(dispatch.loadboardPostGuid);
+
+                // 4. update the vehicle ship car ids
+                const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
+                    OrderStopLink.query().select('commodityGuid')
+                        .where({ 'jobGuid': dispatch.jobGuid })
+                        .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
+                const vehicles = this.updateCommodity(commodities, response.vehicles);
+                for (const vehicle of vehicles)
+                {
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                }
+
+                // 5. unset the stop scheduled dates
+                await OrderStop.query(trx)
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid')
+                            .where({ 'jobGuid': dispatch.jobGuid })
+                            .distinctOn('stopGuid')
+                    );
+
+                await trx.commit();
+
+                // keeping this commented out until we figure out status log types
+                // StatusManagerHandler.registerStatus({
+                //     orderGuid,
+                //     userGuid: anonUser,
+                //     statusId: 4,
+                //     jobGuid: dispatch.jobGuid,
+                //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
+                // });
+
+                return dispatch.jobGuid;
+            }
+            catch (e)
+            {
+                await trx.rollback(e);
+            }
+        }
     }
 
     static updateCommodity(ogCommodities, newCommodities)
     {
-        const comsToUpdate = [];
-        while (ogCommodities.length !== 0)
-        {
-            const com = ogCommodities.shift();
-            this.commodityUpdater(com, newCommodities);
-            comsToUpdate.push(com);
-        }
+        // reducing the incoming vehicles to an object where the keys are trukt commodity guids
+        // ship cars lets partners store their own guids on commodities to make
+        // integration easier
+        const shipCarsVehicles = newCommodities.reduce((acc, curr) => (acc[curr.shipper_vehicle_id] = curr, acc), {});
 
-        return comsToUpdate;
-    }
-
-    static commodityUpdater(com, newCommodities)
-    {
-        for (let i = 0; i < newCommodities.length; i++)
+        for (const com of ogCommodities)
         {
-            const commodity = newCommodities[i];
-            const newName = commodity.vin + ' ' + commodity.year + ' ' + commodity.make + ' ' + commodity.model;
-            const comDescription = (com.vehicle?.year || '2005') + ' ' + (com.vehicle?.make || 'make') + ' ' + (com.vehicle?.model || com.description || 'model');
-            const comName = (com.identifier || 'vin') + ' ' + comDescription;
-            if (comName === newName)
+            if (com.extraExternalData == undefined)
             {
-                if (com.extraExternalData == undefined)
-                {
-                    com.extraExternalData = {};
-                }
-                com.extraExternalData.scGuid = commodity.id;
-                newCommodities.shift(i);
+                com.extraExternalData = {};
             }
+            com.extraExternalData.scGuid = shipCarsVehicles[`${com.guid}`].id;
         }
     }
 }

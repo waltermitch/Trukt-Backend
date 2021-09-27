@@ -5,6 +5,7 @@ class UserService
     static async getById(userGuid)
     {
         const user = await User.query().findById(userGuid);
+
         return user;
     }
 
@@ -14,6 +15,7 @@ class UserService
 
         return users.results || users;
     }
+
 }
 
 module.exports = UserService;

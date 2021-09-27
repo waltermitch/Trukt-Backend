@@ -70,6 +70,21 @@ class SFAccount extends BaseModel
             }
 
             return qb;
+        },
+        byId(query, id)
+        {
+            query.where(query =>
+            {
+                query.orWhere('salesforce.accounts.guid', id)
+                    .orWhere('salesforce.accounts.sfId', id);
+            });
+        },
+        carrier(query)
+        {
+            const qb = query.leftJoinRelated('rectype');
+            qb.select(raw('\'carrier\' as rtype'), 'salesforce.accounts.*');
+            qb.where({ 'rectype.name': 'Carrier' });
+            return qb;
         }
     }
 

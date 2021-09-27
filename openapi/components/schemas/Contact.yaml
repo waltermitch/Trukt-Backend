@@ -1,7 +1,6 @@
 type: object
 required:
   - name
-  - phoneNumber
 properties:
   guid:
     $ref: '.\Common.yaml#/guid'

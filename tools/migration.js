@@ -74,5 +74,5 @@ module.exports = {
     timestamps,
     timestamps_trigger,
     authors,
-    authors_trigger,
+    authors_trigger
 };
