@@ -15,9 +15,17 @@ expense:
       type: string
       format: uuid
     guid:
-      $ref: '.\Common.yaml#/guid'
+      description: expense guid
+      type: string
+      format: uuid
+    invoiceGuid:
+      description: Related invoice guid
+      type: string
+      format: uuid
   required:
-    - guid
+    - itemId
+    - amount
+    - invoiceGuid
 orderExpense:
   type: object
   properties:

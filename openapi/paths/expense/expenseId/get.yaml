@@ -1,6 +1,6 @@
-summary: Get expense by guid
+summary: Get Expense by guid
 operationId: getExpense
-description: Get expense by guid
+description: Get Expense by guid
 tags:
   - Expense
 parameters:

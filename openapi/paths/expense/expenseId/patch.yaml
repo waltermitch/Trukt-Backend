@@ -1,6 +1,6 @@
-summary: Update expense
+summary: Update Expense
 operationId: patchExpenseParam
-description: Update expense
+description: Update Expense
 tags:
   - Expense
 parameters:
@@ -16,6 +16,6 @@ requestBody:
         $ref: '..\..\..\components\schemas\Expense.yaml#/expense'
 responses:
   200:
-    description: expense
+    description: Expense
     content:
       application/json: {}

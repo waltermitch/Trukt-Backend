@@ -1712,9 +1712,9 @@ paths:
             application/json: {}
   '/expense/{expenseId}':
     get:
-      summary: Get expense by guid
+      summary: Get Expense by guid
       operationId: getExpense
-      description: Get expense by guid
+      description: Get Expense by guid
       tags:
         - Expense
       parameters:
@@ -1729,9 +1729,9 @@ paths:
           content:
             application/json: {}
     patch:
-      summary: Update expense
+      summary: Update Expense
       operationId: patchExpenseParam
-      description: Update expense
+      description: Update Expense
       tags:
         - Expense
       parameters:
@@ -1747,40 +1747,35 @@ paths:
               $ref: '#/components/schemas/expense'
       responses:
         '200':
-          description: expense
+          description: Expense
           content:
             application/json: {}
   /expense:
     post:
-      summary: Create bill
-      operationId: postBill
-      description: Create bill
+      summary: Create Expense
+      operationId: postExpense
+      description: Create Expense
       tags:
-        - Bill
+        - Expense
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-              description: List of order guids
-              properties:
-                orders:
-                  type: array
-                  items:
-                    description: order guid
-                    $ref: '#/components/schemas/guid'
-                  minItems: 1
-              required:
-                - orders
+              type: array
+              description: List Of Expenses
+              items:
+                description: Expense
+                $ref: '#/components/schemas/expense'
+                minItems: 1
       responses:
         '200':
           description: invocies
           content:
             application/json: {}
     patch:
-      summary: Update expense
+      summary: Update Expense
       operationId: patchExpense
-      description: Update expense
+      description: Update Expense
       tags:
         - Expense
       requestBody:
@@ -1788,6 +1783,25 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/expense'
+      responses:
+        '200':
+          description: expense
+          content:
+            application/json: {}
+  /expense/search:
+    get:
+      summary: Search Expenses
+      operationId: searchExpense
+      description: Search Expenses related to Order
+      tags:
+        - Expense
+      parameters:
+        - in: query
+          name: order
+          schema:
+            type: string
+            format: uuid
+          required: true
       responses:
         '200':
           description: expense
@@ -2941,9 +2955,17 @@ components:
           type: string
           format: uuid
         guid:
-          $ref: '#/components/schemas/guid'
+          description: expense guid
+          type: string
+          format: uuid
+        invoiceGuid:
+          description: Related invoice guid
+          type: string
+          format: uuid
       required:
-        - guid
+        - itemId
+        - amount
+        - invoiceGuid
     accountType:
       type: string
       enum:
