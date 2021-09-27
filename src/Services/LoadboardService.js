@@ -75,12 +75,16 @@ class LoadboardService
         const job = await LoadboardService.getAllPostingData(jobId, posts);
         const payloads = [];
         let lbPayload;
-        const dispatches = await OrderJobDispatch.query().where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
+        const dispatches = await OrderJobDispatch.query()
+                .where({ 'rcgTms.orderJobDispatches.jobGuid': jobId }).andWhere(builder =>
+                {
+                    builder.where({ isAccepted: true }).orWhere({ isPending: true });
+                }).first();
         try
         {
-            if (dispatches != 0)
+            if (dispatches)
             {
-                throw 'Cannot post load with active dispatch offers';
+                throw new Error('Cannot post load with active dispatch offers');
             }
             for (const post of posts)
             {
