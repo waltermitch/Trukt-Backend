@@ -98,6 +98,8 @@ paths:
       $ref: paths\expense\expenseId\get.yaml
     patch:
       $ref: paths\expense\expenseId\patch.yaml
+    delete:
+      $ref: paths\expense\expenseId\delete.yaml
   /expense:
     post:
       $ref: paths\expense\post.yaml
