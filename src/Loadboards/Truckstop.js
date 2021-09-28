@@ -139,10 +139,11 @@ class Truckstop extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
-            console.log(err);
             await trx.rollback();
         }
 
@@ -175,6 +176,8 @@ class Truckstop extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {

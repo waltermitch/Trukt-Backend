@@ -1,6 +1,8 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const IncomeCalcs = require('./Mixins/IncomeCalcs');
+const OrderJob = require('./OrderJob');
+const OrderJobType = require('./OrderJobType');
 
 class Order extends BaseModel
 {
@@ -143,6 +145,14 @@ class Order extends BaseModel
                     from: 'rcgTms.orders.guid',
                     to: 'rcgTms.statusLogs.orderGuid'
                 }
+            },
+            ediData: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./EDIData'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    to: 'rcgTms.ediData.orderGuid'
+                }
             }
         };
         Object.assign(relations, AuthorRelationMappings('rcgTms.orders'));
@@ -237,6 +247,31 @@ class Order extends BaseModel
         await super.$beforeUpdate(opt, context);
         this.calculateEstimatedIncome();
     }
+
+    static filterIsTender(query, isTender)
+    {
+        return isTender !== undefined ? query.andWhere('isTender', isTender) : query;
+    }
+
+    static filterJobCategories(query, jobCategories = [])
+    {
+        if (jobCategories.length > 0)
+        {
+            const ordersWithJobsByCategory = Order.query().select('guid').whereIn('guid',
+                OrderJob.query().select('orderGuid').whereIn('typeId',
+                    OrderJobType.getJobTypesByCategories(jobCategories)
+                )
+            );
+            return query.whereIn('guid', ordersWithJobsByCategory);
+        }
+        return query;
+    }
+
+    static modifiers = {
+        filterIsTender: this.filterIsTender,
+        filterJobCategories: this.filterJobCategories
+    };
+
 }
 
 Object.assign(Order.prototype, IncomeCalcs);

@@ -24,6 +24,11 @@ class OrderJobType extends BaseModel
         // one big line because of short circuit boolean evaluation
         return (jobType.id != undefined && jobType.id == job?.typeId) || (jobType?.type != undefined && jobType?.category != undefined && jobType.category === job.jobType.category && jobType.type === job.jobType.type);
     }
+
+    static getJobTypesByCategories(jobCategories = [])
+    {
+        return this.query().select('id').whereIn('category', jobCategories);
+    }
 }
 
 module.exports = OrderJobType;
