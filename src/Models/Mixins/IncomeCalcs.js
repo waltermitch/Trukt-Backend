@@ -7,13 +7,15 @@ const mixin = {
     },
     calculateNetProfitMargin(totalRevenue, totalExpense)
     {
-        if(totalRevenue == null && totalRevenue == 0)
-        {
-            return '00.00';
-        }
+        let netProfitMargin = 0;
         const currencyTotalRevenue = currency(totalRevenue);
-        return ((currencyTotalRevenue.subtract(currency(totalExpense))
-        / (currencyTotalRevenue)) * 100).toFixed(2);
+        const currencyTotalExpense = currency(totalExpense);
+        if (currencyTotalRevenue.value != 0)
+        {
+            netProfitMargin = (currencyTotalRevenue.subtract(currencyTotalExpense)
+            / currencyTotalRevenue) * 100;
+        }
+        return netProfitMargin.toFixed(2);
     }
 };
 
