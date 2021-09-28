@@ -229,7 +229,7 @@ class Order extends BaseModel
     $parseDatabaseJson(json)
     {
         json = super.$parseDatabaseJson(json);
-        this.calculateNetProfitMargin(json.actualRevenue, json.actualExpense);
+        json.netProfitMargin = this.calculateNetProfitMargin(json.actualRevenue, json.actualExpense);
         return json;
     }
 
@@ -252,7 +252,9 @@ class Order extends BaseModel
     async $beforeUpdate(opt, context)
     {
         await super.$beforeUpdate(opt, context);
+        console.log('before update ', this);
         this.calculateEstimatedIncome();
+        console.log('after update ', this);
     }
 
     static filterIsTender(query, isTender)
