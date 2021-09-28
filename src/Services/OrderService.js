@@ -63,7 +63,7 @@ class OrderService
         const { total, results } = await queryWithGraphModifiers.orderBy('number', 'ASC');
         const ordersWithDeliveryAddress = {
             results: OrderService.addDeliveryAddress(results),
-            page,
+            page: page + 1,
             rowCount,
             total
         };

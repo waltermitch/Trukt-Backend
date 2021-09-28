@@ -70,8 +70,8 @@ index:
 page:
   description: For pagination purposes, page to return.
   type: integer
-  minimum: 0
-  default: 0
+  minimum: 1
+  default: 1
   example: 1
 rowCount:
   description: For pagination purposes, number of entries per page.
