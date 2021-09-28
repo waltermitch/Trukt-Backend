@@ -42,9 +42,10 @@ class ExpenseController
         if (!guid)
             throw { 'status': 400, 'data': 'Missing Guid' };
 
-        await ExpenseService.update(guid, req.body, req.session.userGuid);
+        const result = await ExpenseService.update(guid, req.body, req.session.userGuid);
 
-        res.status(204).send();
+        if (result)
+            res.status(200).json(result);
 
     }
 
@@ -62,7 +63,7 @@ class ExpenseController
 
     static async search(req, res)
     {
-        const result = await ExpenseService.search(req.query);
+        const result = await ExpenseService.search(req.query.order);
 
         res.status(200);
         res.json(result);

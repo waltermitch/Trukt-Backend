@@ -1714,7 +1714,7 @@ paths:
     get:
       summary: Get Expense by guid
       operationId: getExpense
-      description: Get Expense by guid
+      description: Get Expense
       tags:
         - Expense
       parameters:
@@ -1750,6 +1750,21 @@ paths:
           description: Expense
           content:
             application/json: {}
+    delete:
+      summary: Delete Expense by guid
+      operationId: deleteExpense
+      description: Delete Expense
+      tags:
+        - Expense
+      parameters:
+        - in: path
+          name: expenseId
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '204':
+          description: Expense deleted
   /expense:
     post:
       summary: Create Expense
@@ -2943,7 +2958,9 @@ components:
       properties:
         notes:
           description: Optional notes
-          type: string
+          oneOf:
+            - type: string
+            - type: 'null'
         amount:
           description: New expense amount
           type: number

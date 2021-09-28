@@ -4,9 +4,12 @@ expense:
     notes:
       description: Optional notes
       type: string
+      nullable: true
     amount:
       description: New expense amount
-      type: number
+      oneOf:
+        - type: number
+        - type: string
     itemId:
       description: New item id
       type: number
@@ -25,7 +28,6 @@ expense:
   required:
     - itemId
     - amount
-    - invoiceGuid
 orderExpense:
   type: object
   properties:
