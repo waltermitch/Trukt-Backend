@@ -5,9 +5,9 @@ const mixin = {
     {
         this.estimatedIncome = currency(this.estimatedRevenue).subtract(currency(this.estimatedExpense));
     },
-    calculateGrossProfit(totalRevenue, totalExpense)
+    calculateNetProfitMargin(totalRevenue, totalExpense)
     {
-        this.grossProfit = totalRevenue != null ? ((currency(totalRevenue).subtract(currency(totalExpense))
+        this.netProfitMargin = totalRevenue != null ? ((currency(totalRevenue).subtract(currency(totalExpense))
         / (currency(totalRevenue))) * 100).toFixed(2) : '00.00';
     }
 };

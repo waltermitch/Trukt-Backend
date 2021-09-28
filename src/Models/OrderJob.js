@@ -156,7 +156,7 @@ class OrderJob extends BaseModel
     $parseDatabaseJson(json)
     {
         json = super.$parseDatabaseJson(json);
-        this.calculateGrossProfit(json.actualRevenue, json.actualExpense);
+        this.calculateNetProfitMargin(json.actualRevenue, json.actualExpense);
         return json;
     }
 
