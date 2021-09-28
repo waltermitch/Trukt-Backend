@@ -11,9 +11,9 @@ const mixin = {
         {
             return '00.00';
         }
-        const totalRev = currency(totalRevenue);
-        return ((totalRev.subtract(currency(totalExpense))
-        / (totalRev)) * 100).toFixed(2);
+        const currencyTotalRevenue = currency(totalRevenue);
+        return ((currencyTotalRevenue.subtract(currency(totalExpense))
+        / (currencyTotalRevenue)) * 100).toFixed(2);
     }
 };
 
