@@ -1,7 +1,7 @@
 const Queue = require('../Azure/ServiceBus');
 const StatusManagerService = require('../../src/Services/StatusManagerService');
 
-const QUEUE_NAME = 'status_manager';
+const QUEUE_NAME = process.env['azure.servicebus.statusManager.queueName'];
 
 class StatusManagerHandler
 {
