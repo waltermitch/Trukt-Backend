@@ -32,6 +32,9 @@ class QBO
 
             const token = await Mongo.getSecret(tokenName);
 
+            if (!token)
+                throw { 'data': 'No QBO Access Token Found' };
+
             if (!qb?.instance)
             {
                 qb = new HTTPS(opts);
