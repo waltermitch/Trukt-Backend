@@ -3,6 +3,7 @@ const currency = require('currency.js');
 const R = require('ramda');
 const OrderService = require('../Services/OrderService');
 const Order = require('../Models/Order');
+const EDIData = require('../Models/EDIData');
 
 const SCAC_CODE = 'RCGQ';
 
@@ -222,7 +223,18 @@ class EDIController
                 }
                 delete orderObj.totalCost;
             }
-            await OrderService.create(req.body, req.session.userGuid);
+
+            const ediData = req.body.edi;
+            delete req.body.edi;
+
+            const order = await OrderService.create(req.body, req.session.userGuid);
+
+            await EDIData.query().insert({
+                documentNumber: 200,
+                orderGuid: order.guid,
+                data: ediData
+            });
+
             res.status(201);
             res.send();
         }
@@ -266,7 +278,8 @@ class EDIController
                     builder.orWhere('guid', req.query.partner);
                     builder.orWhere('sfId', req.query.partner);
                 }).select('guid'))
-                .where('isTender', true);
+                .where('isTender', true)
+                .withGraphJoined('ediData(loadTender)');
 
             if (!order)
             {
@@ -275,11 +288,15 @@ class EDIController
 
             const payload = {
                 'action': action,
-                'order': order.guid,
+                'order': {
+                    guid: order.guid,
+                    number: order.number
+                },
                 'reference': req.query.reference,
                 'partner': req.query.partner,
                 'date': DateTime.now().toISO(),
-                'scac': SCAC_CODE
+                'scac': SCAC_CODE,
+                edi: order.ediData[0]?.data
             };
 
             if (action != 'accept')
@@ -551,7 +568,7 @@ class EDIController
     {
         try
         {
-            const orderQuery = Order.query().where('isTender', true).withGraphJoined('[ client, stops.[commodities, terminal] ]').limit(100);
+            const orderQuery = Order.query().where('isTender', true).withGraphJoined('[ ediData(loadTender), client, stops.[ commodities, terminal] ]').limit(100);
             if (req.query.reference)
             {
                 orderQuery.findOne('referenceNumber', req.query.reference);
@@ -576,16 +593,20 @@ class EDIController
             const stop = order.stops[Math.floor(Math.random() * order.stops.length)];
             const commodity = stop?.commodities[Math.floor(Math.random() * stop.commodities.length)];
             const payload = {
-                order: order.guid,
+                order: { guid: order.guid, number: order.number },
                 partner: order.client.sfId,
                 reference: order.referenceNumber,
-                datetime: DateTime.now().toISO()
+                datetime: DateTime.now().toISO(),
+                sla: order.client.sla || order.client.slaDays ? `${order.client.slaDays} days` : '10 days',
+                edi: order.ediData[0]?.data
             };
 
             if (stop)
             {
                 payload.commodity = commodity?.identifier;
                 payload.location = {
+                    sequence: stop.sequence,
+                    name: stop.terminal.name,
                     city: stop?.terminal?.city,
                     state: stop?.terminal?.state,
                     country: stop?.terminal?.country,

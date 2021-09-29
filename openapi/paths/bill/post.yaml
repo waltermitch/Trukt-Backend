@@ -1,0 +1,10 @@
+summary: Create a new Bill
+operationId: createBill
+description: Create a new bill
+tags:
+  - Bill
+responses:
+  200:
+    description: Bill
+    content:
+      application/json: {}

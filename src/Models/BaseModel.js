@@ -3,12 +3,20 @@ const knexPostgis = require('knex-postgis');
 const Knex = require('knex');
 const knexfile = require('../../knexfile');
 const fieldMappings = require('./ModelFieldMappers.json');
+const { uuidRegex, salesforceIdRegex } = require('../Utils/Regexes');
+const { types } = require('pg');
+const { parseDate } = require('../Utils');
 
 const knex = Knex(knexfile());
 
 const st = knexPostgis(knex);
 
 Model.knex(knex);
+
+const TIMESTAMPTZ_OID = 1184;
+const TIMESTAMP_OID = 1114;
+types.setTypeParser(TIMESTAMPTZ_OID, parseDate);
+types.setTypeParser(TIMESTAMP_OID, parseDate);
 
 class BaseModel extends Model
 {
@@ -84,20 +92,11 @@ class BaseModel extends Model
     async $beforeInsert(context)
     {
         await super.$beforeInsert(context);
-        if (typeof this.setCreatedBy === 'function' && this.createdByGuid == undefined && this.createdBy == undefined)
-        {
-            throw new Error('created by user not set for record ' + this.constructor.name);
-        }
     }
 
     async $beforeUpdate(options, context)
     {
         await super.$beforeUpdate(options, context);
-        if (typeof this.setUpdatedBy === 'function' && this.updatedByGuid == undefined && this.updatedBy == undefined)
-        {
-            throw new Error('updated by user not set for record ' + this.constructor.name);
-        }
-
     }
 
     setIndex(index)
@@ -143,6 +142,11 @@ class BaseModel extends Model
             delete json.index;
         }
         return json;
+    }
+
+    static validateId(id)
+    {
+        return uuidRegex.test(id) || salesforceIdRegex.test(id);
     }
 }
 

@@ -1,0 +1,16 @@
+summary: Get Expense by guid
+operationId: getExpense
+description: Get Expense
+tags:
+  - Expense
+parameters:
+  - in: path
+    name: expenseId
+    schema:
+      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: expense
+    content:
+      application/json: {}

@@ -35,7 +35,7 @@ exports.seed = async function (knex)
         const capacityTypes = await new Enums(trx).select('load_capacity_types');
         const dateTypes = await new Enums(trx).select('date_schedule_types');
         const ternaryOptions = migration_tools.ternary_options;
-        const createdBy = await User.query(trx).findOne('name', 'ilike', '%');
+        const createdBy = await User.query(trx).findOne('name', 'ilike', 'TMS System');
         if (!createdBy)
         {
             throw new Error('No user found. Did you run the users seed?');

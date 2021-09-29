@@ -1,7 +1,7 @@
 const StatusManagerService = require('../../src/Services/StatusManagerService');
 const Queue = require('../Azure/ServiceBus');
 
-const QUEUE_NAME = 'status_manager';
+const QUEUE_NAME = process.env['azure.servicebus.statusManager.queueName'];
 
 class StatusManagerHandler
 {
@@ -31,6 +31,7 @@ class StatusManagerHandler
     /**
      * @param statusLogData.userGuid required
      * @param statusLogData.orderGuid required
+     * @param statusLogData.jobGuid required
      * @param statusLogData.statusId required, id from status_log_types table
      * @param statusLogData.extraAnnotations optional, json with extra information to add in the log
      */

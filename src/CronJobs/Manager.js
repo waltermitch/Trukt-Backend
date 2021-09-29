@@ -1,3 +1,4 @@
+const SystemManagementService = require('../Services/SystemManagementService');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const AccountUpdateManager = require('../EventManager/AccountUpdateManager');
 const Triumph = require('../Triumph/API');
@@ -9,6 +10,7 @@ const expressions =
 {
     second: '*/1 * * * * *',
     minute: '0 */1 * * * *',
+    fiveMinutes: '0 */5 * * * *',
     thirtyMinutes: '0 */30 * * * *',
     hourly: '0 0 */1 * * *',
     biHourly: '0 0 */2 * * *',
@@ -25,13 +27,16 @@ Cron.schedule(expressions.second, async () =>
 Cron.schedule(expressions.thirtyMinutes, async () =>
 {
     await QBO.refreshToken();
+
+    await SystemManagementService.generateTmsUserToken();
 });
 
 // every hour
-// Cron.schedule(expressions.hourly, async () =>
-// {
-//     // do stuff here
-// });
+Cron.schedule(expressions.hourly, async () =>
+{
+    // do stuff here
+    await SystemManagementService.syncUsers();
+});
 
 // every 2 hours
 

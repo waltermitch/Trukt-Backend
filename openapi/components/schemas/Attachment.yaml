@@ -1,18 +1,37 @@
 type: object
 properties:
   type:
-    required: false
-    allowEmptyValue: true
     description: The type of attachment (i.e. photo, billOfLading, etc)
-    enum: [photo]
-    default: undefined
+    enum:
+      [
+        vendorInvoice,
+        billOfLading,
+        proofOfDelivery,
+        lumperTicket,
+        scaleTicket,
+        inGateTicket,
+        outGateTicket,
+        miscellaneous,
+        accessorialAgreement,
+        rateConfirmation,
+        loadTender,
+        invoice,
+        customsDocuments,
+        invoiceWithPaperwork,
+        detentionLoading,
+        detentionUnloading,
+        palletReceipt,
+        spotApproval,
+        truckNotUsed,
+        exitPass,
+        balanceDue,
+        packingList,
+        photo,
+      ]
   visibility:
     type: array
     items:
       type: string
       enum: [carrier, client, internal]
       default: [internal]
-    required: false
-    explode: false
-    allowEmptyValue: true
     description: The visibility of the attachment (i.e. carrier, internal)

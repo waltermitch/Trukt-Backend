@@ -3,20 +3,18 @@ operationId: createAttachment
 description: Add Attachment to a given job/order
 tags:
   - Attachments
-parameters: 
-  - in: query
-    schema:
-      $ref: ..\..\components\schemas\AttachmentParams.yaml
+parameters:
+  $ref: '..\..\components\schemas\AttachmentParams.yaml#/properties'
 
 requestBody:
-  required: true
   content:
-    multipart/form-data:
+    multipart/*:
       schema:
-        $ref: ..\..\components\schemas\File.yaml
+        type: string
+        format: binary
 
 responses:
-  '201':
+  "201":
     description: Created Attachment
     content:
       application/json: {}

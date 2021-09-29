@@ -444,6 +444,7 @@ async function teardownHandler(argv)
 
 async function seedHandler(argv)
 {
+    require('../local.settings');
     const yellow = colorme('yellow');
     const cyan = colorme('cyan');
     const green = colorme('green');

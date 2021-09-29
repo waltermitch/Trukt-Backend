@@ -1,0 +1,20 @@
+summary: Create Expense
+operationId: postExpense
+description: Create Expense
+tags:
+  - Expense
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: array
+        description: List Of Expenses
+        items:
+          description: Expense
+          $ref: '..\..\components\schemas\Expense.yaml#/expense'
+          minItems: 1
+responses:
+  200:
+    description: invocies
+    content:
+      application/json: {}

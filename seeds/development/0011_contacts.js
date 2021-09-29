@@ -1,6 +1,6 @@
 const faker = require('faker');
 
-const test_user = '00000000-0000-0000-0000-000000000000';
+const test_user = '91c185fd-d33a-4664-95ee-0b7d244fcb4b';
 const table_name = 'rcg_tms.terminal_contacts';
 exports.seed = async function (knex)
 {
@@ -18,8 +18,8 @@ exports.seed = async function (knex)
 
                     contacts.push({
                         name: faker.name.firstName() + ' ' + faker.name.lastName(),
-                        phone_number: faker.phone.phoneNumber(),
-                        mobile_number: faker.phone.phoneNumber(),
+                        phone_number: faker.phone.phoneNumber('(###) ###-####'),
+                        mobile_number: faker.phone.phoneNumber('(###) ###-####'),
                         email: faker.internet.email(),
                         terminal_guid: terminal.guid,
                         created_by_guid: test_user

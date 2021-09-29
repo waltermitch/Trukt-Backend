@@ -7,14 +7,15 @@ const NodeCache = require('node-cache');
 const Invoice = require('./Invoice');
 const Vendor = require('./Vendor');
 const Client = require('./Client');
+const Mongo = require('../Mongo');
 const axios = require('axios');
 const Bill = require('./Bill');
-const Mongo = require('../Mongo');
 
 const authConfig = { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': process.env['quickbooks.basicAuth'] } };
 const authUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const url = process.env['quickbooks.apiUrl'];
 const tokenName = 'qb_access_token';
+const refreshTokenName = 'qb_refresh_token';
 
 // store client types (for now)
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 60 * 60 * 24 });
@@ -27,9 +28,12 @@ class QBO
     {
         if (!qb?.expCheck())
         {
-            const opts = { url, tokenName: 'qb_access_token' };
+            const opts = { url, tokenName };
 
             const token = await Mongo.getSecret(tokenName);
+
+            if (!token)
+                throw { 'data': 'No QBO Access Token Found' };
 
             if (!qb?.instance)
             {
@@ -362,7 +366,7 @@ class QBO
     static async refreshToken()
     {
         // get refrsh token
-        const refreshToken = await Mongo.getSecret('qb_refresh_token');
+        const refreshToken = await Mongo.getSecret(refreshTokenName);
 
         const payload = `grant_type=refresh_token&refresh_token=${refreshToken.value}`;
 
@@ -372,18 +376,20 @@ class QBO
         // update old access tkn and refresh tokn
         const ATData =
         {
-            'name': 'qb_access_token',
+            'name': tokenName,
             'value': res.data.access_token,
             'exp': HTTPS.setExpTime(30)
         };
 
         const RTData =
         {
-            'name': 'qb_refresh_token',
+            'name': refreshTokenName,
             'value': res.data.refresh_token
         };
 
         await Promise.all([Mongo.updateSecret(ATData.name, ATData), Mongo.updateSecret(RTData.name, RTData)]);
+
+        return { 'status': 200 };
     }
 
     static composeDescription(pTerminal, dTerminal, lineItem)

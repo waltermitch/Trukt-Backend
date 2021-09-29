@@ -8,11 +8,15 @@ get:
     - EDI
   parameters:
     - name: reference
+      schema:
+        type: string
       required: true
       allowEmptyValue: false
       description: The reference number of a load tender
       in: query
     - name: partner
+      schema:
+        $ref: ..\..\..\components\schemas\SFID.yaml
       required: true
       allowEmptyValue: false
       description: The partner ID provided when creating a load tender
@@ -26,34 +30,44 @@ get:
             type: object
             properties:
               order:
-                description: The EDI load tender guid inside of RCG database
-                type: string
-                format: uuid
+                type: object
+                properties:
+                  guid:
+                    allOf:
+                      - description: The EDI load tender guid inside of RCG database
+                      - $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+                  number:
+                    description: The RCG internal load number
+                    type: string
+                    pattern: '[A-Z]{2}[0-9]{5}'
+                    minLength: 7
+                    maxLength: 7
               partner:
-                description: >-
-                  The EDI load tender client guid that was used when creating a
-                  load tender in our system.
-                $ref: ..\components\schemas\SFID.yaml
+                allOf:
+                  - description: >
+                      The EDI load tender client guid that was used when creating a
+                      load tender in our system.
+                  - $ref: ..\..\..\components\schemas\SFID.yaml
               reference:
-                description: >-
+                description: >
                   The EDI load tender reference number used when creating a load
                   tender in our system.
                 type: string
               action:
-                description: The action to take with the EDI load tender.
-                type: string
-                enum:
-                  - accept
-                  - decline
+                allOf:
+                  - description: The action to take with the EDI load tender.
+                  - $ref: '..\..\..\components\schemas\Common.yaml#/Enums/ediActionType'
               reason:
                 description: The reason for rejecting the EDI load tender.
                 type: string
                 maxLength: 60
               date:
-                description: The date the response was generated
                 type: string
-                format: datetime with timezone ISO 8601
+                format: date-time
+                description: The date the response was generated
               scac:
                 description: The scac number
                 type: string
                 format: scac
+              edi:
+                $ref: ..\204\inbound.yaml#/post/requestBody/content/application~1json/schema/properties/edi

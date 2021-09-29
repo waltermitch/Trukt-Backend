@@ -17,13 +17,27 @@ class Truckstop extends Loadboard
         this.postObject = this.data.postObjects[this.loadboardName];
     }
 
-    static async validate(postObject)
+    static validate(requiredFields, values)
     {
-        console.log('validating');
-        console.log(postObject.values);
-        const pickles = JSON.parse(fs.readFileSync(localPicklistPath, 'utf8'));
-        console.log(pickles.loadboardData.TRUCKSTOP.equipmentOptions);
-        return postObject.values;
+        for (const requiredField of requiredFields)
+        {
+            if (!Object.keys(values).includes(requiredField))
+            {
+                throw `${requiredField} is required`;
+            }
+            else if (requiredField == 'weight' && (values[requiredField] < 1 || values[requiredField] > 999999))
+            {
+                throw `${requiredField} should be between 1 and 999999 pounds`;
+            }
+            else if (requiredField == 'length' && (values[requiredField] < 1 || values[requiredField] > 55))
+            {
+                throw `${requiredField} should be between 1 and 55 feet`;
+            }
+            else if (requiredField == 'equipmentOptions' && !Array.isArray(values[requiredField]))
+            {
+                throw `${requiredField} should be array of truckstop valid equipment option ids`;
+            }
+        }
     }
 
     toJSON()
@@ -79,7 +93,7 @@ class Truckstop extends Loadboard
             note: this.postObject.instructions || this.data.loadboardInstructions,
             freightClassId: 1,
             loadNumber: this.data.number,
-            rateAttributes: { postedAllInRate: { amount: currency(this.data.estimatedExpense).value } },
+            rateAttributes: { postedAllInRate: { amount: currency(this.data.actualExpense).value } },
             dimensional: {
                 length: this.postObject.values.length,
                 weight: this.postObject.values.weight,
@@ -96,10 +110,10 @@ class Truckstop extends Loadboard
         return payload;
     }
 
-    static async handlepost(post, response)
+    static async handlePost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
         try
         {
             if (response.hasErrors !== undefined)
@@ -114,6 +128,7 @@ class Truckstop extends Loadboard
                 objectionPost.externalGuid = response.loadId;
                 objectionPost.externalPostGuid = response.loadId;
                 objectionPost.status = 'posted';
+                objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
                 objectionPost.hasError = false;
@@ -122,22 +137,23 @@ class Truckstop extends Loadboard
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
-            console.log(err);
             await trx.rollback();
         }
 
         return objectionPost;
     }
 
-    static async handleunpost(post, response)
+    static async handleUnpost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -158,8 +174,10 @@ class Truckstop extends Loadboard
             }
             objectionPost.setUpdatedBy(anonUser);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {

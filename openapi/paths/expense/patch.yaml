@@ -1,0 +1,15 @@
+summary: Update Expense
+operationId: patchExpense
+description: Update Expense
+tags:
+  - Expense
+requestBody:
+  content:
+    application/json:
+      schema:
+        $ref: '..\..\components\schemas\Expense.yaml#/expense'
+responses:
+  200:
+    description: expense
+    content:
+      application/json: {}

@@ -6,94 +6,99 @@ required:
   - commodities
 properties:
   guid:
-    type: string
-    format: uuid
+    $ref: '.\Common.yaml#/guid'
   index:
-    description: >-
+    description: >
       A unique arbitrary string that will be used to reference this stop record
       inside of other objects.
     type: string
+    nullable: true
   sequence:
     type: integer
+    description: The order in which the stops need to be visited. This number should be assigned in increasing order. Magnitude is arbitrary.
+    nullable: false
   stopType:
-    description: >-
-      Describes the type of stop, use pickup to indicate that the stop is for
-      picking up commodities, use delivery for dropping off commodities.
-    type: string
-    enum:
-      - delivery
-      - pickup
+    $ref: '.\Common.yaml#/Enums/stopType'
   notes:
     description: Used to convey any instructions about the stops.
     type: string
+    nullable: true
   dateRequestedStart:
-    description: >-
+    description: >
       This date is requested by the customer. The earliest date this stop should
       be worked.
     type: string
-    format: datetime with timezone ISO 8601
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateRequestedEnd:
-    description: >-
+    description: >
       This date is requested by the customer. The latest date this stop should
       be worked.
     type: string
-    format: datetime with timezone ISO 8601
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateRequestedType:
     description: Defines the type of requested date the customer requested.
-    type: string
-    enum:
-      - exactly
-      - estimated
-      - no later than
-      - no earlier than
+    $ref: '.\Common.yaml#/Enums/stopDateType'
   dateEstimatedStart:
-    description: >-
+    description: >
       This date is submitted by the carrier/vendor. The earliest date this stop
       could be worked.
     type: string
-    format: datetime with timezone ISO 8601
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateEstimatedEnd:
-    description: >-
+    description: >
       This date is submitted by the carrier/vendor. The latest date this stop
       could be worked.
     type: string
-    format: datetime with timezone ISO 8601
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateEstimatedType:
     description: Defines the type of estimated date the carrier/vendor submitted.
-    type: string
-    enum:
-      - exactly
-      - estimated
-      - no later than
-      - no earlier than
+    $ref: '.\Common.yaml#/Enums/stopDateType'
   dateScheduledStart:
-    description: >-
+    description: >
       This date is submitted by the dispatcher. The earliest date this stop will
       be worked
     type: string
-    format: datetime with timezone ISO 8601
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateScheduledEnd:
-    description: >-
+    description: >
       This date is submitted by the dispatcher. The latest date this stop will
       be worked
     type: string
-    format: datetime with timezone ISO 8601
+    format: date-time
+    example: '2021-09-09T13:45:45.000Z'
+    nullable: true
   dateScheduledType:
     description: Defined the type of scheduled date the dispatcher submitted.
-    type: string
-    enum:
-      - exactly
-      - estimated
-      - no later than
-      - no earlier than
+    $ref: '.\Common.yaml#/Enums/stopDateType'
   primaryContact:
     $ref: .\Contact.yaml
   alternativeContact:
     $ref: .\Contact.yaml
   terminal:
-    $ref: .\Terminal.yaml
+    type: string
+    description: The value of the index field from a Terminal in this payload.
+    nullable: false
   commodities:
     type: array
     minLength: 1
     items:
-      $ref: .\Commodity.yaml
+      type: object
+      properties:
+        index:
+          type: string
+          description: The value of the index field from a Commodity in this payload.
+        lotNumber:
+          type: string
+          description: The lot number for this commodity at this stop.
+      required:
+        - index

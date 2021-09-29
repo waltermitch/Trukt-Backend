@@ -9,14 +9,14 @@ class InvoiceService
     {
         const search = guid.replace(/%/g, '');
 
-        const res = await Invoice.query().where('guid', '=', search);
+        const res = await Invoice.query().findOne({ 'guid': search });
 
         return res?.[0];
     }
 
     static async createInvoices(arr)
     {
-        const qb = Order.query().withGraphFetched('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item]], client]');
+        const qb = Order.query().withGraphJoined('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item]], client]');
 
         for (const guid of arr)
             qb.orWhere('guid', '=', guid);

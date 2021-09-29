@@ -42,6 +42,8 @@ class OrderController extends HttpRouteController
         {
             let order = await OrderService.create(req.body, req.session.userGuid);
             order = await OrderService.getOrderByGuid(order.guid);
+
+            OrderService.registerCreateOrderStatusManager(order, req.session.userGuid);
             res.status(201);
             res.json(order);
         }
@@ -55,11 +57,34 @@ class OrderController extends HttpRouteController
     {
         try
         {
-            const { filters = {}, page, rowCount } = req.body;
-            const orders = await OrderService.getOrders(filters, page || 0, rowCount || 25);
+            const { filters = {}, page: pageByUser, rowCount } = req.body;
+
+            // Backend uses pagination starting on 0 but client starts on 1
+            const page = pageByUser - 1;
+            const orders = await OrderService.getOrders(filters, page, rowCount);
 
             res.status(200);
             res.json(orders);
+        }
+        catch (error)
+        {
+            next({
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+
+    }
+
+    static async patchOrder(req, res, next)
+    {
+        try
+        {
+            const { body } = req;
+            const order = await OrderService.patchOrder(body, req.session.userGuid);
+
+            res.status(200);
+            res.json(order);
         }
         catch (error)
         {

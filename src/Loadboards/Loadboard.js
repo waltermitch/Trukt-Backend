@@ -57,6 +57,34 @@ class Loadboard
         return { payload: this.toJSON(), payloadMetadata };
     }
 
+    dispatch()
+    {
+        const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
+        const payload = {};
+
+        // send the order payload because the load may not exist in the loadboard
+        // or it needs to be updated after dispatching
+        payload.order = this.toJSON();
+        payload.dispatch = this.dispatchJSON();
+        payloadMetadata.action = 'dispatch';
+        payloadMetadata.user = returnTo;
+        return { payload, payloadMetadata };
+    }
+
+    undispatch()
+    {
+        const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
+        const payload = {};
+
+        // sending the order because ship cars archives orders that are canceled
+        // so they will need to be recreated
+        payload.order = this.toJSON();
+        payload.dispatch = { externalLoadGuid: this.postObject.externalGuid, externalDispatchGuid: this.data.dispatch.externalGuid };
+        payloadMetadata.action = 'undispatch';
+        payloadMetadata.user = returnTo;
+        return { payload, payloadMetadata };
+    }
+
     toStringDate(input)
     {
         const date = DateTime.fromJSDate(input).c;
