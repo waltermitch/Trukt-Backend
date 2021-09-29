@@ -61,7 +61,24 @@ const myMessageHandler = async (message) =>
         else
         {
             const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
-            await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
+            let status = '';
+            for(const loadboard of Object.keys(posts))
+            {
+                const post = posts[`${loadboard}`];
+                if(post.status == 'posted' && post.isPosted && post.isSynced)
+                {
+                    status = 'posted';
+                    break;
+                }
+                status = 'ready';
+            }
+            const numOfJobsAffected = await OrderJob.query().patch({ status }).findById(jobGuid).whereNotIn('status', ['pending', 'picked up', 'delivered']);
+            const messagePayload = { posts };
+            if(numOfJobsAffected > 0)
+            {
+                messagePayload.status = status;
+            }
+            await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { messagePayload } });
         }
     }
 };
