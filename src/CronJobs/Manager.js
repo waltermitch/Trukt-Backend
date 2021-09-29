@@ -25,9 +25,18 @@ Cron.schedule(expressions.second, async () =>
 // every 30 minutes
 Cron.schedule(expressions.thirtyMinutes, async () =>
 {
-    const proms = await Promise.allSettled([QBO.refreshToken(), SystemManagementService.generateTmsUserToken()]);
+    try
+    {
+        await QBO.refreshToken();
 
-    console.log(proms[0]?.value || proms[0]?.reason);
+
+        // TODO generate tms user access token
+        await SystemManagementService.generateTmsUserToken();
+    }
+    catch (error)
+    {
+        console.log(error?.response || error);
+    }
 });
 
 // every hour
