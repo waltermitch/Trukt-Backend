@@ -57,11 +57,11 @@ class OrderController extends HttpRouteController
     {
         try
         {
-            const { filters = {}, page: pageByUser, rowCount } = req.body;
+            const { filters = {}, page: pageByUser, rowCount, sort } = req.body;
 
             // Backend uses pagination starting on 0 but client starts on 1
             const page = pageByUser - 1;
-            const orders = await OrderService.getOrders(filters, page, rowCount);
+            const orders = await OrderService.getOrders(filters, page, rowCount, sort);
 
             res.status(200);
             res.json(orders);
