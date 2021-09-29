@@ -59,8 +59,6 @@ Commodity with Category and Type:
 CommodityBase:
   description: The real world item(s) that need to be transported between two real world locations
   type: object
-  required:
-    - identifier
   properties:
     identifier:
       description: An Identifying string like a VIN or Serial number.
