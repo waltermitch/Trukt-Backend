@@ -7,6 +7,7 @@ const prefix = '/order';
 router
     .get(`${prefix}/:orderGuid(${uuidRegexStr})`, controller.constructor.getOrder)
     .post(`${prefix}/getorders`, controller.constructor.getOrders)
-    .post(`${prefix}`, controller.constructor.createOrder);
+    .post(`${prefix}`, controller.constructor.createOrder)
+    .patch(`${prefix}`, controller.constructor.patchOrder);
 
 module.exports = router;
