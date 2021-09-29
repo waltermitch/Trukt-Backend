@@ -10,6 +10,7 @@ const expressions =
 {
     second: '*/1 * * * * *',
     minute: '0 */1 * * * *',
+    fiveMinutes: '0 */5 * * * *',
     thirtyMinutes: '0 */30 * * * *',
     hourly: '0 0 */1 * * *',
     biHourly: '0 0 */2 * * *',
@@ -25,18 +26,10 @@ Cron.schedule(expressions.second, async () =>
 // every 30 minutes
 Cron.schedule(expressions.thirtyMinutes, async () =>
 {
-    try
-    {
-        await QBO.refreshToken();
+    await QBO.refreshToken();
 
-
-        // TODO generate tms user access token
-        await SystemManagementService.generateTmsUserToken();
-    }
-    catch (error)
-    {
-        console.log(error?.response || error);
-    }
+    // TODO generate tms user access token
+    await SystemManagementService.generateTmsUserToken();
 });
 
 // every hour
