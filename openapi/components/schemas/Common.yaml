@@ -378,3 +378,8 @@ Enums:
       - Canceled
       - New
       - Declined
+  noteObject:
+    type: string
+    enum: 
+      - job
+      - order
