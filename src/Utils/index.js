@@ -1,3 +1,5 @@
+const { DateTime } = require('luxon');
+
 const METERS_RATE = 1609.34;
 
 const MilesToMeters = (miles) =>
@@ -5,4 +7,9 @@ const MilesToMeters = (miles) =>
     return miles * METERS_RATE;
 };
 
-module.exports = { MilesToMeters };
+const parseDate = function (date)
+{
+    return date === null ? null : DateTime.fromSQL(date).toISO();
+};
+
+module.exports = { MilesToMeters, parseDate };

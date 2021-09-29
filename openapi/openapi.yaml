@@ -37,6 +37,8 @@ paths:
   /order:
     post:
       $ref: paths\order\post.yaml
+    patch:
+      $ref: paths\order\patch.yaml
   /order/getorders:
     post:
       $ref: paths\order\search.yaml

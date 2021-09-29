@@ -4,12 +4,19 @@ const Knex = require('knex');
 const knexfile = require('../../knexfile');
 const fieldMappings = require('./ModelFieldMappers.json');
 const { uuidRegex, salesforceIdRegex } = require('../Utils/Regexes');
+const { types } = require('pg');
+const { parseDate } = require('../Utils');
 
 const knex = Knex(knexfile());
 
 const st = knexPostgis(knex);
 
 Model.knex(knex);
+
+const TIMESTAMPTZ_OID = 1184;
+const TIMESTAMP_OID = 1114;
+types.setTypeParser(TIMESTAMPTZ_OID, parseDate);
+types.setTypeParser(TIMESTAMP_OID, parseDate);
 
 class BaseModel extends Model
 {
