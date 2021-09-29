@@ -363,7 +363,7 @@ class QBO
     static async refreshToken()
     {
         // get refrsh token
-        const refreshToken = await Mongo.get(refreshTokenName);
+        const refreshToken = await Mongo.getSecret(refreshTokenName);
 
         const payload = `grant_type=refresh_token&refresh_token=${refreshToken.value}`;
 
