@@ -2377,8 +2377,6 @@ components:
         The real world item(s) that need to be transported between two real
         world locations
       type: object
-      required:
-        - identifier
       properties:
         identifier:
           description: An Identifying string like a VIN or Serial number.
@@ -3017,12 +3015,13 @@ components:
       properties:
         notes:
           description: Optional notes
-          oneOf:
-            - type: string
-            - type: 'null'
+          type: string
+          nullable: true
         amount:
           description: New expense amount
-          type: number
+          oneOf:
+            - type: number
+            - type: string
         itemId:
           description: New item id
           type: number
@@ -3041,7 +3040,6 @@ components:
       required:
         - itemId
         - amount
-        - invoiceGuid
     accountType:
       type: string
       enum:
