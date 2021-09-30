@@ -1359,10 +1359,31 @@ class OrderService
         const stop = OrderStop.fromJson({ ...stopInput, terminalGuid });
         stop.setUpdatedBy(currentUser);
 
-        stop.primaryContact = primaryContact;
-        stop.alternativeContact = alternativeContact;
+        if (OrderService.isTerminalContactToBeDeleted(primaryContact))
+            stop.primaryContactGuid = null;
+        else
+            stop.primaryContact = primaryContact;
+        if (OrderService.isTerminalContactToBeDeleted(alternativeContact))
+            stop.alternativeContactGuid = null;
+        else
+            stop.alternativeContact = alternativeContact;
+
         return stop;
     }
+
+    /**
+     * If TerminalContact only contains terminalGuid and createdBy,
+     * it means the TerminalContact reference can be deleted
+     */
+    static isTerminalContactToBeDeleted(terminalContact)
+    {
+        if (terminalContact && Object.keys(terminalContact).length === 2
+            && Object.keys(terminalContact).includes('terminalGuid')
+            && Object.keys(terminalContact).includes('createdByGuid'))
+            return true;
+        return false;
+    }
+
     static createJobsGraph(jobsInput, jobTypes, currentUser)
     {
         return jobsInput?.map(job =>

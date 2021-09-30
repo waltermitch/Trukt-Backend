@@ -70,21 +70,25 @@ requestBody:
           clientContact:
             description: The contact that works for the client.
             type: object
-            additionalProperties: false
-            properties:
-              $ref: '..\..\components\schemas\Contact.yaml#/properties'
+            anyOf:
+            - additionalProperties: false
+              properties:
+                $ref: '..\..\components\schemas\Contact.yaml#/properties'
+            - additionalProperties: false
+              properties:
+                $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable/properties'
           dispatcher:
             description: The dispatcher responsible for this order.
             anyOf:
-              - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+              - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
           referrer:
             description: The account that referred this order to us.
             anyOf:
-              - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+              - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
           salesperson:
             description: The salesperson responsible for managing this order.
             anyOf:
-              - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+              - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
           jobs:
             type: array
             description: All of the jobs that will be worked by vendors for this order.
