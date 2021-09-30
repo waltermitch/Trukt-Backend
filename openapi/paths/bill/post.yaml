@@ -1,10 +1,25 @@
-summary: Create a new Bill
-operationId: createBill
-description: Create a new bill
+summary: Bill Jobs
+operationId: billJobs
+description: Bills Jobs
 tags:
-  - Bill
+  - Invoice
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        description: List of Job guids
+        properties:
+          orders:
+            type: array
+            items:
+              description: Job guid
+              $ref: '..\..\components\schemas\common.yaml#/guid'
+            minItems: 1
+        required:
+          - jobs
 responses:
   200:
-    description: Bill
+    description: bills
     content:
       application/json: {}
