@@ -55,7 +55,7 @@ class ShipCars extends Loadboard
             delivery_requested_date_end: DateTime.fromISO(this.data.delivery.dateRequestedEnd),
             delivery_notes: this.data.delivery?.notes ? this.data.delivery?.notes : ' ',
 
-            first_available_date: this.toStringDate(this.data.pickup.dateRequestedStart),
+            first_available_date: this.toDate(this.data.pickup.dateRequestedStart),
             shipper_load_id: process.env.NODE_ENV != 'prod' || process.env.NODE_ENV != 'production' ? this.saltOrderNumber(this.data.number) : this.data.number,
             instructions: this.data.loadboardInstructions,
             specific_load_requirements: this.postObject.instructions,

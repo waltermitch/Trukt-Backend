@@ -19,7 +19,7 @@ class CentralDispatch extends Loadboard
         ${this.data.pickup.terminal.city},${this.getStateCode(this.data.pickup.terminal.state)},${this.data.pickup.terminal.zipCode},
         ${this.data.delivery.terminal.city},${this.getStateCode(this.data.delivery.terminal.state)},${this.data.delivery.terminal.zipCode},
         ${this.data.actualExpense},0.00,check,delivery,none,${this.setEquipmentType()},${this.getINOP()},
-        ${this.toStringDate(this.data.pickup.dateRequestedStart)},${this.toDate(this.dateAdd(this.data.pickup.dateRequestedStart, 30, 'days'))},
+        ${this.toDate(this.data.pickup.dateRequestedStart)},${this.toDate(this.dateAdd(this.data.pickup.dateRequestedStart, 30, 'days'))},
         ${this.postObject.instructions},${this.setVehicles()}*`;
 
         // one more check to remove \n
