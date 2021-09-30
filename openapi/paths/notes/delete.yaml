@@ -1,0 +1,25 @@
+summary: Delete notes
+operationId: deleteNotes
+description: Delete external or internal notes
+tags:
+  - Notes
+parameters:
+  - in: path
+    name: noteGuid
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true     
+
+responses:
+  204:
+    description: Notes have been deleted
+    content:
+      application/json: {}            
+
+  404:
+    description:  Note does not exist
+    content:
+      application/json:
+        schema:
+          type: string
+          example: Note does not exist

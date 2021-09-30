@@ -989,6 +989,545 @@ paths:
                       allOf:
                         - $ref: '#/components/schemas/guidObject'
                         - $ref: '#/components/schemas/Terminal'
+    patch:
+      summary: Update order
+      operationId: patchOrder
+      description: Update order
+      tags:
+        - Order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                guid:
+                  allOf:
+                    - description: Order to update.
+                    - $ref: '#/components/schemas/guid'
+                referenceNumber:
+                  type: string
+                  maxLength: 64
+                  description: >-
+                    The external identification number the client uses for this
+                    order.
+                inspectionType:
+                  allOf:
+                    - $ref: '#/components/schemas/inspectionType'
+                    - description: This field currently has no use.
+                instructions:
+                  type: string
+                  description: The instructions for the order provided by the client.
+                estimatedRevenue:
+                  type: string
+                  format: currency
+                  description: The amount owed by the client.
+                estimatedExpense:
+                  type: string
+                  format: currency
+                  description: The amount owed to the vendors.
+                quotedRevenue:
+                  type: string
+                  format: currency
+                  description: The amount quoted to the client for this order.
+                estimatedDistance:
+                  type: number
+                  description: >-
+                    The distance required to travel to complete the full order
+                    in miles.
+                  nullable: true
+                  minimum: 0
+                  maximum: 9999999.9
+                isDummy:
+                  type: boolean
+                  description: If the order is a dummy and should not be dispatched.
+                dateExpectedCompleteBy:
+                  type: string
+                  format: date-time
+                  description: The date that this order is expected to be completed by.
+                bol:
+                  type: string
+                  maxLength: 64
+                  description: The Bill of Lading reference number for this order.
+                bolUrl:
+                  type: string
+                  maxLength: 1024
+                  description: The URL to the Bill of Lading for this order.
+                client:
+                  description: The client that placed the order
+                  anyOf:
+                    - $ref: '#/components/schemas/account'
+                consignee:
+                  description: The party that is responsible for paying for the order
+                  anyOf:
+                    - $ref: '#/components/schemas/account'
+                clientContact:
+                  description: The contact that works for the client.
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    guid:
+                      $ref: '#/components/schemas/guid'
+                    name:
+                      type: string
+                      minLength: 1
+                      maxLength: 121
+                    email:
+                      $ref: '#/components/schemas/email'
+                    phoneNumber:
+                      $ref: '#/components/schemas/phoneNumber'
+                    mobileNumber:
+                      $ref: '#/components/schemas/phoneNumber'
+                dispatcher:
+                  description: The dispatcher responsible for this order.
+                  anyOf:
+                    - $ref: '#/components/schemas/guidObject'
+                referrer:
+                  description: The account that referred this order to us.
+                  anyOf:
+                    - $ref: '#/components/schemas/guidObject'
+                salesperson:
+                  description: The salesperson responsible for managing this order.
+                  anyOf:
+                    - $ref: '#/components/schemas/guidObject'
+                jobs:
+                  type: array
+                  description: >-
+                    All of the jobs that will be worked by vendors for this
+                    order.
+                  items:
+                    allOf:
+                      - $ref: '#/components/schemas/Job'
+                      - type: object
+                        properties:
+                          guid:
+                            $ref: '#/components/schemas/guid'
+                          index:
+                            description: >-
+                              Arbitrary string used for referencing this job in
+                              the payload.
+                            type: string
+                          loadType:
+                            type: string
+                            enum:
+                              - full truck load
+                              - partial truck load
+                          inspectionType:
+                            allOf:
+                              - $ref: '#/components/schemas/inspectionType'
+                              - description: This field currently has not use.
+                          vendor:
+                            allOf:
+                              - $ref: '#/components/schemas/guidObject'
+                              - description: >-
+                                  The vendor or carrier responsible for
+                                  completing this job.
+                          vendorContact:
+                            type: object
+                            additionalProperties: false
+                            properties:
+                              guid:
+                                $ref: '#/components/schemas/guid'
+                              name:
+                                type: string
+                                minLength: 1
+                                maxLength: 121
+                              email:
+                                $ref: '#/components/schemas/email'
+                              phoneNumber:
+                                $ref: '#/components/schemas/phoneNumber'
+                              mobileNumber:
+                                $ref: '#/components/schemas/phoneNumber'
+                            description: >-
+                              The vendor or carrier contact that can be
+                              contacted if any questions arise.
+                          vendorAgent:
+                            type: object
+                            additionalProperties: false
+                            properties:
+                              guid:
+                                $ref: '#/components/schemas/guid'
+                              name:
+                                type: string
+                                minLength: 1
+                                maxLength: 121
+                              email:
+                                $ref: '#/components/schemas/email'
+                              phoneNumber:
+                                $ref: '#/components/schemas/phoneNumber'
+                              mobileNumber:
+                                $ref: '#/components/schemas/phoneNumber'
+                            description: >-
+                              The vendor or carrier employee that will be
+                              completing the job. Usually for carriers this is
+                              the driver.
+                          dispatcher:
+                            allOf:
+                              - $ref: '#/components/schemas/guidObject'
+                              - description: >-
+                                  The dispatcher who is responsible for managing
+                                  this job.
+                          stops:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                index:
+                                  type: string
+                                  description: >-
+                                    The index field inside of the stops array in
+                                    the payload
+                                commodities:
+                                  type: array
+                                  items:
+                                    allOf:
+                                      - $ref: '#/components/schemas/indexObject'
+                                      - type: object
+                                        properties:
+                                          lotNumber:
+                                            description: >-
+                                              The lot number for this commodity at
+                                              this stop.
+                                            type: string
+                              required:
+                                - index
+                        required:
+                          - index
+                          - guid
+                expenses:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      account:
+                        type: string
+                        enum:
+                          - client
+                          - vendor
+                          - salesperson
+                          - referrer
+                          - dispatcher
+                      amount:
+                        allOf:
+                          - $ref: '#/components/schemas/currency'
+                          - description: The amount that is owed for this expense.
+                            minimum: 0
+                      item:
+                        description: >-
+                          The invoice line item name that this expense
+                          references.
+                        type: string
+                      commodity:
+                        description: >-
+                          The index field in the commodities array in this
+                          payload.
+                        type: string
+                stops:
+                  type: array
+                  items:
+                    allOf:
+                      - $ref: '#/components/schemas/guidObject'
+                      - $ref: '#/components/schemas/indexObject'
+                      - type: object
+                        properties:
+                          guid:
+                            $ref: '#/components/schemas/guid'
+                          index:
+                            description: >
+                              A unique arbitrary string that will be used to
+                              reference this stop record inside of other
+                              objects.
+                            type: string
+                            nullable: true
+                          sequence:
+                            type: integer
+                            description: >-
+                              The order in which the stops need to be visited.
+                              This number should be assigned in increasing
+                              order. Magnitude is arbitrary.
+                            nullable: false
+                          stopType:
+                            $ref: '#/components/schemas/stopType'
+                          notes:
+                            description: Used to convey any instructions about the stops.
+                            type: string
+                            nullable: true
+                          dateRequestedStart:
+                            description: >
+                              This date is requested by the customer. The
+                              earliest date this stop should be worked.
+                            type: string
+                            format: date-time
+                            example: '2021-09-09T13:45:45.000Z'
+                            nullable: true
+                          dateRequestedEnd:
+                            description: >
+                              This date is requested by the customer. The latest
+                              date this stop should be worked.
+                            type: string
+                            format: date-time
+                            example: '2021-09-09T13:45:45.000Z'
+                            nullable: true
+                          dateRequestedType:
+                            description: >-
+                              Defines the type of requested date the customer
+                              requested.
+                            $ref: '#/components/schemas/stopDateType'
+                          dateEstimatedStart:
+                            description: >
+                              This date is submitted by the carrier/vendor. The
+                              earliest date this stop could be worked.
+                            type: string
+                            format: date-time
+                            example: '2021-09-09T13:45:45.000Z'
+                            nullable: true
+                          dateEstimatedEnd:
+                            description: >
+                              This date is submitted by the carrier/vendor. The
+                              latest date this stop could be worked.
+                            type: string
+                            format: date-time
+                            example: '2021-09-09T13:45:45.000Z'
+                            nullable: true
+                          dateEstimatedType:
+                            description: >-
+                              Defines the type of estimated date the
+                              carrier/vendor submitted.
+                            $ref: '#/components/schemas/stopDateType'
+                          dateScheduledStart:
+                            description: >
+                              This date is submitted by the dispatcher. The
+                              earliest date this stop will be worked
+                            type: string
+                            format: date-time
+                            example: '2021-09-09T13:45:45.000Z'
+                            nullable: true
+                          dateScheduledEnd:
+                            description: >
+                              This date is submitted by the dispatcher. The
+                              latest date this stop will be worked
+                            type: string
+                            format: date-time
+                            example: '2021-09-09T13:45:45.000Z'
+                            nullable: true
+                          dateScheduledType:
+                            description: >-
+                              Defined the type of scheduled date the dispatcher
+                              submitted.
+                            $ref: '#/components/schemas/stopDateType'
+                          primaryContact:
+                            $ref: '#/components/schemas/Contact'
+                          alternativeContact:
+                            $ref: '#/components/schemas/Contact'
+                          terminal:
+                            type: string
+                            description: >-
+                              The value of the index field from a Terminal in
+                              this payload.
+                            nullable: false
+                          commodities:
+                            type: array
+                            minLength: 1
+                            items:
+                              type: object
+                              properties:
+                                index:
+                                  type: string
+                                  description: >-
+                                    The value of the index field from a
+                                    Commodity in this payload.
+                                lotNumber:
+                                  type: string
+                                  description: >-
+                                    The lot number for this commodity at this
+                                    stop.
+                              required:
+                                - index
+                terminals:
+                  type: array
+                  items:
+                    allOf:
+                      - type: object
+                        properties:
+                          name:
+                            description: >-
+                              A non-unique name for this terminal that will be
+                              displayed to the users.
+                            type: string
+                            maxLength: 255
+                          street1:
+                            type: string
+                            maxLength: 64
+                          street2:
+                            type: string
+                            maxLength: 64
+                            nullable: true
+                          state:
+                            type: string
+                            maxLength: 100
+                          city:
+                            type: string
+                            maxLength: 64
+                          country:
+                            type: string
+                            maxLength: 64
+                          zipCode:
+                            $ref: '#/components/schemas/zipCode'
+                          latitude:
+                            $ref: '#/components/schemas/latitude'
+                          longitude:
+                            $ref: '#/components/schemas/longitude'
+                      - $ref: '#/components/schemas/indexObject'
+                      - type: object
+                        properties:
+                          guid:
+                            $ref: '#/components/schemas/guid'
+                commodities:
+                  type: array
+                  items:
+                    allOf:
+                      - $ref: '#/components/schemas/indexObject'
+                      - $ref: '#/components/schemas/CommodityUpdate'
+              required:
+                - guid
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  guid:
+                    $ref: '#/components/schemas/guid'
+                  number:
+                    type: string
+                    pattern: '/[A-Z]{2}\d{5}/'
+                    example: RC10000
+                  instructions:
+                    $ref: '#/components/schemas/instructions'
+                  status:
+                    $ref: '#/components/schemas/orderStatus'
+                  distance:
+                    type: number
+                    description: >-
+                      The calculated distance required to travel to complete the
+                      full order in miles.
+                    nullable: true
+                    minimum: 0
+                    maximum: 9999999.9
+                  isDummy:
+                    type: boolean
+                    default: false
+                    example: false
+                  isCompleted:
+                    type: boolean
+                    default: false
+                    example: false
+                  estimatedExpense:
+                    $ref: '#/components/schemas/estimatedExpense'
+                  estimatedRevenue:
+                    $ref: '#/components/schemas/estimatedRevenue'
+                  quotedRevenue:
+                    $ref: '#/components/schemas/quotedRevenue'
+                  estimatedIncome:
+                    allOf:
+                      - $ref: '#/components/schemas/currency'
+                      - description: The calculated total estimated income for this order.
+                        readOnly: true
+                  actualRevenue:
+                    allOf:
+                      - $ref: '#/components/schemas/currency'
+                      - description: The calculated revenue for this order.
+                        readOnly: true
+                  actualExpense:
+                    allOf:
+                      - $ref: '#/components/schemas/currency'
+                      - description: The calculated expense for this order.
+                        readOnly: true
+                  actualIncome:
+                    allOf:
+                      - $ref: '#/components/schemas/currency'
+                      - description: The calculated total income for this order.
+                        readOnly: true
+                  dateExpectedCompleteBy:
+                    $ref: '#/components/schemas/dateExpectedCompleteBy'
+                  dateCompleted:
+                    description: The date that this order was completed
+                    type: string
+                    format: date-time
+                    readOnly: true
+                    nullable: true
+                  dateCreated:
+                    $ref: '#/components/schemas/dateCreated'
+                  dateUpdated:
+                    $ref: '#/components/schemas/dateUpdated'
+                  createdByGuid:
+                    $ref: '#/components/schemas/createdByGuid'
+                  updatedByGuid:
+                    $ref: '#/components/schemas/updatedByGuid'
+                  referenceNumber:
+                    $ref: '#/components/schemas/referenceNumber'
+                  inspectionType:
+                    $ref: '#/components/schemas/properties-inspectionType'
+                  isTender:
+                    description: >-
+                      Signals if the order is a tender and is pending approval
+                      or confirmation.
+                  isStarted:
+                    description: Signals if the order has been started by the vendor(s).
+                    type: boolean
+                    default: false
+                    example: false
+                  estimatedDistance:
+                    $ref: '#/components/schemas/estimatedDistance'
+                  bol:
+                    $ref: '#/components/schemas/bol'
+                  bolUrl:
+                    $ref: '#/components/schemas/bolUrl'
+                  clientContact:
+                    $ref: '#/components/schemas/properties-clientContact'
+                  dispatcher:
+                    $ref: '#/components/schemas/properties-dispatcher'
+                  referrer:
+                    $ref: '#/components/schemas/properties-referrer'
+                  salesperson:
+                    $ref: '#/components/schemas/properties-salesperson'
+                  client:
+                    allOf:
+                      - $ref: '#/components/schemas/properties-client'
+                      - $ref: '#/components/schemas/Account_client'
+                  consignee:
+                    $ref: '#/components/schemas/properties-consignee'
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                  expenses:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/orderExpense'
+                        - $ref: '#/components/schemas/guidObject'
+                  stops:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Stop'
+                        - type: object
+                          properties:
+                            terminal:
+                              allOf:
+                                - $ref: '#/components/schemas/guidObject'
+                                - $ref: '#/components/schemas/Terminal'
+                            commodities:
+                              $ref: '#/components/schemas/CommodityOutbound'
+                  terminals:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/guidObject'
+                        - $ref: '#/components/schemas/Terminal'
   /order/getorders:
     post:
       summary: Search orders
@@ -2112,6 +2651,155 @@ paths:
                       detail:
                         type: string
                         example: Not Found
+  '/note/{object}/{objectGuid}':
+    post:
+      summary: Create Internal and external notes
+      operationId: createNotes
+      description: Create internal and external notes
+      tags:
+        - Notes
+      parameters:
+        - in: path
+          name: object
+          schema:
+            $ref: '#/components/schemas/noteObject'
+          required: true
+        - in: path
+          name: objectGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 'This is a useless field, so fill it up as you wish.'
+                body:
+                  description: Note for internal use only.
+                  type: string
+                  maxLength: 3000
+                type:
+                  type: string
+                  enum:
+                    - lead
+                    - flag
+                    - update
+                  description: types of notes that internal notes store
+                  example: lead
+              required:
+                - body
+                - type
+      responses:
+        '200':
+          description: Notes have been created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    $ref: '#/components/schemas/title'
+                  body:
+                    $ref: '#/components/schemas/body'
+                  type:
+                    $ref: '#/components/schemas/type'
+                  createdByGuid:
+                    $ref: '#/components/schemas/createdByGuid'
+                  job:
+                    type: object
+                    properties:
+                      guid:
+                        $ref: '#/components/schemas/guid'
+                  guid:
+                    $ref: '#/components/schemas/guid'
+        '400':
+          description: Unable to create notes
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Some Error for DB
+  '/note/{noteGuid}':
+    put:
+      summary: Update notes
+      operationId: updateNotes
+      description: Update internal and external notes
+      tags:
+        - Notes
+      parameters:
+        - in: path
+          name: noteGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 'This is a useless field, so fill it up as you wish.'
+                body:
+                  description: Note for external use only.
+                  type: string
+                  maxLength: 3000
+                type:
+                  type: string
+                  enum:
+                    - lead
+                    - flag
+                    - update
+                  description: types of notes that internal notes store
+                  example: lead
+              required:
+                - body
+                - type
+      responses:
+        '204':
+          description: Notes have been updated
+          content:
+            application/json: {}
+        '400':
+          description: Failed to update data note with input values
+          content:
+            application/json: {}
+        '404':
+          description: Note does not exist
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Note does not exist
+    delete:
+      summary: Delete notes
+      operationId: deleteNotes
+      description: Delete external or internal notes
+      tags:
+        - Notes
+      parameters:
+        - in: path
+          name: noteGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '204':
+          description: Notes have been deleted
+          content:
+            application/json: {}
+        '404':
+          description: Note does not exist
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Note does not exist
 components:
   schemas:
     guid:
@@ -2996,11 +3684,115 @@ components:
         - $ref: '#/components/schemas/guidObject'
         - $ref: '#/components/schemas/Commodity with Type ID'
         - $ref: '#/components/schemas/Commodity with Category and Type'
+    CommodityUpdate:
+      allOf:
+        - type: object
+          properties:
+            identifier:
+              description: An Identifying string like a VIN or Serial number.
+              type: string
+              maxLength: 255
+              example: ABC1234-GF56-DEADBEEF
+            description:
+              description: A breif description of the commodity.
+              type: string
+              maxLength: 255
+              nullable: true
+            quantity:
+              description: The number of separate pieces in this commodity.
+              type: integer
+              nullable: true
+            length:
+              description: The length of the commodity in US feet.
+              type: integer
+              minimum: 0
+              nullable: true
+            weight:
+              description: The weight of the commodity in US pounds.
+              type: integer
+              minimum: 0
+              nullable: true
+            extraExternalData:
+              description: >-
+                Any information about the commodity that is stored in external
+                systems. This is a free response json field.
+              type: object
+              nullable: true
+        - oneOf:
+            - type: object
+              properties:
+                typeId:
+                  description: |
+                    Available Values:
+                      * `1` - vehicle: coupe
+                      * `2` - vehicle: convertible
+                      * `3` - vehicle: sedan
+                      * `4` - vehicle: SUV
+                      * `5` - vehicle: minivan
+                      * `6` - vehicle: pickup truck (2 door)
+                      * `7` - vehicle: pickup truck (4 door)
+                      * `8` - vehicle: pickup dually
+                      * `9` - vehicle: motorcycle
+                      * `10` - vehicle: ATV
+                      * `11` - vehicle: boat
+                      * `12` - vehicle: RV
+                      * `13` - vehicle: trailer (5th wheel)
+                      * `14` - vehicle: trailer (bumper pull)
+                      * `15` - vehicle: trailer (gooseneck)
+                      * `16` - vehicle: cargo van
+                      * `17` - vehicle: box truck
+                      * `18` - vehicle: day cab
+                      * `19` - vehicle: sleeper cab
+                      * `20` - vehicle: other
+                      * `21` - freight: bulk
+                      * `22` - freight: crushed cars
+                      * `23` - freight: other
+                  type: integer
+                  minimum: 1
+                  maximum: 23
+            - $ref: '#/components/schemas/CommodityCategory'
+    properties-clientContact:
+      description: The contact that works for the client.
+      type: object
+      additionalProperties: false
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 121
+        email:
+          $ref: '#/components/schemas/email'
+        phoneNumber:
+          $ref: '#/components/schemas/phoneNumber'
+        mobileNumber:
+          $ref: '#/components/schemas/phoneNumber'
+    properties-dispatcher:
+      description: The dispatcher responsible for this order.
+      anyOf:
+        - $ref: '#/components/schemas/guidObject'
+    properties-referrer:
+      description: The account that referred this order to us.
+      anyOf:
+        - $ref: '#/components/schemas/guidObject'
+    properties-salesperson:
+      description: The salesperson responsible for managing this order.
+      anyOf:
+        - $ref: '#/components/schemas/guidObject'
+    properties-client:
+      description: The client that placed the order
+      anyOf:
+        - $ref: '#/components/schemas/account'
+    properties-consignee:
+      description: The party that is responsible for paying for the order
+      anyOf:
+        - $ref: '#/components/schemas/account'
     page:
       description: 'For pagination purposes, page to return.'
       type: integer
-      minimum: 0
-      default: 0
+      minimum: 1
+      default: 1
       example: 1
     rowCount:
       description: 'For pagination purposes, number of entries per page.'
@@ -3252,3 +4044,23 @@ components:
         - dateDeliveryStart
         - loadboard
         - extraExternalData
+    noteObject:
+      type: string
+      enum:
+        - job
+        - order
+    title:
+      type: string
+      description: 'This is a useless field, so fill it up as you wish.'
+    body:
+      description: Note for internal use only.
+      type: string
+      maxLength: 3000
+    type:
+      type: string
+      enum:
+        - lead
+        - flag
+        - update
+      description: types of notes that internal notes store
+      example: lead

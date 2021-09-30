@@ -913,7 +913,8 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
-            expenses = []
+            expenses = [],
+            ...orderData
         } = orderInput;
 
         try
@@ -982,7 +983,8 @@ class OrderService
                 clientContactGuid: orderContactCreated,
                 stops: stopsToUpdate,
                 jobs: jobsWithExpensesGraph,
-                invoices: orderInvoices
+                invoices: orderInvoices,
+                ...orderData
             });
 
             const orderToUpdate = Order.query(trx).skipUndefined().upsertGraphAndFetch(orderGraph, {
@@ -1025,6 +1027,8 @@ class OrderService
             const { guid: orderContactGuid, ...orderContactData } = orderContact;
             newOrderContactChecked = orderContactData;
         }
+        else if (orderContact && orderChecked === 'removeContact')
+            newOrderContactChecked = { guid: null };
 
         return { newOrderContactChecked, terminalsChecked, stopsChecked };
     }
@@ -1106,7 +1110,9 @@ class OrderService
 
     static async checkContactReference(contact, orderGuid)
     {
-        if (!contact.guid)
+        if (contact.guid === null && Object.keys(contact).length === 1)
+            return 'removeContact';
+        else if (!contact.guid)
             return 'createNewContact';
 
         const searchInOrder = Order.query().count('guid')
@@ -1280,10 +1286,14 @@ class OrderService
     }
     static async createOrderContactCommoditiesTerminalsMap(contactInfo, commoditiesInfo, terminals, currentUser, trx)
     {
-        const { contact, contactRecordType, client } = contactInfo;
+        const { contact = {}, contactRecordType, client } = contactInfo;
         const { commodities, commodityTypes } = commoditiesInfo;
 
-        const orderContactTocreate = OrderService.createSFContact(contact, contactRecordType, client, trx);
+        let orderContactTocreate;
+        if (contact.guid === null && Object.keys(contact).includes('guid'))
+            orderContactTocreate = null;
+        else if (contact && Object.keys(contact).length > 0)
+            orderContactTocreate = OrderService.createSFContact(contact, contactRecordType, client, trx);
 
         const commoditiesToUpdate = commodities?.map(commodity => OrderService.updateCreateCommodity(commodity, commodityTypes, currentUser, trx)) || [];
         const terminalsToUpdate = terminals?.map(terminal => OrderService.updateCreateTerminal(terminal, currentUser, trx)) || [];
@@ -1349,10 +1359,31 @@ class OrderService
         const stop = OrderStop.fromJson({ ...stopInput, terminalGuid });
         stop.setUpdatedBy(currentUser);
 
-        stop.primaryContact = primaryContact;
-        stop.alternativeContact = alternativeContact;
+        if (OrderService.isTerminalContactToBeDeleted(primaryContact))
+            stop.primaryContactGuid = null;
+        else
+            stop.primaryContact = primaryContact;
+        if (OrderService.isTerminalContactToBeDeleted(alternativeContact))
+            stop.alternativeContactGuid = null;
+        else
+            stop.alternativeContact = alternativeContact;
+
         return stop;
     }
+
+    /**
+     * If TerminalContact only contains terminalGuid and createdBy,
+     * it means the TerminalContact reference can be deleted
+     */
+    static isTerminalContactToBeDeleted(terminalContact)
+    {
+        if (terminalContact && Object.keys(terminalContact).length === 2
+            && Object.keys(terminalContact).includes('terminalGuid')
+            && Object.keys(terminalContact).includes('createdByGuid'))
+            return true;
+        return false;
+    }
+
     static createJobsGraph(jobsInput, jobTypes, currentUser)
     {
         return jobsInput?.map(job =>
