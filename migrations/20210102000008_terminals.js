@@ -64,6 +64,7 @@ exports.up = function (knex)
             table.boolean('is_resolved').notNullable().defaultsTo(false).comment('this is set to true only and only when the address is verified and proper geo-coords are stored');
             migration_tools.timestamps(table);
             migration_tools.authors(table);
+
             table.unique(['latitude', 'longitude']);
 
         })

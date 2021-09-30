@@ -137,3 +137,11 @@ paths:
   /loadboard/requests/{requestGuid}/decline:
     put:
       $ref: paths\loadboard\requests\decline.yaml
+  /note/{object}/{objectGuid}:
+    post:
+      $ref: paths\notes\post.yaml
+  /note/{noteGuid}:
+    put:
+      $ref: paths\notes\put.yaml
+    delete:
+      $ref: paths\notes\delete.yaml

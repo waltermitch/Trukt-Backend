@@ -96,6 +96,7 @@ guid:
   format: uuid
   pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
   example: '00000000-0000-0000-0000-000000000000'
+  nullable: true
 zipCode:
   type: string
   example: '98765'
@@ -109,6 +110,19 @@ guidObject:
   properties:
     guid:
       $ref: '#/guid'
+guidObjectNullable:
+  type: object
+  required:
+    - guid
+  properties:
+    guid:
+      $ref: '#/guidNullable'
+guidNullable:
+  type: string
+  format: uuid
+  pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
+  example: '00000000-0000-0000-0000-000000000000'
+  nullable: true
 phoneNumber:
   type: string
   pattern: \d+
@@ -378,3 +392,8 @@ Enums:
       - Canceled
       - New
       - Declined
+  noteObject:
+    type: string
+    enum: 
+      - job
+      - order
