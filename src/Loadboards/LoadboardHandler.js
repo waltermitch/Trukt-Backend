@@ -1,6 +1,7 @@
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJob = require('../Models/OrderJob');
+const R = require('ramda');
 
 const { ServiceBusClient } = require('@azure/service-bus');
 
@@ -61,17 +62,18 @@ const myMessageHandler = async (message) =>
         else
         {
             const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
-            let status = '';
-            for(const loadboard of Object.keys(posts))
-            {
-                const post = posts[`${loadboard}`];
-                if(post.status == 'posted' && post.isPosted && post.isSynced)
-                {
-                    status = 'posted';
-                    break;
-                }
-                status = 'ready';
-            }
+
+            // this loops through all the posts and returns true as soon as
+            // it finds that one of the loadboards is marked as posted
+            const isPosted = R.any(post => post.posted())(Object.values(posts));
+            const status = isPosted ? 'posted' : 'ready';
+
+            // Objection returns the number of rows affected by a query
+            // so that means if this query really did change the status, then
+            // add the changed status to the pubsub message.
+            // If the job status is in pending, picked up, or delivered,
+            // then the status should not be updated the the message listener should
+            // not need a status update
             const numOfJobsAffected = await OrderJob.query().patch({ status }).findById(jobGuid).whereNotIn('status', ['pending', 'picked up', 'delivered']);
             const messagePayload = { posts };
             if(numOfJobsAffected > 0)
