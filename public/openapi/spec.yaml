@@ -2653,7 +2653,7 @@ paths:
                         example: Not Found
   '/note/{object}/{objectGuid}':
     post:
-      summary: Create Internal  and external notes
+      summary: Create Internal and external notes
       operationId: createNotes
       description: Create internal and external notes
       tags:
@@ -2722,7 +2722,7 @@ paths:
             application/json:
               schema:
                 type: string
-                example: Error
+                example: Some Error for DB
   '/note/{noteGuid}':
     put:
       summary: Update notes
