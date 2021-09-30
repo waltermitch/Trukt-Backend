@@ -4,9 +4,12 @@ expense:
     notes:
       description: Optional notes
       type: string
+      nullable: true
     amount:
       description: New expense amount
-      type: number
+      oneOf:
+        - type: number
+        - type: string
     itemId:
       description: New item id
       type: number
@@ -15,9 +18,16 @@ expense:
       type: string
       format: uuid
     guid:
-      $ref: '.\Common.yaml#/guid'
+      description: expense guid
+      type: string
+      format: uuid
+    invoiceGuid:
+      description: Related invoice guid
+      type: string
+      format: uuid
   required:
-    - guid
+    - itemId
+    - amount
 orderExpense:
   type: object
   properties:

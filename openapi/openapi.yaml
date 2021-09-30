@@ -4,11 +4,11 @@ info:
   title: Trukt
   description: Transportation management system
 servers:
-  - url: 'https://truktbackend-dev.rcgauto.p.azurewebsites.net'
+  - url: "https://truktbackend-dev.rcgauto.p.azurewebsites.net"
     description: Development server
-  - url: 'https://truktbackend-staging.rcgauto.p.azurewebsites.net'
+  - url: "https://truktbackend-staging.rcgauto.p.azurewebsites.net"
     description: Staging server
-  - url: 'https://truktbackend.rcgauto.p.azurewebsites.net'
+  - url: "https://truktbackend.rcgauto.p.azurewebsites.net"
     description: Production server
 paths:
   /attachments:
@@ -37,6 +37,8 @@ paths:
   /order:
     post:
       $ref: paths\order\post.yaml
+    patch:
+      $ref: paths\order\patch.yaml
   /order/getorders:
     post:
       $ref: paths\order\search.yaml
@@ -75,12 +77,12 @@ paths:
     delete:
       $ref: paths\loadboard\delete.yaml
     post:
-      $ref:  paths\loadboard\post.yaml
+      $ref: paths\loadboard\post.yaml
   /loadboard/{jobId}/dispatch:
     post:
-      $ref:  paths\loadboard\dispatch\post.yaml
+      $ref: paths\loadboard\dispatch\post.yaml
     put:
-      $ref:  paths\loadboard\dispatch\put.yaml
+      $ref: paths\loadboard\dispatch\put.yaml
   /invoice/{invoiceId}:
     get:
       $ref: paths\invoice\get.yaml
@@ -98,11 +100,16 @@ paths:
       $ref: paths\expense\expenseId\get.yaml
     patch:
       $ref: paths\expense\expenseId\patch.yaml
+    delete:
+      $ref: paths\expense\expenseId\delete.yaml
   /expense:
     post:
       $ref: paths\expense\post.yaml
     patch:
       $ref: paths\expense\patch.yaml
+  /expense/search:
+    get:
+      $ref: paths\expense\search.yaml
   /bill/{billId}:
     get:
       $ref: paths\bill\get.yaml

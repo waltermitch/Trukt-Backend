@@ -69,3 +69,8 @@ test.js
 /localdata
 TestController.js
 Test.js
+local.settings.copy*
+test
+
+/edi
+/sql

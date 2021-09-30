@@ -82,6 +82,7 @@ exports.up = function (knex)
             sla_days__c as sla_days,
             sla_expiration_date__c as sla_expiration_date,
             sla_serial_number__c as sla_serial_number,
+            status__c as status,
             suite__c as suite,
             systemmodstamp as system_mod_stamp,
             truckstop_username__c as truckstop_username,

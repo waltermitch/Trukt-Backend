@@ -141,13 +141,13 @@ class CentralDispatch extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handleUnpost(payloadMetadata, response)
@@ -175,13 +175,13 @@ class CentralDispatch extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 }
 

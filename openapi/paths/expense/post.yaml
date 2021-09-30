@@ -1,23 +1,18 @@
-summary: Create bill
-operationId: postBill
-description: Create bill
+summary: Create Expense
+operationId: postExpense
+description: Create Expense
 tags:
-  - Bill
+  - Expense
 requestBody:
   content:
     application/json:
       schema:
-        type: object
-        description: List of order guids
-        properties:
-          orders: 
-            type: array
-            items: 
-              description: order guid
-              $ref: '..\..\components\schemas\common.yaml#/guid'
-            minItems: 1
-        required:
-          - orders
+        type: array
+        description: List Of Expenses
+        items:
+          description: Expense
+          $ref: '..\..\components\schemas\Expense.yaml#/expense'
+          minItems: 1
 responses:
   200:
     description: invocies

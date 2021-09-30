@@ -18,35 +18,7 @@ Commodity with Type ID:
   allOf:
     - type: object
       properties:
-        typeId:
-          description: >
-            Available Values:
-              * `1` - vehicle: coupe
-              * `2` - vehicle: convertible
-              * `3` - vehicle: sedan
-              * `4` - vehicle: SUV
-              * `5` - vehicle: minivan
-              * `6` - vehicle: pickup truck (2 door)
-              * `7` - vehicle: pickup truck (4 door)
-              * `8` - vehicle: pickup dually
-              * `9` - vehicle: motorcycle
-              * `10` - vehicle: ATV
-              * `11` - vehicle: boat
-              * `12` - vehicle: RV
-              * `13` - vehicle: trailer (5th wheel)
-              * `14` - vehicle: trailer (bumper pull)
-              * `15` - vehicle: trailer (gooseneck)
-              * `16` - vehicle: cargo van
-              * `17` - vehicle: box truck
-              * `18` - vehicle: day cab
-              * `19` - vehicle: sleeper cab
-              * `20` - vehicle: other
-              * `21` - freight: bulk
-              * `22` - freight: crushed cars
-              * `23` - freight: other
-          type: integer
-          minimum: 1
-          maximum: 23
+        $ref: '#/CommodityTypeIdProperties'
       required:
         - typeId
     - $ref: '#/CommodityBase'
@@ -59,8 +31,6 @@ Commodity with Category and Type:
 CommodityBase:
   description: The real world item(s) that need to be transported between two real world locations
   type: object
-  required:
-    - identifier
   properties:
     identifier:
       description: An Identifying string like a VIN or Serial number.
@@ -148,3 +118,45 @@ Commodity Vehicle:
         - day cab
         - sleeper cab
         - other
+
+CommodityUpdate:
+  allOf:
+    - type: object
+      properties:
+        $ref: '#/CommodityBase/properties'
+    - oneOf:
+      - type: object
+        properties:
+          $ref: '#/CommodityTypeIdProperties'
+      - $ref: '#/CommodityCategory'
+
+CommodityTypeIdProperties:
+  typeId:
+    description: >
+      Available Values:
+        * `1` - vehicle: coupe
+        * `2` - vehicle: convertible
+        * `3` - vehicle: sedan
+        * `4` - vehicle: SUV
+        * `5` - vehicle: minivan
+        * `6` - vehicle: pickup truck (2 door)
+        * `7` - vehicle: pickup truck (4 door)
+        * `8` - vehicle: pickup dually
+        * `9` - vehicle: motorcycle
+        * `10` - vehicle: ATV
+        * `11` - vehicle: boat
+        * `12` - vehicle: RV
+        * `13` - vehicle: trailer (5th wheel)
+        * `14` - vehicle: trailer (bumper pull)
+        * `15` - vehicle: trailer (gooseneck)
+        * `16` - vehicle: cargo van
+        * `17` - vehicle: box truck
+        * `18` - vehicle: day cab
+        * `19` - vehicle: sleeper cab
+        * `20` - vehicle: other
+        * `21` - freight: bulk
+        * `22` - freight: crushed cars
+        * `23` - freight: other
+    type: integer
+    minimum: 1
+    maximum: 23

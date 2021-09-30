@@ -38,7 +38,9 @@ class OrderService
         carrier,
         dispatcher,
         salesperson,
-        dates
+        dates,
+        isTender,
+        jobCategory
     }, page, rowCount)
     {
 
@@ -53,14 +55,15 @@ class OrderService
         const queryFilterDispatcher = OrderService.addFilterDispatcher(queryFilterCustomer, dispatcher);
         const queryFilterSalesperson = OrderService.addFilterSalesperson(queryFilterDispatcher, salesperson);
         const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
-        const queryAllFilters = OrderService.addFilterDates(queryFilterCarrier, dates);
+        const queryFilterDates = OrderService.addFilterDates(queryFilterCarrier, dates);
+        const queryAllFilters = OrderService.addFilterModifiers(queryFilterDates, { isTender, jobCategory });
 
-        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
+        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters, jobCategory);
 
         const { total, results } = await queryWithGraphModifiers.orderBy('number', 'ASC');
         const ordersWithDeliveryAddress = {
             results: OrderService.addDeliveryAddress(results),
-            page,
+            page: page + 1,
             rowCount,
             total
         };
@@ -748,7 +751,7 @@ class OrderService
         return cache.get('comparisonTypes');
     }
 
-    static addGraphModifiers(baseQuery)
+    static addGraphModifiers(baseQuery, jobCategory = [])
     {
         return baseQuery
             .withGraphFetched({
@@ -825,17 +828,30 @@ class OrderService
                 'country',
                 'zipCode'
             ).distinct())
-            .modifyGraph('jobs', builder => builder.select(
-                'guid',
-                'number',
-                'estimatedExpense',
-                'estimatedRevenue',
-                'status'
-            ).distinct())
+            .modifyGraph('jobs', builder =>
+            {
+                const baseBuilder = builder.select(
+                    'guid',
+                    'number',
+                    'estimatedExpense',
+                    'estimatedRevenue',
+                    'status'
+                ).distinct();
+                if (jobCategory.length > 0)
+                    baseBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(jobCategory));
+            })
             .modifyGraph('jobs.loadboardPosts', builder => builder.select('loadboard', 'isPosted', 'status').distinct())
             .modifyGraph('jobs.vendor', builder => builder.select('guid', 'name').distinct())
             .modifyGraph('jobs.vendor.rectype', builder => builder.select('name').distinct());
 
+    }
+
+    static addFilterModifiers(baseQuery, filters)
+    {
+        const { isTender, jobCategory } = filters;
+        return baseQuery
+            .modify('filterIsTender', isTender)
+            .modify('filterJobCategories', jobCategory);
     }
 
     static addDeliveryAddress(ordersArray)
@@ -875,6 +891,664 @@ class OrderService
             });
         }
 
+    }
+
+    /**
+     * If terminal, terminalContact or orderContact provided already exists and it is uses in another order,
+     * it can not be updated so the GUID is removed from the input and a new object will be created
+     */
+    static async patchOrder(orderInput, currentUser)
+    {
+        const trx = await Order.startTransaction();
+        const {
+            guid,
+            dispatcher,
+            referrer,
+            salesperson,
+            client,
+            consignee,
+            instructions,
+            clientContact,
+            commodities = [],
+            terminals = [],
+            stops = [],
+            jobs = [],
+            expenses = []
+        } = orderInput;
+
+        try
+        {
+            const [
+                contactRecordType,
+                clientFound,
+                commodityTypes,
+                jobTypes,
+                invoiceLineItems,
+                referencesChecked
+            ] =
+                await Promise.all([
+                    clientContact ? RecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact') : null,
+                    client?.guid ? OrderService.findSFClient(client.guid, trx) :
+                        undefined,
+                    commodities.length > 0 ? CommodityType.query(trx) : null,
+                    jobs.length > 0 ? OrderJobType.query(trx) : null,
+                    expenses.length > 0 ? InvoiceLineItem.query(trx) : null,
+                    OrderService.validateReferencesBeforeUpdate(clientContact, guid, stops, terminals)
+                ]);
+
+            /**
+             * terminalsChecked and stopsChecked are the same objects from the user input but they may or may not have the GUID
+             * prvovided by the user, pending on those references are being use in another orders, that is to now if they
+             * have to be created or updated
+             */
+            const { newOrderContactChecked, terminalsChecked, stopsChecked } = referencesChecked;
+
+            /**
+             * Updates or creates OrderContact, Commodities and Terminals
+             * Returns an object for Commodities and Terminals to faciliate access
+             */
+            const { orderContactCreated, commoditiesMap, terminalsMap } = await OrderService.createOrderContactCommoditiesTerminalsMap(
+                { contact: newOrderContactChecked, contactRecordType, client: clientFound },
+                { commodities, commodityTypes },
+                terminalsChecked,
+                currentUser, trx
+            );
+
+            // Create stop contacts using terminals and return an object to faciliatet access
+            const stopContactsGraphMap = OrderService.createStopContactsMap(stopsChecked, terminalsMap, currentUser, trx);
+
+            const stopsToUpdate = OrderService.createStopsGraph(stopsChecked, terminalsMap, stopContactsGraphMap, currentUser);
+            const jobsToUpdate = OrderService.createJobsGraph(jobs, jobTypes, currentUser);
+            const stopLinksToUpdate = OrderService.updateCreateStopLinks(stopsChecked, jobs, guid, commoditiesMap, currentUser, trx);
+
+            const { orderInvoices, jobs: jobsWithExpensesGraph } = OrderService.updateCreateExpenses(
+                expenses, {
+                dispatcher,
+                referrer,
+                salesperson,
+                consignee
+            }, jobsToUpdate, invoiceLineItems, commoditiesMap, currentUser
+            );
+
+            const orderGraph = Order.fromJson({
+                guid,
+                updatedByGuid: currentUser,
+                dispatcherGuid: dispatcher?.guid,
+                referrerGuid: referrer?.guid,
+                salespersonGuid: salesperson?.guid,
+                clientGuid: client?.guid,
+                consigneeGuid: consignee?.guid,
+                instructions,
+                clientContactGuid: orderContactCreated,
+                stops: stopsToUpdate,
+                jobs: jobsWithExpensesGraph,
+                invoices: orderInvoices
+            });
+
+            const orderToUpdate = Order.query(trx).skipUndefined().upsertGraphAndFetch(orderGraph, {
+                relate: true,
+                noDelete: true
+            });
+
+            const [orderUpdated] = await Promise.all([orderToUpdate, Promise.all([stopLinksToUpdate])]);
+
+            await trx.commit();
+            return orderUpdated;
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw { message: error?.nativeError?.detail || error?.message || error };
+        }
+    }
+
+    static async validateReferencesBeforeUpdate(orderContact, orderGuid, stops, terminals)
+    {
+
+        const orderContacToCheck = orderContact ? OrderService.checkContactReference(orderContact, orderGuid) : undefined;
+
+        // Return new stops with info checked if needs to be updated or created
+        const stopsToChecked = [];
+        for (const stop of stops)
+            stopsToChecked.push(OrderService.getStopsWithInfoChecked(stop, orderGuid));
+
+        // Return new terminals with info checkd if needs to be updated or created
+        const terminalsToChecked = [];
+        for (const terminal of terminals)
+            terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal, orderGuid));
+
+        const [orderChecked, terminalsChecked, stopsChecked] = await Promise.all([orderContacToCheck, Promise.all(terminalsToChecked), Promise.all(stopsToChecked)]);
+
+        let newOrderContactChecked = orderContact;
+        if (orderContact && orderChecked === 'createNewContact')
+        {
+            const { guid: orderContactGuid, ...orderContactData } = orderContact;
+            newOrderContactChecked = orderContactData;
+        }
+
+        return { newOrderContactChecked, terminalsChecked, stopsChecked };
+    }
+    static async getStopsWithInfoChecked(stop, orderGuid)
+    {
+        // If no contact is provided, then this value is not use
+        let stopPrimaryContactPromise = 'createNewTerminalContact';
+        let stopAlternativeContactPromise = 'createNewTerminalContact';
+
+        if (stop.primaryContact?.guid)
+            stopPrimaryContactPromise = OrderService.checkTerminalContacReference(stop.primaryContact.guid, orderGuid);
+
+        if (stop.alternativeContact?.guid)
+            stopAlternativeContactPromise = OrderService.checkTerminalContacReference(stop.alternativeContact.guid, orderGuid);
+
+        const [primaryContactResolve, alternativeContactResolve] = await Promise.all([stopPrimaryContactPromise, stopAlternativeContactPromise]);
+
+        const stopChecked = stop;
+
+        // Remove guid if needs to be created
+        if (stop.primaryContact && Object.keys(stop.primaryContact).length > 0 && primaryContactResolve === 'createNewTerminalContact')
+        {
+            const { guid: stopPrimaryContactGuid, ...newStopPrimaryContactData } = stop.primaryContact;
+            stopChecked.primaryContact = newStopPrimaryContactData;
+        }
+
+        // Remove guid if needs to be created
+        if (stop.alternativeContact && Object.keys(stop.alternativeContact).length > 0 && alternativeContactResolve === 'createNewTerminalContact')
+        {
+            const { guid: stopAlternativeContactGuid, ...newStopAlternativeContactData } = stop.alternativeContact;
+            stopChecked.alternativeContact = newStopAlternativeContactData;
+        }
+
+        return stopChecked;
+    }
+
+    static async getTerminalWithInfoChecked(terminal, orderGuid)
+    {
+        let terminalPromise = 'createNewTerminal';
+        let terminalPrimaryContactPromise = 'createNewTerminalContact';
+        let terminalAlternativeContactPromise = 'createNewTerminalContact';
+
+        if (terminal.guid)
+            terminalPromise = OrderService.checkTerminalReference(terminal.guid, orderGuid);
+
+        if (terminal.primaryContact?.guid)
+            terminalPrimaryContactPromise = OrderService.checkTerminalContacReference(terminal.primaryContact?.guid, orderGuid);
+
+        if (terminal.alternativeContact?.guid)
+            terminalAlternativeContactPromise = OrderService.checkTerminalContacReference(terminal.alternativeContact?.guid, orderGuid);
+
+        const [terminalResolve, primaryContactResolve, alternativeContactResolve] = await Promise.all([terminalPromise, terminalPrimaryContactPromise, terminalAlternativeContactPromise]);
+
+        let terminalChecked = terminal;
+
+        // Remove guid if needs to be created
+        if (terminalResolve === 'createNewTerminal')
+        {
+            const { guid: terminalGuid, ...newTerminalData } = terminal;
+            terminalChecked = newTerminalData;
+        }
+
+        // Remove guid if needs to be created
+        if (terminal.primaryContact && Object.keys(terminal.primaryContact).length > 0 && primaryContactResolve === 'createNewTerminalContact')
+        {
+            const { guid: terminalPrimaryConatctGuid, ...newTerminalPrimaryContactData } = terminal.primaryContact;
+            terminalChecked.primaryContact = newTerminalPrimaryContactData;
+        }
+
+        // Remove guid if needs to be created
+        if (terminal.alternativeContact && Object.keys(terminal.alternativeContact).length > 0 && alternativeContactResolve === 'createNewTerminalContact')
+        {
+            const { guid: terminalAlternativeConatctGuid, ...newTerminalAlternativeContactData } = terminal.alternativeContact;
+            terminalChecked.alternativeContact = newTerminalAlternativeContactData;
+        }
+
+        return terminalChecked;
+    }
+
+    static async checkContactReference(contact, orderGuid)
+    {
+        if (!contact.guid)
+            return 'createNewContact';
+
+        const searchInOrder = Order.query().count('guid')
+            .where('clientContactGuid', contact.guid)
+            .andWhereNot('guid', orderGuid);
+
+        const searchInJobs = OrderJob.query().count('orderGuid')
+            .where('vendorContactGuid', contact.guid)
+            .andWhereNot('orderGuid', orderGuid)
+            .orWhere('vendorAgentGuid', contact.guid);
+
+        const [[{ count: countInOrder }], [{ count: countInJobs }]] = await Promise.all([searchInOrder, searchInJobs]);
+
+        if (countInOrder > 0 || countInJobs > 0)
+            return 'createNewContact';
+        return 'updateContact';
+    }
+
+    // If TerminalContact is being reference elseWhere, a new contact will be created
+    static async checkTerminalContacReference(terminalContacGuid, orderGuid)
+    {
+        const [{ count }] = await OrderStopLink.query().count('orderGuid').whereIn(
+            'stopGuid', OrderStop.query().select('guid').whereIn(
+                'terminalGuid', Terminal.query().select('guid').whereIn(
+                    'guid', Contact.query().select('terminalGuid').where('guid', terminalContacGuid)
+                )
+            )
+        ).andWhereNot('orderGuid', orderGuid);
+
+        if (count > 0)
+            return 'createNewTerminalContact';
+        return 'updateTerminalContact';
+    }
+
+    // If Terminal is being reference elseWhere, a new terminal will be created
+    static async checkTerminalReference(terminalGuid, orderGuid)
+    {
+        const [{ count }] = await OrderStopLink.query().count('orderGuid').whereIn(
+            'stopGuid', OrderStop.query().select('guid').where('terminalGuid', terminalGuid)
+        ).andWhereNot('orderGuid', orderGuid);
+
+        if (count > 0)
+            return 'createNewTerminal';
+        return 'updateTerminal';
+    }
+
+    static async findSFClient(clientGuid, trx)
+    {
+        return SFAccount.query(trx).modify('byType', 'client').findOne(builder =>
+        {
+            builder.orWhere('guid', clientGuid)
+                .orWhere('salesforce.accounts.sfId', clientGuid);
+        });
+    }
+
+    static async createSFContact(contactInput, contactRecordType, sfClient, trx)
+    {
+        if (!contactInput) return;
+
+        const clientContact = SFContact.fromJson(contactInput);
+        if (sfClient)
+            clientContact.linkAccount(sfClient);
+        if (contactRecordType)
+            clientContact.linkRecordType(contactRecordType);
+
+        const { guid } = await SFContact.query(trx).skipUndefined().upsertGraphAndFetch(clientContact, {
+            relate: true,
+            noDelete: true
+        });
+
+        return guid;
+    }
+
+    static async updateCreateCommodity(commodityInput, commodityTypes, currentUser, trx)
+    {
+        const { index, ...commodityData } = commodityInput;
+
+        /**
+         * If only has 1 property for GUID, it is not necessary to update it because that means
+         * the commodity is only being use to reference other elements in the update
+         */
+        if (Object.keys(commodityData).length === 1)
+            return { commodity: commodityData, index };
+
+        const commodity = await OrderService.createCommodityGraph(commodityData, commodityTypes, currentUser, trx);
+        const commodityUpserted = await Commodity.query(trx).skipUndefined().upsertGraphAndFetch(commodity, {
+            relate: true,
+            noDelete: true
+        });
+
+        return { commodity: commodityUpserted, index };
+    }
+    static async createCommodityGraph(commodityInput, commodityTypes, currentUser, trx)
+    {
+        const commodity = Commodity.fromJson(commodityInput);
+        if (!commodityInput.guid)
+            commodity.setCreatedBy(currentUser);
+        else
+            commodity.setUpdatedBy(currentUser);
+
+        if (commodity?.typeId)
+        {
+            const commType = commodityTypes.find(commodityType => CommodityType.compare(commodity, commodityType));
+            if (!commType)
+                throw new Error(`Unknown commodity ${commodity.commType?.category} ${commodity.commType?.type}`);
+
+            commodity.graphLink('commType', commType);
+        }
+
+        if (commodity.isVehicle())
+        {
+            const vehicle = await Vehicle.fromJson(commodity.vehicle).findOrCreate(trx);
+            commodity.graphLink('vehicle', vehicle);
+        }
+        return commodity;
+    }
+    static async updateCreateTerminal(terminalInput, currentUser, trx)
+    {
+        const { index,
+            primaryContact: primaryContactInput,
+            alternativeContact: alternativeContactInput,
+            ...terminalData
+        } = terminalInput;
+
+        /**
+         * If only has 1 property for GUID, it is not necessary to update it because that means
+         * the terminal is only being use to reference other elements in the update
+         */
+        if (Object.keys(terminalData).length === 1 && !primaryContactInput && !alternativeContactInput)
+            return { terminal: terminalData, index };
+
+        const terminal = Terminal.fromJson(terminalData);
+        if (!terminalInput.guid)
+            terminal.setCreatedBy(currentUser);
+        else
+            terminal.setUpdatedBy(currentUser);
+
+        const terminalUpserted = await Terminal.query(trx).skipUndefined().upsertGraphAndFetch(terminal, {
+            relate: true,
+            noDelete: true
+        });
+
+        return { terminal: terminalUpserted, index };
+    }
+
+    static createTerminalContactGraph(terminalContactInput, terminal, currentUser)
+    {
+        const terminalContactGraph = Contact.fromJson(terminalContactInput);
+        terminalContactGraph.linkTerminal(terminal);
+        if (!terminalContactInput.guid)
+            terminalContactGraph.setCreatedBy(currentUser);
+        else
+            terminalContactGraph.setUpdatedBy(currentUser);
+
+        return terminalContactGraph;
+    }
+    static createStopContactsMap(stops, terminalsMap, currentUser, trx)
+    {
+        const stopsWithContacts = stops?.filter(stop => OrderStop.hasContact(stop)) || [];
+        const stopsContactsToUpdate = stopsWithContacts?.map(stopWithContact =>
+        {
+            const terminal = terminalsMap[stopWithContact.terminal];
+            return OrderService.updateCreateStopContacts(stopWithContact, terminal, currentUser, trx);
+        });
+
+        return stopsContactsToUpdate.reduce((map, { contacts, index }) =>
+        {
+            map[index] = contacts;
+            return map;
+        }, {});
+    }
+    static async createOrderContactCommoditiesTerminalsMap(contactInfo, commoditiesInfo, terminals, currentUser, trx)
+    {
+        const { contact, contactRecordType, client } = contactInfo;
+        const { commodities, commodityTypes } = commoditiesInfo;
+
+        const orderContactTocreate = OrderService.createSFContact(contact, contactRecordType, client, trx);
+
+        const commoditiesToUpdate = commodities?.map(commodity => OrderService.updateCreateCommodity(commodity, commodityTypes, currentUser, trx)) || [];
+        const terminalsToUpdate = terminals?.map(terminal => OrderService.updateCreateTerminal(terminal, currentUser, trx)) || [];
+
+        const [orderContactCreated, commoditiesUpdated, terminalsUpdated] = await Promise.all([orderContactTocreate, Promise.all(commoditiesToUpdate), Promise.all(terminalsToUpdate)]);
+
+        // Create maps for commodities and terminal to facilitate use
+        const commoditiesMap = commoditiesUpdated.reduce((map, { commodity, index }) =>
+        {
+            map[index] = commodity;
+            return map;
+        }, {});
+        const terminalsMap = terminalsUpdated.reduce((map, { terminal, index }) =>
+        {
+            map[index] = terminal;
+            return map;
+        }, {});
+
+        return { orderContactCreated, commoditiesMap, terminalsMap };
+    }
+
+    static updateCreateStopContacts(stopWithContactInput, terminal, currentUser)
+    {
+        const { primaryContact, alternativeContact, index } = stopWithContactInput;
+
+        const primaryContactGraph = primaryContact && OrderService.createTerminalContactGraph(primaryContact, terminal, currentUser);
+        const alternativeContactGraph = alternativeContact && OrderService.createTerminalContactGraph(alternativeContact, terminal, currentUser);
+
+        return {
+            index,
+            contacts: {
+                primaryContact: primaryContactGraph,
+                alternativeContact: alternativeContactGraph
+            }
+        };
+    }
+
+    static createStopsGraph(stopsInput, terminalsMap, stopContactsMap, currentUser)
+    {
+        return stopsInput?.map(stop =>
+        {
+            // commodities, primaryContact, alternativeContact are remove from the rest of stopData because they are not use in this step
+            const { index: stopIndex,
+                terminal: terminalIndex,
+                // eslint-disable-next-line no-unused-vars
+                primaryContact: primaryContactDataNotUseHere,
+                // eslint-disable-next-line no-unused-vars
+                alternativeContact: alternativeContactDataNotUseHere,
+                // eslint-disable-next-line no-unused-vars
+                commodities: commoditiesDataNotUseHere,
+                ...stopData
+            } = stop;
+
+            const terminalGuid = terminalsMap[terminalIndex]?.guid;
+            const stopContacts = stopContactsMap[stopIndex];
+            return OrderService.createSingleStopGraph(stopData, terminalGuid, stopContacts, currentUser);
+        }) || [];
+    }
+
+    static createSingleStopGraph(stopInput, terminalGuid, contacts = {}, currentUser)
+    {
+        const { primaryContact, alternativeContact } = contacts;
+        const stop = OrderStop.fromJson({ ...stopInput, terminalGuid });
+        stop.setUpdatedBy(currentUser);
+
+        stop.primaryContact = primaryContact;
+        stop.alternativeContact = alternativeContact;
+        return stop;
+    }
+    static createJobsGraph(jobsInput, jobTypes, currentUser)
+    {
+        return jobsInput?.map(job =>
+        {
+            // eslint-disable-next-line no-unused-vars
+            const { stops: stopsDataNotUseHere, ...newJobData } = job;
+            return OrderService.createSingleJobGraph(newJobData, jobTypes, currentUser);
+        }) || [];
+    }
+
+    static createSingleJobGraph(jobInput, jobTypes, currentUser)
+    {
+        const jobGraph = OrderJob.fromJson(jobInput);
+        if (jobGraph?.jobType?.category && jobGraph?.jobType?.type)
+        {
+            const jobType = jobTypes?.find(jobType => OrderJobType.compare(jobGraph, jobType));
+            if (!jobType)
+            {
+                throw new Error(`unknown job type ${jobGraph.typeId || jobGraph.jobType.category + jobGraph.jobType.type}`);
+            }
+            jobGraph.graphLink('jobType', jobType);
+            jobGraph.setIsTransport(jobType);
+        }
+        jobGraph.setUpdatedBy(currentUser);
+        return jobGraph;
+    }
+
+    /**
+     * Insert or update of stopLInks was done manually because upsert wasn't working for stopLinks graph
+     * so the process was to find if the stoplink if exists, if it does udpate it, if not, create it
+     * TODO Check if this can be redo using upsert
+     */
+    static async updateCreateStopLinks(stopsFromInput, jobs, orderGuid, commoditiesMap, currentUser, trx)
+    {
+        const stopLinksByJob = OrderService.createJobStopLinksObjects(jobs, stopsFromInput, commoditiesMap);
+        const stopLinksByStops = OrderService.createStopLinksObjects(stopsFromInput, commoditiesMap, orderGuid);
+        return [...stopLinksByStops, ...stopLinksByJob].map(stopLinkData => OrderService.updateOrCreateStopLink(stopLinkData, currentUser, trx));
+    }
+
+    static async updateOrCreateStopLink(stopLinkData, currentUser, trx)
+    {
+        const { orderGuid, commodityGuid, stopGuid, lotNumber } = stopLinkData;
+        const stopLinkFound = await OrderStopLink.query(trx).findOne({
+            orderGuid,
+            stopGuid,
+            commodityGuid
+        });
+
+        if (stopLinkFound)
+            return await OrderStopLink.query(trx).patchAndFetchById([orderGuid, stopGuid, commodityGuid], { lotNumber, updatedByGuid: currentUser });
+        else
+        {
+            const stopLinkToInsert = OrderStopLink.fromJson(stopLinkData);
+            stopLinkToInsert.setCreatedBy(currentUser);
+            return await OrderStopLink.query(trx).insert(stopLinkToInsert);
+        }
+    }
+
+    // This methode is similar to createJobStopLinksObjects, but it was separated to facilitate readability
+    static createStopLinksObjects(stops, commoditiesMap, orderGuid)
+    {
+        return stops?.reduce((stopLinks, { commodities: stopCommodities, guid: stopGuid }) =>
+        {
+            const stopLinksByCommodities = stopCommodities?.reduce((stopLinks, { index: commodityIndex, ...stopLinkData }) =>
+            {
+                const commodityGuid = commoditiesMap[commodityIndex].guid;
+
+                stopLinks.push({ stopGuid, commodityGuid, orderGuid, jobGuid: null, ...stopLinkData });
+                return stopLinks;
+
+            }, []) || [];
+            stopLinks.push(...stopLinksByCommodities);
+            return stopLinks;
+
+        }, []);
+    }
+
+    // This methode is similar to createStopLinksObjects, but it was separated to facilitate readability
+    static createJobStopLinksObjects(jobs, stopsFromInput, commoditiesMap)
+    {
+        return jobs?.reduce((stopLinks, { guid: jobGuid, stops: jobStops }) =>
+        {
+            const stopLinksByJob = jobStops?.reduce((stopLinks, { index: stopIndex, commodities: jobStopCommodities }) =>
+            {
+                const stopLinksByStop = jobStopCommodities?.reduce((stopLinks, { index: commodityIndex, ...stopLinkData }) =>
+                {
+                    const commodityGuid = commoditiesMap[commodityIndex].guid;
+                    const stopGuid = stopsFromInput.find(stop => stop.index === stopIndex)?.guid;
+
+                    stopLinks.push({ stopGuid, commodityGuid, orderGuid: null, jobGuid, ...stopLinkData });
+                    return stopLinks;
+
+                }, []) || [];
+                stopLinks.push(...stopLinksByStop);
+                return stopLinks;
+
+            }, []) || [];
+            stopLinks.push(...stopLinksByJob);
+            return stopLinks;
+
+        }, []) || [];
+    }
+
+    static updateCreateExpenses(expenses, orderContacts, jobs, invoiceLineItems, commoditiesMap, currentUser)
+    {
+        const { consignee, referrer, salesperson, dispatcher } = orderContacts;
+        const actors = {
+            'client': consignee,
+            'referrer': referrer,
+            'salesperson': salesperson,
+            'dispatcher': dispatcher
+        };
+
+        // there can be many vendors
+        for (const job of jobs)
+        {
+            actors[job.index + 'vendor'] = job.vendor;
+        }
+
+        // going to use the actor role name as the key for quick storage
+        const invoices = {};
+
+        for (const expense of expenses)
+        {
+            let invoiceKey = expense.account;
+            if (expense.job)
+            {
+                // this is a job expense, there are many vendors so have to make unique key
+                invoiceKey = expense.job + expense.account;
+            }
+
+            if (!(invoiceKey in invoices))
+            {
+                const invoiceBill = InvoiceBill.fromJson({
+                    // mark as invoice only if it is for the client, everyone else is a bill
+                    isInvoice: expense.account === 'client',
+                    lines: []
+                });
+                invoiceBill.consignee = actors[invoiceKey];
+                invoiceBill.setCreatedBy(currentUser);
+                invoices[invoiceKey] = invoiceBill;
+            }
+            const invoice = invoices[invoiceKey];
+            const lineItem = invoiceLineItems.find(lineItem => expense.item === lineItem.name && expense.item);
+
+            if (!lineItem)
+                throw new Error('Unknown expense item: ' + expense.item);
+
+            const invoiceLine = InvoiceLine.fromJson({
+                amount: expense.amount
+            });
+            invoiceLine.graphLink('item', lineItem);
+
+            if (expense.guid)
+            {
+                invoiceLine.setUpdatedBy(currentUser);
+                invoiceLine.guid = expense.guid;
+            }
+            else
+                invoiceLine.setCreatedBy(currentUser);
+
+            if (expense.commodity)
+            {
+                const commodity = commoditiesMap[expense.commodity];
+                invoiceLine.commodityGuid = commodity.guid;
+            }
+
+            invoice.lines.push(invoiceLine);
+        }
+
+        const orderInvoices = [];
+        const jobInvoices = {};
+        Object.keys(invoices).map((it) =>
+        {
+            const match = it.match(/(.*?)vendor$/);
+            if (match)
+            {
+                if (match[1])
+                    jobInvoices[match[1]] = invoices[it];
+                else
+                    throw new Error('expense specifies vendor account but not linked to a job');
+
+            }
+            else
+                orderInvoices.push(invoices[it]);
+
+        });
+
+        for (const jobIndex of Object.keys(jobInvoices))
+        {
+            const job = jobs.find(job => job['#id'] === jobIndex);
+            job.bills ? null : job.bills = [];
+            job.bills.push(jobInvoices[jobIndex]);
+        }
+
+        return { orderInvoices, jobs };
     }
 }
 
