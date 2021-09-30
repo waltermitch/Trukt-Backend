@@ -64,7 +64,12 @@ exports.up = function (knex)
             table.boolean('is_resolved').notNullable().defaultsTo(false).comment('this is set to true only and only when the address is verified and proper geo-coords are stored');
             migration_tools.timestamps(table);
             migration_tools.authors(table);
-            table.unique(['latitude', 'longitude']);
+
+            /**
+             * Right now this is causing issues for UpdateOrder and CreateOrder, it is going to be disable
+             * until STS-1428 is resolve and fix the issue of checking references for terminals with same lat and lon
+             */
+            // table.unique(['latitude', 'longitude']);
 
         })
         .raw(migration_tools.guid_function(table_name))
