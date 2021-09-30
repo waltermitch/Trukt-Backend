@@ -60,8 +60,11 @@ class QuickBooksService
         const bills = [];
 
         for (const job of jobs)
-            for (const bill of job.invoices)
+            for (const bill of job.bills)
             {
+                if (!bill.vendor)
+                    throw { 'data': 'No Vendor Assigned To Job' };
+
                 bill.vendorId = bill.vendor.qbId;
                 bill.orderNumber = job.number;
 
@@ -164,6 +167,8 @@ class QuickBooksService
                 {
                     // find vendor by name
                     const res = await QBO.getVendorByName(vendor.DisplayName);
+
+                    // compare DOT numbers
 
                     return { qbId: res[0].Id };
                 }
