@@ -8,6 +8,7 @@ router
     .get(`${prefix}/:orderGuid(${uuidRegexStr})`, controller.constructor.getOrder)
     .post(`${prefix}/getorders`, controller.constructor.getOrders)
     .post(`${prefix}`, controller.constructor.createOrder)
-    .put(`${prefix}/:orderGuid(${uuidRegexStr})/tender/:action(accept|reject)`, controller.constructor.handleTenders);
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/tender/:action(accept|reject)`, controller.constructor.handleTenders)
+    .patch(`${prefix}`, controller.constructor.patchOrder);
 
 module.exports = router;

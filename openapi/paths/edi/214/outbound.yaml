@@ -9,7 +9,7 @@ get:
   parameters:
     - name: reference
       schema:
-        type: number
+        type: string
       required: true
       allowEmptyValue: false
       description: The reference number of a load tender
@@ -29,15 +29,25 @@ get:
               - datetime
             properties:
               order:
-                description: The guid of the order in our system that is being updated. may be used to fetch additional information
-                type: string
-                format: uuid
-              partner:
-                description: The partner that wishes to update a load tender
-                oneOf:
-                  - $ref: ..\..\..\components\schemas\SFID.yaml
-                  - type: string
+                type: object
+                properties:
+                  guid:
+                    description: The guid of the order in our system that is being updated. may be used to fetch additional information
+                    type: string
                     format: uuid
+                  number:
+                    description: The RCG internal load number
+                    type: string
+                    pattern: '[A-Z]{2}[0-9]{5}'
+                    minLength: 7
+                    maxLength: 7
+              partner:
+                allOf:
+                  - description: The partner that wishes to update a load tender.
+                  - oneOf:
+                      - $ref: ..\..\..\components\schemas\SFID.yaml
+                      - type: string
+                        format: uuid
               reference:
                 description: >
                   The shipment/reference number from the load that was created via
@@ -45,14 +55,22 @@ get:
                 type: string
                 maxLength: 64
               commodity:
-                description: >
-                  The identifier field from a commodity that was created via EDI 204 load tender
-                type: string
-                maxLength: 255
+                description: An array of commodity identifier field values that have a status update.
+                type: array
+                items:
+                  type: string
+                  description: The identifier field from a commodity that was created via EDI 204 load tender
+                  maxLength: 255
               location:
                 description: The load tender's stop whose status will be updated.
                 type: object
                 properties:
+                  sequence:
+                    type: integer
+                    description: The sequence number of the stop.
+                  name:
+                    type: string
+                    description: The name of the Terminal when creating the load tender.
                   city:
                     type: string
                     maxLength: 64
@@ -80,3 +98,9 @@ get:
               datetime:
                 type: string
                 format: date-time
+              sla:
+                description: The Service Level Agreement.
+                type: string
+                example: '8 days'
+              edi:
+                $ref: ..\204\inbound.yaml#/post/requestBody/content/application~1json/schema/properties/edi

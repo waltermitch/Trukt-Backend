@@ -141,8 +141,23 @@ class OrderJob extends BaseModel
                     },
                     to: 'rcgTms.invoiceBills.guid'
                 }
+            },
+            dispatches: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./OrderJobDispatch'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    to: 'rcgTms.orderJobDispatches.jobGuid'
+                }
             }
         };
+    }
+
+    $parseDatabaseJson(json)
+    {
+        json = super.$parseDatabaseJson(json);
+        json.netProfitMargin = this.calculateNetProfitMargin(json.actualRevenue, json.actualExpense);
+        return json;
     }
 
     $parseJson(json)

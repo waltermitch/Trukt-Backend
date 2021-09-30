@@ -1,6 +1,6 @@
-summary: Update expense
+summary: Update Expense
 operationId: patchExpense
-description: Update expense
+description: Update Expense
 tags:
   - Expense
 requestBody:

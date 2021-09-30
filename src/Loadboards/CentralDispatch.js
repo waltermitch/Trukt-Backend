@@ -18,7 +18,7 @@ class CentralDispatch extends Loadboard
         let string = `${this.data.number},
         ${this.data.pickup.terminal.city},${this.getStateCode(this.data.pickup.terminal.state)},${this.data.pickup.terminal.zipCode},
         ${this.data.delivery.terminal.city},${this.getStateCode(this.data.delivery.terminal.state)},${this.data.delivery.terminal.zipCode},
-        ${this.data.estimatedExpense},0.00,check,delivery,none,${this.setEquipmentType()},${this.getINOP()},
+        ${this.data.actualExpense},0.00,check,delivery,none,${this.setEquipmentType()},${this.getINOP()},
         ${this.toStringDate(this.data.pickup.dateRequestedStart)},${this.toDate(this.dateAdd(this.data.pickup.dateRequestedStart, 30, 'days'))},
         ${this.postObject.instructions},${this.setVehicles()}*`;
 
@@ -33,7 +33,7 @@ class CentralDispatch extends Loadboard
     {
         for (const com of this.data.commodities)
         {
-            if (com.isInoperable)
+            if (com.inoperable === 'yes')
             {
                 return 'inop';
             }
@@ -115,10 +115,10 @@ class CentralDispatch extends Loadboard
         }
     }
 
-    static async handlepost(post, response)
+    static async handlePost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
         try
         {
             if (response.hasErrors)
@@ -141,19 +141,19 @@ class CentralDispatch extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
-    static async handleunpost(post, response)
+    static async handleUnpost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
         try
         {
             if (response.hasErrors)
@@ -175,13 +175,13 @@ class CentralDispatch extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 }
 

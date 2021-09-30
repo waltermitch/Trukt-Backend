@@ -53,6 +53,14 @@ class OrderStop extends BaseModel
                     },
                     to: 'rcgTms.commodities.guid'
                 }
+            },
+            links: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./OrderStopLink'),
+                join: {
+                    from: 'rcgTms.orderStops.guid',
+                    to: 'rcgTms.orderStopLinks.stopGuid'
+                }
             }
         };
     }

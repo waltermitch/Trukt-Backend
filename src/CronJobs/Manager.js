@@ -10,6 +10,7 @@ const expressions =
 {
     second: '*/1 * * * * *',
     minute: '0 */1 * * * *',
+    fiveMinutes: '0 */5 * * * *',
     thirtyMinutes: '0 */30 * * * *',
     hourly: '0 0 */1 * * *',
     biHourly: '0 0 */2 * * *',
@@ -32,10 +33,11 @@ Cron.schedule(expressions.thirtyMinutes, async () =>
 });
 
 // every hour
-// Cron.schedule(expressions.hourly, async () =>
-// {
-//     // do stuff here
-// });
+Cron.schedule(expressions.hourly, async () =>
+{
+    // do stuff here
+    await SystemManagementService.syncUsers();
+});
 
 // every 2 hours
 

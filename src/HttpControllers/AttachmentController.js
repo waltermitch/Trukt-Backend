@@ -6,10 +6,12 @@ class AttachmentController
     {
         const result = await AttachmentService.get(req.params.attachmentId);
 
-        if (result)
-            res.status(200).json(result);
-        else
+        if (!result)
             res.status(404).send({ 'error': 'Attachment Not Found' });
+        else if (result.isDeleted)
+            res.status(404).send({ 'error': 'Attachment Deleted' });
+        else
+            res.status(200).json(result);
     }
 
     static async search(req, res)
@@ -44,7 +46,7 @@ class AttachmentController
         }
         else
         {
-            const result = await AttachmentService.insert(req.files, req.query);
+            const result = await AttachmentService.insert(req.files, req.query, req.session?.userGuid);
             res.status(201);
             res.json(result);
         }
@@ -59,7 +61,7 @@ class AttachmentController
         }
         else
         {
-            const result = await AttachmentService.update(req.params.attachmentId, req.body);
+            const result = await AttachmentService.update(req.params.attachmentId, req.body, req.session?.userGuid);
 
             res.status(200);
             res.json(result);
@@ -68,7 +70,7 @@ class AttachmentController
 
     static async delete(req, res)
     {
-        await AttachmentService.delete(req.params.attachmentId);
+        await AttachmentService.delete(req.params.attachmentId, req.session?.userGuid);
 
         res.status(204).send();
     }

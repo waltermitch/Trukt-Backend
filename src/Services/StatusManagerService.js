@@ -91,6 +91,7 @@ class StatusManagerService
 
     static async getStatusLogs({ pg, rc, orderGuid, jobGuid })
     {
+        const page = pg - 1;
         let baseQuery = StatusLog.query().select([
             'id',
             'orderGuid',
@@ -98,7 +99,7 @@ class StatusManagerService
             'extraAnnotations',
             'jobGuid'
         ])
-            .page(pg, rc)
+            .page(page, rc)
             .where('order_guid', orderGuid);
 
         if (jobGuid)
@@ -113,7 +114,7 @@ class StatusManagerService
 
         const statusLogResults = await baseQuery;
 
-        statusLogResults.page = pg;
+        statusLogResults.page = page + 1;
         statusLogResults.rowCount = rc;
         return statusLogResults;
     }

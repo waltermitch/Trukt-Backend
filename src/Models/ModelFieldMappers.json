@@ -119,16 +119,13 @@
                     "portfolioCode",
                     "primaryContactId",
                     "primaryContactPersonId",
-                    "qbId",
                     "rating",
                     "recordTypeId",
                     "referralCode",
                     "requiresAttention",
                     "salesAccountManager",
                     "salutation",
-                    "sdGuid",
                     "searchAddress",
-                    "sfId",
                     "shippingGeocodeAccuracy",
                     "sic",
                     "sicDesc",
@@ -137,7 +134,6 @@
                     "slaDays",
                     "slaExpirationDate",
                     "slaSerialNumber",
-                    "status",
                     "subIndustry",
                     "suite",
                     "systemModStamp",
@@ -167,7 +163,6 @@
             "external": {
                 "outa": [],
                 "into": [
-                    "accountId",
                     "accountingContact",
                     "assistantName",
                     "assistantPhone",
@@ -330,6 +325,17 @@
                     "updatedByGuid",
                     "deletedByGuid",
                     "terminalGuid"
+                ]
+            }
+        }
+    },
+    "Attachment": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid"
                 ]
             }
         }

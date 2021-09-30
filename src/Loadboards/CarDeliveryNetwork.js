@@ -21,7 +21,7 @@ class CarDeliveryNetwork extends Loadboard
             AdvertiseType: 'Both',
             JobNumberSuffix: 'RC',
             PaymentTerm: 2,
-            BuyPrice: this.data.estimatedExpense,
+            BuyPrice: this.data.actualExpense,
             ServiceRequired: 1,
             JobInitiator: this.data.dispatcher?.name || 'Brad Marinov',
             Customer: {
@@ -87,10 +87,10 @@ class CarDeliveryNetwork extends Loadboard
         return vehicles;
     }
 
-    static async handlecreate(post, response)
+    static async handleCreate(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -122,11 +122,10 @@ class CarDeliveryNetwork extends Loadboard
         return objectionPost;
     }
 
-    static async handlepost(post, response)
+    static async handlePost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
-
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
         try
         {
             if (response.hasErrors)
@@ -150,19 +149,19 @@ class CarDeliveryNetwork extends Loadboard
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
-    static async handleunpost(post, response)
+    static async handleUnpost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(post);
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
@@ -184,6 +183,8 @@ class CarDeliveryNetwork extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
