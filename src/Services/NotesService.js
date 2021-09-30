@@ -1,6 +1,7 @@
+const OrderJob = require('../Models/OrderJob');
+const pubsub = require('../Azure/PubSub');
 const Notes = require('../Models/Notes');
 const Order = require('../Models/Order');
-const OrderJob = require('../Models/OrderJob');
 
 class NotesService
 {
@@ -10,6 +11,7 @@ class NotesService
         // create job model object to link notes to job
         const job = OrderJob.fromJson({ guid: jobGuid });
 
+        // generating internal notes
         return await NotesService.genericCreator('job', job, notePayload, currentUser);
     }
 
@@ -19,6 +21,7 @@ class NotesService
         // create order model object to link notes to order
         const order = Order.fromJson({ guid: orderGuid });
 
+        // generating cleint notes
         return await NotesService.genericCreator('order', order, notePayload, currentUser);
     }
 
@@ -33,39 +36,69 @@ class NotesService
             isDeleted: false
         };
 
-        // find note by note GUID and patch the note
-        const response = await Notes.query().findById(noteGuid).patch(note);
+        // find note by note GUID and patch the note and return job/order guid
+        const updatedNote = await Notes.query().patchAndFetchById(noteGuid, note).withGraphFetched('[job, order]');
 
         // not doesn't exist
-        if (response == 0)
+        if (updatedNote == undefined)
         {
             throw new Error('Note does not exist');
         }
+
+        // assigning guid
+        const guid = updatedNote.job?.guid || updatedNote.order?.guid;
+
+        // removing job/order fields to update sub with payload
+        delete updatedNote.order;
+        delete updatedNote.job;
+
+        // update pubsub accordingly
+        await pubsub.publishToGroup(guid, { object: 'note', data: updatedNote });
     }
 
+    // function to delete not
     static async deleteNote(noteGuid)
     {
-        // find note being that needs to be deleted
-        const response = await Notes.query().findById(noteGuid).patch({ isDeleted: true });
-        console.log(response);
+        // find note being that needs to be deleted return job/order guid
+        const updatedNote = await Notes.query().patchAndFetchById(noteGuid, { isDeleted: true }).withGraphFetched('[job, order]');
 
         // not doesn't exist
-        if (response == 0)
+        if (updatedNote == undefined)
         {
             throw new Error('Note does not exist');
         }
 
-        // return status 202 with no note
-        return;
+        // assigning guid
+        const guid = updatedNote.job?.guid || updatedNote.order?.guid;
+
+        // removing job/order fields to update sub with payload
+        delete updatedNote.order;
+        delete updatedNote.job;
+
+        // update pubsub accordingly
+        await pubsub.publishToGroup(guid, { object: 'note', data: updatedNote.guid });
     }
 
+    // to create any note
     static async genericCreator(name, model, notePayload, currentUser)
     {
+        // composing payload
         const notes = Notes.fromJson(notePayload);
+
+        // adding current user
         notes.setCreatedBy(currentUser);
+
+        // linking models to propper table order/job
         notes.graphLink(name, model);
-        const internalNote = await Notes.query().insertGraph(notes, { allowRefs: true, relate: true });
-        return internalNote;
+
+        // insert note into table with conjustion
+        const createdNote = await Notes.query().insertGraph(notes, { allowRefs: true, relate: true });
+
+        // update pubsub accordingly
+        await pubsub.publishToGroup(`${model.guid}`, { object: 'note', data: createdNote });
+
+        // return full note
+        return createdNote;
     }
 }
 
