@@ -1,9 +1,9 @@
+const QuickBooksService = require('../Services/QuickBooksService');
 const SFAccount = require('../Models/SFAccount');
 const Queue = require('../Azure/ServiceBus');
 const { mergeDeepRight } = require('ramda');
 const Triumph = require('../Triumph/API');
 const NodeCache = require('node-cache');
-const QB = require('../QuickBooks/API');
 const Super = require('../Super/API');
 const LoadboardsFunc = require('../Loadboards/API');
 
@@ -58,7 +58,7 @@ class AccountUpdateManager
                 payload.businessType = res.businessType;
                 payload.notes = res.notes;
 
-                response = await Promise.allSettled([QB.upsertClient(payload), Super.upsertClient(payload)]);
+                response = await Promise.allSettled([QuickBooksService.upsertClient(payload), Super.upsertClient(payload)]);
                 break;
 
             case 'Carrier':
@@ -69,7 +69,7 @@ class AccountUpdateManager
                 payload.preferred = res.preferred;
 
                 response = await Promise.allSettled([
-                    QB.upsertVendor(payload),
+                    QuickBooksService.upsertVendor(payload),
                     Super.upsertCarrier(payload),
                     Triumph.createCarrierProfile(payload),
                     AccountUpdateManager.getShipCarsUpdate(payload)
@@ -78,7 +78,7 @@ class AccountUpdateManager
                 break;
 
             case 'Vendor':
-                response = await Promise.allSettled([QB.upsertVendor(payload)]);
+                response = await Promise.allSettled([QuickBooksService.upsertVendor(payload)]);
                 break;
 
             default:

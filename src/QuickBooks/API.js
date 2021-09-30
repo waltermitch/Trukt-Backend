@@ -1,15 +1,10 @@
 const InvoicePaymentMethod = require('../Models/InvoicePaymentMethod');
 const InvoicePaymentTerm = require('../Models/InvoicePaymentTerm');
 const LineItemMdl = require('../Models/InvoiceLineItem');
-const OrderStop = require('../Models/OrderStop');
 const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
-const Invoice = require('./Invoice');
-const Vendor = require('./Vendor');
-const Client = require('./Client');
 const Mongo = require('../Mongo');
 const axios = require('axios');
-const Bill = require('./Bill');
 
 const authConfig = { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': process.env['quickbooks.basicAuth'] } };
 const authUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -50,89 +45,8 @@ class QBO
         return qb.instance;
     }
 
-    static async createBills(jobs)
-    {
-        const bills = [];
-
-        for (const job of jobs)
-            for (const bill of job.invoices)
-            {
-                bill.vendorId = bill.vendor.qbId;
-                bill.orderNumber = job.number;
-
-                for (const lineItem of bill.lines)
-                {
-                    const commodity = lineItem.commodity;
-
-                    if (commodity)
-                    {
-
-                        const stops = OrderStop.firstAndLast(commodity?.stops);
-
-                        const pTerminal = stops[0]?.terminal;
-                        const dTerminal = stops[1]?.terminal;
-
-                        lineItem.description = QBO.composeDescription(pTerminal, dTerminal, lineItem);
-                    }
-                    else
-                        lineItem.description = lineItem.notes || '';
-                }
-
-                const payload =
-                {
-                    'bId': bill.guid,
-                    'operation': 'create',
-                    'Bill': new Invoice(bill)
-                };
-
-                bills.push(payload);
-            }
-
-        const res = await QBO.batch(bills);
-
-        return res;
-    }
-
-    static async batchBills(array)
-    {
-        // this way we take in arrays and singular objects
-        if (!Array.isArray(array))
-            array = [array];
-
-        const bills = [];
-
-        for (const e of array)
-        {
-            const bill = new Bill(e);
-
-            const payload =
-            {
-                'bId': e.guid,
-                'operation': 'create',
-                'Bill': bill
-            };
-
-            bills.push(payload);
-        }
-
-        const res = await QBO.batch(bills);
-
-        return res;
-    }
-
     static async batch(arr)
     {
-        // TODO validation
-        // const errors = Validator.evalSchema('quickbooksBatch', arr)
-
-        // if (errors?.length > 0)
-        // {
-        //     console.log(errors)
-        //     throw { 'status': 400, 'data': errors };
-        // }
-        // else
-        // {
-
         const api = await QBO.connect();
 
         const results = [];
@@ -150,64 +64,24 @@ class QBO
         }
 
         return results;
-
-        // }
     }
 
-    static async upsertClient(data)
+    static async upsertClient(client)
     {
-        const client = new Client(data);
-
         const api = await QBO.connect();
 
-        // get client types
-        const clientTypes = await QBO.getClientTypes();
+        const res = await api.post('/customer', client);
 
-        // set client type
-        client.setBusinessType(data.businessType, clientTypes);
-
-        if (!data.qbId)
-        {
-            // create
-            const res = await api.post('/customer', client);
-
-            return { qbId: res.data.Customer.Id };
-        }
-        else
-        {
-            // update
-            const SyncToken = await QBO.getSyncToken('Customer', data.qbId);
-
-            client.SyncToken = SyncToken;
-            client.Id = data.qbId;
-
-            await api.post('/customer', client);
-        }
+        return res.data;
     }
 
-    static async upsertVendor(data)
+    static async upsertVendor(vendor)
     {
-        const vendor = new Vendor(data);
-
         const api = await QBO.connect();
 
-        if (!data.qbId)
-        {
-            // create
-            const res = await api.post('/vendor', vendor);
+        const res = await api.post('/vendor', vendor);
 
-            return { qbId: res.data.Vendor.Id };
-        }
-        else
-        {
-            // update
-            const SyncToken = await QBO.getSyncToken('Vendor', data.qbId);
-
-            vendor.SyncToken = SyncToken;
-            vendor.Id = data.qbId;
-
-            await api.post('/vendor', vendor);
-        }
+        return res.data;
     }
 
     static async getSyncToken(objectName, objectId)
@@ -229,6 +103,24 @@ class QBO
         return res.data[`${objectName}`];
     }
 
+    static async getClientByName(name)
+    {
+        const api = await QBO.connect();
+
+        const res = await api.get(`/query?query=Select * from Customer where DisplayName = '${name}'`);
+
+        return res.data.QueryResponse.Customer;
+    }
+
+    static async getVendorByName(name)
+    {
+        const api = await QBO.connect();
+
+        const res = await api.get(`/query?query=Select * from Vendor where DisplayName = '${name}'`);
+
+        return res.data.QueryResponse.Vendor;
+    }
+
     static async syncListsToDB()
     {
         const proms = await Promise.all([QBO.getItemTypes(), QBO.getPaymentMethods(), QBO.getPaymentTerms()]);
@@ -236,9 +128,6 @@ class QBO
         const items = proms[0];
         const methods = proms[1];
         const terms = proms[2];
-
-        console.log(methods);
-        console.log(terms);
 
         for (const method of methods)
             await InvoicePaymentMethod.query().insert({ name: method.Name, externalSource: 'QBO', 'externalId': method.Id }).onConflict('externalId').merge();
