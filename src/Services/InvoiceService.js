@@ -9,7 +9,7 @@ class InvoiceService
     {
         const search = guid.replace(/%/g, '');
 
-        const res = await Invoice.query().findOne({ 'guid': search });
+        const res = await Invoice.query().findOne({ 'guid': search, 'isDeleted': false });
 
         return res;
     }

@@ -237,11 +237,14 @@ class QBO
         const methods = proms[1];
         const terms = proms[2];
 
+        console.log(methods);
+        console.log(terms);
+
         for (const method of methods)
-            await InvoicePaymentMethod.query().insert({ name: method.Name });
+            await InvoicePaymentMethod.query().insert({ name: method.Name, externalSource: 'QBO', 'externalId': method.Id }).onConflict('externalId').merge();
 
         for (const term of terms)
-            await InvoicePaymentTerm.query().insert({ name: term.Name });
+            await InvoicePaymentTerm.query().insert({ name: term.Name, externalSource: 'QBO', externalId: term.Id }).onConflict('externalId').merge();
 
         for (const item of items)
             await LineItemMdl.query().insert({ name: item.Name, isAccessorial: false, isDeprecated: false, externalSourceGuid: item.Id, externalSource: 'QB' }).onConflict('name').merge();
@@ -251,7 +254,6 @@ class QBO
     {
         const api = await QBO.connect();
 
-        // get items
         const res = await api.get('/query?query=Select * from Item');
 
         return res.data.QueryResponse.Item;
@@ -261,7 +263,6 @@ class QBO
     {
         const api = await QBO.connect();
 
-        // get items
         const res = await api.get('/query?query=Select * from PaymentMethod');
 
         return res.data.QueryResponse.PaymentMethod;
@@ -271,7 +272,6 @@ class QBO
     {
         const api = await QBO.connect();
 
-        // get items
         const res = await api.get('/query?query=Select * from Term');
 
         return res.data.QueryResponse.Term;
@@ -322,13 +322,12 @@ class QBO
 
         const RTData =
         {
-            'name': refreshTokenName,
-            'value': res.data.refresh_token
+            'name': 'qb_refresh_token',
+            'value': res.data.refresh_token,
+            'exp': HTTPS.setExpTime(60 * 24 * 30)
         };
 
         await Promise.all([Mongo.updateSecret(ATData.name, ATData), Mongo.updateSecret(RTData.name, RTData)]);
-
-        return { 'status': 200 };
     }
 
 }
