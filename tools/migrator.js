@@ -177,28 +177,19 @@ async function refreshMigrations(filenames)
             return m;
         }, {});
 
-        try
-        {
-            for (const filename of filenames.reverse())
+        for (const filename of filenames.reverse())
 
-                if (filename in completed)
-                {
-                    console.log(listStyle(`migration: down ${cleanName(filename)}`));
-                    await trx.migrate.down({ name: filename });
-                }
-
-            for (const filename of filenames.reverse())
+            if (filename in completed)
             {
-                console.log(listStyle(`migration: up   ${cleanName(filename)}`));
-                await trx.migrate.up({ name: filename });
+                console.log(listStyle(`migration: down ${cleanName(filename)}`));
+                await trx.migrate.down({ name: filename });
             }
-        }
-        catch (err)
-        {
-            trx.rollback();
-            console.log(err);
-        }
 
+        for (const filename of filenames.reverse())
+        {
+            console.log(listStyle(`migration: up   ${cleanName(filename)}`));
+            await trx.migrate.up({ name: filename });
+        }
     });
     knex.destroy();
 }
