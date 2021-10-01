@@ -567,30 +567,28 @@ class OrderService
 
     static async loadTenders(action, orderGuid, reason)
     {
-        const order = await Order.query().skipUndefined().findById(orderGuid).withGraphJoined('client');
+        // getting order with client and ediData to create payload for logic app
+        const order = await Order.query().skipUndefined().findById(orderGuid).withGraphJoined('[client, ediData]');
 
-        // if order doesn't exist throw error
+        // if order doesn't exist
         if (order == undefined)
         {
             throw new Error('Order doesn\'t exist');
         }
 
-        // handling condition cases
+        // if tender is an order
         if (order.isTender == false)
         {
-            const err = new Error('Order is not a load Tender');
-            err.status = 400;
-
-            // throw new Error('Order is not a load Tender');
-            throw err;
+            throw new Error('Order is not a load Tender');
         }
 
+        // if tender is deleted
         if (order.isDeleted == true)
         {
             throw new Error('Order Already Rejected');
         }
 
-        // payload for logic app
+        // composing payload for logic app
         const logicAppPayload = {
             order: {
                 guid: order.guid,
@@ -600,9 +598,11 @@ class OrderService
             refrence: order.referenceNumber,
             action: action,
             date: DateTime.utc().toString(),
-            scac: 'RCGQ'
+            scac: 'RCGQ',
+            edi: order.ediData?.[0].data
         };
 
+        // if reason append to logic payload
         if (reason)
         {
             Object.assign(logicAppPayload, { reason: reason });
@@ -610,19 +610,14 @@ class OrderService
 
         console.log('Payload', logicAppPayload);
 
+        // sending request to logic app with correct payload
         const response = await logicAppInstance.post(process.env['azure.logicApp.params'], logicAppPayload);
-        console.log('Logic Response', response.status);
+        console.log('Logic Response', response);
 
-        // Error
-        if (response.status == 202)
+        // handling differnet responses from logic app
+        if (response.status == 200)
         {
-            // await StatusManagerHandler.registerStatus({
-            // orderGuid: orderGuid,
-            // userGuid: createdByGuid,
-            // jobGuid: jobGuid,
-            // statusId:
-            // });
-            return response;
+            return;
         }
         else
         {
@@ -630,7 +625,7 @@ class OrderService
         }
     }
 
-    static async acceptLoadTender(orderGuid)
+    static async acceptLoadTender(orderGuid, currentUser)
     {
         await OrderService.loadTenders('accept', orderGuid);
 
@@ -642,16 +637,13 @@ class OrderService
 
         // status update
         await StatusManagerHandler.registerStatus({
-            // orderGuid: orderGuid,
-            // userGuid: createdByGuid,
-            // jobGuid: jobGuid,
-            // statusId:
+            orderGuid: orderGuid,
+            userGuid: currentUser,
+            statusId: 8
         });
-
-        return;
     }
 
-    static async rejectLoadTender(orderGuid, reason)
+    static async rejectLoadTender(orderGuid, reason, currentUser)
     {
         if (!reason)
         {
@@ -666,13 +658,10 @@ class OrderService
 
         // status update
         await StatusManagerHandler.registerStatus({
-            // orderGuid: orderGuid,
-            // userGuid: createdByGuid,
-            // jobGuid: jobGuid,
-            // statusId:
+            orderGuid: orderGuid,
+            userGuid: currentUser,
+            statusId: 9
         });
-
-        return;
     }
 
     /**

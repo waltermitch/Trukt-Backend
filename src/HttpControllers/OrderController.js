@@ -82,11 +82,11 @@ class OrderController extends HttpRouteController
         {
             if (req.params.action == 'accept')
             {
-                await OrderService.acceptLoadTender(req.params.orderGuid);
+                await OrderService.acceptLoadTender(req.params.orderGuid, req.session.userGuid);
             }
             else if (req.params.action == 'reject')
             {
-                await OrderService.rejectLoadTender(req.params.orderGuid, req.body.reason);
+                await OrderService.rejectLoadTender(req.params.orderGuid, req.body.reason, req.session.userGuid);
             }
             res.status(200);
             res.send();
@@ -98,11 +98,8 @@ class OrderController extends HttpRouteController
                 res.status(404);
                 res.json(err.message);
             }
-            else
-            {
-                res.status(400);
-                res.json(err.message);
-            }
+            res.status(400);
+            res.json(err.message);
 
             // next(err);
         }
