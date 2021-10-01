@@ -974,9 +974,9 @@ class OrderService
             const orderGraph = Order.fromJson({
                 guid,
                 updatedByGuid: currentUser,
-                dispatcherGuid: dispatcher?.guid,
-                referrerGuid: referrer?.guid,
-                salespersonGuid: salesperson?.guid,
+                dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
+                referrerGuid: OrderService.getObjectContactReference(referrer),
+                salespersonGuid: OrderService.getObjectContactReference(salesperson),
                 clientGuid: client?.guid,
                 consigneeGuid: consignee?.guid,
                 instructions,
@@ -992,7 +992,7 @@ class OrderService
                 noDelete: true
             });
 
-            const [orderUpdated] = await Promise.all([orderToUpdate, Promise.all([stopLinksToUpdate])]);
+            const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
             await trx.commit();
             return orderUpdated;
@@ -1002,6 +1002,12 @@ class OrderService
             await trx.rollback();
             throw { message: error?.nativeError?.detail || error?.message || error };
         }
+    }
+
+    // If contactObject is null -> reference should be removed
+    static getObjectContactReference(contactObject)
+    {
+        return contactObject === null ? null : contactObject?.guid;
     }
 
     static async validateReferencesBeforeUpdate(orderContact, orderGuid, stops, terminals)
@@ -1271,7 +1277,7 @@ class OrderService
     }
     static createStopContactsMap(stops, terminalsMap, currentUser, trx)
     {
-        const stopsWithContacts = stops?.filter(stop => OrderStop.hasContact(stop)) || [];
+        const stopsWithContacts = stops?.filter(stop => OrderStop.hasContact(stop) || OrderStop.removeContact(stop)) || [];
         const stopsContactsToUpdate = stopsWithContacts?.map(stopWithContact =>
         {
             const terminal = terminalsMap[stopWithContact.terminal];
@@ -1290,7 +1296,7 @@ class OrderService
         const { commodities, commodityTypes } = commoditiesInfo;
 
         let orderContactTocreate;
-        if (contact.guid === null && Object.keys(contact).includes('guid'))
+        if (contact === null)
             orderContactTocreate = null;
         else if (contact && Object.keys(contact).length > 0)
             orderContactTocreate = OrderService.createSFContact(contact, contactRecordType, client, trx);
@@ -1377,9 +1383,7 @@ class OrderService
      */
     static isTerminalContactToBeDeleted(terminalContact)
     {
-        if (terminalContact && Object.keys(terminalContact).length === 2
-            && Object.keys(terminalContact).includes('terminalGuid')
-            && Object.keys(terminalContact).includes('createdByGuid'))
+        if (terminalContact === null)
             return true;
         return false;
     }
@@ -1396,7 +1400,9 @@ class OrderService
 
     static createSingleJobGraph(jobInput, jobTypes, currentUser)
     {
-        const jobGraph = OrderJob.fromJson(jobInput);
+        const jobWithContactReferences = OrderService.createJobContactReferences(jobInput);
+        const jobGraph = OrderJob.fromJson(jobWithContactReferences);
+
         if (jobGraph?.jobType?.category && jobGraph?.jobType?.type)
         {
             const jobType = jobTypes?.find(jobType => OrderJobType.compare(jobGraph, jobType));
@@ -1411,12 +1417,25 @@ class OrderService
         return jobGraph;
     }
 
+    static createJobContactReferences(jobInput)
+    {
+        const { dispatcher, vendor, vendorAgent, vendorContact, ...jobData } = jobInput;
+
+        return {
+            dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
+            vendorGuid: OrderService.getObjectContactReference(vendor),
+            vendorAgentGuid: OrderService.getObjectContactReference(vendorAgent),
+            vendorContactGuid: OrderService.getObjectContactReference(vendorContact),
+            ...jobData
+        };
+    }
+
     /**
      * Insert or update of stopLInks was done manually because upsert wasn't working for stopLinks graph
      * so the process was to find if the stoplink if exists, if it does udpate it, if not, create it
      * TODO Check if this can be redo using upsert
      */
-    static async updateCreateStopLinks(stopsFromInput, jobs, orderGuid, commoditiesMap, currentUser, trx)
+    static updateCreateStopLinks(stopsFromInput, jobs, orderGuid, commoditiesMap, currentUser, trx)
     {
         const stopLinksByJob = OrderService.createJobStopLinksObjects(jobs, stopsFromInput, commoditiesMap);
         const stopLinksByStops = OrderService.createStopLinksObjects(stopsFromInput, commoditiesMap, orderGuid);
@@ -1433,7 +1452,11 @@ class OrderService
         });
 
         if (stopLinkFound)
-            return await OrderStopLink.query(trx).patchAndFetchById([orderGuid, stopGuid, commodityGuid], { lotNumber, updatedByGuid: currentUser });
+        {
+            return await OrderStopLink.query(trx)
+                .patch({ lotNumber, updatedByGuid: currentUser })
+                .where('id', stopLinkFound.id);
+        }
         else
         {
             const stopLinkToInsert = OrderStopLink.fromJson(stopLinkData);

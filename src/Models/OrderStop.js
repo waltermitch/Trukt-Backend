@@ -105,6 +105,11 @@ class OrderStop extends BaseModel
 
         return [stops[0], stops[stops.length - 1]];
     }
+
+    static removeContact(stop)
+    {
+        return stop.primaryContact === null || stop.alternativeContact === null;
+    }
 }
 
 Object.assign(OrderStop.prototype, RecordAuthorMixin);
