@@ -137,35 +137,7 @@ class Loadboard
         return date ? DateTime.fromISO(date).plus({ [`${type}`]: amount }).toString() : null;
     }
 
-    minusMinutes(date, amount)
-    {
-        return DateTime.fromISO(date).minus({ minutes: amount }).toUTC().toString();
-    }
-
-    adjustDates()
-    {
-        const now = DateTime.now().toUTC().toISO();
-
-        if (this.data.pickup.dateRequestedStart < now)
-        {
-            this.data.pickup.dateRequestedStart = now;
-        }
-
-        if (this.data.pickup.dateRequestedEnd < this.data.pickup.dateRequestedStart)
-        {
-            this.data.pickup.dateRequestedEnd = this.fastForward(this.data.pickup.dateRequestedEnd, this.data.pickup.dateRequestedStart);
-        }
-
-        if (this.data.delivery.dateRequestedStart < this.data.pickup.dateRequestedEnd)
-        {
-            this.data.delivery.dateRequestedStart = this.fastForward(this.data.delivery.dateRequestedStart, this.data.pickup.dateRequestedEnd);
-        }
-
-        if (this.data.delivery.dateRequestedEnd < this.data.delivery.dateRequestedStart)
-        {
-            this.data.delivery.dateRequestedEnd = this.fastForward(this.data.delivery.dateRequestedEnd, this.data.delivery.dateRequestedStart);
-        }
-    }
+    adjustDates(payload){ return payload; }
 
     getDifferencefromToday(date)
     {
@@ -178,15 +150,42 @@ class Loadboard
 
     fastForward(targetDate, secondDate)
     {
-        targetDate = DateTime.fromISO(targetDate);
-        secondDate = DateTime.fromISO(secondDate);
-        targetDate = secondDate.plus({ hours: 1 });
-        return targetDate.toUTC().toString();
+        const tempSecondDate = secondDate;
+        targetDate = tempSecondDate.plus({ days: 1, hours: 1 });
+        return targetDate;
     }
 
     getStateCode(state)
     {
         return states.getStateCodeByStateName(state) == null ? states.sanitizeStateCode(state) : states.getStateCodeByStateName(state);
+    }
+
+    cleanUpPhoneNumber(phone)
+    {
+        if (!phone)
+        {
+            return undefined;
+        }
+
+        // 0. clean up non-alphanumeric characters
+        phone = phone.replace(/[^\w]|_/g, '');
+
+        // 1. remove extensions
+        phone = phone.replace(/[a-zA-Z]+\d*/, '');
+
+        // 2. count the number of digits
+        if (phone.length === 11 || phone.length === 10)
+        {
+            // 4. construct new phone string
+            const matches = phone.match(/\d?(\d{3})(\d{3})(\d{4})/);
+            phone = `(${matches[1]}) ${matches[2]}-${matches[3]}`;
+        }
+        else
+        {
+            phone = undefined;
+        }
+
+        return phone;
     }
 
     static async handleCreate(post, response)
