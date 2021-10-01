@@ -43,7 +43,7 @@ class Loadboard
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'create';
         payloadMetadata.user = returnTo;
-        payload = this.toJSON();
+        payload = this.adjustDates(this.toJSON());
 
         return { payload, payloadMetadata };
     }
@@ -72,11 +72,12 @@ class Loadboard
 
     update()
     {
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
         payloadMetadata.action = 'update';
         payloadMetadata.user = returnTo;
 
-        return { payload: this.toJSON(), payloadMetadata };
+        return { payload: this.adjustDates(this.toJSON()), payloadMetadata };
     }
 
     dispatch()
