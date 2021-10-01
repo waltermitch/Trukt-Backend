@@ -1,11 +1,11 @@
-const table_name = 'index_numbers';
+const TABLE_NAME = 'index_numbers';
 
 exports.up = function (knex)
 {
     // postgres sequences are used only for integer values
     // this will be used for any number of things
 
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, (table) =>
     {
         // size shouldnt be restricted here
         table.string('index').primary().unique();
@@ -16,5 +16,5 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
+    return knex.schema.withSchema('rcg_tms').dropTableIfExists(TABLE_NAME);
 };

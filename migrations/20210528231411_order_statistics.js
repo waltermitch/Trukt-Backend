@@ -1,8 +1,8 @@
-const view_name = 'order_statistics';
+const VIEW_NAME = 'order_statistics';
 exports.up = function (knex)
 {
     return knex.raw(`
-        CREATE OR REPLACE VIEW rcg_tms.${view_name} AS
+        CREATE OR REPLACE VIEW rcg_tms.${VIEW_NAME} AS
         SELECT 
             o.guid AS order,
             CASE 
@@ -29,5 +29,5 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.raw(`DROP VIEW IF EXISTS ${view_name}`);
+    return knex.raw(`DROP VIEW IF EXISTS ${VIEW_NAME}`);
 };

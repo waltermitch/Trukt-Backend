@@ -1,17 +1,17 @@
-const table_name = 'attachments';
+const TABLE_NAME = 'attachments';
 
 exports.up = function (knex)
 {
     return knex.raw(`
     CREATE TYPE document_visibility AS ENUM ('internal', 'carrier', 'client');
-    ALTER TABLE ${table_name}
+    ALTER TABLE ${TABLE_NAME}
     ADD visibility document_visibility[] DEFAULT array['internal']::document_visibility[]`);
 };
 
 exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .table(table_name, (table) =>
+        .table(TABLE_NAME, (table) =>
         {
             table.dropColumn('visibility');
         })

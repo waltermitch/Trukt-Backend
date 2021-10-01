@@ -1,8 +1,8 @@
-const function_name = 'rcg_gen_uuid';
+const FUNCTION_NAME = 'rcg_gen_uuid';
 exports.up = function (knex)
 {
     return knex.raw(`
-        CREATE OR REPLACE FUNCTION rcg_tms.${function_name}()
+        CREATE OR REPLACE FUNCTION rcg_tms.${FUNCTION_NAME}()
             RETURNS trigger
             LANGUAGE 'plpgsql'
             COST 100
@@ -21,11 +21,11 @@ exports.up = function (knex)
         END;
         $BODY$;
 
-        COMMENT ON FUNCTION rcg_tms.${function_name}()
+        COMMENT ON FUNCTION rcg_tms.${FUNCTION_NAME}()
             IS 'Generates a uuid and stores it inside of the guid field on the table';`);
 };
 
 exports.down = function (knex)
 {
-    return knex.raw(`DROP FUNCTION rcg_tms.${function_name}();`);
+    return knex.raw(`DROP FUNCTION rcg_tms.${FUNCTION_NAME}();`);
 };

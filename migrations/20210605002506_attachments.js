@@ -1,10 +1,10 @@
 const documentTypes = require('../src/Schemas/attachmentTypes.json').enum;
 
-const table_name = 'attachments';
+const TABLE_NAME = 'attachments';
 
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, (table) =>
     {
         table.uuid('guid').primary().notNullable().unique();
         table.enu('type', documentTypes, { useNative: true, enumName: 'document_types' }).notNullable();
@@ -19,6 +19,6 @@ exports.up = function (knex)
 exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .dropTableIfExists(table_name)
+        .dropTableIfExists(TABLE_NAME)
         .raw('DROP TYPE IF EXISTS rcg_tms.document_types;');
 };
