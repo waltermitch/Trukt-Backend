@@ -495,15 +495,6 @@ class Super extends Loadboard
 
             await trx.commit();
 
-            // keeping this commented out until we figure out status log types
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid: dispatch.loadboardPost.jobGuid,
-            //     userGuid: process.env.SYSTEM_USER,
-            //     statusId: 4,
-            //     jobGuid: objectionPost.guid,
-            //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'dispatched' }
-            // });
-
             return dispatch.jobGuid;
         }
         catch (e)
@@ -565,17 +556,6 @@ class Super extends Loadboard
 
             await trx.commit();
 
-            // keeping this commented out until we figure out status log types
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid: dispatch.job.orderGuid,
-            //     userGuid: currentUser,
-            //     statusId: 6,
-            //     jobGuid,
-            //     extraAnnotations: {
-            //         undispatchedFrom: 'SUPERDISPATCH',
-            //         code: 'offer canceled'
-            //     }
-            // });
             return dispatch.jobGuid;
         }
         catch (e)
@@ -624,13 +604,6 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                // StatusManagerHandler.registerStatus({
-                //     orderGuid,
-                //     userGuid: process.env.SYSTEM_USER,
-                //     statusId: 5,
-                //     jobGuid: dispatch.jobGuid,
-                //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'dispatched', vendor: dispatch.vendorGuid, vendorName: vendorName }
-                // });
                 return dispatch.jobGuid;
             }
             catch (e)
@@ -691,14 +664,6 @@ class Super extends Loadboard
                 await OrderJobDispatch.query().patch(dispatch).findById(dispatch.guid);
 
                 await trx.commit();
-
-                // StatusManagerHandler.registerStatus({
-                //     orderGuid,
-                //     userGuid: process.env.SYSTEM_USER,
-                //     statusId: 6,
-                //     jobGuid: dispatch.jobGuid,
-                //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
-                // });
 
                 return dispatch.jobGuid;
             }

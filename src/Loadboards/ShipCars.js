@@ -203,18 +203,6 @@ class ShipCars extends Loadboard
         return phone;
     }
 
-    // adjustDates(payload)
-    // {
-    //     payload.pickup_requested_date_start = payload.pickup_requested_date_start.toISODate();
-    //     payload.pickup_requested_date_end = payload.pickup_requested_date_end.toISODate();
-
-    //     payload.delivery_requested_date_start = payload.delivery_requested_date_start.toISODate();
-    //     payload.delivery_requested_date_end = payload.delivery_requested_date_end.toISODate();
-
-    //     payload.first_available_date = payload.pickup_requested_date_start;
-    //     return payload;
-    // }
-
     static async handleCreate(post, response)
     {
         const trx = await LoadboardPost.startTransaction();
@@ -379,15 +367,6 @@ class ShipCars extends Loadboard
             
             trx.commit();
 
-            // keeping this commented out until we figure out status log types
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid: dispatch.loadboardPost.jobGuid,
-            //     userGuid: process.env.SYSTEM_USER,
-            //     statusId: 4,
-            //     jobGuid: objectionPost.guid,
-            //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'dispatched' }
-            // });
-
             return objectionPost.jobGuid;
         }
         catch (e)
@@ -466,18 +445,6 @@ class ShipCars extends Loadboard
 
             await trx.commit();
 
-            // keeping this commented out until we figure out status log types
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid: dispatch.job.orderGuid,
-            //     userGuid: currentUser,
-            //     statusId: 6,
-            //     jobGuid,
-            //     extraAnnotations: {
-            //         undispatchedFrom: 'SHIPCARS',
-            //         code: 'ready'
-            //     }
-            // });
-
             return objectionPost.jobGuid;
         }
         catch (e)
@@ -523,15 +490,6 @@ class ShipCars extends Loadboard
                 }).findById(dispatch.jobGuid);
 
                 await trx.commit();
-
-                // keeping this commented out until we figure out status log types
-                // StatusManagerHandler.registerStatus({
-                //     orderGuid,
-                //     userGuid: process.env.SYSTEM_USER,
-                //     statusId: 4,
-                //     jobGuid: dispatch.jobGuid,
-                //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'dispatched', vendor: dispatch.vendorGuid, vendorName: vendorName }
-                // });
 
                 return dispatch.jobGuid;
             }
@@ -622,15 +580,6 @@ class ShipCars extends Loadboard
                     );
 
                 await trx.commit();
-
-                // keeping this commented out until we figure out status log types
-                // StatusManagerHandler.registerStatus({
-                //     orderGuid,
-                //     userGuid: process.env.SYSTEM_USER,
-                //     statusId: 4,
-                //     jobGuid: dispatch.jobGuid,
-                //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
-                // });
 
                 return dispatch.jobGuid;
             }
