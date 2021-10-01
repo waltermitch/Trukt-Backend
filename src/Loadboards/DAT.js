@@ -2,8 +2,6 @@ const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 const DateTime = require('luxon').DateTime;
 
-const anonUser = process.env.SYSTEM_USER;
-
 class DAT extends Loadboard
 {
     constructor(data)
@@ -147,7 +145,7 @@ class DAT extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
@@ -181,7 +179,7 @@ class DAT extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();

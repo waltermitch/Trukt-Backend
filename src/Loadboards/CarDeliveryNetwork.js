@@ -1,8 +1,6 @@
 const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 
-const anonUser = process.env.SYSTEM_USER;
-
 class CarDeliveryNetwork extends Loadboard
 {
     constructor(data)
@@ -108,7 +106,7 @@ class CarDeliveryNetwork extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
@@ -144,7 +142,7 @@ class CarDeliveryNetwork extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -179,7 +177,7 @@ class CarDeliveryNetwork extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();

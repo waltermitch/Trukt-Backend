@@ -1,10 +1,7 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const DateTime = require('luxon').DateTime;
-
 const LoadboardPost = require('../Models/LoadboardPost');
-
-const anonUser = process.env.SYSTEM_USER;
 
 class Truckstop extends Loadboard
 {
@@ -166,7 +163,7 @@ class Truckstop extends Loadboard
                 objectionPost.apiError = null;
 
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
@@ -203,7 +200,7 @@ class Truckstop extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();

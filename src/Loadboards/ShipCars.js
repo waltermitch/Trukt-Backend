@@ -10,8 +10,6 @@ const SFAccount = require('../Models/SFAccount');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const knex = require('../Models/BaseModel').knex();
 
-const anonUser = process.env.SYSTEM_USER;
-
 class ShipCars extends Loadboard
 {
     constructor(data)
@@ -237,7 +235,7 @@ class ShipCars extends Loadboard
                 this.updateCommodity(job.commodities, response.vehicles);
                 for (const vehicle of job.commodities)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
                 objectionPost.externalGuid = response.id;
@@ -245,7 +243,7 @@ class ShipCars extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
@@ -280,7 +278,7 @@ class ShipCars extends Loadboard
 
                 for (const vehicle of job.commodities)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
                 objectionPost.externalGuid = response.id;
@@ -290,7 +288,7 @@ class ShipCars extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -325,7 +323,7 @@ class ShipCars extends Loadboard
                 objectionPost.status = 'unposted';
                 objectionPost.isSynced = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
@@ -345,7 +343,7 @@ class ShipCars extends Loadboard
         {
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.id;
-            dispatch.setUpdatedBy(anonUser);
+            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
             await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
 
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
@@ -371,12 +369,12 @@ class ShipCars extends Loadboard
                     this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
                     for (const vehicle of job.commodities)
                     {
-                        vehicle.setUpdatedBy(anonUser);
+                        vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                         await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                     }
                 }
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             
             trx.commit();
@@ -384,7 +382,7 @@ class ShipCars extends Loadboard
             // keeping this commented out until we figure out status log types
             // StatusManagerHandler.registerStatus({
             //     orderGuid: dispatch.loadboardPost.jobGuid,
-            //     userGuid: anonUser,
+            //     userGuid: process.env.SYSTEM_USER,
             //     statusId: 4,
             //     jobGuid: objectionPost.guid,
             //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'dispatched' }
@@ -410,14 +408,14 @@ class ShipCars extends Loadboard
                 dateStarted: null,
                 status: 'ready'
             });
-            job.setUpdatedBy(anonUser);
+            job.setUpdatedBy(process.env.SYSTEM_USER);
             await Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid);
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.isPending = false;
             dispatch.isAccepted = false;
             dispatch.isCanceled = true;
-            dispatch.setUpdatedBy(anonUser);
+            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
             const objectionPost = dispatch.loadboardPost;
             objectionPost.externalGuid = response.id;
@@ -427,7 +425,7 @@ class ShipCars extends Loadboard
             objectionPost.isSynced = true;
 
             await OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
                 .whereIn('guid',
                     OrderStopLink.query(trx).select('stopGuid')
                         .where({ 'jobGuid': dispatch.jobGuid })
@@ -447,7 +445,7 @@ class ShipCars extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
                 OrderStopLink.query(trx).select('commodityGuid')
@@ -456,7 +454,7 @@ class ShipCars extends Loadboard
             this.updateCommodity(commodities, response.vehicles);
             for (const vehicle of commodities)
             {
-                vehicle.setUpdatedBy(anonUser);
+                vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                 await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
             }
 
@@ -501,7 +499,7 @@ class ShipCars extends Loadboard
 
                 dispatch.isPending = false;
                 dispatch.isAccepted = true;
-                dispatch.setUpdatedBy(anonUser);
+                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // move queried data into variables
                 // because they are not part of the orer_job_dispatch
@@ -521,7 +519,7 @@ class ShipCars extends Loadboard
 
                 await Job.query(trx).patch({
                     status: 'dispatched',
-                    updatedByGuid: anonUser
+                    updatedByGuid: process.env.SYSTEM_USER
                 }).findById(dispatch.jobGuid);
 
                 await trx.commit();
@@ -529,7 +527,7 @@ class ShipCars extends Loadboard
                 // keeping this commented out until we figure out status log types
                 // StatusManagerHandler.registerStatus({
                 //     orderGuid,
-                //     userGuid: anonUser,
+                //     userGuid: process.env.SYSTEM_USER,
                 //     statusId: 4,
                 //     jobGuid: dispatch.jobGuid,
                 //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'dispatched', vendor: dispatch.vendorGuid, vendorName: vendorName }
@@ -560,7 +558,7 @@ class ShipCars extends Loadboard
                 dispatch.isPending = false;
                 dispatch.isAccepted = false;
                 dispatch.isCanceled = true;
-                dispatch.setUpdatedBy(anonUser);
+                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // move queried data into variables
                 // because they are not part of the orer_job_dispatch
@@ -586,7 +584,7 @@ class ShipCars extends Loadboard
                     dateStarted: null,
                     status: 'declined'
                 });
-                job.setUpdatedBy(anonUser);
+                job.setUpdatedBy(process.env.SYSTEM_USER);
                 await Job.query(trx).patch(job).findById(dispatch.jobGuid);
 
                 // 3. Set the loadboard post record external guid to the new
@@ -599,7 +597,7 @@ class ShipCars extends Loadboard
                     hasError: false,
                     apiError: null
                 });
-                objectionPost.setUpdatedBy(anonUser);
+                objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
                 await LoadboardPost.query(trx).patch(objectionPost).findById(dispatch.loadboardPostGuid);
 
                 // 4. update the vehicle ship car ids
@@ -610,13 +608,13 @@ class ShipCars extends Loadboard
                 const vehicles = this.updateCommodity(commodities, response.vehicles);
                 for (const vehicle of vehicles)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
 
                 // 5. unset the stop scheduled dates
                 await OrderStop.query(trx)
-                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid')
                             .where({ 'jobGuid': dispatch.jobGuid })
@@ -628,7 +626,7 @@ class ShipCars extends Loadboard
                 // keeping this commented out until we figure out status log types
                 // StatusManagerHandler.registerStatus({
                 //     orderGuid,
-                //     userGuid: anonUser,
+                //     userGuid: process.env.SYSTEM_USER,
                 //     statusId: 4,
                 //     jobGuid: dispatch.jobGuid,
                 //     extraAnnotations: { dispatchedTo: 'SHIPCARS', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }

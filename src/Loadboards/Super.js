@@ -10,8 +10,6 @@ const SFAccount = require('../Models/SFAccount');
 const DateTime = require('luxon').DateTime;
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
-const anonUser = process.env.SYSTEM_USER;
-
 class Super extends Loadboard
 {
 
@@ -273,7 +271,7 @@ class Super extends Loadboard
                 const vehicles = this.updateCommodity(job.commodities, response.vehicles);
                 for (const vehicle of vehicles)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
 
@@ -289,7 +287,7 @@ class Super extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -326,7 +324,7 @@ class Super extends Loadboard
                 const vehicles = this.updateCommodity(job.commodities, response.vehicles);
                 for (const vehicle of vehicles)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
 
@@ -344,7 +342,7 @@ class Super extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -379,7 +377,7 @@ class Super extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
@@ -414,7 +412,7 @@ class Super extends Loadboard
                 this.updateCommodity(job.commodities, response.vehicles);
                 for (const vehicle of job.commodities)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
 
@@ -429,7 +427,7 @@ class Super extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -451,7 +449,7 @@ class Super extends Loadboard
         {
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.guid;
-            dispatch.setUpdatedBy(anonUser);
+            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
             await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
 
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
@@ -480,7 +478,7 @@ class Super extends Loadboard
                     const vehicles = this.updateCommodity(job.commodities, response.order.vehicles);
                     for (const vehicle of vehicles)
                     {
-                        vehicle.setUpdatedBy(anonUser);
+                        vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                         await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                     }
 
@@ -492,7 +490,7 @@ class Super extends Loadboard
                     }
                 }
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
@@ -500,7 +498,7 @@ class Super extends Loadboard
             // keeping this commented out until we figure out status log types
             // StatusManagerHandler.registerStatus({
             //     orderGuid: dispatch.loadboardPost.jobGuid,
-            //     userGuid: anonUser,
+            //     userGuid: process.env.SYSTEM_USER,
             //     statusId: 4,
             //     jobGuid: objectionPost.guid,
             //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'dispatched' }
@@ -526,21 +524,21 @@ class Super extends Loadboard
                 dateStarted: null,
                 status: 'ready'
             });
-            job.setUpdatedBy(anonUser);
+            job.setUpdatedBy(process.env.SYSTEM_USER);
             await Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid);
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.isPending = false;
             dispatch.isAccepted = false;
             dispatch.isCanceled = true;
-            dispatch.setUpdatedBy(anonUser);
+            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
             const objectionPost = LoadboardPost.fromJson({
                 isSynced: true,
                 guid: dispatch.loadboardPost.guid
             });
             await OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
                 .whereIn('guid',
                     OrderStopLink.query().select('stopGuid')
                         .where({ 'jobGuid': dispatch.jobGuid })
@@ -559,7 +557,7 @@ class Super extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -600,7 +598,7 @@ class Super extends Loadboard
 
                 dispatch.isPending = false;
                 dispatch.isAccepted = true;
-                dispatch.setUpdatedBy(anonUser);
+                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // move queried data into variables
                 // because they are not part of the orer_job_dispatch
@@ -621,14 +619,14 @@ class Super extends Loadboard
                 // update the job status to accepted. It's a string, we can literally write anything to this
                 await Job.query(trx).patch({
                     status: 'dispatched',
-                    updatedByGuid: anonUser
+                    updatedByGuid: process.env.SYSTEM_USER
                 }).findById(dispatch.jobGuid);
 
                 await trx.commit();
 
                 // StatusManagerHandler.registerStatus({
                 //     orderGuid,
-                //     userGuid: anonUser,
+                //     userGuid: process.env.SYSTEM_USER,
                 //     statusId: 5,
                 //     jobGuid: dispatch.jobGuid,
                 //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'dispatched', vendor: dispatch.vendorGuid, vendorName: vendorName }
@@ -659,7 +657,7 @@ class Super extends Loadboard
                 dispatch.isPending = false;
                 dispatch.isAccepted = false;
                 dispatch.isCanceled = true;
-                dispatch.setUpdatedBy(anonUser);
+                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // move queried data into variables
                 // because they are not part of the orer_job_dispatch
@@ -670,7 +668,7 @@ class Super extends Loadboard
                 delete dispatch.vendorName;
 
                 await OrderStop.query(trx)
-                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid')
                             .where({ 'jobGuid': dispatch.jobGuid })
@@ -684,7 +682,7 @@ class Super extends Loadboard
                     dateStarted: null,
                     status: 'declined'
                 });
-                job.setUpdatedBy(anonUser);
+                job.setUpdatedBy(process.env.SYSTEM_USER);
                 await Job.query(trx).patch(job).findById(dispatch.jobGuid);
 
                 // have to put table name because externalGuid is also on loadboard post and not
@@ -696,7 +694,7 @@ class Super extends Loadboard
 
                 // StatusManagerHandler.registerStatus({
                 //     orderGuid,
-                //     userGuid: anonUser,
+                //     userGuid: process.env.SYSTEM_USER,
                 //     statusId: 6,
                 //     jobGuid: dispatch.jobGuid,
                 //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }

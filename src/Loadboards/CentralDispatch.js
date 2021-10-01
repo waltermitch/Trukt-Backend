@@ -2,8 +2,6 @@ const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 const DateTime = require('luxon').DateTime;
 
-const anonUser = process.env.SYSTEM_USER;
-
 class CentralDispatch extends Loadboard
 {
     constructor(data)
@@ -17,7 +15,7 @@ class CentralDispatch extends Loadboard
     toJSON()
     {
         // We have to adjust the dates here in this payload constructor because this payload is a string
-        // and we will not (easily) be able to adjust the dates in some alter process.
+        // and we will not (easily) be able to adjust the dates in some later process.
         const now = DateTime.now().toUTC();
         const pickupStartDate = this.data.pickup.dateRequestedStart < now ? now : this.data.pickup.dateRequestedStart;
 
@@ -143,7 +141,7 @@ class CentralDispatch extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
@@ -177,7 +175,7 @@ class CentralDispatch extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
