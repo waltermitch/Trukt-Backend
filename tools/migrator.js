@@ -331,27 +331,25 @@ async function downHandler(argv)
         await knex.transaction(async function (trx)
         {
             const status = await trx.migrate.list();
-            try
+
+            // must migrate it down one at a time.
+            for (const filename of filenames)
             {
-                for (const filename of filenames)
+                if (status[0].includes(filename))
                 {
-                    if (status[0].includes(filename))
-                    {
-                        console.log(listStyle('migration: down ' + cleanName(filename)));
-                        await trx.migrate.down({ name: filename });
-                    }
-                    else
-                    {
-                        console.log(yellow, listStyle('already down: ' + cleanName(filename)));
-                    }
+                    console.log(listStyle('migration: down ' + cleanName(filename)));
+                    await trx.migrate.down({ name: filename });
+                }
+                else
+                {
+                    console.log(yellow, listStyle('already down: ' + cleanName(filename)));
                 }
             }
-            catch (err)
-            {
-                await trx.rollback();
-                console.log(err);
-            }
+            return trx;
 
+        }).catch(function (error)
+        {
+            throw error;
         });
     }
     else
