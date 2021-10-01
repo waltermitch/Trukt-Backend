@@ -252,18 +252,10 @@ async function refreshHandler(argv)
     {
         await knex.transaction(async (trx) =>
         {
-            try
-            {
-                console.log(listStyle('migration: rollback all'));
-                await knex.migrate.rollback(true);
-                console.log(listStyle('migration: latest'));
-                await knex.migrate.latest();
-            }
-            catch (err)
-            {
-                await trx.rollback();
-                console.log(err);
-            }
+            console.log(listStyle('migration: rollback all'));
+            await trx.migrate.rollback(true);
+            console.log(listStyle('migration: latest'));
+            await trx.migrate.latest();
         });
     }
     else if (argv.all && argv.but.length > 0 || argv.filenames.length > 0)
