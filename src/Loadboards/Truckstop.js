@@ -37,7 +37,6 @@ class Truckstop extends Loadboard
 
     toJSON()
     {
-        // this.adjustDates();
         const payload = {
             postAsUserId: this.postObject.values.contact.externalId,
             equipmentAttributes:
