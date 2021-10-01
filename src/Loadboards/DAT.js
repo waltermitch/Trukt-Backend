@@ -1,6 +1,7 @@
 const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 const DateTime = require('luxon').DateTime;
+const currency = require('currency.js');
 
 class DAT extends Loadboard
 {
@@ -84,7 +85,7 @@ class DAT extends Loadboard
                         includesExtendedNetwork: this.postObject.values.extendedNetwork,
                         transactionDetails: {
                             transactionType: 'NONBOOKABLE_OFFER_RATE',
-                            loadOfferRateUsd: parseFloat(this.data?.actualExpense) || 5
+                            loadOfferRateUsd: currency(this.data?.actualExpense).value || 5
                         }
                     }
                 },
