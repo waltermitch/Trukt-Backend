@@ -16,9 +16,30 @@ class Loadboard
 
     static validate() { }
 
+    cleanUp()
+    {
+        // get sketchy information into workable format before being assigned to different payloads
+        this.data.pickup.dateRequestedStart = DateTime.fromISO(this.data.pickup.dateRequestedStart).toUTC();
+        this.data.pickup.dateRequestedEnd = DateTime.fromISO(this.data.pickup.dateRequestedEnd).toUTC();
+        this.data.pickup.dateScheduledStart = DateTime.fromISO(this.data.pickup.dateScheduledStart).toUTC();
+        this.data.pickup.dateScheduledEnd = DateTime.fromISO(this.data.pickup.dateScheduledEnd).toUTC();
+        this.data.pickup.terminal.state = this.getStateCode(this.data.pickup.terminal.state);
+        this.data.pickup.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.phoneNumber);
+        this.data.pickup.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.mobileNumber);
+
+        this.data.delivery.dateRequestedStart = DateTime.fromISO(this.data.delivery.dateRequestedStart).toUTC();
+        this.data.delivery.dateRequestedEnd = DateTime.fromISO(this.data.delivery.dateRequestedEnd).toUTC();
+        this.data.delivery.dateScheduledStart = DateTime.fromISO(this.data.delivery.dateScheduledStart).toUTC();
+        this.data.delivery.dateScheduledEnd = DateTime.fromISO(this.data.delivery.dateScheduledEnd).toUTC();
+        this.data.delivery.terminal.state = this.getStateCode(this.data.delivery.terminal.state);
+        this.data.delivery.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.phoneNumber);
+        this.data.delivery.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.mobileNumber);
+    }
+
     create()
     {
         let payload = {};
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'create';
         payloadMetadata.user = returnTo;
@@ -30,10 +51,11 @@ class Loadboard
     post()
     {
         let payload = {};
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'post';
         payloadMetadata.user = returnTo;
-        payload = this.toJSON();
+        payload = this.adjustDates(this.toJSON());
 
         return { payload, payloadMetadata };
     }
@@ -51,7 +73,7 @@ class Loadboard
     update()
     {
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
-        payloadMetadata.action = ['update'];
+        payloadMetadata.action = 'update';
         payloadMetadata.user = returnTo;
 
         return { payload: this.toJSON(), payloadMetadata };
@@ -59,12 +81,13 @@ class Loadboard
 
     dispatch()
     {
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
         const payload = {};
 
         // send the order payload because the load may not exist in the loadboard
         // or it needs to be updated after dispatching
-        payload.order = this.toJSON();
+        payload.order = this.adjustDates(this.toJSON());
         payload.dispatch = this.dispatchJSON();
         payloadMetadata.action = 'dispatch';
         payloadMetadata.user = returnTo;
@@ -73,12 +96,13 @@ class Loadboard
 
     undispatch()
     {
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
         const payload = {};
 
         // sending the order because ship cars archives orders that are canceled
         // so they will need to be recreated
-        payload.order = this.toJSON();
+        payload.order = this.adjustDates(this.toJSON());
         payload.dispatch = { externalLoadGuid: this.postObject.externalGuid, externalDispatchGuid: this.data.dispatch.externalGuid };
         payloadMetadata.action = 'undispatch';
         payloadMetadata.user = returnTo;
