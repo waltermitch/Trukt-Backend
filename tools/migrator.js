@@ -290,26 +290,25 @@ async function upHandler(argv)
         await knex.transaction(async function (trx)
         {
             const status = await trx.migrate.list();
-            try
+            for (const filename of filenames)
             {
-                for (const filename of filenames)
-
-                    if (status[0].includes(filename))
-                    {
-                        console.log(yellow, listStyle('already up: ' + cleanName(filename)));
-                    }
-                    else
-                    {
-                        console.log(listStyle('migration: up ' + cleanName(filename)));
-                        await trx.migrate.up({ name: filename });
-                    }
-            }
-            catch (err)
-            {
-                await trx.rollback();
-                console.log(err);
+                // must migrate it up one at a time.
+                if (status[0].includes(filename))
+                {
+                    console.log(yellow, listStyle('already up: ' + cleanName(filename)));
+                }
+                else
+                {
+                    console.log(listStyle('migration: up ' + cleanName(filename)));
+                    await trx.migrate.up({ name: filename });
+                }
             }
 
+            return trx;
+
+        }).catch(function (error)
+        {
+            throw error;
         });
     }
     else
