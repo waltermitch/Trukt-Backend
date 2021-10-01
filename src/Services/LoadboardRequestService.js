@@ -31,14 +31,14 @@ class LoadboardRequestService
             LoadboardRequest
                 .query()
                 .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true })
-                .where(ref('extraExternalData:guid').castText(), payload.extraExternalData.guid),
+                .where(ref('extraExternalData:carrierInfo.guid').castText(), payload.extraExternalData.carrierInfo.guid),
             LoadboardPost
                 .query()
                 .findOne('externalPostGuid', payload.extraExternalData.externalOrderID)
                 .leftJoinRelated('job')
                 .select('rcgTms.loadboardPosts.*', 'job.orderGuid')
         ]);
-
+        console.log(lbRequest, lbPosting);
         if (lbPosting == undefined)
         {
             throw new Error('Posting Doesn\'t Exist');
@@ -101,7 +101,7 @@ class LoadboardRequestService
             LoadboardRequest
                 .query()
                 .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true })
-                .where(ref('extraExternalData:guid').castText(), payload.extraExternalData.guid),
+                .where(ref('extraExternalData:carrierInfo.guid').castText(), payload.extraExternalData.carrierInfo.guid),
             LoadboardPost
                 .query()
                 .findOne('externalPostGuid', payload.extraExternalData.externalOrderID)
