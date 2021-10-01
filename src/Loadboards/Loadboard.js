@@ -24,16 +24,22 @@ class Loadboard
         this.data.pickup.dateScheduledStart = DateTime.fromISO(this.data.pickup.dateScheduledStart).toUTC();
         this.data.pickup.dateScheduledEnd = DateTime.fromISO(this.data.pickup.dateScheduledEnd).toUTC();
         this.data.pickup.terminal.state = this.getStateCode(this.data.pickup.terminal.state);
-        this.data.pickup.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.phoneNumber);
-        this.data.pickup.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.mobileNumber);
+        if(this.data.pickup.primaryContact)
+        {
+            this.data.pickup.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.phoneNumber);
+            this.data.pickup.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.mobileNumber);
+        }
 
         this.data.delivery.dateRequestedStart = DateTime.fromISO(this.data.delivery.dateRequestedStart).toUTC();
         this.data.delivery.dateRequestedEnd = DateTime.fromISO(this.data.delivery.dateRequestedEnd).toUTC();
         this.data.delivery.dateScheduledStart = DateTime.fromISO(this.data.delivery.dateScheduledStart).toUTC();
         this.data.delivery.dateScheduledEnd = DateTime.fromISO(this.data.delivery.dateScheduledEnd).toUTC();
         this.data.delivery.terminal.state = this.getStateCode(this.data.delivery.terminal.state);
-        this.data.delivery.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.phoneNumber);
-        this.data.delivery.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.mobileNumber);
+        if(this.data.delivery.primaryContact)
+        {
+            this.data.delivery.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.phoneNumber);
+            this.data.delivery.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.mobileNumber);
+        }
     }
 
     create()
@@ -152,7 +158,7 @@ class Loadboard
     fastForward(targetDate, secondDate)
     {
         const tempSecondDate = secondDate;
-        targetDate = tempSecondDate.plus({ days: 1, hours: 1 });
+        targetDate = tempSecondDate.plus({ days: 1, hours: 1 }).toUTC();
         return targetDate;
     }
 
@@ -165,7 +171,7 @@ class Loadboard
     {
         if (!phone)
         {
-            return undefined;
+            return null;
         }
 
         // 0. clean up non-alphanumeric characters
@@ -183,7 +189,7 @@ class Loadboard
         }
         else
         {
-            phone = undefined;
+            phone = null;
         }
 
         return phone;

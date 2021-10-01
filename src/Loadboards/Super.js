@@ -70,10 +70,10 @@ class Super extends Loadboard
                     zip: this.data.pickup.terminal.zipCode,
                     name: this.data.pickup.terminal.name,
                     business_type: this.setBusinessType(this.data.pickup.terminal.locationType),
-                    contact_name: this.data.pickup?.primaryContact?.name,
-                    contact_email: this.data.pickup?.primaryContact?.email,
-                    contact_phone: this.data.pickup?.primaryContact?.phoneNumber,
-                    contact_mobile_phone: this.data.pickup?.primaryContact?.mobileNumber,
+                    contact_name: this.data.pickup?.primaryContact?.name || null,
+                    contact_email: this.data.pickup?.primaryContact?.email || null,
+                    contact_phone: this.data.pickup?.primaryContact?.phoneNumber || null,
+                    contact_mobile_phone: this.data.pickup?.primaryContact?.mobileNumber || null,
                     date_type: this.setDateType(this.data.pickup.dateScheduledType)
                 }
             },
@@ -93,10 +93,10 @@ class Super extends Loadboard
                     zip: this.data.delivery.terminal.zipCode,
                     name: this.data.delivery.terminal.name,
                     business_type: this.setBusinessType(this.data.delivery.terminal.locationType),
-                    contact_name: this.data.delivery?.primaryContact?.name,
-                    contact_email: this.data.delivery?.primaryContact?.email,
-                    contact_phone: this.data.delivery?.primaryContact?.phoneNumber,
-                    contact_mobile_phone: this.data.delivery?.primaryContact?.mobileNumber,
+                    contact_name: this.data.delivery?.primaryContact?.name || null,
+                    contact_email: this.data.delivery?.primaryContact?.email || null,
+                    contact_phone: this.data.delivery?.primaryContact?.phoneNumber || null,
+                    contact_mobile_phone: this.data.delivery?.primaryContact?.mobileNumber || null,
                     date_type: this.setDateType(this.data.delivery.dateRequestedType)
                 }
             },
