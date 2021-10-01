@@ -1,5 +1,6 @@
 const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
+const DateTime = require('luxon').DateTime;
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
 
@@ -45,8 +46,11 @@ class DAT extends Loadboard
         this.adjustDates();
         const payload = {
             freight: {
-                equipmentType: this.postObject.values.equipmentType, // equipment type id as string
-                fullPartial: this.postObject.values.loadType, // either FULL or PARTIAL
+                // equipment type id as string
+                equipmentType: this.postObject.values.equipmentType,
+
+                // either FULL or PARTIAL
+                fullPartial: this.postObject.values.loadType,
                 comments: [
                     {
                         comment: this.postObject.values.comment1
@@ -58,18 +62,22 @@ class DAT extends Loadboard
                 commodity: {
                     details: this.postObject.values.commodity
                 },
-                lengthFeet: this.postObject.values.length, // integer good between 1 and 199
-                weightPounds: this.postObject.values.weight // integer good between 1 and 999998
+
+                // integer good between 1 and 199
+                lengthFeet: this.postObject.values.length,
+
+                // integer good between 1 and 999998
+                weightPounds: this.postObject.values.weight
             },
             lane: {
                 origin: {
                     city: this.data.pickup.terminal.city,
-                    stateProv: this.getStateCode(this.data.pickup.terminal.state),
+                    stateProv: this.data.pickup.terminal.state,
                     postalCode: this.data.pickup.terminal.zipCode
                 },
                 destination: {
                     city: this.data.delivery.terminal.city,
-                    stateProv: this.getStateCode(this.data.delivery.terminal.state),
+                    stateProv: this.data.delivery.terminal.state,
                     postalCode: this.data.delivery.terminal.zipCode
                 }
             },
@@ -79,15 +87,32 @@ class DAT extends Loadboard
                 latestAvailabilityWhen: this.data.pickup.dateRequestedEnd,
 
                 // endWhen - (From DAT) this is the date and time whent he posting is no longer visible to the target audience.
-                // this fueld gives you the flexibility to fine tune when the posting will no longer be available, separate from the end of the pick up window.
-                endWhen: this.minusMinutes(this.data.pickup.dateRequestedEnd, 30),
-                preferredContactMethod: 'PRIMARY_PHONE',
-                transactionDetails: {
-                    loadOfferRateUsd: this.data.actualExpense
-                }
+                // this field gives you the flexibility to fine tune when the posting will no longer be available, separate from the end of the pick up window.
+                endWhen: this.data.pickup.dateRequestedEnd,
+                preferredContactMethod: 'PRIMARY_PHONE'
             },
             referenceId: this.data.number
         };
+
+        return payload;
+    }
+
+    adjustDates(payload)
+    {
+        const now = DateTime.now().toUTC();
+
+        if (payload.exposure.earliestAvailabilityWhen < now)
+        {
+            payload.exposure.earliestAvailabilityWhen = now;
+        }
+
+        if (payload.exposure.latestAvailabilityWhen < payload.exposure.earliestAvailabilityWhen)
+        {
+            payload.exposure.latestAvailabilityWhen = this.fastForward(payload.exposure.latestAvailabilityWhen, payload.exposure.earliestAvailabilityWhen);
+        }
+
+        const tempLatestAvail = payload.exposure.latestAvailabilityWhen;
+        payload.exposure.endWhen = tempLatestAvail.minus({ minutes: 20 });
 
         return payload;
     }

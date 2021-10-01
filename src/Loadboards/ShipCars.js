@@ -38,8 +38,8 @@ class ShipCars extends Loadboard
             pickup_notes: this.data.pickup?.notes ? this.pickup?.notes : ' ',
             pickup_estimate_type: this.setDateType(this.data.pickup.dateRequestedType),
             pickup_requested_date_start_type: this.setDateType(this.data.pickup.dateRequestedType),
-            pickup_requested_date_start: DateTime.fromISO(this.data.pickup.dateRequestedStart).toISODate(),
-            pickup_requested_date_end: DateTime.fromISO(this.data.pickup.dateRequestedEnd).toISODate(),
+            pickup_requested_date_start: this.data.pickup.dateRequestedStart.toISODate(),
+            pickup_requested_date_end: this.data.pickup.dateRequestedEnd.toISODate(),
 
             delivery_name: this.data.delivery.terminal.name,
             delivery_contact: this.data.delivery?.primaryContact?.name,
@@ -51,11 +51,11 @@ class ShipCars extends Loadboard
             delivery_zip: this.data.delivery.terminal.zipCode,
             delivery_estimate_type: this.setDateType(this.data.delivery.dateRequestedType),
             delivery_requested_date_start_type: this.setDateType(this.data.delivery.dateRequestedType),
-            delivery_requested_date_start: DateTime.fromISO(this.data.delivery.dateRequestedStart),
-            delivery_requested_date_end: DateTime.fromISO(this.data.delivery.dateRequestedEnd),
+            delivery_requested_date_start: this.data.delivery.dateRequestedStart.toISODate(),
+            delivery_requested_date_end: this.data.delivery.dateRequestedEnd.toISODate(),
             delivery_notes: this.data.delivery?.notes ? this.data.delivery?.notes : ' ',
 
-            first_available_date: this.toDate(this.data.pickup.dateRequestedStart),
+            first_available_date: this.data.pickup.dateRequestedStart.toISODate(),
             shipper_load_id: process.env.NODE_ENV != 'prod' || process.env.NODE_ENV != 'production' ? this.saltOrderNumber(this.data.number) : this.data.number,
             instructions: this.data.loadboardInstructions,
             specific_load_requirements: this.postObject.instructions,
@@ -70,6 +70,7 @@ class ShipCars extends Loadboard
             payment_term_business_days: 2
         };
 
+        // console.log(payload);
         return payload;
     }
 
@@ -203,6 +204,18 @@ class ShipCars extends Loadboard
 
         return phone;
     }
+
+    // adjustDates(payload)
+    // {
+    //     payload.pickup_requested_date_start = payload.pickup_requested_date_start.toISODate();
+    //     payload.pickup_requested_date_end = payload.pickup_requested_date_end.toISODate();
+
+    //     payload.delivery_requested_date_start = payload.delivery_requested_date_start.toISODate();
+    //     payload.delivery_requested_date_end = payload.delivery_requested_date_end.toISODate();
+
+    //     payload.first_available_date = payload.pickup_requested_date_start;
+    //     return payload;
+    // }
 
     static async handleCreate(post, response)
     {

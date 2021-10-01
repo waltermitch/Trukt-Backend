@@ -1,10 +1,8 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
-const fs = require('fs');
+const DateTime = require('luxon').DateTime;
 
 const LoadboardPost = require('../Models/LoadboardPost');
-
-const localPicklistPath = 'localdata/picklists.json';
 
 const anonUser = '00000000-0000-0000-0000-000000000000';
 
@@ -42,7 +40,7 @@ class Truckstop extends Loadboard
 
     toJSON()
     {
-        this.adjustDates();
+        // this.adjustDates();
         const payload = {
             postAsUserId: this.postObject.values.contact.externalId,
             equipmentAttributes:
@@ -53,8 +51,11 @@ class Truckstop extends Loadboard
             },
             loadStops: [
                 {
-                    type: 1, // indicates what kind of stop this is i.e 1 = pickup, 2 = delivery
-                    sequence: 1, // indicates order in stops
+                    // indicates what kind of stop this is i.e 1 = pickup, 2 = delivery
+                    type: 1,
+
+                    // indicates order in stops
+                    sequence: 1,
                     earlyDateTime: this.data.pickup.dateRequestedStart,
                     lateDateTime: this.data.pickup.dateRequestedEnd,
                     location: {
@@ -72,7 +73,9 @@ class Truckstop extends Loadboard
                     stopNotes: this.data.pickup.notes
                 },
                 {
-                    type: 2, // indicates what kind of stop this is i.e 1 = pickup, 2 = delivery
+                    // indicates what kind of stop this is i.e 1 = pickup, 2 = delivery
+                    type: 2,
+                    sequence: 2,
                     earlyDateTime: this.data.delivery.dateRequestedStart,
                     lateDateTime: this.data.delivery.dateRequestedEnd,
                     location: {
@@ -110,6 +113,33 @@ class Truckstop extends Loadboard
         return payload;
     }
 
+    adjustDates(payload)
+    {
+        const now = DateTime.now().toUTC();
+
+        if (payload.loadStops[0].earlyDateTime < now)
+        {
+            payload.loadStops[0].earlyDateTime = now;
+        }
+
+        if (payload.loadStops[0].lateDateTime < payload.loadStops[0].earlyDateTime)
+        {
+            payload.loadStops[0].lateDateTime = this.fastForward(payload.loadStops[0].lateDateTime, payload.loadStops[0].earlyDateTime);
+        }
+
+        if (payload.loadStops[1].earlyDateTime < payload.loadStops[0].lateDateTime)
+        {
+            payload.loadStops[1].earlyDateTime = this.fastForward(payload.loadStops[1].earlyDateTime, payload.loadStops[0].lateDateTime);
+        }
+
+        if (payload.loadStops[1].lateDateTime < payload.loadStops[1].earlyDateTime)
+        {
+            payload.loadStops[1].lateDateTime = this.fastForward(payload.loadStops[1].lateDateTime, payload.loadStops[1].earlyDateTime);
+        }
+
+        return payload;
+    }
+
     static async handlePost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
@@ -122,6 +152,7 @@ class Truckstop extends Loadboard
                 objectionPost.isSynced = false;
                 objectionPost.hasError = true;
                 objectionPost.apiError = response.errors;
+                console.log(response.errors);
             }
             else
             {

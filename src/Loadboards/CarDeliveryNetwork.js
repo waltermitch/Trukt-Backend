@@ -42,7 +42,7 @@ class CarDeliveryNetwork extends Loadboard
                     MobilePhone: this.data.pickup?.primaryContact?.mobilePhone,
                     OrganisationName: this.data.pickup.terminal.name,
                     QuickCode: this.data.pickup.terminal.guid,
-                    StateRegion: this.getStateCode(this.data.pickup.terminal.state),
+                    StateRegion: this.data.pickup.terminal.state,
                     ZipPostCode: this.data.pickup.terminal.zipCode
                 },
                 RequestedDate: this.data.pickup.dateRequestedStart
@@ -56,7 +56,7 @@ class CarDeliveryNetwork extends Loadboard
                     MobilePhone: this.data.delivery?.primaryContact?.mobilePhone,
                     OrganisationName: this.data.delivery.terminal.name,
                     QuickCode: this.data.delivery.terminal.guid,
-                    StateRegion: this.getStateCode(this.data.delivery.terminal.state),
+                    StateRegion: this.data.delivery.terminal.state,
                     ZipPostCode: this.data.delivery.terminal.zipCode
                 },
                 RequestedDate: this.data.delivery.dateRequestedStart,
