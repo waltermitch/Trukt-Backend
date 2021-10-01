@@ -43,7 +43,6 @@ class DAT extends Loadboard
 
     toJSON()
     {
-        this.adjustDates();
         const payload = {
             freight: {
                 // equipment type id as string
@@ -82,7 +81,15 @@ class DAT extends Loadboard
                 }
             },
             exposure: {
-                audience: { loadBoard: { includesExtendedNetwork: this.postObject.values.extendedNetwork } },
+                audience: {
+                    loadBoard: {
+                        includesExtendedNetwork: this.postObject.values.extendedNetwork,
+                        transactionDetails: {
+                            transactionType: 'NONBOOKABLE_OFFER_RATE',
+                            loadOfferRateUsd: parseFloat(this.data?.actualExpense) || 5
+                        }
+                    }
+                },
                 earliestAvailabilityWhen: this.data.pickup.dateRequestedStart,
                 latestAvailabilityWhen: this.data.pickup.dateRequestedEnd,
 
