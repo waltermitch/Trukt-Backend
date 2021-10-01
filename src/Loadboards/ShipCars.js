@@ -10,7 +10,7 @@ const SFAccount = require('../Models/SFAccount');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const knex = require('../Models/BaseModel').knex();
 
-const anonUser = '00000000-0000-0000-0000-000000000000';
+const anonUser = process.env.SYSTEM_USER;
 
 class ShipCars extends Loadboard
 {

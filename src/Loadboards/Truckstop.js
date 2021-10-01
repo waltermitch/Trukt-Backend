@@ -4,7 +4,7 @@ const DateTime = require('luxon').DateTime;
 
 const LoadboardPost = require('../Models/LoadboardPost');
 
-const anonUser = '00000000-0000-0000-0000-000000000000';
+const anonUser = process.env.SYSTEM_USER;
 
 class Truckstop extends Loadboard
 {

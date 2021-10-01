@@ -10,7 +10,7 @@ const SFAccount = require('../Models/SFAccount');
 const DateTime = require('luxon').DateTime;
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
-const anonUser = '00000000-0000-0000-0000-000000000000';
+const anonUser = process.env.SYSTEM_USER;
 
 class Super extends Loadboard
 {
