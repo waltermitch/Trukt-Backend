@@ -1,12 +1,14 @@
-const table_name = 'orders';
-const consignee = 'consignee_guid';
+const TABLE_NAME = 'orders';
+const CONSIGNEE = 'consignee_guid';
+const SCHEMA_NAME = 'rcg_tms';
+
 exports.up = function (knex)
 {
     return Promise.all([
-        knex.schema.withSchema('rcg_tms').table(table_name, table =>
+        knex.schema.withSchema(SCHEMA_NAME).table(TABLE_NAME, table =>
         {
-            table.string(consignee, 100);
-            table.foreign(consignee).references('guid__c').inTable('salesforce.account');
+            table.string(CONSIGNEE, 100);
+            table.foreign(CONSIGNEE).references('guid__c').inTable('salesforce.account');
             table.string('reference_number', 64).comment('external reference number that customer provides');
             table.enu('inspection_type', ['standard', 'advanced'],
                 {
@@ -15,7 +17,7 @@ exports.up = function (knex)
             table.boolean('is_tender').notNullable().defaultsTo(false).comment('this is mainly used for EDI load tenders');
             table.boolean('is_started').defaultsTo(false).notNullable();
         }),
-        knex.schema.withSchema('rcg_tms').table('order_jobs', table =>
+        knex.schema.withSchema(SCHEMA_NAME).table('order_jobs', table =>
         {
             table.enu('load_type', null, { useNative: true, enumName: 'load_capacity_types', existingType: true });
             table.boolean('is_started').defaultsTo(false).notNullable();
@@ -26,11 +28,11 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms')
-        .table(table_name, (table) =>
+    return knex.schema.withSchema(SCHEMA_NAME)
+        .table(TABLE_NAME, (table) =>
         {
-            table.dropForeign(consignee);
-            table.dropColumn(consignee);
+            table.dropForeign(CONSIGNEE);
+            table.dropColumn(CONSIGNEE);
             table.dropColumn('reference_number');
             table.dropColumn('inspection_type');
             table.dropColumn('is_tender');

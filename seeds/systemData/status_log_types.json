@@ -1,0 +1,49 @@
+{
+    "schema": "rcg_tms",
+    "table": "status_log_types",
+    "unique": "id",
+    "data": [
+        {
+            "id": 1,
+            "category": "order",
+            "name": "Created",
+            "order_filter_label": "Created On"
+        },
+        {
+            "id": 2,
+            "category": "order",
+            "name": "Posted to",
+            "order_filter_label": "Posted On"
+        },
+        {
+            "id": 3,
+            "category": "order",
+            "name": "Un-Posted from",
+            "order_filter_label": "Un-Posted On"
+        },
+        {
+            "id": 4,
+            "category": "loadRequest",
+            "name": "Created",
+            "order_filter_label": null
+        },
+        {
+            "id": 5,
+            "category": "loadRequest",
+            "name": "Canceled",
+            "order_filter_label": null
+        },
+        {
+            "id": 6,
+            "category": "loadRequest",
+            "name": "Accpeted",
+            "order_filter_label": null
+        },
+        {
+            "id": 7,
+            "category": "loadRequest",
+            "name": "Declined",
+            "order_filter_label": null
+        }
+    ]
+}

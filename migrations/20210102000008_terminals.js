@@ -1,8 +1,8 @@
 const migration_tools = require('../tools/migration');
 
-const table_name = 'terminals';
-const table_name_contact = 'terminal_contacts';
-const unique_contact_fields = [
+const TABLE_NAME = 'terminals';
+const TABLE_NAME_CONTACT = 'terminal_contacts';
+const UNIQUE_CONTACT_FIELDS = [
     'terminal_guid',
     'first_name',
     'last_name',
@@ -12,7 +12,7 @@ const unique_contact_fields = [
 exports.up = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .createTable(table_name_contact, (table) =>
+        .createTable(TABLE_NAME_CONTACT, (table) =>
         {
             table.uuid('guid').unique().primary().notNullable();
             table.string('first_name', 24);
@@ -27,10 +27,10 @@ exports.up = function (knex)
             migration_tools.authors(table);
 
         })
-        .raw(migration_tools.guid_function(table_name_contact))
-        .raw(migration_tools.timestamps_trigger(table_name_contact))
-        .raw(migration_tools.authors_trigger(table_name_contact))
-        .createTable(table_name, (table) =>
+        .raw(migration_tools.guid_function(TABLE_NAME_CONTACT))
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME_CONTACT))
+        .raw(migration_tools.authors_trigger(TABLE_NAME_CONTACT))
+        .createTable(TABLE_NAME, (table) =>
         {
             table.string('name').notNullable();
             table.uuid('guid').unique().notNullable().primary();
@@ -59,7 +59,7 @@ exports.up = function (knex)
             {
                 const fieldname = type + '_contact_guid';
                 table.uuid(fieldname).comment('the default ' + type + ' contact for this terminal');
-                table.foreign(fieldname).references('guid').inTable(`rcg_tms.${table_name_contact}`);
+                table.foreign(fieldname).references('guid').inTable(`rcg_tms.${TABLE_NAME_CONTACT}`);
             }
             table.boolean('is_resolved').notNullable().defaultsTo(false).comment('this is set to true only and only when the address is verified and proper geo-coords are stored');
             migration_tools.timestamps(table);
@@ -68,28 +68,28 @@ exports.up = function (knex)
             table.unique(['latitude', 'longitude']);
 
         })
-        .raw(migration_tools.guid_function(table_name))
-        .raw(migration_tools.timestamps_trigger(table_name))
-        .raw(migration_tools.authors_trigger(table_name))
+        .raw(migration_tools.guid_function(TABLE_NAME))
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME))
+        .raw(migration_tools.authors_trigger(TABLE_NAME))
 
-        .table(table_name_contact, (table) =>
+        .table(TABLE_NAME_CONTACT, (table) =>
         {
             table.uuid('terminal_guid').notNullable().comment('the terminal the contact is a contact for');
             table.foreign('terminal_guid').references('guid').inTable('rcg_tms.terminals');
-            table.unique(unique_contact_fields);
+            table.unique(UNIQUE_CONTACT_FIELDS);
         });
 };
 
 exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .table(table_name_contact, (table) =>
+        .table(TABLE_NAME_CONTACT, (table) =>
         {
-            table.dropUnique(unique_contact_fields);
+            table.dropUnique(UNIQUE_CONTACT_FIELDS);
             table.dropForeign('terminal_guid');
 
         })
-        .dropTableIfExists(table_name)
-        .dropTableIfExists(table_name_contact)
+        .dropTableIfExists(TABLE_NAME)
+        .dropTableIfExists(TABLE_NAME_CONTACT)
         .raw('DROP TYPE IF EXISTS rcg_tms.location_types');
 };

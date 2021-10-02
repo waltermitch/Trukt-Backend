@@ -1,10 +1,11 @@
 const migration_tools = require('../tools/migration');
 
-const table_name = 'loadboard_requests';
+const SCHEMA_NAME = 'rcg_tms';
+const TABLE_NAME = 'loadboard_requests';
 
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema(SCHEMA_NAME).createTable(TABLE_NAME, (table) =>
     {
         table.uuid('guid').primary();
         table.string('status', 16).notNullable();
@@ -32,15 +33,15 @@ exports.up = function (knex)
         migration_tools.timestamps(table);
         migration_tools.authors(table);
     })
-        .raw(migration_tools.timestamps_trigger(table_name))
-        .raw(migration_tools.authors_trigger(table_name))
-        .raw(migration_tools.guid_function(table_name));
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME))
+        .raw(migration_tools.authors_trigger(TABLE_NAME))
+        .raw(migration_tools.guid_function(TABLE_NAME));
 
 };
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms')
-        .dropTableIfExists(table_name)
+    return knex.schema.withSchema(SCHEMA_NAME)
+        .dropTableIfExists(TABLE_NAME)
         .raw('DROP TYPE IF EXISTS rcg_tms.carrier_identifier_types CASCADE;');
 };
