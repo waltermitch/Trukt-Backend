@@ -1,7 +1,10 @@
+const SCHEMA_NAME = 'rcg_tms';
+const TABLE_NAME_INVOICES = 'invoices';
+const TABLE_NAME_BILLS = 'bills';
 
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable('invoices', (table) =>
+    return knex.schema.withSchema(SCHEMA_NAME).createTable(TABLE_NAME_INVOICES, (table) =>
     {
         table.uuid('invoice_guid').unique().notNullable();
         table.uuid('order_guid').notNullable();
@@ -11,9 +14,8 @@ exports.up = function (knex)
 
         table.primary(['order_guid', 'invoice_guid']);
 
-    }).createTable('bills', (table) =>
+    }).createTable(TABLE_NAME_BILLS, (table) =>
     {
-
         table.uuid('bill_guid').unique().notNullable();
         table.uuid('job_guid').notNullable();
 
@@ -26,7 +28,7 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms')
-        .dropTableIfExists('invoices')
-        .dropTableIfExists('bills');
+    return knex.schema.withSchema(SCHEMA_NAME)
+        .dropTableIfExists(TABLE_NAME_INVOICES)
+        .dropTableIfExists(TABLE_NAME_BILLS);
 };

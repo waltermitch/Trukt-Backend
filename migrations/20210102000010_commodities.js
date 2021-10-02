@@ -2,12 +2,11 @@ const migration_tools = require('../tools/migration');
 
 const guid_function = migration_tools.guid_function;
 const ternary_options = migration_tools.ternary_options;
-const table_name = 'commodities';
+const TABLE_NAME = 'commodities';
 
 exports.up = function (knex)
 {
-
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, (table) =>
     {
         table.uuid('guid').unique().notNullable();
 
@@ -39,15 +38,15 @@ exports.up = function (knex)
         migration_tools.authors(table);
 
     })
-        .raw(guid_function(table_name))
-        .raw(migration_tools.timestamps_trigger(table_name))
-        .raw(migration_tools.authors_trigger(table_name));
+        .raw(guid_function(TABLE_NAME))
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME))
+        .raw(migration_tools.authors_trigger(TABLE_NAME));
 };
 
 exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .dropTableIfExists(table_name)
+        .dropTableIfExists(TABLE_NAME)
         .raw('DROP TYPE IF EXISTS rcg_tms.load_capacity_types CASCADE;')
         .raw('DROP TYPE IF EXISTS rcg_tms.delivery_status_types CASCADE;')
         .raw('DROP TYPE IF EXISTS rcg_tms.ternary_types CASCADE;');

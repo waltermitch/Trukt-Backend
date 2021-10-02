@@ -1,9 +1,9 @@
 const migration_tools = require('../tools/migration');
 
-const table_name = 'order_stop_links';
+const TABLE_NAME = 'order_stop_links';
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, (table) =>
     {
         table.increments('id', { primaryKey: true }).notNullable();
         const commodityfn = 'commodity_guid';
@@ -32,11 +32,11 @@ exports.up = function (knex)
         migration_tools.timestamps(table);
         migration_tools.authors(table);
     })
-        .raw(migration_tools.timestamps_trigger(table_name))
-        .raw(migration_tools.authors_trigger(table_name));
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME))
+        .raw(migration_tools.authors_trigger(TABLE_NAME));
 };
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
+    return knex.schema.withSchema('rcg_tms').dropTableIfExists(TABLE_NAME);
 };

@@ -1,6 +1,7 @@
-const table_name = 'terminal_contacts';
-const unique_contact_fields = ['terminal_guid', 'name', 'phone_number'];
-const unique_contact_fields_old = [
+const SCHEMA_NAME = 'rcg_tms';
+const TABLE_NAME = 'terminal_contacts';
+const UNIQUE_CONTACT_FIELDS = ['terminal_guid', 'name', 'phone_number'];
+const UNIQUE_CONTACT_FIELDS_OLD = [
     'terminal_guid',
     'first_name',
     'last_name',
@@ -10,20 +11,20 @@ const unique_contact_fields_old = [
 exports.up = function (knex)
 {
 
-    return knex.schema.withSchema('rcg_tms')
-        .table(table_name, (table) =>
+    return knex.schema.withSchema(SCHEMA_NAME)
+        .table(TABLE_NAME, (table) =>
         {
             table.string('name', 64);
-            table.unique(unique_contact_fields);
+            table.unique(UNIQUE_CONTACT_FIELDS);
         })
         .raw(`
-            UPDATE rcg_tms.${table_name}
+            UPDATE rcg_tms.${TABLE_NAME}
             SET name = CONCAT( first_name, ' ' , last_name)
             WHERE name IS NULL;
         `)
-        .table(table_name, (table) =>
+        .table(TABLE_NAME, (table) =>
         {
-            table.dropUnique(unique_contact_fields_old);
+            table.dropUnique(UNIQUE_CONTACT_FIELDS_OLD);
             table.dropColumn('first_name');
             table.dropColumn('last_name');
         });
@@ -32,23 +33,23 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms')
-        .table(table_name, (table) =>
+    return knex.schema.withSchema(SCHEMA_NAME)
+        .table(TABLE_NAME, (table) =>
         {
             table.string('first_name', 24);
             table.string('last_name', 24);
-            table.unique(unique_contact_fields_old);
+            table.unique(UNIQUE_CONTACT_FIELDS_OLD);
         })
         .raw(`
-            UPDATE rcg_tms.${table_name}
+            UPDATE rcg_tms.${TABLE_NAME}
             SET 
             first_name = SPLIT_PART( name, ' ', 1),
             last_name = SPLIT_PART(name, ' ', 2)
             WHERE name IS NULL;
         `)
-        .table(table_name, (table) =>
+        .table(TABLE_NAME, (table) =>
         {
-            table.dropUnique(unique_contact_fields);
+            table.dropUnique(UNIQUE_CONTACT_FIELDS);
             table.dropColumn('name');
         });
 };

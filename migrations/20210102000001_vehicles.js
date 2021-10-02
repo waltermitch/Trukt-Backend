@@ -1,8 +1,7 @@
-
-const table_name = 'vehicles';
+const TABLE_NAME = 'vehicles';
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, (table) =>
     {
         table.increments('id', { primaryKey: true }).unique().notNullable();
         table.string('year', 4);
@@ -22,5 +21,5 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
+    return knex.schema.withSchema('rcg_tms').dropTableIfExists(TABLE_NAME);
 };
