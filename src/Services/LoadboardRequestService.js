@@ -38,7 +38,7 @@ class LoadboardRequestService
                 .leftJoinRelated('job')
                 .select('rcgTms.loadboardPosts.*', 'job.orderGuid')
         ]);
-        console.log(lbRequest, lbPosting);
+
         if (lbPosting == undefined)
         {
             throw new Error('Posting Doesn\'t Exist');
