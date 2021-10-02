@@ -22,10 +22,10 @@ class SystemManagementService
     }
 
     // function sync users with azure
-    static async syncUsers()
+    static async syncUsers(keepAlive = true)
     {
         // gets users from AD Employee Group
-        const usersFromAD = await Graph.getGroupMembers(process.env['azure.ad.groupId']);
+        const usersFromAD = await Graph.getGroupMembers(process.env['azure.ad.groupId'], keepAlive);
 
         // gets users from DB
         const usersFromDB = await User.query();

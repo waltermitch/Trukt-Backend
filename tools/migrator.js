@@ -3,10 +3,12 @@
  * This is MIG, makes migrating database stuff easier
  * Also comes with fancy tools
  */
+require('../local.settings');
 const yargs = require('yargs/yargs');
 const fs = require('fs');
 const path = require('path');
 const Knex = require('knex');
+const BaseModel = require('../src/Models/BaseModel');
 
 const seedDataMap = {
     'dev': 'devData',
@@ -14,6 +16,7 @@ const seedDataMap = {
     'test': 'testData',
     'dep': 'deploymentData'
 };
+
 console.log(colorme('yellow'), '\nCURRENT NODE_ENV: ' + process.env.NODE_ENV + '\n');
 
 yargs(process.argv.slice(2))
@@ -747,7 +750,7 @@ async function seedHandler(argv)
     });
 
     knex.destroy();
-
+    BaseModel.knex().destroy();
     if (didAthing)
     {
         console.log(green, '...done!');

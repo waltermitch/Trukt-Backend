@@ -10,7 +10,7 @@ let api;
 
 class Graph
 {
-    static async connect()
+    static async connect(keepAlive = true)
     {
         if (!api?.expCheck())
         {
@@ -22,7 +22,7 @@ class Graph
             {
                 api = new HTTPS(opts);
 
-                api.connect();
+                api.connect(keepAlive);
             }
 
             // set exp
@@ -35,9 +35,9 @@ class Graph
         return api.instance;
     }
 
-    static async getGroupMembers(groupId)
+    static async getGroupMembers(groupId, keepAlive = true)
     {
-        const graph = await Graph.connect();
+        const graph = await Graph.connect(keepAlive);
 
         const members = await graph.get(`/v1.0/groups/${groupId}/members`);
 
