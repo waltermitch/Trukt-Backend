@@ -31,7 +31,7 @@ class LoadboardRequestService
             LoadboardRequest
                 .query()
                 .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true })
-                .where(ref('extraExternalData:guid').castText(), payload.extraExternalData.guid),
+                .where(ref('extraExternalData:carrierInfo.guid').castText(), payload.extraExternalData.carrierInfo.guid),
             LoadboardPost
                 .query()
                 .findOne('externalPostGuid', payload.extraExternalData.externalOrderID)
@@ -101,7 +101,7 @@ class LoadboardRequestService
             LoadboardRequest
                 .query()
                 .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true })
-                .where(ref('extraExternalData:guid').castText(), payload.extraExternalData.guid),
+                .where(ref('extraExternalData:carrierInfo.guid').castText(), payload.extraExternalData.carrierInfo.guid),
             LoadboardPost
                 .query()
                 .findOne('externalPostGuid', payload.extraExternalData.externalOrderID)
