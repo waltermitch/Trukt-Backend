@@ -1,4 +1,4 @@
-const QBO = require('../../src/QuickBooks/API');
+const QBO = require('../../../src/QuickBooks/API');
 
 exports.seed = function (knex)
 {
