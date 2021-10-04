@@ -28,7 +28,7 @@ exports.seed = function (knex)
                         quantity: 1,
                         damaged: faker.random.arrayElement(ternary_options),
                         inoperable: faker.random.arrayElement(ternary_options),
-                        created_by_guid: '00000000-0000-0000-0000-000000000000',
+                        created_by_guid: '91c185fd-d33a-4664-95ee-0b7d244fcb4b',
                         description: faker.lorem.words()
                     });
                 }
