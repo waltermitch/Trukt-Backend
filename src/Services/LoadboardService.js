@@ -170,14 +170,14 @@ class LoadboardService
             // another loadboard, otherwise first create a posting record and dispatch
             if (!body.loadboard)
             {
-                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills.lines(isNotDeleted, transportOnly).item, dispatches(activeDispatch)]');
+                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), bills.lines(isNotDeleted, transportOnly).item, dispatches(activeDispatch)]');
                 const stops = await this.getFirstAndLastStops(job.stops);
                 Object.assign(job, stops);
             }
             else
             {
                 job = await this.getAllPostingData(jobId, [{ loadboard: body.loadboard }]);
-                job.dispatches = await OrderJobDispatch.query(trx).where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
+                job.dispatches = await OrderJobDispatch.query(trx).where({ jobGuid: jobId }).where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
             }
 
             if (job.isDummy)
