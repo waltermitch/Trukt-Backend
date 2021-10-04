@@ -13,8 +13,8 @@ exports.up = function (knex)
         })
         .createTable(mappings, (table) =>
         {
-            table.integer('account_id').unique().notNullable();
-            table.integer('item_id').notNullable();
+            table.integer('account_id').notNullable();
+            table.integer('item_id').unique().notNullable();
 
             table.foreign('account_id').references('id').inTable(`${schemaName}.${accountsTable}`);
             table.foreign('item_id').references('id').inTable('rcg_tms.invoice_bill_line_items');
