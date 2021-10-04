@@ -938,9 +938,7 @@ class OrderService
                 ]);
 
             /**
-             * terminalsChecked and stopsChecked are the same objects from the user input but they may or may not have the GUID
-             * prvovided by the user, pending on those references are being use in another orders, that is to now if they
-             * have to be created or updated
+             * terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
              */
             const { newOrderContactChecked, terminalsChecked, stopsChecked } = referencesChecked;
 
@@ -955,8 +953,8 @@ class OrderService
                 currentUser, trx
             );
 
-            // Create stop contacts using terminals and return an object to faciliatet access
-            const stopContactsGraphMap = OrderService.createStopContactsMap(stopsChecked, terminalsMap, currentUser, trx);
+            // Create stop contacts using terminals and return an object to faciliatet access, it uses the action from stopsChecked
+            const stopContactsGraphMap = await OrderService.createStopContactsMap(stopsChecked, terminalsMap, currentUser, trx);
 
             const stopsToUpdate = OrderService.createStopsGraph(stopsChecked, terminalsMap, stopContactsGraphMap, currentUser);
             const jobsToUpdate = OrderService.createJobsGraph(jobs, jobTypes, currentUser);
@@ -989,7 +987,8 @@ class OrderService
 
             const orderToUpdate = Order.query(trx).skipUndefined().upsertGraphAndFetch(orderGraph, {
                 relate: true,
-                noDelete: true
+                noDelete: true,
+                allowRefs: true
             });
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
@@ -1040,33 +1039,18 @@ class OrderService
     }
     static async getStopsWithInfoChecked(stop, orderGuid)
     {
-        // If no contact is provided, then this value is not use
-        let stopPrimaryContactPromise = 'createNewTerminalContact';
-        let stopAlternativeContactPromise = 'createNewTerminalContact';
+        const contacTypes = ['primaryContact', 'alternativeContact'];
+        const contactsActionPromise = contacTypes.map(contactType =>
+            OrderService.checkTerminalContacReference(stop[contactType], orderGuid)
+        );
 
-        if (stop.primaryContact?.guid)
-            stopPrimaryContactPromise = OrderService.checkTerminalContacReference(stop.primaryContact.guid, orderGuid);
+        const [primaryContactAction, alternativeContactAction] = await Promise.all(contactsActionPromise);
 
-        if (stop.alternativeContact?.guid)
-            stopAlternativeContactPromise = OrderService.checkTerminalContacReference(stop.alternativeContact.guid, orderGuid);
-
-        const [primaryContactResolve, alternativeContactResolve] = await Promise.all([stopPrimaryContactPromise, stopAlternativeContactPromise]);
-
-        const stopChecked = stop;
-
-        // Remove guid if needs to be created
-        if (stop.primaryContact && Object.keys(stop.primaryContact).length > 0 && primaryContactResolve === 'createNewTerminalContact')
-        {
-            const { guid: stopPrimaryContactGuid, ...newStopPrimaryContactData } = stop.primaryContact;
-            stopChecked.primaryContact = newStopPrimaryContactData;
-        }
-
-        // Remove guid if needs to be created
-        if (stop.alternativeContact && Object.keys(stop.alternativeContact).length > 0 && alternativeContactResolve === 'createNewTerminalContact')
-        {
-            const { guid: stopAlternativeContactGuid, ...newStopAlternativeContactData } = stop.alternativeContact;
-            stopChecked.alternativeContact = newStopAlternativeContactData;
-        }
+        const stopChecked = {
+            primaryContactAction,
+            alternativeContactAction,
+            ...stop
+        };
 
         return stopChecked;
     }
@@ -1074,19 +1058,11 @@ class OrderService
     static async getTerminalWithInfoChecked(terminal, orderGuid)
     {
         let terminalPromise = 'createNewTerminal';
-        let terminalPrimaryContactPromise = 'createNewTerminalContact';
-        let terminalAlternativeContactPromise = 'createNewTerminalContact';
 
         if (terminal.guid)
             terminalPromise = OrderService.checkTerminalReference(terminal.guid, orderGuid);
 
-        if (terminal.primaryContact?.guid)
-            terminalPrimaryContactPromise = OrderService.checkTerminalContacReference(terminal.primaryContact?.guid, orderGuid);
-
-        if (terminal.alternativeContact?.guid)
-            terminalAlternativeContactPromise = OrderService.checkTerminalContacReference(terminal.alternativeContact?.guid, orderGuid);
-
-        const [terminalResolve, primaryContactResolve, alternativeContactResolve] = await Promise.all([terminalPromise, terminalPrimaryContactPromise, terminalAlternativeContactPromise]);
+        const terminalResolve = await terminalPromise;
 
         let terminalChecked = terminal;
 
@@ -1095,20 +1071,6 @@ class OrderService
         {
             const { guid: terminalGuid, ...newTerminalData } = terminal;
             terminalChecked = newTerminalData;
-        }
-
-        // Remove guid if needs to be created
-        if (terminal.primaryContact && Object.keys(terminal.primaryContact).length > 0 && primaryContactResolve === 'createNewTerminalContact')
-        {
-            const { guid: terminalPrimaryConatctGuid, ...newTerminalPrimaryContactData } = terminal.primaryContact;
-            terminalChecked.primaryContact = newTerminalPrimaryContactData;
-        }
-
-        // Remove guid if needs to be created
-        if (terminal.alternativeContact && Object.keys(terminal.alternativeContact).length > 0 && alternativeContactResolve === 'createNewTerminalContact')
-        {
-            const { guid: terminalAlternativeConatctGuid, ...newTerminalAlternativeContactData } = terminal.alternativeContact;
-            terminalChecked.alternativeContact = newTerminalAlternativeContactData;
         }
 
         return terminalChecked;
@@ -1137,20 +1099,45 @@ class OrderService
         return 'updateContact';
     }
 
-    // If TerminalContact is being reference elseWhere, a new contact will be created
-    static async checkTerminalContacReference(terminalContacGuid, orderGuid)
+    /**
+     * This check is to avoid creating innecesary entries, we check by guid first to know if that TC can be updated or not
+     * TC: Terminal contact
+     * Key: The primary compaund key of a TC, TerminalGuid, name and phoneNumber
+     * Rules:
+     * 1) If non GUID is provided -> findOrCreate
+     * 2) If GUID is provided -> Check if TC being used in other orders
+     *    -> If it is being use -> findOrCreate (You can not update it, you can use the TC if exists or create a new one)
+     *    -> If it is not used -> findAndUpdate (You can updated the Key if new one does not exists in DB, if it does, use the existing TC, if not, use current TC,
+     *      then update the TC with the new information), this is in case you try to change the name, but that TC key exists, so we need to use the existing TC, but that
+     *      TC does not have the new email or mobileNumber, so if needs to updated)
+     * @param {*} terminalContacGuid
+     * @param {*} orderGuid
+     * @param {*} stopTerminalContactInput
+     * @returns string with the action to perform later by updateCreateStopContacts function
+     */
+    static async checkTerminalContacReference(terminalContact, orderGuid)
     {
-        const [{ count }] = await OrderStopLink.query().count('orderGuid').whereIn(
-            'stopGuid', OrderStop.query().select('guid').whereIn(
-                'terminalGuid', Terminal.query().select('guid').whereIn(
-                    'guid', Contact.query().select('terminalGuid').where('guid', terminalContacGuid)
+        if (terminalContact === null)
+            return 'remove';
+        else if (terminalContact === undefined)
+            return 'nothingToDo';
+        else if (terminalContact?.guid === undefined)
+            return 'findOrCreate';
+        else
+        {
+            const [{ count }] = await OrderStopLink.query().count('orderGuid').whereIn(
+                'stopGuid', OrderStop.query().select('guid').whereIn(
+                    'terminalGuid', Terminal.query().select('guid').whereIn(
+                        'guid', Contact.query().select('terminalGuid').where('guid', terminalContact.guid)
+                    )
                 )
-            )
-        ).andWhereNot('orderGuid', orderGuid);
+            ).andWhereNot('orderGuid', orderGuid);
+            const useInOtherOrders = count > 0 ? true : false;
 
-        if (count > 0)
-            return 'createNewTerminalContact';
-        return 'updateTerminalContact';
+            if (useInOtherOrders)
+                return 'findOrCreate';
+            return 'findAndUpdate';
+        }
     }
 
     // If Terminal is being reference elseWhere, a new terminal will be created
@@ -1238,8 +1225,6 @@ class OrderService
     static async updateCreateTerminal(terminalInput, currentUser, trx)
     {
         const { index,
-            primaryContact: primaryContactInput,
-            alternativeContact: alternativeContactInput,
             ...terminalData
         } = terminalInput;
 
@@ -1247,7 +1232,7 @@ class OrderService
          * If only has 1 property for GUID, it is not necessary to update it because that means
          * the terminal is only being use to reference other elements in the update
          */
-        if (Object.keys(terminalData).length === 1 && !primaryContactInput && !alternativeContactInput)
+        if (Object.keys(terminalData).length === 1)
             return { terminal: terminalData, index };
 
         const terminal = Terminal.fromJson(terminalData);
@@ -1275,14 +1260,16 @@ class OrderService
 
         return terminalContactGraph;
     }
-    static createStopContactsMap(stops, terminalsMap, currentUser, trx)
+    static async createStopContactsMap(stops, terminalsMap, currentUser, trx)
     {
         const stopsWithContacts = stops?.filter(stop => OrderStop.hasContact(stop) || OrderStop.removeContact(stop)) || [];
-        const stopsContactsToUpdate = stopsWithContacts?.map(stopWithContact =>
+        const stopsContactsToUpdate = [];
+        for (const stopWithContact of stopsWithContacts)
         {
             const terminal = terminalsMap[stopWithContact.terminal];
-            return OrderService.updateCreateStopContacts(stopWithContact, terminal, currentUser, trx);
-        });
+            const stopContactsUpdated = await OrderService.updateCreateStopContacts(stopWithContact, terminal, currentUser, trx);
+            stopsContactsToUpdate.push(stopContactsUpdated);
+        }
 
         return stopsContactsToUpdate.reduce((map, { contacts, index }) =>
         {
@@ -1321,18 +1308,87 @@ class OrderService
         return { orderContactCreated, commoditiesMap, terminalsMap };
     }
 
-    static updateCreateStopContacts(stopWithContactInput, terminal, currentUser)
+    /**
+     * This returns the terminal contacts wether they are creates, found or updated. depending on the action it has to be performed.
+     * each stopWithContactInput has a parametter call primaryContactAction or alternativeContactAction with teh following values:
+     * 1) remove: The conatct should be removed from teh stop
+     * 2) findOrCreate: The contact maybe exists, so it should be search by KEY (name, phoneNumber and temrinalGuid), if it is found the use that one, if not create a new one
+     * 3) findAndUpdate: The contact should be reuse, find if there is a TC with the same key, if so, use that one if not, use the existing one, after either case, we can
+     *      update the information
+     * 4) nothingToDo: The contact was not pass so there is nothing to do
+     * @param {*} stopWithContactInput
+     * @param {*} terminal
+     * @param {*} terminalContactsNoDuplicates
+     * @param {*} currentUser
+     * @returns
+     */
+    static async updateCreateStopContacts(stopWithContactInput, terminal, currentUser, trx)
     {
-        const { primaryContact, alternativeContact, index } = stopWithContactInput;
+        const contacTypes = ['primaryContact', 'alternativeContact'];
+        const contactsUpdated = {
+            primaryContact: undefined,
+            alternativeContact: undefined
+        };
+        for (const contactType of contacTypes)
+        {
+            const contactAction = stopWithContactInput[`${contactType}Action`];
+            const contactInput = stopWithContactInput[contactType];
 
-        const primaryContactGraph = primaryContact && OrderService.createTerminalContactGraph(primaryContact, terminal, currentUser);
-        const alternativeContactGraph = alternativeContact && OrderService.createTerminalContactGraph(alternativeContact, terminal, currentUser);
+            switch (contactAction)
+            {
+                case 'findOrCreate':
+                    const terminalContactFound = await Contact.query().findOne({
+                        terminalGuid: terminal.guid,
+                        name: contactInput.name,
+                        phoneNumber: contactInput.phoneNumber
+                    });
+
+                    // Contact exists, now we have to add non essential information
+                    if (terminalContactFound)
+                    {
+                        terminalContactFound.setUpdatedBy(currentUser);
+                        terminalContactFound.email = contactInput.email;
+                        terminalContactFound.mobileNumber = contactInput.mobileNumber;
+                        contactsUpdated[contactType] = await Contact.query(trx).patchAndFetchById(terminalContactFound.guid, terminalContactFound);
+                    }
+                    else
+                    {
+                        // Guid is not use because it has to be created
+                        const { guid, ...contactData } = contactInput;
+                        const contactGraphToCreate = OrderService.createTerminalContactGraph(contactData, terminal, currentUser);
+                        contactsUpdated[contactType] = await Contact.query(trx).insertAndFetch(contactGraphToCreate);
+                    }
+                    break;
+                case 'findAndUpdate':
+                    let terminalContactToUpdate = await Contact.query().findOne({
+                        terminalGuid: terminal.guid,
+                        name: contactInput.name,
+                        phoneNumber: contactInput.phoneNumber
+                    });
+
+                    // Update contact with new information
+                    if (terminalContactToUpdate)
+                    {
+                        terminalContactToUpdate.setUpdatedBy(currentUser);
+                        terminalContactToUpdate.email = contactInput.email;
+                        terminalContactToUpdate.mobileNumber = contactInput.mobileNumber;
+                    }
+                    else
+                        terminalContactToUpdate = OrderService.createTerminalContactGraph(contactInput, terminal, currentUser);
+
+                    contactsUpdated[contactType] = await Contact.query(trx).patchAndFetchById(terminalContactToUpdate.guid, terminalContactToUpdate);
+                    break;
+                default:
+                    // Null means that should be delete, the real remove happens in createSingleStopGraph
+                    contactsUpdated[contactType] = contactAction === 'remove' ? null : undefined;
+            }
+        }
 
         return {
-            index,
+            index: stopWithContactInput.index,
             contacts: {
-                primaryContact: primaryContactGraph,
-                alternativeContact: alternativeContactGraph
+                primaryContact: contactsUpdated.primaryContact,
+                alternativeContact: contactsUpdated.alternativeContact
             }
         };
     }
@@ -1341,7 +1397,10 @@ class OrderService
     {
         return stopsInput?.map(stop =>
         {
-            // commodities, primaryContact, alternativeContact are remove from the rest of stopData because they are not use in this step
+            /**
+             * commodities, primaryContact, alternativeContact, primaryContactAction and alternativeContactAction
+             * are remove from the rest of stopData because they are not use in this step
+             */
             const { index: stopIndex,
                 terminal: terminalIndex,
                 // eslint-disable-next-line no-unused-vars
@@ -1350,6 +1409,10 @@ class OrderService
                 alternativeContact: alternativeContactDataNotUseHere,
                 // eslint-disable-next-line no-unused-vars
                 commodities: commoditiesDataNotUseHere,
+                // eslint-disable-next-line no-unused-vars
+                primaryContactAction,
+                // eslint-disable-next-line no-unused-vars
+                alternativeContactAction,
                 ...stopData
             } = stop;
 
@@ -1377,10 +1440,6 @@ class OrderService
         return stop;
     }
 
-    /**
-     * If TerminalContact only contains terminalGuid and createdBy,
-     * it means the TerminalContact reference can be deleted
-     */
     static isTerminalContactToBeDeleted(terminalContact)
     {
         if (terminalContact === null)
