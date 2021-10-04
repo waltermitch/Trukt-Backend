@@ -12,6 +12,7 @@ class ExpenseService
             notes: data.notes,
             amount: data.amount,
             itemId: data.itemId,
+            isPaid: data?.isPaid,
             commodityGuid: data.commodityGuid,
             updatedByGuid: user
         };
@@ -38,6 +39,7 @@ class ExpenseService
                     notes: data.notes,
                     amount: data.amount,
                     itemId: data.itemId,
+                    isPaid: data?.isPaid,
                     commodityGuid: data.commodityGuid || undefined,
                     createdByGuid: user
                 };
@@ -127,7 +129,23 @@ class ExpenseService
         // clean
         guid = guid.replace(/%/g, '');
 
-        const res = await Line.query().findOne({ 'guid': guid, 'isDeleted': false }).withGraphJoined('item');
+        const res = await Line.query()
+            .findOne({ 'invoice_bill_lines.guid': guid, 'invoice_bill_lines.isDeleted': false })
+            .withGraphJoined('invoiceBill.[order.client,job.vendor]').withGraphJoined('item');
+
+        if (res.invoiceBill.job)
+        {
+            res.jobNumber = res.invoiceBill.job.number;
+            res.vendor = res.invoiceBill.job.vendor.name;
+        }
+        else
+        {
+            res.orderNumber = res.invoiceBill.order.number;
+            res.client = res.invoiceBill.order.client.name;
+        }
+
+        // remove invoiceBill
+        delete res.invoiceBill;
 
         return res;
     }
@@ -143,19 +161,29 @@ class ExpenseService
 
         // get order with jobs and invoices and bills and lines
         const order = await Order.query().skipUndefined().findById(orderGuid)
-            .withGraphJoined('jobs.bills.lines.item').withGraphJoined('invoices.lines.item');
+            .withGraphJoined('jobs.[bills.lines.item, vendor]').withGraphJoined('[invoices.[lines.item], client]');
 
         // get all lines
         let expenses = [];
 
         // map lines
         for (const invoice of order.invoices)
-            expenses = expenses.concat(invoice.lines);
+            expenses = expenses.concat(invoice.lines.map((e) =>
+            {
+                e.orderNumber = order.number;
+                e.client = order.client.name;
+                return e;
+            }));
 
         // map lines
         for (const job of order.jobs)
             for (const bill of job.bills)
-                expenses = expenses.concat(bill.lines);
+                expenses = expenses.concat(bill.lines.map((e) =>
+                {
+                    e.jobNumber = job.number;
+                    e.vendor = job.vendor?.name;
+                    return e;
+                }));
 
         return expenses;
     }
