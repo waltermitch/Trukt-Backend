@@ -17,7 +17,7 @@ class InvoiceService
     static async createInvoices(arr)
     {
         // query to get all the orders with related objects
-        const qb = Order.query().withGraphFetched('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item]], client]');
+        const qb = Order.query().withGraphFetched('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item.qbAccount]], client]');
 
         // append all the order guids
         for (const guid of arr)

@@ -15,7 +15,7 @@ class BillService
 
     static async createBills(arr)
     {
-        const qb = OrderJob.query().withGraphFetched('[bills.[lines.[commodity.[stops.[terminal]], item]], vendor]');
+        const qb = OrderJob.query().withGraphFetched('[bills.[lines.[commodity.[stops.[terminal]], item.qbAccount]], vendor]');
 
         for (const guid of arr)
             qb.orWhere('guid', '=', guid);
