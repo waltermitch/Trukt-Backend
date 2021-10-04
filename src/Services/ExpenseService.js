@@ -25,62 +25,83 @@ class ExpenseService
     {
         const results = [];
 
-        for (const data of arr)
+        // start transaction
+        const trx = await Line.startTransaction();
+
+        try
         {
-            // compose payload
-            const payload =
+            for (const data of arr)
             {
-                notes: data.notes,
-                amount: data.amount,
-                itemId: data.itemId,
-                commodityGuid: data.commodityGuid || undefined,
-                createdByGuid: user
-            };
+                // compose payload
+                const payload =
+                {
+                    notes: data.notes,
+                    amount: data.amount,
+                    itemId: data.itemId,
+                    commodityGuid: data.commodityGuid || undefined,
+                    createdByGuid: user
+                };
 
-            let res;
+                let res;
 
-            // check if there is a reimbursement
-            if (data.reimbursement && data.orderGuid && data.jobGuid)
-            {
-                // find an invoice and a bill
-                const proms = await Promise.all(
-                    [Bill.query().findOne({ 'job_guid': data.jobGuid }), Invoice.query().findOne({ 'order_guid': data.orderGuid })]);
+                // check if there is a reimbursement
+                // removing reimbursement for now - not MVP
+                // if (data.reimbursement && data.orderGuid && data.jobGuid)
+                // {
+                //     // find an invoice and a bill
+                //     const proms = await Promise.all(
+                //         [Bill.query().findOne({ 'job_guid': data.jobGuid }), Invoice.query().findOne({ 'order_guid': data.orderGuid })]);
 
-                // compose 2 payloads
-                const bill = Object.assign({ invoiceGuid: proms[0].billGuid }, payload);
-                const invoice = Object.assign({ invoiceGuid: proms[1].invoiceGuid }, payload);
+                //     // compose 2 payloads
+                //     const bill = Object.assign({ invoiceGuid: proms[0].billGuid }, payload);
+                //     const invoice = Object.assign({ invoiceGuid: proms[1].invoiceGuid }, payload);
 
-                // set invoice amount to reimbursement amount
-                invoice.amount = data.reimbursement;
+                //     // set invoice amount to reimbursement amount
+                //     invoice.amount = data.reimbursement;
 
-                // create 2 lines
-                res = await Promise.all([Line.query().insert(bill), Line.query().insert(invoice)]);
+                //     // create 2 lines
+                //     res = await Promise.all([Line.query().insert(bill), Line.query().insert(invoice)]);
+                // }
+
+                // create line for either job or order
+                if (data.jobGuid)
+                {
+                    const bill = await Bill.query().findOne({ 'job_guid': data.jobGuid });
+
+                    payload.invoiceGuid = bill.billGuid;
+
+                    res = await Line.query().insert(payload);
+                }
+                else if (data.orderGuid)
+                {
+                    const invoice = await Invoice.query().findOne({ 'order_guid': data.orderGuid });
+
+                    payload.invoiceGuid = invoice.invoiceGuid;
+
+                    res = await Line.query().insert(payload);
+                }
+                else
+                {
+                    // throw error
+                    throw { 'status': 400, 'data': 'Job or Order Guid Required' };
+                }
+
+                results.push(res);
             }
-            else if (data.jobGuid)
-            {
-                const bill = await Bill.query().findOne({ 'job_guid': data.jobGuid });
 
-                payload.invoiceGuid = bill.billGuid;
+            // commit transaction
+            await trx.commit();
 
-                res = await Line.query().insert(payload);
-            }
-            else if (data.orderGuid)
-            {
-                const invoice = await Invoice.query().findOne({ 'order_guid': data.orderGuid });
-
-                payload.invoiceGuid = invoice.invoiceGuid;
-
-                res = await Line.query().insert(payload);
-            }
-            else
-            {
-                throw { 'status': 400, 'data': 'Job or Order Guid Required' };
-            }
-
-            results.push(res);
+            return results;
         }
+        catch (err)
+        {
+            // undo transaction
+            await trx.rollback();
 
-        return results;
+            // throw error
+            throw err;
+        }
     }
 
     // mark expense as deleted
