@@ -16,6 +16,9 @@ exports.up = function (knex)
         {
             table.uuid('account_guid').unique().notNullable();
             table.integer('item_id').notNullable();
+
+            table.foreign('account_guid').references('guid').inTable(`${schemaName}.${accountsTable}`);
+            table.foreign('item_id').references('id').inTable('rcg_tms.invoice_bill_line_items');
         });
 };
 
