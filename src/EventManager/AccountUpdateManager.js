@@ -19,6 +19,8 @@ class AccountUpdateManager
 
         const recordType = res.rectype.name;
 
+        const proms = [];
+
         // build generic payload
         const payload =
         {
@@ -49,7 +51,6 @@ class AccountUpdateManager
         };
 
         // make api calls, add additional fields base on recordType
-        let response;
         switch (recordType)
         {
             case 'Client':
@@ -58,7 +59,10 @@ class AccountUpdateManager
                 payload.businessType = res.businessType;
                 payload.notes = res.notes;
 
-                response = await Promise.allSettled([QuickBooksService.upsertClient(payload), Super.upsertClient(payload)]);
+                // push promises to array
+                proms.push({ func: QuickBooksService.upsertClient, payload: payload });
+                proms.push({ func: Super.upsertClient, payload: payload });
+
                 break;
 
             case 'Carrier':
@@ -68,22 +72,26 @@ class AccountUpdateManager
                 payload.insuranceExpiration = res.insuranceExpiration;
                 payload.preferred = res.preferred;
 
-                response = await Promise.allSettled([
-                    QuickBooksService.upsertVendor(payload),
-                    Super.upsertCarrier(payload),
-                    Triumph.createCarrierProfile(payload),
-                    AccountUpdateManager.getShipCarsUpdate(payload)
-                ]);
+                // push promises to array
+                proms.push({ func: QuickBooksService.upsertVendor, payload: payload });
+                proms.push({ func: Super.upsertCarrier, payload: payload });
+                proms.push({ func: Triumph.createCarrierProfile, payload: payload });
+                proms.push({ func: AccountUpdateManager.getShipCarsUpdate, payload: payload });
 
                 break;
 
             case 'Vendor':
-                response = await Promise.allSettled([QuickBooksService.upsertVendor(payload)]);
+                // push promises to array
+                proms.push({ func: QuickBooksService.upsertVendor, payload: payload });
+
                 break;
 
             default:
                 return;
         }
+
+        // execute promises
+        const response = await Promise.allSettled(proms.map(p => p.func(p.payload)));
 
         let update = {};
         for (const r of response)
