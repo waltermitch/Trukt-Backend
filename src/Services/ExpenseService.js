@@ -18,8 +18,6 @@ class ExpenseService
 
         const res = await Line.query().patch(payload).findOne({ 'guid': guid }).returning('*');
 
-        console.log(res);
-
         return res;
     }
 
