@@ -18,6 +18,8 @@ exports.up = function (knex)
 
             table.foreign('account_id').references('id').inTable(`${schemaName}.${accountsTable}`);
             table.foreign('item_id').references('id').inTable('rcg_tms.invoice_bill_line_items');
+
+            table.primary(['item_id', 'account_id']);
         });
 };
 
