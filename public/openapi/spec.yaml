@@ -1000,6 +1000,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               properties:
                 guid:
                   allOf:
@@ -1011,6 +1012,7 @@ paths:
                   description: >-
                     The external identification number the client uses for this
                     order.
+                  nullable: true
                 inspectionType:
                   allOf:
                     - $ref: '#/components/schemas/inspectionType'
@@ -1054,42 +1056,48 @@ paths:
                   maxLength: 1024
                   description: The URL to the Bill of Lading for this order.
                 client:
-                  description: The client that placed the order
-                  anyOf:
+                  allOf:
+                    - description: The client that placed the order
                     - $ref: '#/components/schemas/account'
                 consignee:
-                  description: The party that is responsible for paying for the order
-                  anyOf:
+                  allOf:
+                    - description: The party that is responsible for paying for the order
                     - $ref: '#/components/schemas/account'
                 clientContact:
                   description: The contact that works for the client.
                   type: object
-                  additionalProperties: false
-                  properties:
-                    guid:
-                      $ref: '#/components/schemas/guid'
-                    name:
-                      type: string
-                      minLength: 1
-                      maxLength: 121
-                    email:
-                      $ref: '#/components/schemas/email'
-                    phoneNumber:
-                      $ref: '#/components/schemas/phoneNumber'
-                    mobileNumber:
-                      $ref: '#/components/schemas/phoneNumber'
+                  nullable: true
+                  anyOf:
+                    - additionalProperties: false
+                      properties:
+                        guid:
+                          $ref: '#/components/schemas/guid'
+                        name:
+                          type: string
+                          minLength: 1
+                          maxLength: 121
+                        email:
+                          $ref: '#/components/schemas/email'
+                        phoneNumber:
+                          $ref: '#/components/schemas/phoneNumber'
+                        mobileNumber:
+                          $ref: '#/components/schemas/phoneNumber'
+                    - additionalProperties: false
+                      properties:
+                        guid:
+                          $ref: '#/components/schemas/guid'
                 dispatcher:
-                  description: The dispatcher responsible for this order.
-                  anyOf:
-                    - $ref: '#/components/schemas/guidObject'
+                  allOf:
+                    - description: The dispatcher responsible for this order.
+                    - $ref: '#/components/schemas/guidObjectNullable'
                 referrer:
-                  description: The account that referred this order to us.
-                  anyOf:
-                    - $ref: '#/components/schemas/guidObject'
+                  allOf:
+                    - description: The account that referred this order to us.
+                    - $ref: '#/components/schemas/guidObjectNullable'
                 salesperson:
-                  description: The salesperson responsible for managing this order.
-                  anyOf:
-                    - $ref: '#/components/schemas/guidObject'
+                  allOf:
+                    - description: The salesperson responsible for managing this order.
+                    - $ref: '#/components/schemas/guidObjectNullable'
                 jobs:
                   type: array
                   description: >-
@@ -1118,52 +1126,26 @@ paths:
                               - description: This field currently has not use.
                           vendor:
                             allOf:
-                              - $ref: '#/components/schemas/guidObject'
+                              - $ref: '#/components/schemas/guidObjectNullable'
                               - description: >-
                                   The vendor or carrier responsible for
                                   completing this job.
                           vendorContact:
-                            type: object
-                            additionalProperties: false
-                            properties:
-                              guid:
-                                $ref: '#/components/schemas/guid'
-                              name:
-                                type: string
-                                minLength: 1
-                                maxLength: 121
-                              email:
-                                $ref: '#/components/schemas/email'
-                              phoneNumber:
-                                $ref: '#/components/schemas/phoneNumber'
-                              mobileNumber:
-                                $ref: '#/components/schemas/phoneNumber'
-                            description: >-
-                              The vendor or carrier contact that can be
-                              contacted if any questions arise.
+                            allOf:
+                              - description: >-
+                                  The vendor or carrier contact that can be
+                                  contacted if any questions arise.
+                              - $ref: '#/components/schemas/guidObjectNullable'
                           vendorAgent:
-                            type: object
-                            additionalProperties: false
-                            properties:
-                              guid:
-                                $ref: '#/components/schemas/guid'
-                              name:
-                                type: string
-                                minLength: 1
-                                maxLength: 121
-                              email:
-                                $ref: '#/components/schemas/email'
-                              phoneNumber:
-                                $ref: '#/components/schemas/phoneNumber'
-                              mobileNumber:
-                                $ref: '#/components/schemas/phoneNumber'
-                            description: >-
-                              The vendor or carrier employee that will be
-                              completing the job. Usually for carriers this is
-                              the driver.
+                            allOf:
+                              - description: >-
+                                  The vendor or carrier employee that will be
+                                  completing the job. Usually for carriers this
+                                  is the driver.
+                              - $ref: '#/components/schemas/guidObjectNullable'
                           dispatcher:
                             allOf:
-                              - $ref: '#/components/schemas/guidObject'
+                              - $ref: '#/components/schemas/guidObjectNullable'
                               - description: >-
                                   The dispatcher who is responsible for managing
                                   this job.
@@ -1228,121 +1210,134 @@ paths:
                     allOf:
                       - $ref: '#/components/schemas/guidObject'
                       - $ref: '#/components/schemas/indexObject'
-                      - type: object
-                        properties:
-                          guid:
-                            $ref: '#/components/schemas/guid'
-                          index:
-                            description: >
-                              A unique arbitrary string that will be used to
-                              reference this stop record inside of other
-                              objects.
-                            type: string
-                            nullable: true
-                          sequence:
-                            type: integer
-                            description: >-
-                              The order in which the stops need to be visited.
-                              This number should be assigned in increasing
-                              order. Magnitude is arbitrary.
-                            nullable: false
-                          stopType:
-                            $ref: '#/components/schemas/stopType'
-                          notes:
-                            description: Used to convey any instructions about the stops.
-                            type: string
-                            nullable: true
-                          dateRequestedStart:
-                            description: >
-                              This date is requested by the customer. The
-                              earliest date this stop should be worked.
-                            type: string
-                            format: date-time
-                            example: '2021-09-09T13:45:45.000Z'
-                            nullable: true
-                          dateRequestedEnd:
-                            description: >
-                              This date is requested by the customer. The latest
-                              date this stop should be worked.
-                            type: string
-                            format: date-time
-                            example: '2021-09-09T13:45:45.000Z'
-                            nullable: true
-                          dateRequestedType:
-                            description: >-
-                              Defines the type of requested date the customer
-                              requested.
-                            $ref: '#/components/schemas/stopDateType'
-                          dateEstimatedStart:
-                            description: >
-                              This date is submitted by the carrier/vendor. The
-                              earliest date this stop could be worked.
-                            type: string
-                            format: date-time
-                            example: '2021-09-09T13:45:45.000Z'
-                            nullable: true
-                          dateEstimatedEnd:
-                            description: >
-                              This date is submitted by the carrier/vendor. The
-                              latest date this stop could be worked.
-                            type: string
-                            format: date-time
-                            example: '2021-09-09T13:45:45.000Z'
-                            nullable: true
-                          dateEstimatedType:
-                            description: >-
-                              Defines the type of estimated date the
-                              carrier/vendor submitted.
-                            $ref: '#/components/schemas/stopDateType'
-                          dateScheduledStart:
-                            description: >
-                              This date is submitted by the dispatcher. The
-                              earliest date this stop will be worked
-                            type: string
-                            format: date-time
-                            example: '2021-09-09T13:45:45.000Z'
-                            nullable: true
-                          dateScheduledEnd:
-                            description: >
-                              This date is submitted by the dispatcher. The
-                              latest date this stop will be worked
-                            type: string
-                            format: date-time
-                            example: '2021-09-09T13:45:45.000Z'
-                            nullable: true
-                          dateScheduledType:
-                            description: >-
-                              Defined the type of scheduled date the dispatcher
-                              submitted.
-                            $ref: '#/components/schemas/stopDateType'
-                          primaryContact:
-                            $ref: '#/components/schemas/Contact'
-                          alternativeContact:
-                            $ref: '#/components/schemas/Contact'
-                          terminal:
-                            type: string
-                            description: >-
-                              The value of the index field from a Terminal in
-                              this payload.
-                            nullable: false
-                          commodities:
-                            type: array
-                            minLength: 1
-                            items:
-                              type: object
-                              properties:
-                                index:
-                                  type: string
-                                  description: >-
-                                    The value of the index field from a
-                                    Commodity in this payload.
-                                lotNumber:
-                                  type: string
-                                  description: >-
-                                    The lot number for this commodity at this
-                                    stop.
-                              required:
-                                - index
+                      - anyOf:
+                          - type: object
+                            properties:
+                              primaryContact:
+                                anyOf:
+                                  - $ref: '#/components/schemas/guidObjectNullable'
+                                  - $ref: '#/components/schemas/Contact'
+                              alternativeContact:
+                                anyOf:
+                                  - $ref: '#/components/schemas/guidObjectNullable'
+                                  - $ref: '#/components/schemas/Contact'
+                          - type: object
+                            properties:
+                              guid:
+                                $ref: '#/components/schemas/guid'
+                              index:
+                                description: >
+                                  A unique arbitrary string that will be used to
+                                  reference this stop record inside of other
+                                  objects.
+                                type: string
+                                nullable: true
+                              sequence:
+                                type: integer
+                                description: >-
+                                  The order in which the stops need to be
+                                  visited. This number should be assigned in
+                                  increasing order. Magnitude is arbitrary.
+                                nullable: false
+                              stopType:
+                                $ref: '#/components/schemas/stopType'
+                              notes:
+                                description: >-
+                                  Used to convey any instructions about the
+                                  stops.
+                                type: string
+                                nullable: true
+                              dateRequestedStart:
+                                description: >
+                                  This date is requested by the customer. The
+                                  earliest date this stop should be worked.
+                                type: string
+                                format: date-time
+                                example: '2021-09-09T13:45:45.000Z'
+                                nullable: true
+                              dateRequestedEnd:
+                                description: >
+                                  This date is requested by the customer. The
+                                  latest date this stop should be worked.
+                                type: string
+                                format: date-time
+                                example: '2021-09-09T13:45:45.000Z'
+                                nullable: true
+                              dateRequestedType:
+                                description: >-
+                                  Defines the type of requested date the
+                                  customer requested.
+                                $ref: '#/components/schemas/stopDateType'
+                              dateEstimatedStart:
+                                description: >
+                                  This date is submitted by the carrier/vendor.
+                                  The earliest date this stop could be worked.
+                                type: string
+                                format: date-time
+                                example: '2021-09-09T13:45:45.000Z'
+                                nullable: true
+                              dateEstimatedEnd:
+                                description: >
+                                  This date is submitted by the carrier/vendor.
+                                  The latest date this stop could be worked.
+                                type: string
+                                format: date-time
+                                example: '2021-09-09T13:45:45.000Z'
+                                nullable: true
+                              dateEstimatedType:
+                                description: >-
+                                  Defines the type of estimated date the
+                                  carrier/vendor submitted.
+                                $ref: '#/components/schemas/stopDateType'
+                              dateScheduledStart:
+                                description: >
+                                  This date is submitted by the dispatcher. The
+                                  earliest date this stop will be worked
+                                type: string
+                                format: date-time
+                                example: '2021-09-09T13:45:45.000Z'
+                                nullable: true
+                              dateScheduledEnd:
+                                description: >
+                                  This date is submitted by the dispatcher. The
+                                  latest date this stop will be worked
+                                type: string
+                                format: date-time
+                                example: '2021-09-09T13:45:45.000Z'
+                                nullable: true
+                              dateScheduledType:
+                                description: >-
+                                  Defined the type of scheduled date the
+                                  dispatcher submitted.
+                                $ref: '#/components/schemas/stopDateType'
+                              primaryContact:
+                                $ref: '#/components/schemas/Contact'
+                              alternativeContact:
+                                $ref: '#/components/schemas/Contact'
+                              terminal:
+                                type: string
+                                description: >-
+                                  The value of the index field from a Terminal
+                                  in this payload.
+                                nullable: false
+                              commodities:
+                                type: array
+                                minLength: 1
+                                items:
+                                  type: object
+                                  properties:
+                                    index:
+                                      type: string
+                                      description: >-
+                                        The value of the index field from a
+                                        Commodity in this payload.
+                                    lotNumber:
+                                      type: string
+                                      description: >-
+                                        The lot number for this commodity at
+                                        this stop.
+                                  required:
+                                    - index
                 terminals:
                   type: array
                   items:
@@ -1467,7 +1462,7 @@ paths:
                   updatedByGuid:
                     $ref: '#/components/schemas/updatedByGuid'
                   referenceNumber:
-                    $ref: '#/components/schemas/referenceNumber'
+                    $ref: '#/components/schemas/properties-referenceNumber'
                   inspectionType:
                     $ref: '#/components/schemas/properties-inspectionType'
                   isTender:
@@ -1498,7 +1493,7 @@ paths:
                       - $ref: '#/components/schemas/properties-client'
                       - $ref: '#/components/schemas/Account_client'
                   consignee:
-                    $ref: '#/components/schemas/properties-consignee'
+                    $ref: '#/components/schemas/consignee'
                   jobs:
                     type: array
                     items:
@@ -3684,6 +3679,14 @@ components:
         - $ref: '#/components/schemas/guidObject'
         - $ref: '#/components/schemas/Commodity with Type ID'
         - $ref: '#/components/schemas/Commodity with Category and Type'
+    guidObjectNullable:
+      type: object
+      nullable: true
+      required:
+        - guid
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
     CommodityUpdate:
       allOf:
         - type: object
@@ -3751,42 +3754,49 @@ components:
                   minimum: 1
                   maximum: 23
             - $ref: '#/components/schemas/CommodityCategory'
+    properties-referenceNumber:
+      type: string
+      maxLength: 64
+      description: The external identification number the client uses for this order.
+      nullable: true
     properties-clientContact:
       description: The contact that works for the client.
       type: object
-      additionalProperties: false
-      properties:
-        guid:
-          $ref: '#/components/schemas/guid'
-        name:
-          type: string
-          minLength: 1
-          maxLength: 121
-        email:
-          $ref: '#/components/schemas/email'
-        phoneNumber:
-          $ref: '#/components/schemas/phoneNumber'
-        mobileNumber:
-          $ref: '#/components/schemas/phoneNumber'
+      nullable: true
+      anyOf:
+        - additionalProperties: false
+          properties:
+            guid:
+              $ref: '#/components/schemas/guid'
+            name:
+              type: string
+              minLength: 1
+              maxLength: 121
+            email:
+              $ref: '#/components/schemas/email'
+            phoneNumber:
+              $ref: '#/components/schemas/phoneNumber'
+            mobileNumber:
+              $ref: '#/components/schemas/phoneNumber'
+        - additionalProperties: false
+          properties:
+            guid:
+              $ref: '#/components/schemas/guid'
     properties-dispatcher:
-      description: The dispatcher responsible for this order.
-      anyOf:
-        - $ref: '#/components/schemas/guidObject'
+      allOf:
+        - description: The dispatcher responsible for this order.
+        - $ref: '#/components/schemas/guidObjectNullable'
     properties-referrer:
-      description: The account that referred this order to us.
-      anyOf:
-        - $ref: '#/components/schemas/guidObject'
+      allOf:
+        - description: The account that referred this order to us.
+        - $ref: '#/components/schemas/guidObjectNullable'
     properties-salesperson:
-      description: The salesperson responsible for managing this order.
-      anyOf:
-        - $ref: '#/components/schemas/guidObject'
+      allOf:
+        - description: The salesperson responsible for managing this order.
+        - $ref: '#/components/schemas/guidObjectNullable'
     properties-client:
-      description: The client that placed the order
-      anyOf:
-        - $ref: '#/components/schemas/account'
-    properties-consignee:
-      description: The party that is responsible for paying for the order
-      anyOf:
+      allOf:
+        - description: The client that placed the order
         - $ref: '#/components/schemas/account'
     page:
       description: 'For pagination purposes, page to return.'
@@ -3854,6 +3864,65 @@ components:
         - CENTRALDISPATCH
         - SHIPCARS
         - CARDELIVERYNETWORK
+    extraExternalData:
+      type: object
+      description: extra data that varries depending incoming posting
+      properties:
+        carrierInfo:
+          type: object
+          description: carrierInfo object that holds carrier contact information .
+          properties:
+            guid:
+              type: string
+              description: ID or GUID of the carrier.
+            name:
+              type: string
+              description: Full name of the carrier.
+              example: RCG Logistics LLC.
+            phone:
+              type: string
+              description: First contact number of the carrier.
+              example: (916) 123-4566
+            email:
+              type: string
+              description: Contact email address of the carrier.
+              example: dimitar.derentsev+rcg@ship.cars
+            contactName:
+              type: string
+              description: Name of the person who to contact.
+              nullable: true
+              example: First Last
+            address:
+              type: string
+              description: Street name and number from the carrier address.
+              example: 1900 Tech Center Dr.
+            city:
+              type: string
+              description: City name from the carrier address.
+              example: Chicago
+            state:
+              type: string
+              description: Abbreviation of the state from the company address.
+              example: IL
+            zip:
+              type: string
+              description: Zip code from the carrier address.
+              example: 19505
+          required:
+            - guid
+            - name
+            - phone
+            - email
+            - address
+            - city
+            - state
+            - zip
+        externalOrderID:
+          type: string
+          description: order GUID of external post.
+      required:
+        - carrierInfo
+        - externalOrderID
     deletedByGuid:
       allOf:
         - $ref: '#/components/schemas/guid'
@@ -3908,26 +3977,7 @@ components:
           type: string
           example: Becasuse you are cheap.
         extraExternalData:
-          type: object
-          properties:
-            type:
-              type: string
-              example: carrierMisc
-            guid:
-              type: string
-              example: oqg3
-            name:
-              type: string
-              example: RCG Logistics Carrier
-            offerUrl:
-              type: string
-              example: /api/offers/yyqd/
-            carrierUrl:
-              type: string
-              example: /api/companies/oqg3/
-            externalOrderID:
-              type: string
-              example: 3xkq4
+          $ref: '#/components/schemas/extraExternalData'
         isActive:
           type: boolean
           example: true
@@ -3973,27 +4023,6 @@ components:
           $ref: '#/components/schemas/updatedByGuid'
         deletedByGuid:
           $ref: '#/components/schemas/deletedByGuid'
-    extraExternalData:
-      type: object
-      description: extra data that varries depending incoming posting
-      properties:
-        type:
-          type: string
-          description: Simple explantation of what object contains (useless)
-        guid:
-          type: string
-          description: ID or GUID of the carrier
-        name:
-          type: string
-          description: Name of the carrier
-        externalOrderID:
-          type: string
-          description: order GUID of external post
-      required:
-        - type
-        - guid
-        - name
-        - externalOrderID
     postRequestPayload:
       type: object
       properties:

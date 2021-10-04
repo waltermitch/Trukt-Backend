@@ -1,4 +1,5 @@
-const table_name = 'commodities';
+const SCHEMA_NAME = 'rcg_tms';
+const TABLE_NAME = 'commodities';
 
 /**
  * The purpose of this is to add a dynamic json field onto the commodities table
@@ -7,16 +8,18 @@ const table_name = 'commodities';
  */
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').table(table_name, (table) =>
-    {
-        table.json('extra_external_data');
-    });
+    return knex.schema.withSchema(SCHEMA_NAME)
+        .table(TABLE_NAME, (table) =>
+        {
+            table.json('extra_external_data');
+        });
 };
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').table(table_name, (table) =>
-    {
-        table.dropColumn('extra_external_data');
-    });
+    return knex.schema.withSchema(SCHEMA_NAME)
+        .table(TABLE_NAME, (table) =>
+        {
+            table.dropColumn('extra_external_data');
+        });
 };
