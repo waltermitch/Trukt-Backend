@@ -1,30 +1,39 @@
+// new Items
 const items = [
-    { name: 'transport', type: 'revenue' },
-    { name: 'lumper', type: 'revenue' },
-    { name: 'referral', type: 'expense' },
-    { name: 'fuel surcharge', type: 'revenue', is_accessorial: true },
-    { name: 'unloading', type: 'revenue', is_accessorial: true },
-    { name: 'refund', type: 'expense', is_accessorial: false },
-    { name: 'deduction', type: 'expense', is_accessorial: false },
-    { name: 'duplicate car keys', type: 'revenue', is_accessorial: true },
-    { name: 'laser-cut transponder key', type: 'revenue', is_accessorial: true },
-    { name: 'mechanical key', type: 'revenue', is_accessorial: true },
-    { name: 'program car remotes', type: 'revenue', is_accessorial: true },
-    { name: 'program keys', type: 'revenue', is_accessorial: true },
-    { name: 'proximity fob w/last cut key override', type: 'revenue', is_accessorial: true },
-    { name: 'remote/key combo', type: 'revenue', is_accessorial: true },
-    { name: 'replace car fobs', type: 'revenue', is_accessorial: true },
-    { name: 'replace car remotes', type: 'revenue', is_accessorial: true },
-    { name: 'self programmable remote', type: 'revenue', is_accessorial: true },
-    { name: 'sell car remotes', type: 'revenue', is_accessorial: true },
-    { name: 'tibbe key', type: 'revenue', is_accessorial: true },
-    { name: 'transponder key', type: 'revenue', is_accessorial: true },
-    { name: 'Services', type: 'expense', is_accessorial: false }
+    { name: 'Transport', type: 'revenue' },
+    { name: 'Keys', type: 'expense' },
+    { name: 'Storage', type: 'expense' },
+    { name: 'Fuel Surcharge', type: 'expense' },
+    { name: 'Repossession Fee', type: 'expense' },
+    { name: 'Impound Fee', type: 'expense' }
 ];
+
+// old Items made by vlad
+// const items = [
+//     { name: 'Transport', type: 'revenue' },
+//     { name: 'Lumper', type: 'revenue' },
+//     { name: 'Referral', type: 'expense' },
+//     { name: 'Fuel Surcharge', type: 'revenue', is_accessorial: true },
+//     { name: 'Unloading', type: 'revenue', is_accessorial: true },
+//     { name: 'Refund', type: 'expense', is_accessorial: false },
+//     { name: 'Deduction', type: 'expense', is_accessorial: false },
+//     { name: 'Duplicate car keys', type: 'revenue', is_accessorial: true },
+//     { name: 'Laser-Cut Transponder key', type: 'revenue', is_accessorial: true },
+//     { name: 'Mechanical Key', type: 'revenue', is_accessorial: true },
+//     { name: 'Program Car Remotes', type: 'revenue', is_accessorial: true },
+//     { name: 'Program Keys', type: 'revenue', is_accessorial: true },
+//     { name: 'Proximity Fob w/last cut key override', type: 'revenue', is_accessorial: true },
+//     { name: 'Remote/Key Combo', type: 'revenue', is_accessorial: true },
+//     { name: 'Replace Car Fobs', type: 'revenue', is_accessorial: true },
+//     { name: 'Replace Car Remotes', type: 'revenue', is_accessorial: true },
+//     { name: 'Self Programmable Remote', type: 'revenue', is_accessorial: true },
+//     { name: 'Sell Car Remotes', type: 'revenue', is_accessorial: true },
+//     { name: 'Tibbe Key', type: 'revenue', is_accessorial: true },
+//     { name: 'Transponder Key', type: 'revenue', is_accessorial: true },
+//     { name: 'Services', type: 'expense', is_accessorial: false }
+// ];
 
 exports.seed = async function (knex)
 {
-
     return knex('rcg_tms.invoice_bill_line_items').insert(items).onConflict(['name']).ignore();
-
 };
