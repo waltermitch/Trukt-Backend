@@ -1,12 +1,19 @@
 const InvoicePaymentMethod = require('../Models/InvoicePaymentMethod');
 const InvoicePaymentTerm = require('../Models/InvoicePaymentTerm');
-const LineItemMdl = require('../Models/InvoiceLineItem');
+const QBAccount = require('../Models/QBAccount');
 const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
 const Mongo = require('../Mongo');
 const axios = require('axios');
 
-const authConfig = { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': process.env['quickbooks.basicAuth'] } };
+const authConfig =
+{
+    headers:
+    {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': process.env['quickbooks.basicAuth']
+    }
+};
 const authUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const url = process.env['quickbooks.apiUrl'];
 const tokenName = 'qb_access_token';
@@ -123,20 +130,19 @@ class QBO
 
     static async syncListsToDB()
     {
-        const proms = await Promise.all([QBO.getItemTypes(), QBO.getPaymentMethods(), QBO.getPaymentTerms()]);
+        const proms = await Promise.all([QBO.getAccounts(), QBO.getPaymentMethods(), QBO.getPaymentTerms()]);
 
-        const items = proms[0];
-        const methods = proms[1];
-        const terms = proms[2];
+        const accounts = [];
+        proms[0].map((e) =>
+        {
+            if (e?.Description?.includes('EXTERNAL'))
+                accounts.push({ 'name': e.Name, 'id': e.Id });
+        });
 
-        for (const method of methods)
-            await InvoicePaymentMethod.query().insert({ name: method.Name, externalSource: 'QBO', 'externalId': method.Id }).onConflict('externalId').merge();
+        const methods = proms[1].map((e) => { return { 'name': e.Name, 'externalId': e.Id, 'externalSource': 'QBO' }; });
+        const terms = proms[2].map((e) => { return { 'name': e.Name, 'externalId': e.Id, 'externalSource': 'QBO' }; });
 
-        for (const term of terms)
-            await InvoicePaymentTerm.query().insert({ name: term.Name, externalSource: 'QBO', externalId: term.Id }).onConflict('externalId').merge();
-
-        for (const item of items)
-            await LineItemMdl.query().insert({ name: item.Name, isAccessorial: false, isDeprecated: false, externalSourceGuid: item.Id, externalSource: 'QB' }).onConflict('name').merge();
+        await Promise.all([QBAccount.query().insert(accounts).onConflict('id').merge(), InvoicePaymentTerm.query().insert(terms).onConflict('externalId').merge(), InvoicePaymentMethod.query().insert(methods).onConflict('externalId').merge()]);
     }
 
     static async getItemTypes()
@@ -191,6 +197,15 @@ class QBO
         return obj;
     }
 
+    static async getAccounts()
+    {
+        const api = await QBO.connect();
+
+        const res = await api.get('/query?query=Select * from Account maxresults 1000');
+
+        return res.data.QueryResponse.Account;
+    }
+
     static async refreshToken()
     {
         // get refrsh token
@@ -218,7 +233,6 @@ class QBO
 
         await Promise.all([Mongo.updateSecret(ATData.name, ATData), Mongo.updateSecret(RTData.name, RTData)]);
     }
-
 }
 
 module.exports = QBO;
