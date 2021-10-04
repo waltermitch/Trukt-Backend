@@ -87,7 +87,8 @@ class Loadboard
 
     toStringDate(input)
     {
-        const date = DateTime.fromJSDate(input).c;
+        const date = DateTime.fromISO(input).c;
+        
         return input ? date.year + '-' + date.month + '-' + date.day : null;
     }
 
@@ -109,17 +110,17 @@ class Loadboard
 
     dateAdd(date, amount, type)
     {
-        return date ? DateTime.fromJSDate(date).plus({ [`${type}`]: amount }).toString() : null;
+        return date ? DateTime.fromISO(date).plus({ [`${type}`]: amount }).toString() : null;
     }
 
     minusMinutes(date, amount)
     {
-        return DateTime.fromJSDate(date).minus({ minutes: amount }).toUTC().toString();
+        return DateTime.fromISO(date).minus({ minutes: amount }).toUTC().toString();
     }
 
     adjustDates()
     {
-        const now = new Date(Date.now());
+        const now = DateTime.now().toUTC().toISO();
 
         if (this.data.pickup.dateRequestedStart < now)
         {
@@ -153,10 +154,10 @@ class Loadboard
 
     fastForward(targetDate, secondDate)
     {
-        targetDate = DateTime.fromJSDate(targetDate);
-        secondDate = DateTime.fromJSDate(secondDate);
+        targetDate = DateTime.fromISO(targetDate);
+        secondDate = DateTime.fromISO(secondDate);
         targetDate = secondDate.plus({ hours: 1 });
-        return targetDate.toJSDate();
+        return targetDate.toUTC().toString();
     }
 
     getStateCode(state)
@@ -164,7 +165,7 @@ class Loadboard
         return states.getStateCodeByStateName(state) == null ? states.sanitizeStateCode(state) : states.getStateCodeByStateName(state);
     }
 
-    static async handlecreate(post, response)
+    static async handleCreate(post, response)
     {
         return LoadboardPost.fromJson(post);
     }

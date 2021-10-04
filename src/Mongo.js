@@ -9,18 +9,31 @@ const dbOptions =
     useNewUrlParser: true
 };
 
-// db instance
+const mongoclient = new MongoClient(dbUrl, dbOptions);
 let db;
+let client;
 
 class Mongo
 {
-    static async connect()
+    static getClient()
     {
-        if (!db)
-        {
-            const client = new MongoClient(dbUrl, dbOptions);
+        return client;
+    }
+    static getDB()
+    {
+        return db;
+    }
+    static getMongoClient()
+    {
+        return mongoclient;
+    }
 
-            db = (await client.connect()).db(dbName);
+    static async connect(databaseName = dbName)
+    {
+        if (!db && !client)
+        {
+            client = await mongoclient.connect();
+            db = client.db(databaseName);
         }
 
         return db;

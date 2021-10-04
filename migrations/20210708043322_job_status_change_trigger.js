@@ -1,10 +1,10 @@
-const function_name = 'job_status_change_trigger';
-const table_name = 'order_jobs';
+const FUNCTION_NAME = 'job_status_change_trigger';
+const TABLE_NAME = 'order_jobs';
 
 exports.up = function (knex)
 {
     return knex.raw(`
-    CREATE OR REPLACE FUNCTION rcg_tms.${function_name}()
+    CREATE OR REPLACE FUNCTION rcg_tms.${FUNCTION_NAME}()
             RETURNS trigger
             LANGUAGE 'plpgsql'
             COST 100
@@ -21,14 +21,14 @@ exports.up = function (knex)
 
         CREATE TRIGGER rcg_order_job_status_change
             AFTER UPDATE
-            ON rcg_tms.${table_name}
+            ON rcg_tms.${TABLE_NAME}
             FOR EACH ROW
-            EXECUTE FUNCTION rcg_tms.${function_name}();
+            EXECUTE FUNCTION rcg_tms.${FUNCTION_NAME}();
 
-        COMMENT ON TRIGGER rcg_order_job_status_change ON rcg_tms.${table_name}
+        COMMENT ON TRIGGER rcg_order_job_status_change ON rcg_tms.${TABLE_NAME}
             IS 'Notify on job status change';
 
-        COMMENT ON FUNCTION rcg_tms.${function_name}()
+        COMMENT ON FUNCTION rcg_tms.${FUNCTION_NAME}()
             IS 'Triggers Notification';`);
 };
 
@@ -37,5 +37,5 @@ exports.down = function (knex)
     return knex.raw(`  
     DROP TRIGGER rcg_order_job_status_change ON rcg_tms.order_jobs;
     
-    DROP FUNCTION rcg_tms.${function_name}();`);
+    DROP FUNCTION rcg_tms.${FUNCTION_NAME}();`);
 };

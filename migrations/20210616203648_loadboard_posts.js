@@ -1,55 +1,17 @@
 const migration_tools = require('../tools/migration');
 
-const loadboardNames = [
-    { name: 'SUPERDISPATCH', requires_options: false, allows_bulk: true },
-    { name: 'CENTRALDISPATCH', requires_options: false, allows_bulk: true },
-    { name: 'SHIPCARS', requires_options: false, allows_bulk: true },
-    { name: 'CARDELIVERYNETWORK', requires_options: false, allows_bulk: false },
-    {
-        name: 'DAT',
-        requires_options: true,
-        allows_bulk: true,
-        required_fields: {
-            requiredFields: [
-                'contact',
-                'loadType',
-                'equipmentType',
-                'length',
-                'weight',
-                'commodity',
-                'comment1',
-                'comment2'
-            ]
-        }
-    },
-    {
-        name: 'TRUCKSTOP',
-        requires_options: true,
-        allows_bulk: false,
-        required_fields: {
-            requiredFields: [
-                'contact',
-                'loadType',
-                'equipmentType',
-                'length',
-                'weight'
-            ]
-        }
-    }
-];
-const proms = [];
-const table_name_lb = 'loadboards';
-const table_name_lb_contact = 'loadboard_contacts';
-const table_name_post = 'loadboard_posts';
+const TABLE_NAME_LB = 'loadboards';
+const TABLE_NAME_LB_CONTACT = 'loadboard_contacts';
+const TABLE_NAME_POST = 'loadboard_posts';
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name_lb, (table) =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME_LB, (table) =>
     {
         table.string('name', 24).primary().notNullable();
         table.boolean('requires_options');
         table.boolean('allows_bulk');
         table.json('required_fields');
-    }).createTable(table_name_lb_contact, (table) =>
+    }).createTable(TABLE_NAME_LB_CONTACT, (table) =>
     {
         table.increments().primary();
         table.string('loadboard', 20);
@@ -58,8 +20,8 @@ exports.up = function (knex)
         table.string('email', 50).notNullable();
         table.string('username', 50).notNullable();
         table.string('external_id', 80).comment('the external guid of the contact in the external loadboard system');
-        table.foreign('loadboard').references('name').inTable(`rcg_tms.${table_name_lb}`);
-    }).createTable(table_name_post, (table) =>
+        table.foreign('loadboard').references('name').inTable(`rcg_tms.${TABLE_NAME_LB}`);
+    }).createTable(TABLE_NAME_POST, (table) =>
     {
         table.increments().primary();
         table.uuid('job_guid').notNullable();
@@ -87,23 +49,18 @@ exports.up = function (knex)
         migration_tools.authors(table);
 
         table.foreign('job_guid').references('guid').inTable('rcg_tms.order_jobs');
-        table.foreign('loadboard').references('name').inTable(`rcg_tms.${table_name_lb}`);
+        table.foreign('loadboard').references('name').inTable(`rcg_tms.${TABLE_NAME_LB}`);
     })
-        .raw(migration_tools.timestamps_trigger(table_name_post))
-        .raw(migration_tools.authors_trigger(table_name_post))
-        .then(() =>
-        {
-            proms.push(knex(table_name_lb).insert(loadboardNames));
-            Promise.all(proms);
-        });
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME_POST))
+        .raw(migration_tools.authors_trigger(TABLE_NAME_POST));
 
 };
 
 exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .dropTableIfExists(table_name_post)
-        .dropTableIfExists(table_name_lb_contact)
-        .dropTableIfExists(table_name_lb)
+        .dropTableIfExists(TABLE_NAME_POST)
+        .dropTableIfExists(TABLE_NAME_LB_CONTACT)
+        .dropTableIfExists(TABLE_NAME_LB)
         .raw('DROP TYPE IF EXISTS rcg_tms.post_status');
 };

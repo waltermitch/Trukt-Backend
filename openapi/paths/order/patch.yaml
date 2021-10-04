@@ -60,34 +60,35 @@ requestBody:
             maxLength: 1024
             description: The URL to the Bill of Lading for this order.
           client:
-            description: The client that placed the order
-            anyOf:
+            allOf:
+              - description: The client that placed the order
               - $ref: ..\..\components\schemas\Account.yaml#/account
           consignee:
-            description: The party that is responsible for paying for the order
-            anyOf:
+            allOf:
+              - description: The party that is responsible for paying for the order
               - $ref: ..\..\components\schemas\Account.yaml#/account
           clientContact:
             description: The contact that works for the client.
             type: object
+            nullable: true
             anyOf:
             - additionalProperties: false
               properties:
                 $ref: '..\..\components\schemas\Contact.yaml#/properties'
             - additionalProperties: false
               properties:
-                $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable/properties'
+                $ref: '..\..\components\schemas\Common.yaml#/guidObject/properties'
           dispatcher:
-            description: The dispatcher responsible for this order.
-            anyOf:
+            allOf:
+              - description: The dispatcher responsible for this order.
               - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
           referrer:
-            description: The account that referred this order to us.
-            anyOf:
+            allOf:
+              - description: The account that referred this order to us.
               - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
           salesperson:
-            description: The salesperson responsible for managing this order.
-            anyOf:
+            allOf:
+              - description: The salesperson responsible for managing this order.
               - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
           jobs:
             type: array
@@ -113,23 +114,19 @@ requestBody:
                         - description: This field currently has not use.
                     vendor:
                       allOf:
-                        - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                        - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
                         - description: The vendor or carrier responsible for completing this job.
                     vendorContact:
-                      type: object
-                      additionalProperties: false
-                      properties:
-                        $ref: '..\..\components\schemas\Contact.yaml#/properties'
-                      description: The vendor or carrier contact that can be contacted if any questions arise.
+                      allOf:
+                        - description: The vendor or carrier contact that can be contacted if any questions arise.
+                        - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
                     vendorAgent:
-                      type: object
-                      additionalProperties: false
-                      properties:
-                        $ref: '..\..\components\schemas\Contact.yaml#/properties'
-                      description: The vendor or carrier employee that will be completing the job. Usually for carriers this is the driver.
+                        allOf:
+                          - description: The vendor or carrier employee that will be completing the job. Usually for carriers this is the driver.
+                          - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
                     dispatcher:
                       allOf:
-                        - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                        - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
                         - description: The dispatcher who is responsible for managing this job.
                     stops:
                       type: array
@@ -166,9 +163,20 @@ requestBody:
               allOf:
                 - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
                 - $ref: '..\..\components\schemas\Common.yaml#/indexObject'
-                - type: object
-                  properties:
-                    $ref: '..\..\components\schemas\Stop.yaml#/properties'
+                - anyOf:   
+                  - type: object
+                    properties:
+                      primaryContact:
+                        anyOf:
+                          - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
+                          - $ref: '..\..\components\schemas\Contact.yaml'
+                      alternativeContact:
+                        anyOf:
+                          - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
+                          - $ref: '..\..\components\schemas\Contact.yaml'
+                  - type: object
+                    properties:
+                      $ref: '..\..\components\schemas\Stop.yaml#/properties'
           terminals:
             type: array
             items:

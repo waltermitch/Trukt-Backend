@@ -1,10 +1,11 @@
 const migration_tools = require('../tools/migration');
 
-const table_name = 'order_job_dispatches';
+const SCHEMA_NAME = 'rcg_tms';
+const TABLE_NAME = 'order_job_dispatches';
 
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema(SCHEMA_NAME).createTable(TABLE_NAME, (table) =>
     {
         table.uuid('guid').primary();
         table.uuid('job_guid').notNullable();
@@ -33,10 +34,10 @@ exports.up = function (knex)
         table.foreign('loadboard_post_guid').references('guid').inTable('rcg_tms.loadboard_posts');
         migration_tools.timestamps(table);
         migration_tools.authors(table);
-    }).raw(migration_tools.guid_function(table_name));
+    }).raw(migration_tools.guid_function(TABLE_NAME));
 };
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
+    return knex.schema.withSchema(SCHEMA_NAME).dropTableIfExists(TABLE_NAME);
 };

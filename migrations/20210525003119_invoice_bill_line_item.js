@@ -1,7 +1,7 @@
-const table_name = 'invoice_bill_line_items';
+const TABLE_NAME = 'invoice_bill_line_items';
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, (table) =>
     {
         table.increments('id', { primaryKey: true }).unique().notNullable();
         table.string('name').notNullable().unique();
@@ -21,6 +21,6 @@ exports.up = function (knex)
 exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .dropTableIfExists(table_name)
+        .dropTableIfExists(TABLE_NAME)
         .raw('DROP TYPE IF EXISTS rcg_tms.expense_types;');
 };

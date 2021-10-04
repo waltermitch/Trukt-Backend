@@ -1,10 +1,10 @@
-const function_name = 'account_upserted_trigger';
-const table_name = 'account';
+const FUNCTION_NAME = 'account_upserted_trigger';
+const TABLE_NAME = 'account';
 
 exports.up = function (knex)
 {
     return knex.raw(`
-    CREATE OR REPLACE FUNCTION salesforce.${function_name}()
+    CREATE OR REPLACE FUNCTION salesforce.${FUNCTION_NAME}()
             RETURNS trigger
             LANGUAGE 'plpgsql'
             COST 100
@@ -28,21 +28,21 @@ exports.up = function (knex)
 
         CREATE TRIGGER account_upserted
             AFTER INSERT OR UPDATE
-            ON salesforce.${table_name}
+            ON salesforce.${TABLE_NAME}
             FOR EACH ROW
-            EXECUTE FUNCTION salesforce.${function_name}();
+            EXECUTE FUNCTION salesforce.${FUNCTION_NAME}();
 
-        COMMENT ON TRIGGER account_upserted ON salesforce.${table_name}
+        COMMENT ON TRIGGER account_upserted ON salesforce.${TABLE_NAME}
             IS 'Notify On Account Upsert';
 
-        COMMENT ON FUNCTION salesforce.${function_name}()
+        COMMENT ON FUNCTION salesforce.${FUNCTION_NAME}()
             IS 'Triggers Notification';`);
 };
 
 exports.down = function (knex)
 {
     return knex.raw(`  
-    DROP TRIGGER account_upserted ON salesforce.${table_name};
+    DROP TRIGGER account_upserted ON salesforce.${TABLE_NAME};
     
-    DROP FUNCTION salesforce.${function_name}();`);
+    DROP FUNCTION salesforce.${FUNCTION_NAME}();`);
 };
