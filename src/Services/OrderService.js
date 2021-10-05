@@ -8,7 +8,7 @@ const OrderJob = require('../Models/OrderJob');
 const OrderJobType = require('../Models/OrderJobType');
 const SFAccount = require('../Models/SFAccount');
 const SFContact = require('../Models/SFContact');
-const RecordType = require('../Models/RecordType');
+const SFRecordType = require('../Models/SFRecordType');
 const Commodity = require('../Models/Commodity');
 const CommodityType = require('../Models/CommodityType');
 const Vehicle = require('../Models/Vehicle');
@@ -152,7 +152,7 @@ class OrderService
         try
         {
             // use trx (transaction) because none of the data should be left in the database if any of it fails
-            const contactRecordType = await RecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact');
+            const contactRecordType = await SFRecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact');
             const commTypes = await CommodityType.query(trx);
             const jobTypes = await OrderJobType.query(trx);
             const invoiceLineItems = await InvoiceLineItem.query(trx);
@@ -928,7 +928,7 @@ class OrderService
                 referencesChecked
             ] =
                 await Promise.all([
-                    clientContact ? RecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact') : null,
+                    clientContact ? SFRecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact') : null,
                     client?.guid ? OrderService.findSFClient(client.guid, trx) :
                         undefined,
                     commodities.length > 0 ? CommodityType.query(trx) : null,
