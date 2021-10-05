@@ -31,6 +31,14 @@ class SFContact extends BaseModel
                     from: 'salesforce.contacts.guid',
                     to: 'salesforce.order.clientGuid'
                 }
+            },
+            rectype: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./SFRecordType'),
+                join: {
+                    from: 'salesforce.contacts.recordTypeId',
+                    to: 'salesforce.record_types.sfId'
+                }
             }
         };
     }

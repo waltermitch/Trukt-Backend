@@ -1,6 +1,6 @@
 const BaseModel = require('./BaseModel');
 
-class RecordType extends BaseModel
+class SFRecordType extends BaseModel
 {
     static get tableName()
     {
@@ -24,4 +24,4 @@ class RecordType extends BaseModel
     }
 }
 
-module.exports = RecordType;
+module.exports = SFRecordType;

@@ -1,4 +1,3 @@
-CREATE SCHEMA salesforce;
 CREATE SEQUENCE salesforce.account_id_seq
 	INCREMENT BY 1
 	MINVALUE 1

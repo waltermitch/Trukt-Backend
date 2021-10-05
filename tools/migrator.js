@@ -377,6 +377,8 @@ async function initHandler(argv)
     {
         await knex.raw(`CREATE SCHEMA IF NOT EXISTS rcg_tms AUTHORIZATION ${user};`);
         console.log(green, listStyle('added rcg_tms schema to database'));
+        await knex.raw(`CREATE SCHEMA IF NOT EXISTS salesforce AUTHORIZATION ${user};`);
+        console.log(green, listStyle('added salesforce schema to database'));
     }
     catch (err)
     {
