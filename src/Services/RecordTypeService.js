@@ -1,4 +1,4 @@
-const RecordType = require('../Models/RecordType');
+const SFRecordType = require('../Models/SFRecordType');
 
 let recordTypes;
 
@@ -21,7 +21,7 @@ class AccountService
     static async getTypes()
     {
         if (!recordTypes)
-            recordTypes = (await RecordType.query()).map((e) =>
+            recordTypes = (await SFRecordType.query()).map((e) =>
             {
                 return { 'sfid': e.sfid, 'name': e.name.toLowerCase() };
             });
