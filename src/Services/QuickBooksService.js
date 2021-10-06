@@ -25,19 +25,22 @@ class QuickBooksService
 
                 for (const lineItem of invoice.lines)
                 {
-                    const commodity = lineItem.commodity;
-
-                    if (commodity)
+                    if (!lineItem.isPaid)
                     {
-                        const stops = OrderStop.firstAndLast(commodity?.stops);
+                        const commodity = lineItem.commodity;
 
-                        const pTerminal = stops[0]?.terminal;
-                        const dTerminal = stops[1]?.terminal;
+                        if (commodity)
+                        {
+                            const stops = OrderStop.firstAndLast(commodity?.stops);
 
-                        lineItem.description = QuickBooksService.composeDescription(pTerminal, dTerminal, lineItem);
+                            const pTerminal = stops[0]?.terminal;
+                            const dTerminal = stops[1]?.terminal;
+
+                            lineItem.description = QuickBooksService.composeDescription(pTerminal, dTerminal, lineItem);
+                        }
+                        else
+                            lineItem.description = lineItem.notes || '';
                     }
-                    else
-                        lineItem.description = lineItem.notes || '';
                 }
 
                 const payload =
@@ -70,20 +73,23 @@ class QuickBooksService
 
                 for (const lineItem of bill.lines)
                 {
-                    const commodity = lineItem.commodity;
-
-                    if (commodity)
+                    if (!lineItem.isPaid)
                     {
+                        const commodity = lineItem.commodity;
 
-                        const stops = OrderStop.firstAndLast(commodity?.stops);
+                        if (commodity)
+                        {
 
-                        const pTerminal = stops[0]?.terminal;
-                        const dTerminal = stops[1]?.terminal;
+                            const stops = OrderStop.firstAndLast(commodity?.stops);
 
-                        lineItem.description = QuickBooksService.composeDescription(pTerminal, dTerminal, lineItem);
+                            const pTerminal = stops[0]?.terminal;
+                            const dTerminal = stops[1]?.terminal;
+
+                            lineItem.description = QuickBooksService.composeDescription(pTerminal, dTerminal, lineItem);
+                        }
+                        else
+                            lineItem.description = lineItem.notes || '';
                     }
-                    else
-                        lineItem.description = lineItem.notes || '';
                 }
 
                 const payload =
