@@ -1604,6 +1604,17 @@ class OrderService
 
         return { orderInvoices, jobs };
     }
+
+    static async findByVin(vin)
+    {
+        // find order where commodity has vin
+        const comms = await Commodity.query().where({ 'identifier': vin }).withGraphJoined('order').orderBy('order.dateCreated', 'desc');
+
+        return comms.map((com) =>
+        {
+            return { 'guid': com.order?.guid, 'number': com.order?.number, 'dateCreated': com.order?.dateCreated };
+        });
+    }
 }
 
 module.exports = OrderService;

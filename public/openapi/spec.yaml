@@ -4,11 +4,11 @@ info:
   title: Trukt
   description: Transportation management system
 servers:
-  - url: 'https://truktbackend-dev.rcgauto.p.azurewebsites.net'
+  - url: 'https://truktapi-dev.rcgauto.net'
     description: Development server
-  - url: 'https://truktbackend-staging.rcgauto.p.azurewebsites.net'
+  - url: 'https://truktapi-staging.rcgauto.net'
     description: Staging server
-  - url: 'https://truktbackend.rcgauto.p.azurewebsites.net'
+  - url: 'https://truktapi.rcgauto.net'
     description: Production server
 paths:
   /attachments:
@@ -1657,6 +1657,24 @@ paths:
           description: order
           content:
             application/json: {}
+  '/order/find_by_vin/{vin}':
+    get:
+      summary: Find By VIN
+      operationId: findByVin
+      description: Find All Orders By VIN
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: vin
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: order
+          content:
+            application/json: {}
   /picklist/options:
     get:
       summary: Get picklist options
@@ -2243,9 +2261,9 @@ paths:
             application/json: {}
   /invoice:
     post:
-      summary: Create invoice
-      operationId: postInvoice
-      description: Create invoice
+      summary: Invoice Orders
+      operationId: invoiceOrders
+      description: Invoices Orders
       tags:
         - Invoice
       requestBody:
@@ -2253,19 +2271,19 @@ paths:
           application/json:
             schema:
               type: object
-              description: List of order guids
+              description: List of Order guids
               properties:
                 orders:
                   type: array
                   items:
-                    description: order guid
+                    description: Order guid
                     $ref: '#/components/schemas/guid'
                   minItems: 1
               required:
                 - orders
       responses:
         '200':
-          description: invocies
+          description: invoices
           content:
             application/json: {}
   /index/order/number:
@@ -2432,14 +2450,29 @@ paths:
             application/json: {}
   /bill:
     post:
-      summary: Create a new Bill
-      operationId: createBill
-      description: Create a new bill
+      summary: Bill Jobs
+      operationId: billJobs
+      description: Bills Jobs
       tags:
-        - Bill
+        - Invoice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: List of Job guids
+              properties:
+                orders:
+                  type: array
+                  items:
+                    description: Job guid
+                    $ref: '#/components/schemas/guid'
+                  minItems: 1
+              required:
+                - jobs
       responses:
         '200':
-          description: Bill
+          description: bills
           content:
             application/json: {}
   '/account/{accountType}':
@@ -3839,6 +3872,9 @@ components:
           description: Related invoice guid
           type: string
           format: uuid
+        isPaid:
+          description: Is expense paid
+          type: boolean
       required:
         - itemId
         - amount

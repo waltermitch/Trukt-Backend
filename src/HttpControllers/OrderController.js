@@ -93,8 +93,28 @@ class OrderController extends HttpRouteController
                 data: { message: error?.message || 'Internal server error' }
             });
         }
-
     }
+
+    // find order by vin
+    static async findOrdersByVin(req, res, next)
+    {
+        try
+        {
+            const { vin } = req.params;
+            const orders = await OrderService.findByVin(vin);
+
+            res.status(200);
+            res.json(orders);
+        }
+        catch (error)
+        {
+            next({
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
 }
 
 const controller = new OrderController();
