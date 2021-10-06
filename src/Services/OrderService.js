@@ -20,6 +20,7 @@ const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Expense = require('../Models/Expense');
 const ComparisonType = require('../Models/ComparisonType');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const StatusLog = require('../Models/StatusLog');
 
 const { MilesToMeters } = require('./../Utils');
 
@@ -41,12 +42,23 @@ class OrderService
         dates,
         isTender,
         jobCategory
-    }, page, rowCount)
+    }, page, rowCount, sort
+    )
     {
 
         dateFilterComparisonTypes = dates && await OrderService.getComparisonTypesCached();
+        const jobFieldsToReturn = [
+            'guid',
+            'number',
+            'estimatedExpense',
+            'estimatedRevenue',
+            'status',
+            'dateCreated',
+            'actualRevenue',
+            'actualExpense'
+        ];
 
-        const baseOrderQuery = Order.query().page(page, rowCount);
+        const baseOrderQuery = OrderJob.query().select(jobFieldsToReturn).page(page, rowCount);
 
         const queryFilterPickup = OrderService.addFilterPickups(baseOrderQuery, pickup);
         const queryFilterDelivery = OrderService.addFilterDeliveries(queryFilterPickup, delivery);
@@ -56,11 +68,11 @@ class OrderService
         const queryFilterSalesperson = OrderService.addFilterSalesperson(queryFilterDispatcher, salesperson);
         const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
         const queryFilterDates = OrderService.addFilterDates(queryFilterCarrier, dates);
-        const queryAllFilters = OrderService.addFilterModifiers(queryFilterDates, { isTender, jobCategory });
+        const queryAllFilters = OrderService.addFilterModifiers(queryFilterDates, { isTender, jobCategory, sort });
 
         const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters, jobCategory);
 
-        const { total, results } = await queryWithGraphModifiers.orderBy('number', 'ASC');
+        const { total, results } = await queryWithGraphModifiers;
         const ordersWithDeliveryAddress = {
             results: OrderService.addDeliveryAddress(results),
             page: page + 1,
@@ -640,7 +652,7 @@ class OrderService
     {
         const doesPickupsHaveElements = pickups?.length > 0 ? true : false;
         return doesPickupsHaveElements ? baseQuery.whereExists(
-            Order.relatedQuery('stops').where('stopType', 'pickup').whereExists(
+            OrderJob.relatedQuery('stops').where('stopType', 'pickup').whereExists(
                 OrderService.basePickupDeliveryFilterQuery(pickups)
             )
         ) : baseQuery;
@@ -652,8 +664,8 @@ class OrderService
         if (isDeliveriesEmpty)
             return baseQuery;
 
-        const deliveryQuery = Order.query().select('guid').whereExists(
-            Order.relatedQuery('stops').where('stopType', 'delivery').whereExists(
+        const deliveryQuery = OrderJob.query().select('guid').whereExists(
+            OrderJob.relatedQuery('stops').where('stopType', 'delivery').whereExists(
                 OrderService.basePickupDeliveryFilterQuery(deliveries)
             )
         );
@@ -692,20 +704,24 @@ class OrderService
     {
         const doesCustomerListHaveElements = customerList?.length > 0 ? true : false;
         return doesCustomerListHaveElements ?
-            baseQuery.whereIn('clientGuid', customerList) : baseQuery;
+            baseQuery.whereIn('orderGuid', Order.query().select('guid').whereIn('clientGuid', customerList))
+            : baseQuery;
     }
 
     static addFilterDispatcher(baseQuery, dispatcherList)
     {
         const doesDispatcherListHaveElements = dispatcherList?.length > 0 ? true : false;
         return doesDispatcherListHaveElements ?
-            baseQuery.whereIn('dispatcherGuid', dispatcherList) : baseQuery;
+            baseQuery.whereIn('orderGuid', Order.query().select('guid').whereIn('dispatcherGuid', dispatcherList))
+            : baseQuery;
     }
 
     static addFilterSalesperson(baseQuery, salespersonList)
     {
         const doesSalespersonListHaveElements = salespersonList?.length > 0 ? true : false;
-        return doesSalespersonListHaveElements ? baseQuery.whereIn('salespersonGuid', salespersonList) : baseQuery;
+        return doesSalespersonListHaveElements ?
+            baseQuery.whereIn('orderGuid', Order.query().select('guid').whereIn('salespersonGuid', salespersonList))
+            : baseQuery;
     }
 
     static addFilterDates(baseQuery, dateList)
@@ -723,7 +739,7 @@ class OrderService
                     andWhere('statusId', status);
             };
             return index === 0 ? query.where(comparisonDateAndStatus) : query.orWhere(comparisonDateAndStatus);
-        }, Order.relatedQuery('statusLogs').select('orderGuid'));
+        }, StatusLog.query().select('jobGuid'));
 
         return baseQuery.whereIn('guid', datesQuery);
     }
@@ -732,8 +748,7 @@ class OrderService
     {
         const doesCarrierListHaveElements = carrierList?.length > 0 ? true : false;
         return doesCarrierListHaveElements ?
-            baseQuery.whereIn('guid', Order.relatedQuery('jobs').select('orderGuid')
-                .whereIn('vendorGuid', carrierList)) : baseQuery;
+            baseQuery.whereIn('vendorGuid', carrierList) : baseQuery;
     }
 
     static async getComparisonTypesCached()
@@ -751,26 +766,26 @@ class OrderService
         return cache.get('comparisonTypes');
     }
 
-    static addGraphModifiers(baseQuery, jobCategory = [])
+    static addGraphModifiers(baseQuery)
     {
         return baseQuery
             .withGraphFetched({
-                client: true,
-                clientContact: true,
-                salesperson: true,
-                dispatcher: true,
-                jobs: {
-                    loadboardPosts: true,
-                    vendor: {
-                        rectype: true
-                    },
-                    jobType: true,
-                    stops: {
-                        terminal: true,
-                        commodities: {
-                            commType: true,
-                            vehicle: true
-                        }
+                order: {
+                    client: true,
+                    clientContact: true,
+                    salesperson: true,
+                    dispatcher: true
+                },
+                loadboardPosts: true,
+                vendor: {
+                    rectype: true
+                },
+                jobType: true,
+                stops: {
+                    terminal: true,
+                    commodities: {
+                        commType: true,
+                        vehicle: true
                     }
                 }
             })
@@ -779,22 +794,23 @@ class OrderService
              * Is necessary to use modifyGraph on stops and
              * stops.commodities to avoid duplicate rows
              */
-            .modifyGraph('client', builder => builder.select(
+            .modifyGraph('order.client', builder => builder.select(
                 'guid', 'name'
             ))
-            .modifyGraph('clientContact', builder => builder.select(
+            .modifyGraph('order.clientContact', builder => builder.select(
                 'guid',
                 'name',
                 'phone_number',
                 'email'
             ))
-            .modifyGraph('salesperson', builder => builder.select(
+            .modifyGraph('order.salesperson', builder => builder.select(
                 'guid', 'name'
             ))
-            .modifyGraph('dispatcher', builder => builder.select(
+
+            .modifyGraph('order.dispatcher', builder => builder.select(
                 'guid', 'name'
             ))
-            .modifyGraph('jobs.stops', builder => builder.select(
+            .modifyGraph('stops', builder => builder.select(
                 'guid',
                 'stopType',
                 'status',
@@ -803,9 +819,10 @@ class OrderService
                 'dateScheduledType',
                 'dateRequestedStart',
                 'dateRequestedEnd',
-                'dateRequestedType'
+                'dateRequestedType',
+                'sequence'
             ).distinct('guid'))
-            .modifyGraph('jobs.stops.commodities', builder => builder.select(
+            .modifyGraph('stops.commodities', builder => builder.select(
                 'guid',
                 'damaged',
                 'inoperable',
@@ -818,7 +835,7 @@ class OrderService
                     'guid'
                 )
             )
-            .modifyGraph('jobs.stops.terminal', builder => builder.select(
+            .modifyGraph('stops.terminal', builder => builder.select(
                 'name',
                 'guid',
                 'street1',
@@ -828,47 +845,30 @@ class OrderService
                 'country',
                 'zipCode'
             ).distinct())
-            .modifyGraph('jobs', builder =>
-            {
-                const baseBuilder = builder.select(
-                    'guid',
-                    'number',
-                    'estimatedExpense',
-                    'estimatedRevenue',
-                    'status'
-                ).distinct();
-                if (jobCategory.length > 0)
-                    baseBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(jobCategory));
-            })
-            .modifyGraph('jobs.loadboardPosts', builder => builder.select('loadboard', 'isPosted', 'status').distinct())
-            .modifyGraph('jobs.vendor', builder => builder.select('guid', 'name').distinct())
-            .modifyGraph('jobs.vendor.rectype', builder => builder.select('name').distinct());
+            .modifyGraph('loadboardPosts', builder => builder.select('loadboard', 'isPosted', 'status').distinct())
+            .modifyGraph('vendor', builder => builder.select('guid', 'name').distinct())
+            .modifyGraph('vendor.rectype', builder => builder.select('name').distinct());
 
     }
 
     static addFilterModifiers(baseQuery, filters)
     {
-        const { isTender, jobCategory } = filters;
+        const { isTender, jobCategory, sort } = filters;
         return baseQuery
             .modify('filterIsTender', isTender)
-            .modify('filterJobCategories', jobCategory);
+            .modify('filterJobCategories', jobCategory)
+            .modify('sorted', sort);
     }
 
-    static addDeliveryAddress(ordersArray)
+    static addDeliveryAddress(jobsArray)
     {
-        return ordersArray.map((order) =>
+        return jobsArray.map(job =>
         {
-            const jobsWithDeliveryAddress = order.jobs.map((job) =>
-            {
-                const { terminal } = job.stops.length > 0 && job.stops.reduce((acumulatorStop, stop) =>
-                {
-                    return OrderService.getLastDeliveryBetweenStops(acumulatorStop, stop);
-                });
-                job.deliveryAddress = terminal || null;
-                return job;
-            });
-            order.jobs = jobsWithDeliveryAddress;
-            return order;
+            const { terminal } = job.stops.length > 0 && job.stops.reduce((acumulatorStop, stop) =>
+                OrderService.getLastDeliveryBetweenStops(acumulatorStop, stop)
+            );
+            job.deliveryAddress = terminal || null;
+            return job;
         });
     }
 
