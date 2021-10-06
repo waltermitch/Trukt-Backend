@@ -53,6 +53,21 @@ class ServiceBus
 
         return res;
     }
+
+    // batch promises to get many messages
+    static async popMany(SBName, count)
+    {
+        // map promises
+        const promises = [];
+
+        for (let i = 0; i < count; i++)
+            promises.push({ func: ServiceBus.pop, args: [SBName] });
+
+        // get messages
+        const res = await Promise.all(promises.map(p => p.func(...p.args)));
+
+        return res;
+    }
 }
 
 module.exports = ServiceBus;
