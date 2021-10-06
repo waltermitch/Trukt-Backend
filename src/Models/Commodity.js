@@ -41,6 +41,20 @@ class Commodity extends BaseModel
                     to: 'rcgTms.orderStops.guid'
                 }
             },
+            order: {
+                relation: BaseModel.HasOneThroughRelation,
+                modelClass: require('./Order'),
+                join: {
+                    from: 'rcgTms.commodities.guid',
+                    through:
+                    {
+                        modelClass: require('./OrderStopLink'),
+                        from: 'rcgTms.orderStopLinks.commodityGuid',
+                        to: 'rcgTms.orderStopLinks.orderGuid'
+                    },
+                    to: 'rcgTms.orders.guid'
+                }
+            },
             commType: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: require('./CommodityType'),
