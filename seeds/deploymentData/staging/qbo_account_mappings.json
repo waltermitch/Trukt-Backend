@@ -1,0 +1,31 @@
+{
+    "table": "account_mappings",
+    "schema": "quickbooks",
+    "unique": "item_id",
+    "data": [
+        {
+            "account_id": "92",
+            "item_id": 1
+        },
+        {
+            "account_id": "93",
+            "item_id": 2
+        },
+        {
+            "account_id": "94",
+            "item_id": 3
+        },
+        {
+            "account_id": "95",
+            "item_id": 4
+        },
+        {
+            "account_id": "96",
+            "item_id": 5
+        },
+        {
+            "account_id": "97",
+            "item_id": 6
+        }
+    ]
+}
