@@ -453,7 +453,7 @@ function printSeedsAndData(config)
         const seeds = config.seeds;
         for (const seed of Object.keys(seeds))
         {
-            console.log(green, `   - ${seed}`);
+            console.log(green, `  - ${seed}`);
         }
     }
 
