@@ -484,11 +484,7 @@ async function seedHandler(argv)
     const basedir = './seeds';
     const files = fs.readdirSync(basedir).reduce((files, dir1) =>
     {
-        files[dir1] = {
-            env: {},
-            data: {},
-            seeds: {}
-        };
+        files[dir1] = { env: {}, data: {}, seeds: {} };
         const p = path.resolve(basedir, dir1);
         const stat = fs.statSync(p);
         if (stat && stat.isDirectory())
@@ -502,10 +498,7 @@ async function seedHandler(argv)
                 if (!stat.isDirectory())
                 {
                     let type = 'seeds';
-                    if (isJSON(dir2))
-                    {
-                        type = 'data';
-                    }
+                    if (isJSON(dir2)) { type = 'data'; }
                     files[type][cleanName(dir2)] = {
                         directory: [basedir, dir1].join('/'),
                         filename: dir2
@@ -513,22 +506,12 @@ async function seedHandler(argv)
                 }
                 else
                 {
-                    files.env[dir2] = {
-                        data: {},
-                        seeds: {}
-                    };
-
+                    files.env[dir2] = { data: {}, seeds: {} };
                     fs.readdirSync(filepath2).reduce((files, dir3) =>
                     {
                         let type = 'seeds';
-                        if (isJSON(dir3))
-                        {
-                            type = 'data';
-                        }
-                        files[type][cleanName(dir3)] = {
-                            directory: [basedir, dir1, dir2].join('/'),
-                            filename: dir3
-                        };
+                        if (isJSON(dir3)) { type = 'data'; }
+                        files[type][cleanName(dir3)] = { directory: [basedir, dir1, dir2].join('/'), filename: dir3 };
                         return files;
                     }, files.env[dir2]);
                 }
@@ -568,204 +551,173 @@ async function seedHandler(argv)
             if ('env' in files[key])
             {
                 const envs = files[key].env;
-
-                if (envKey in files[key].env)
-                {
-                    printSeedsAndData(envs[envKey]);
-                }
+                if (envKey in files[key].env) printSeedsAndData(envs[envKey]);
             }
         }
         return;
     }
-
-    // files to work on
-    let workfiles = {};
-
-    // add all the filenames
-    if (argv.all)
+    else
     {
-        if (!dataType)
+        // files to work on
+        let workfiles = {};
+
+        // add all the filenames
+        if (argv.all)
         {
-            workfiles = files;
-        }
-        else
-        {
-            // add all files filtered by dataType
-            const workdata = files[dataType];
-            workfiles[dataType] = workdata;
-            for (const key of Object.keys(workdata.env))
+            if (!dataType)
             {
-                // filter the env
-                if (key != envKey)
+                workfiles = files;
+            }
+            else
+            {
+                // add all files filtered by dataType
+                const workdata = files[dataType];
+                workfiles[dataType] = workdata;
+                for (const key of Object.keys(workdata.env))
                 {
-                    delete workdata.env[key];
+                    // filter the env
+                    if (key != envKey) delete workdata.env[key];
                 }
             }
         }
-    }
 
-    if (argv.filenames)
-    {
-        const sources = [files[dataType]];
-        const env = files[dataType].env;
-        envKey in env && sources.push(env[envKey]);
-
-        for (const source of sources)
+        if (argv.filenames)
         {
-            for (const ftype of ['data', 'seeds'])
-            {
-                for (const filename of argv.filenames)
-                {
-                    if (filename in source[ftype])
-                    {
-                        if (!(dataType in workfiles))
-                        {
-                            workfiles[dataType] = {};
-                        }
+            const sources = [files[dataType]];
+            const env = files[dataType].env;
+            envKey in env && sources.push(env[envKey]);
 
-                        if (!(ftype in workfiles[dataType]))
-                        {
-                            workfiles[dataType][ftype] = {};
-                        }
-
-                        workfiles[dataType][ftype][filename] = source[ftype][filename];
-                    }
-                }
-            }
-        }
-    }
-
-    // filter out the files that are included with the --but option
-    if (argv.but)
-    {
-        for (const dtype of Object.keys(workfiles))
-        {
-            const datafiles = workfiles[dtype];
-            const sources = [datafiles];
-            if ('env' in datafiles)
-            {
-                const env = datafiles.env;
-                if (envKey in env && Object.keys(env[envKey]).length > 0)
-                {
-                    sources.push(env[envKey]);
-                    for (const etype of Object.keys(env))
-                    {
-                        if (etype != envKey)
-                        {
-                            delete env[etype];
-                        }
-                    }
-                }
-            }
             for (const source of sources)
             {
                 for (const ftype of ['data', 'seeds'])
                 {
-                    if (ftype in source)
+                    for (const filename of argv.filenames)
                     {
-                        for (const file of Object.keys(source[ftype]))
+                        if (filename in source[ftype])
                         {
-                            if (argv.but.includes(file))
-                            {
-                                delete source[ftype][file];
-                            }
+                            if (!(dataType in workfiles)) workfiles[dataType] = {};
+                            if (!(ftype in workfiles[dataType])) workfiles[dataType][ftype] = {};
+                            workfiles[dataType][ftype][filename] = source[ftype][filename];
                         }
                     }
                 }
             }
         }
-    }
-    let anError = false;
-    let didAthing = false;
-    const knex = Knex(require('../knexfile')());
-    await knex.transaction(async (trx) =>
-    {
-        for (const dtype of Object.keys(workfiles))
+
+        // filter out the files that are included with the --but option
+        if (argv.but)
         {
-            const datafiles = workfiles[dtype];
-            const sources = [datafiles];
-            if ('env' in datafiles)
+            for (const dtype of Object.keys(workfiles))
             {
-                for (const env of Object.values(datafiles.env))
+                const datafiles = workfiles[dtype];
+                const sources = [datafiles];
+                if ('env' in datafiles)
                 {
-                    sources.push(env);
-                }
-            }
-
-            for (const source of sources)
-            {
-                if ('seeds' in source)
-                {
-                    for (const filename of Object.keys(source.seeds))
+                    const env = datafiles.env;
+                    if (envKey in env && Object.keys(env[envKey]).length > 0)
                     {
-                        const fileconts = source.seeds[filename];
-                        console.log(listStyle('seed:  ' + filename));
-                        await trx.seed.run({
-                            directory: fileconts.directory,
-                            specific: fileconts.filename
-                        });
-                        didAthing = true;
+                        sources.push(env[envKey]);
+                        for (const etype of Object.keys(env))
+                        {
+                            if (etype != envKey) delete env[etype];
+                        }
                     }
                 }
-
-                if ('data' in source)
+                for (const source of sources)
                 {
-                    for (const filename of Object.keys(source.data))
+                    for (const ftype of ['data', 'seeds'])
                     {
-                        const fileconts = source.data[filename];
-                        const filedata = require('../' + fileconts.directory + '/' + fileconts.filename);
-                        for (const field of [
-                            'schema',
-                            'table',
-                            'unique',
-                            'data'
-                        ])
+                        if (ftype in source)
                         {
-                            if (!(field in filedata))
+                            for (const file of Object.keys(source[ftype]))
                             {
-                                throw new Error(`${filename} missing ${field} field`);
+                                if (argv.but.includes(file)) delete source[ftype][file];
                             }
                         }
-
-                        console.log(listStyle('data:  ' + filename));
-                        let builder = trx(filedata.table).withSchema(filedata.schema).insert(filedata.data);
-                        if (Array.isArray(filedata.unique))
-                        {
-                            builder = builder.onConflict(...filedata.unique);
-                        }
-                        else
-                        {
-                            builder = builder.onConflict(filedata.unique);
-                        }
-
-                        await builder.merge();
-                        didAthing = true;
-
                     }
                 }
             }
-
         }
-    }).catch((error) =>
-    {
-        anError = error;
-    });
+        let anError = false;
+        let didAthing = false;
+        const knex = Knex(require('../knexfile')());
+        await knex.transaction(async (trx) =>
+        {
+            for (const dtype of Object.keys(workfiles))
+            {
+                const datafiles = workfiles[dtype];
+                const sources = [datafiles];
+                if ('env' in datafiles)
+                {
+                    for (const env of Object.values(datafiles.env))
+                    {
+                        sources.push(env);
+                    }
+                }
 
-    knex.destroy();
-    BaseModel.knex().destroy();
-    if (didAthing)
-    {
-        console.log(green, '...done!');
-    }
-    else
-    {
-        didNothing();
+                for (const source of sources)
+                {
+                    if ('seeds' in source)
+                    {
+                        for (const filename of Object.keys(source.seeds))
+                        {
+                            const fileconts = source.seeds[filename];
+                            console.log(listStyle('seed:  ' + filename));
+                            await trx.seed.run({
+                                directory: fileconts.directory,
+                                specific: fileconts.filename
+                            });
+                            didAthing = true;
+                        }
+                    }
+
+                    if ('data' in source)
+                    {
+                        for (const filename of Object.keys(source.data))
+                        {
+                            const fileconts = source.data[filename];
+                            const filedata = require('../' + fileconts.directory + '/' + fileconts.filename);
+                            for (const field of [
+                                'schema',
+                                'table',
+                                'unique',
+                                'data'
+                            ])
+                            {
+                                if (!(field in filedata))
+                                {
+                                    throw new Error(`${filename} missing ${field} field`);
+                                }
+                            }
+
+                            console.log(listStyle('data:  ' + filename));
+                            let builder = trx(filedata.table).withSchema(filedata.schema).insert(filedata.data);
+                            if (Array.isArray(filedata.unique))
+                            {
+                                builder = builder.onConflict(...filedata.unique);
+                            }
+                            else
+                            {
+                                builder = builder.onConflict(filedata.unique);
+                            }
+
+                            await builder.merge();
+                            didAthing = true;
+
+                        }
+                    }
+                }
+
+            }
+        }).catch((error) => { anError = error; });
+
+        didAthing ? console.log(green, '...done!') : didNothing();
+
+        if (anError) throw anError;
+        knex.destroy();
+        BaseModel.knex().destroy();
     }
 
-    if (anError)
-    {
-        throw anError;
-    }
 }
 
 async function cleanHandler(argv)
