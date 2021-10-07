@@ -4,6 +4,7 @@ const QBO = require('../QuickBooks/API');
 const currency = require('currency.js');
 const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
+const Bill = require('../Models/InvoiceBill');
 
 let transportItem;
 
@@ -11,7 +12,6 @@ let transportItem;
 {
     transportItem = await InvoiceLineItem.query().findOne({ name: 'transport' });
 })();
-const Bill = require('../Models/InvoiceBill');
 
 class BillService
 {
@@ -38,7 +38,7 @@ class BillService
     }
 
     /**
-     *
+     * @description evenly splits a price across provided commodities
      * @param {InvoiceBill} bill an objection model of a single bill
      * @param {Commodity[]} commodities a list of objection commodities with atleast a guid
      * @param {Number} carrierPay a decimal number used to evenly split accross all commodity lines
