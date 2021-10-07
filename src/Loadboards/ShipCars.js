@@ -331,7 +331,7 @@ class ShipCars extends Loadboard
         {
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.id;
-            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
+            dispatch.setUpdatedBy(dispatch.createdByGuid);
             await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
 
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
@@ -349,18 +349,30 @@ class ShipCars extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
-                if (objectionPost.externalGuid == null)
-                {
-                    objectionPost.externalGuid = response.order.id;
+                objectionPost.externalGuid = response.order.id;
 
-                    const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
-                    this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
-                    for (const vehicle of job.commodities)
-                    {
-                        vehicle.setUpdatedBy(process.env.SYSTEM_USER);
-                        await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
-                    }
+                const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle], vendor, vendorAgent]');
+                this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
+                for (const vehicle of job.commodities)
+                {
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
+
+                StatusManagerHandler.registerStatus({
+                    orderGuid: job.orderGuid,
+                    userGuid: dispatch.createdByGuid,
+                    statusId: 8,
+                    jobGuid: dispatch.jobGuid,
+                    extraAnnotations: {
+                        dispatchedTo: this.loadboardName,
+                        vendorGuid: job.vendorGuid,
+                        vendorAgentGuid: job.vendorAgentGuid,
+                        vendorName: job.vendor.name,
+                        vendorAgentName: job.vendorAgent.name,
+                        code: 'pending'
+                }
+                });
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
@@ -394,7 +406,7 @@ class ShipCars extends Loadboard
             dispatch.isPending = false;
             dispatch.isAccepted = false;
             dispatch.isCanceled = true;
-            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
+            dispatch.setUpdatedBy(dispatch.updatedByGuid);
 
             const objectionPost = dispatch.loadboardPost;
             objectionPost.externalGuid = response.id;
@@ -443,8 +455,31 @@ class ShipCars extends Loadboard
 
             await OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid);
 
+            const vendor = await SFAccount.query(trx)
+            .findById(dispatch.vendorGuid)
+            .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
+            .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+            .select('salesforce.accounts.name as vendorName',
+            'salesforce.accounts.guid as vendorGuid',
+            'salesforce.contacts.guid as agentGuid',
+            'salesforce.contacts.name as agentName');
+
             await trx.commit();
 
+            StatusManagerHandler.registerStatus({
+                orderGuid: dispatch.job.orderGuid,
+                userGuid: dispatch.updatedByGuid,
+                statusId: 10,
+                jobGuid: dispatch.jobGuid,
+                extraAnnotations: {
+                    undispatchedFrom: this.loadboardName,
+                    code: 'offer canceled',
+                    vendorGuid: vendor.vendorGuid,
+                    vendorAgentGuid: vendor.agentGuid,
+                    vendorName: vendor.vendorName,
+                    vendorAgentName: vendor.agentName
+                }
+            });
             return objectionPost.jobGuid;
         }
         catch (e)
@@ -460,9 +495,9 @@ class ShipCars extends Loadboard
             const trx = await OrderJobDispatch.startTransaction();
             try
             {
-                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor')
+                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 dispatch.isPending = false;
                 dispatch.isAccepted = true;
@@ -473,8 +508,10 @@ class ShipCars extends Loadboard
                 // table and will cause dml errors
                 const orderGuid = dispatch.orderGuid;
                 const vendorName = dispatch.vendorName;
+                const vendorAgentName = dispatch.vendorAgentName;
                 delete dispatch.orderGuid;
                 delete dispatch.vendorName;
+                delete dispatch.vendorAgentName;
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
@@ -490,6 +527,21 @@ class ShipCars extends Loadboard
                 }).findById(dispatch.jobGuid);
 
                 await trx.commit();
+
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    userGuid: process.env.SYSTEM_USER,
+                    statusId: 11,
+                    jobGuid: dispatch.jobGuid,
+                    extraAnnotations: {
+                        dispatchedTo: this.loadboardName,
+                        code: 'dispatched',
+                        vendorGuid: dispatch.vendorGuid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: vendorName,
+                        vendorAgentName: vendorAgentName
+                    }
+                });
 
                 return dispatch.jobGuid;
             }
@@ -523,8 +575,10 @@ class ShipCars extends Loadboard
                 // table and will cause dml errors
                 const orderGuid = dispatch.orderGuid;
                 const vendorName = dispatch.vendorName;
+                const vendorAgentName = dispatch.vendorAgentName;
                 delete dispatch.orderGuid;
                 delete dispatch.vendorName;
+                delete dispatch.vendorAgentName;
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
@@ -580,6 +634,21 @@ class ShipCars extends Loadboard
                     );
 
                 await trx.commit();
+
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    userGuid: process.env.SYSTEM_USER,
+                    statusId: 11,
+                    jobGuid: dispatch.jobGuid,
+                    extraAnnotations: {
+                        dispatchedTo: this.loadboardName,
+                        code: 'dispatched',
+                        vendorGuid: dispatch.vendorGuid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: vendorName,
+                        vendorAgentName: vendorAgentName
+                    }
+                });
 
                 return dispatch.jobGuid;
             }
