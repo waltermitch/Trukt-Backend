@@ -449,7 +449,7 @@ class Super extends Loadboard
         {
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.guid;
-            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
+            dispatch.setUpdatedBy(dispatch.createdByGuid);
             await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
 
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
@@ -487,10 +487,9 @@ class Super extends Loadboard
                     await SFAccount.query(trx).patch(client).findById(client.guid);
                 }
 
-                console.log(dispatch);
                 StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
-                    userGuid: process.env.SYSTEM_USER,
+                    userGuid: dispatch.createdByGuid,
                     statusId: 8,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
@@ -500,7 +499,7 @@ class Super extends Loadboard
                         vendorName: job.vendor.name,
                         vendorAgentName: job.vendorAgent.name,
                         code: 'pending'
-                }
+                    }
                 });
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
@@ -536,7 +535,7 @@ class Super extends Loadboard
             dispatch.isPending = false;
             dispatch.isAccepted = false;
             dispatch.isCanceled = true;
-            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
+            dispatch.setUpdatedBy(dispatch.updatedByGuid);
 
             const objectionPost = LoadboardPost.fromJson({
                 isSynced: true,
@@ -579,10 +578,9 @@ class Super extends Loadboard
             
             await trx.commit();
 
-            // keeping this commented out until we figure out status log types
             StatusManagerHandler.registerStatus({
                 orderGuid: dispatch.job.orderGuid,
-                userGuid: process.env.SYSTEM_USER,
+                userGuid: dispatch.updatedByGuid,
                 statusId: 10,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
@@ -624,8 +622,10 @@ class Super extends Loadboard
                 // table and will cause dml errors
                 const orderGuid = dispatch.orderGuid;
                 const vendorName = dispatch.vendorName;
+                const vendorAgentName = dispatch.vendorAgentName;
                 delete dispatch.orderGuid;
                 delete dispatch.vendorName;
+                delete dispatch.vendorAgentName;
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
@@ -653,8 +653,8 @@ class Super extends Loadboard
                         code: 'dispatched',
                         vendorGuid: dispatch.vendorGuid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
-                        vendorName: dispatch.vendorName,
-                        vendorAgentName: dispatch.vendorAgentName
+                        vendorName: vendorName,
+                        vendorAgentName: vendorAgentName
                     }
                 });
                 return dispatch.jobGuid;
@@ -690,8 +690,10 @@ class Super extends Loadboard
                 // table and will cause dml errors
                 const orderGuid = dispatch.orderGuid;
                 const vendorName = dispatch.vendorName;
+                const vendorAgentName = dispatch.vendorAgentName;
                 delete dispatch.orderGuid;
                 delete dispatch.vendorName;
+                delete dispatch.vendorAgentName;
 
                 await OrderStop.query(trx)
                     .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
@@ -728,8 +730,8 @@ class Super extends Loadboard
                         code: 'declined',
                         vendorGuid: dispatch.vendorGuid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
-                        vendorName: dispatch.vendorName,
-                        vendorAgentName: dispatch.vendorAgentName
+                        vendorName: vendorName,
+                        vendorAgentName: vendorAgentName
                     }
                 });
 
