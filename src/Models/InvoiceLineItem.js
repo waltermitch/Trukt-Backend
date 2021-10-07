@@ -12,6 +12,24 @@ class InvoiceLineItem extends BaseModel
         return 'id';
     }
 
+    static get relationMappings()
+    {
+        return {
+            qbAccount: {
+                relation: BaseModel.HasOneThroughRelation,
+                modelClass: require('./QBAccount'),
+                join: {
+                    from: 'rcgTms.invoiceBillLineItems.id',
+                    through: {
+                        from: 'quickbooks.account_mappings.item_id',
+                        to: 'quickbooks.account_mappings.account_id'
+                    },
+                    to: 'quickbooks.accounts.id'
+                }
+            }
+        };
+    }
+
     /**
      * Used to compare two invoice line items,
      * usually compare api supplied item vs database item

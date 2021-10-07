@@ -1,5 +1,5 @@
-const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, isNotDeleted } = require('./Mixins/RecordAuthors');
+const BaseModel = require('./BaseModel');
 
 class InvoiceLine extends BaseModel
 {
@@ -30,6 +30,14 @@ class InvoiceLine extends BaseModel
                 join: {
                     from: 'rcgTms.invoiceBillLines.itemId',
                     to: 'rcgTms.invoiceBillLineItems.id'
+                }
+            },
+            invoiceBill: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./InvoiceBill'),
+                join: {
+                    from: 'rcgTms.invoiceBillLines.invoiceGuid',
+                    to: 'rcgTms.invoiceBills.guid'
                 }
             }
         };

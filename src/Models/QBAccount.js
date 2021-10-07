@@ -1,14 +1,16 @@
 const BaseModel = require('./BaseModel');
 
-class Request extends BaseModel
+class QBAccount extends BaseModel
 {
     static get tableName()
     {
-        return 'rcgTms.requests';
+        return 'quickbooks.accounts';
     }
 
     static get idColumn()
     {
-        return 'guid';
+        return 'id';
     }
 }
+
+module.exports = QBAccount;

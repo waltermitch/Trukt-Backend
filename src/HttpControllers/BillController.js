@@ -12,16 +12,16 @@ class BillController
 
     static async createBills(req, res)
     {
-        const orders = req.body?.orders;
+        const jobs = req.body?.jobs;
 
-        if (!orders || orders == 0)
+        if (!jobs || jobs == 0)
         {
             res.status(400);
             res.json({ 'error': 'Missing Or Empty Array' });
         }
         else
         {
-            const result = await BillService.createBills(orders);
+            const result = await BillService.createBills(jobs);
 
             res.status(200);
             res.json(result);

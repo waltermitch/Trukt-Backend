@@ -25,6 +25,9 @@ expense:
       description: Related invoice guid
       type: string
       format: uuid
+    isPaid:
+      description: Is expense paid
+      type: boolean
   required:
     - itemId
     - amount

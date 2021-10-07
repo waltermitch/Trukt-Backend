@@ -287,11 +287,7 @@
     "User": {
         "hide": {
             "external": {
-                "into": [
-                    "dateCreated",
-                    "dateUpdated",
-                    "dateDeleted"
-                ]
+                "into": ["dateCreated", "dateUpdated", "dateDeleted"]
             }
         }
     },
@@ -332,11 +328,14 @@
     "Attachment": {
         "hide": {
             "external": {
-                "into": [
-                    "isDeleted",
-                    "dateDeleted",
-                    "deletedByGuid"
-                ]
+                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
+            }
+        }
+    },
+    "InvoiceLine": {
+        "hide": {
+            "external": {
+                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
             }
         }
     }
