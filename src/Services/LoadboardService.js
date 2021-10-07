@@ -3,7 +3,6 @@ const LoadboardPost = require('../Models/LoadboardPost');
 const LoadboardContact = require('../Models/LoadboardContact');
 const Job = require('../Models/OrderJob');
 const SFAccount = require('../Models/SFAccount');
-const InvoiceLine = require('../Models/InvoiceLine');
 const currency = require('currency.js');
 const DateTime = require('luxon').DateTime;
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
@@ -153,7 +152,7 @@ class LoadboardService
         return payloads;
     }
 
-    static async dispatchJob(jobId, body, currentUserGuid)
+    static async dispatchJob(jobId, body, currentUser)
     {
         const trx = await OrderJobDispatch.startTransaction();
         const allPromises = [];
@@ -228,9 +227,9 @@ class LoadboardService
             job.vendorGuid = carrier.guid;
             job.vendorAgentGuid = carrierContact.guid;
 
-            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUserGuid }).findById(job.bills[0].guid);
+            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job.bills[0].guid);
             
-            const lines = await BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUserGuid);
+            const lines = await BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
             for(const line of lines)
             {
                 line.transacting(trx);
@@ -238,33 +237,26 @@ class LoadboardService
             allPromises.push(...lines);
 
             job.pickup.setScheduledDates(body.pickup.dateType, body.pickup.startDate, body.pickup.endDate);
-            job.pickup.setUpdatedBy(currentUserGuid);
+            job.pickup.setUpdatedBy(currentUser);
             allPromises.push(OrderStop.query(trx).patch(job.pickup).findById(job.pickup.guid));
 
             job.delivery.setScheduledDates(body.delivery.dateType, body.delivery.startDate, body.delivery.endDate);
-            job.delivery.setUpdatedBy(currentUserGuid);
+            job.delivery.setUpdatedBy(currentUser);
             allPromises.push(OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid));
 
-            /* await Job.query(trx).patch({
+            const jobForUpdate = Job.fromJson({
                 vendorGuid: carrier.guid,
                 vendorAgentGuid: carrierContact.guid,
                 dateStarted: DateTime.utc(),
-                updatedByGuid: currentUser,
                 status: 'pending',
                 actualExpense: currency(body.price).value
-            }).findById(job.guid); */
-            job.setUpdatedBy(currentUserGuid);
+            });
+            jobForUpdate.setUpdatedBy(currentUser);
             job.actualExpense = currency(body.price).value;
             job.vendor = carrier;
             job.vendorAgent = driver;
 
-            allPromises.push(Job.query(trx).patch({
-                vendorGuid: carrier.guid,
-                vendorAgentGuid: carrierContact.guid,
-                dateStarted: DateTime.utc(),
-                status: 'pending',
-                actualExpense: currency(body.price).value
-            }).findById(job.guid));
+            allPromises.push(Job.query(trx).patch(jobForUpdate).findById(job.guid));
 
             let lbPost;
             try
@@ -286,9 +278,9 @@ class LoadboardService
                 isCanceled: false,
                 paymentTermId: body.paymentTerm,
                 paymentMethodId: body.paymentMethod,
-                price: body.price,
-                createdByGuid: currentUserGuid
+                price: body.price
             });
+            dispatch.setCreatedBy(currentUser);
 
             job.dispatch = await OrderJobDispatch.query(trx).insertAndFetch(dispatch);
 
@@ -305,7 +297,7 @@ class LoadboardService
             // that is being to dispatched to now because that loadboard post is now out of sync
             // until the job is completely dispatched and a successful response is returned
             const posts = await LoadboardPost.query(trx).select('loadboard').where({ status: 'posted', isPosted: true, isSynced: true, jobGuid: jobId });
-            this.unpostPostings(jobId, posts, currentUserGuid);
+            this.unpostPostings(jobId, posts, currentUser);
 
             // compose response that can be useful for client
             dispatch.vendor = carrier;
@@ -316,7 +308,7 @@ class LoadboardService
             {
                 StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
-                    userGuid: currentUserGuid,
+                    userGuid: currentUser,
                     statusId: 8,
                     jobGuid: jobId,
                     extraAnnotations: {
@@ -359,13 +351,14 @@ class LoadboardService
                         builder.select('guid', 'orderGuid');
                     }
                 }).first();
+            dispatch.setUpdatedBy(currentUser);
             if (!dispatch)
             {
                 throw new Error('No active offers to undispatch');
             }
             if (dispatch.loadboardPostGuid != null)
             {
-                const job = await this.getAllPostingData(jobGuid, [{ loadboard: dispatch.loadboardPost.loadboard }]);
+                const job = await this.getAllPostingData(jobGuid, [{ loadboard: dispatch.loadboardPost.loadboard }], currentUser);
                 job.dispatch = dispatch;
                 const lbPayload = new loadboardClasses[`${dispatch.loadboardPost.loadboard}`](job);
                 const message = [lbPayload['undispatch']()];
@@ -377,7 +370,6 @@ class LoadboardService
                 dispatch.isPending = false;
                 dispatch.isAccepted = false;
                 dispatch.isCanceled = true;
-                dispatch.setUpdatedBy(currentUser);
 
                 await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
                 await OrderStop.query(trx)
@@ -402,7 +394,6 @@ class LoadboardService
 
             if (!dispatch.loadboardPostGuid)
             {
-                // keeping this commented out until we figure out status log types
                 StatusManagerHandler.registerStatus({
                     orderGuid: dispatch.job.orderGuid,
                     userGuid: currentUser,
