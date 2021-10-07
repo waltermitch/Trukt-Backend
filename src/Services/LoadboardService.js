@@ -350,7 +350,7 @@ class LoadboardService
         try
         {
 
-            const dispatch = await OrderJobDispatch.query(trx).withGraphJoined('[loadboardPost, job(justIds)]')
+            const dispatch = await OrderJobDispatch.query(trx).withGraphJoined('[loadboardPost, job(justIds), vendor, vendorAgent]')
                 .where({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid }).andWhere(builder =>
                 {
                     builder.where({ isAccepted: true }).orWhere({ isPending: true });
@@ -405,16 +405,20 @@ class LoadboardService
             if (!dispatch.loadboardPostGuid)
             {
                 // keeping this commented out until we figure out status log types
-                // StatusManagerHandler.registerStatus({
-                //     orderGuid: dispatch.job.orderGuid,
-                //     userGuid: currentUser,
-                //     statusId: 6,
-                //     jobGuid,
-                //     extraAnnotations: {
-                //         undispatchedFrom: 'internal',
-                //         code: 'ready'
-                //     }
-                // });
+                StatusManagerHandler.registerStatus({
+                    orderGuid: dispatch.job.orderGuid,
+                    userGuid: currentUser,
+                    statusId: 10,
+                    jobGuid,
+                    extraAnnotations: {
+                        undispatchedFrom: 'internal',
+                        code: 'ready',
+                        vendorGuid: dispatch.vendor.guid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: dispatch.vendor.name,
+                        vendorAgentName: dispatch.vendorAgent.name
+                    }
+                });
             }
 
             return dispatch;
