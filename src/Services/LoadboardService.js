@@ -21,7 +21,6 @@ const queueName = 'loadboard_posts_outgoing';
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
 
-let currentUserGuid = '00000000-0000-0000-0000-000000000000';
 const dispatchableLoadboards = ['SUPERDISPATCH', 'SHIPCARS'];
 let dbLoadboardNames;
 
@@ -40,8 +39,7 @@ class LoadboardService
 
     static async createPostings(jobId, posts, currentUser)
     {
-        currentUserGuid = currentUser;
-        const job = await LoadboardService.getAllPostingData(jobId, posts);
+        const job = await LoadboardService.getAllPostingData(jobId, posts, currentUser);
         const payloads = [];
         let lbPayload;
 
@@ -71,7 +69,6 @@ class LoadboardService
 
     static async postPostings(jobId, posts, currentUser)
     {
-        currentUserGuid = currentUser;
         const dispatches = await OrderJobDispatch.query()
                 .where({ 'rcgTms.orderJobDispatches.jobGuid': jobId }).andWhere(builder =>
                 {
@@ -81,7 +78,7 @@ class LoadboardService
         {
             throw new Error('Cannot post load with active dispatch offers');
         }
-        const job = await LoadboardService.getAllPostingData(jobId, posts);
+        const job = await LoadboardService.getAllPostingData(jobId, posts, currentUser);
         const payloads = [];
         let lbPayload;
         try
@@ -102,6 +99,7 @@ class LoadboardService
         }
         catch (e)
         {
+            console.log(e);
             throw new Error(e.toString());
         }
 
@@ -111,7 +109,6 @@ class LoadboardService
     static async unpostPostings(jobId, posts, currentUser)
     {
         const job = await LoadboardService.getPostRecords(jobId, posts);
-        currentUserGuid = currentUser;
         const payloads = [];
         let lbPayload;
 
@@ -231,7 +228,7 @@ class LoadboardService
             }, currency(0));
 
             const bill = job.bills[0];
-            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUserGuid }).findById(bill.guid);
+            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(bill.guid);
             if (body.price !== jobTotalPrice.value)
             {
                 const lines = bill.lines;
@@ -240,27 +237,27 @@ class LoadboardService
                 {
                     const billLine = lines[i];
                     const amount = distribution[i].value;
-                    await InvoiceLine.query(trx).patch({ amount: amount, updatedByGuid: currentUserGuid }).findById(billLine.guid);
+                    await InvoiceLine.query(trx).patch({ amount: amount, updatedByGuid: currentUser }).findById(billLine.guid);
                 }
             }
 
             job.pickup.dateScheduledType = body.pickup.dateType;
             job.pickup.dateScheduledStart = body.pickup.startDate;
             job.pickup.dateScheduledEnd = body.pickup.dateType == 'estimated' ? body.pickup.endDate : null;
-            job.pickup.updatedByGuid = currentUserGuid;
+            job.pickup.updatedByGuid = currentUser;
             await OrderStop.query(trx).patch(job.pickup).findById(job.pickup.guid);
 
             job.delivery.dateScheduledType = body.delivery.dateType;
             job.delivery.dateScheduledStart = body.delivery.startDate;
             job.delivery.dateScheduledEnd = body.delivery.dateType == 'estimated' ? body.delivery.endDate : null;
-            job.delivery.updatedByGuid = currentUserGuid;
+            job.delivery.updatedByGuid = currentUser;
             await OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid);
 
             await Job.query(trx).patch({
                 vendorGuid: carrier.guid,
                 vendorAgentGuid: carrierContact.guid,
                 dateStarted: DateTime.utc(),
-                updatedByGuid: currentUserGuid,
+                updatedByGuid: currentUser,
                 status: 'pending',
                 actualExpense: currency(body.price).value
             }).findById(job.guid);
@@ -289,7 +286,7 @@ class LoadboardService
                 paymentTermId: body.paymentTerm,
                 paymentMethodId: body.paymentMethod,
                 price: body.price,
-                createdByGuid: currentUserGuid
+                createdByGuid: currentUser
             });
 
             job.dispatch = await OrderJobDispatch.query(trx).insertAndFetch(dispatch);
@@ -319,7 +316,7 @@ class LoadboardService
                 // keeping this commented out until we figure out status log types
                 // StatusManagerHandler.registerStatus({
                 //     orderGuid: job.orderGuid,
-                //     userGuid: currentUserGuid,
+                //     userGuid: currentUser,
                 //     statusId: 4,
                 //     jobGuid: jobId,
                 //     extraAnnotations: { dispatchedTo: 'internal', code: 'dispatched' }
@@ -490,7 +487,7 @@ class LoadboardService
         return job;
     }
 
-    static async createPostRecords(job, posts)
+    static async createPostRecords(job, posts, currentUser)
     {
         const newPosts = [];
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
@@ -521,7 +518,7 @@ class LoadboardService
                         loadboard: post.loadboard,
                         instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
                         values: post.values,
-                        createdByGuid: currentUserGuid
+                        createdByGuid: currentUser
                     });
                     newPosts.push(objectionPost);
                 }
@@ -533,7 +530,7 @@ class LoadboardService
                         instructions: post.loadboardInstructions || job.postObjects[`${post.loadboard}`].loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
                         isSynced: false,
                         values: post.values,
-                        updatedByGuid: currentUserGuid
+                        updatedByGuid: currentUser
                     });
                 }
             }
