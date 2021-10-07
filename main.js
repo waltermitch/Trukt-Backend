@@ -11,8 +11,8 @@ const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
 const PGListener = require('./src/EventManager/PGListener');
 const HttpErrorHandler = require('./src/HttpErrorHandler');
-const Auth = require('./src/HttpControllers/Auth');
 const Mongo = require('./src/Mongo');
+const Auth = require('./src/Authorization/Auth');
 require('./src/CronJobs/Manager');
 
 run();
@@ -72,26 +72,7 @@ async function run()
         })
     );
 
-    // TODO: temp solution for created-by requirement
-    // grabs the user id and adds it to the session
-    app.use(async (req, res, next) =>
-    {
-        try
-        {
-            req.session.userGuid = (await Auth.verifyJWT(req.headers?.authorization)).oid;
-
-            if ('x-test-user' in req.headers && !req.session?.userGuid)
-            {
-                req.session.userGuid = req.headers['x-test-user'];
-            }
-        }
-        catch (e)
-        {
-            // do nothing
-        }
-
-        next();
-    });
+    app.use(Auth.middleware());
 
     // wanted to have a dynamic way to add routes without having to modify main.js
     const filepaths = fs.readdirSync('./src/Routes');
@@ -105,7 +86,7 @@ async function run()
         }
     }
 
-    app.all('*', (req, res) => { res.status(404).send(); });
+    app.all('*', (req, res) => { res.status(404).send('this endpoint does not exist.'); });
     app.use(HttpErrorHandler);
 
     app.listen(process.env.PORT, async (err) =>
