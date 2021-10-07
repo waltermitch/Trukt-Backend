@@ -469,47 +469,52 @@ class Super extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
-                if (objectionPost.externalGuid == null)
+                objectionPost.externalGuid = response.order.guid;
+
+                const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
+                    order.[client], commodities(distinct, isNotDeleted).[vehicle], vendor, vendorAgent
+                ]`);
+
+                const vehicles = this.updateCommodity(job.commodities, response.order.vehicles);
+                for (const vehicle of vehicles)
                 {
-                    objectionPost.externalGuid = response.order.guid;
-
-                    const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
-                        order.[client], commodities(distinct, isNotDeleted).[vehicle]
-                    ]`);
-
-                    const vehicles = this.updateCommodity(job.commodities, response.order.vehicles);
-                    for (const vehicle of vehicles)
-                    {
-                        vehicle.setUpdatedBy(anonUser);
-                        await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
-                    }
-
-                    const client = job.order.client;
-                    if (client.sdGuid !== response.order.customer.counterparty_guid)
-                    {
-                        client.sdGuid = response.order.customer.counterparty_guid;
-                        await SFAccount.query(trx).patch(client).findById(client.guid);
-                    }
+                    vehicle.setUpdatedBy(anonUser);
+                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
+
+                const client = job.order.client;
+                if (client.sdGuid !== response.order.customer.counterparty_guid)
+                {
+                    client.sdGuid = response.order.customer.counterparty_guid;
+                    await SFAccount.query(trx).patch(client).findById(client.guid);
+                }
+
+                console.log(dispatch);
+                StatusManagerHandler.registerStatus({
+                    orderGuid: job.orderGuid,
+                    userGuid: process.env.SYSTEM_USER,
+                    statusId: 8,
+                    jobGuid: dispatch.jobGuid,
+                    extraAnnotations: {
+                        dispatchedTo: 'SUPERDISPATCH',
+                        vendorGuid: job.vendorGuid,
+                        vendorAgentGuid: job.vendorAgentGuid,
+                        vendorName: job.vendor.name,
+                        vendorAgentName: job.vendorAgent.name,
+                        code: 'pending'
+                }
+                });
             }
             objectionPost.setUpdatedBy(anonUser);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
 
-            // keeping this commented out until we figure out status log types
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid: dispatch.loadboardPost.jobGuid,
-            //     userGuid: anonUser,
-            //     statusId: 4,
-            //     jobGuid: objectionPost.guid,
-            //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'dispatched' }
-            // });
-
             return dispatch.jobGuid;
         }
         catch (e)
         {
+            console.log(e);
             await trx.rollback();
         }
     }
@@ -565,23 +570,37 @@ class Super extends Loadboard
 
             await OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid);
 
+            const vendor = await SFAccount.query(trx)
+            .findById(dispatch.vendorGuid)
+            .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
+            .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+            .select('salesforce.accounts.name as vendorName',
+            'salesforce.accounts.guid as vendorGuid',
+            'salesforce.contacts.guid as agentGuid',
+            'salesforce.contacts.name as agentName');
+            
             await trx.commit();
 
             // keeping this commented out until we figure out status log types
-            // StatusManagerHandler.registerStatus({
-            //     orderGuid: dispatch.job.orderGuid,
-            //     userGuid: currentUser,
-            //     statusId: 6,
-            //     jobGuid,
-            //     extraAnnotations: {
-            //         undispatchedFrom: 'SUPERDISPATCH',
-            //         code: 'offer canceled'
-            //     }
-            // });
+            StatusManagerHandler.registerStatus({
+                orderGuid: dispatch.job.orderGuid,
+                userGuid: process.env.SYSTEM_USER,
+                statusId: 10,
+                jobGuid: dispatch.jobGuid,
+                extraAnnotations: {
+                    undispatchedFrom: 'SUPERDISPATCH',
+                    code: 'offer canceled',
+                    vendorGuid: vendor.vendorGuid,
+                    vendorAgentGuid: vendor.agentGuid,
+                    vendorName: vendor.vendorName,
+                    vendorAgentName: vendor.agentName
+                }
+            });
             return dispatch.jobGuid;
         }
         catch (e)
         {
+            console.log(e);
             await trx.rollback();
         }
 
@@ -594,9 +613,9 @@ class Super extends Loadboard
             const trx = await OrderJobDispatch.startTransaction();
             try
             {
-                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor')
+                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 dispatch.isPending = false;
                 dispatch.isAccepted = true;
@@ -626,13 +645,20 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                // StatusManagerHandler.registerStatus({
-                //     orderGuid,
-                //     userGuid: anonUser,
-                //     statusId: 5,
-                //     jobGuid: dispatch.jobGuid,
-                //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'dispatched', vendor: dispatch.vendorGuid, vendorName: vendorName }
-                // });
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    userGuid: process.env.SYSTEM_USER,
+                    statusId: 11,
+                    jobGuid: dispatch.jobGuid,
+                    extraAnnotations: {
+                        dispatchedTo: 'SUPERDISPATCH',
+                        code: 'dispatched',
+                        vendorGuid: dispatch.vendorGuid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: dispatch.vendorName,
+                        vendorAgentName: dispatch.vendorAgentName
+                    }
+                });
                 return dispatch.jobGuid;
             }
             catch (e)
@@ -652,9 +678,9 @@ class Super extends Loadboard
             {
                 // getting the dispatch record because it has the job guid, which we need in order to operate
                 // on the job
-                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor')
+                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 dispatch.isPending = false;
                 dispatch.isAccepted = false;
@@ -694,13 +720,20 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                // StatusManagerHandler.registerStatus({
-                //     orderGuid,
-                //     userGuid: anonUser,
-                //     statusId: 6,
-                //     jobGuid: dispatch.jobGuid,
-                //     extraAnnotations: { dispatchedTo: 'SUPERDISPATCH', code: 'declined', vendor: dispatch.vendorGuid, vendorName: vendorName }
-                // });
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    userGuid: anonUser,
+                    statusId: 12,
+                    jobGuid: dispatch.jobGuid,
+                    extraAnnotations: {
+                        undispatchedFrom: 'SUPERDISPATCH',
+                        code: 'declined',
+                        vendorGuid: dispatch.vendorGuid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: dispatch.vendorName,
+                        vendorAgentName: dispatch.vendorAgentName
+                    }
+                });
 
                 return dispatch.jobGuid;
             }
