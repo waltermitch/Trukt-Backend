@@ -49,7 +49,7 @@ class InvoiceLineItem extends LineItem
     constructor(data)
     {
         super(data);
-        this.SalesItemLineDetail = { ItemRef: { value: data.item.externalSourceGuid } };
+        this.SalesItemLineDetail = { ItemAccountRef: { value: data.item.qbAccount.id } };
         this.DetailType = 'SalesItemLineDetail';
     }
 }

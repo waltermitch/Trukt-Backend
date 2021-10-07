@@ -1634,6 +1634,29 @@ paths:
                       items:
                         type: string
                       minItems: 1
+                sort:
+                  description: Sort results by field provided
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                      enum:
+                        - status
+                        - number
+                        - dateCreated
+                        - actualRevenue
+                        - 'actualExpense,'
+                        - 'estimatedExpense,'
+                        - estimatedRevenue
+                    order:
+                      description: Sorting order
+                      type: string
+                      enum:
+                        - asc
+                        - desc
+                      default: asc
+                  required:
+                    - field
       responses:
         '200':
           description: Orders
@@ -2243,9 +2266,9 @@ paths:
             application/json: {}
   /invoice:
     post:
-      summary: Create invoice
-      operationId: postInvoice
-      description: Create invoice
+      summary: Invoice Orders
+      operationId: invoiceOrders
+      description: Invoices Orders
       tags:
         - Invoice
       requestBody:
@@ -2253,19 +2276,19 @@ paths:
           application/json:
             schema:
               type: object
-              description: List of order guids
+              description: List of Order guids
               properties:
                 orders:
                   type: array
                   items:
-                    description: order guid
+                    description: Order guid
                     $ref: '#/components/schemas/guid'
                   minItems: 1
               required:
                 - orders
       responses:
         '200':
-          description: invocies
+          description: invoices
           content:
             application/json: {}
   /index/order/number:
@@ -2432,14 +2455,29 @@ paths:
             application/json: {}
   /bill:
     post:
-      summary: Create a new Bill
-      operationId: createBill
-      description: Create a new bill
+      summary: Bill Jobs
+      operationId: billJobs
+      description: Bills Jobs
       tags:
-        - Bill
+        - Invoice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: List of Job guids
+              properties:
+                orders:
+                  type: array
+                  items:
+                    description: Job guid
+                    $ref: '#/components/schemas/guid'
+                  minItems: 1
+              required:
+                - jobs
       responses:
         '200':
-          description: Bill
+          description: bills
           content:
             application/json: {}
   '/account/{accountType}':
@@ -3839,6 +3877,9 @@ components:
           description: Related invoice guid
           type: string
           format: uuid
+        isPaid:
+          description: Is expense paid
+          type: boolean
       required:
         - itemId
         - amount

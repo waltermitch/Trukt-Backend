@@ -6,7 +6,6 @@ const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
  */
 class InvoiceBill extends BaseModel
 {
-
     static get tableName()
     {
         return 'rcgTms.invoiceBills';

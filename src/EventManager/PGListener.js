@@ -1,3 +1,4 @@
+const AccountUpdateManager = require('./AccountUpdateManager');
 const Handler = require('./Handler');
 const PG = require('../PostGres');
 
@@ -35,7 +36,7 @@ class PGListener
                             await Handler.jobStatusChanged(jsonMsg);
                             break;
                         case 'account_upserted':
-                            await Handler.pushToQueue('accountupdated', jsonMsg);
+                            await AccountUpdateManager.pushToQueue('accountupdated', jsonMsg);
                             break;
                         default:
                             break;

@@ -35,7 +35,7 @@ class SFAccount extends BaseModel
             },
             rectype: {
                 relation: BaseModel.HasOneRelation,
-                modelClass: require('./RecordType'),
+                modelClass: require('./SFRecordType'),
                 join: {
                     from: 'salesforce.accounts.recordTypeId',
                     to: 'salesforce.record_types.sfId'
@@ -143,6 +143,17 @@ class SFAccount extends BaseModel
         }
         return json;
     }
+
+    linkRecordType(recType)
+    {
+        this.recordTypeId = recType.sfId;
+    }
+
+    linkPrimaryContact(contact)
+    {
+        this.primaryContactId = contact.sfId;
+    }
+
 }
 
 module.exports = SFAccount;

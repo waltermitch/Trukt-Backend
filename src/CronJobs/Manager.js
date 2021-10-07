@@ -1,6 +1,6 @@
 const SystemManagementService = require('../Services/SystemManagementService');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
-const EventHandler = require('../EventManager/Handler');
+const AccountUpdateManager = require('../EventManager/AccountUpdateManager');
 const Triumph = require('../Triumph/API');
 const QBO = require('../QuickBooks/API');
 const Super = require('../Super/API');
@@ -20,7 +20,7 @@ const expressions =
 // every second
 Cron.schedule(expressions.second, async () =>
 {
-    await EventHandler.checkAccountUpdatedQueue();
+    await AccountUpdateManager.checkAccountUpdatedQueue();
 });
 
 // every 30 minutes
@@ -28,7 +28,6 @@ Cron.schedule(expressions.thirtyMinutes, async () =>
 {
     await QBO.refreshToken();
 
-    // TODO generate tms user access token
     await SystemManagementService.generateTmsUserToken();
 });
 

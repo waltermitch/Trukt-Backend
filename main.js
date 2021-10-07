@@ -11,104 +11,90 @@ const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
 const PGListener = require('./src/EventManager/PGListener');
 const HttpErrorHandler = require('./src/HttpErrorHandler');
-const Auth = require('./src/HttpControllers/Auth');
 const Mongo = require('./src/Mongo');
+const Auth = require('./src/Authorization/Auth');
 require('./src/CronJobs/Manager');
 
-PGListener.listen();
-Mongo.connect();
+run();
 
-const store = new KnexSessionStore
-    ({
-        knex: BaseModel.knex(),
-        tableName: 'sessions'
-    });
-
-const sessionConfig = {
-    secret: process.env['node.secret'],
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        // 1 day
-        maxAge: 1 * 24 * 60 * 60 * 1000
-    },
-    store
-};
-
-switch (process.env.ENV)
+async function run()
 {
-    case 'dev':
-    case 'development':
-        sessionConfig.cookie.secure = true;
-        break;
-    case 'staging':
-        sessionConfig.cookie.secure = true;
-        break;
-    case 'prod':
-    case 'production':
-        sessionConfig.cookie.secure = true;
-        break;
-    default:
-        sessionConfig.cookie.secure = false;
-}
+    await PGListener.listen();
+    await Mongo.connect();
 
-const app = express();
-app.use(domain);
-app.use(session(sessionConfig));
-app.use(express.json());
+    const store = new KnexSessionStore
+        ({
+            knex: BaseModel.knex(),
+            tableName: 'sessions'
+        });
 
-app.use(
-    openApiValidator.middleware({
-        apiSpec: './openApi/openapi.yaml',
-        ignorePaths: path => path.startsWith('/api/docs'),
-        $refParser: {
-            mode: 'dereference'
+    const sessionConfig = {
+        secret: process.env['node.secret'],
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            // 1 day
+            maxAge: 1 * 24 * 60 * 60 * 1000
         },
-        formats: require('./openapi/customFormats.js')
-    })
-);
+        store
+    };
 
-// TODO: temp solution for created-by requirement
-// grabs the user id and adds it to the session
-app.use(async (req, res, next) =>
-{
-    try
+    switch (process.env.ENV)
     {
-        req.session.userGuid = (await Auth.verifyJWT(req.headers?.authorization)).oid;
+        case 'dev':
+        case 'development':
+            sessionConfig.cookie.secure = true;
+            break;
+        case 'staging':
+            sessionConfig.cookie.secure = true;
+            break;
+        case 'prod':
+        case 'production':
+            sessionConfig.cookie.secure = true;
+            break;
+        default:
+            sessionConfig.cookie.secure = false;
+    }
 
-        if ('x-test-user' in req.headers && !req.session?.userGuid)
+    const app = express();
+    app.use(domain);
+    app.use(session(sessionConfig));
+    app.use(express.json());
+
+    app.use(
+        openApiValidator.middleware({
+            apiSpec: './openApi/openapi.yaml',
+            ignorePaths: path => path.startsWith('/api/docs'),
+            $refParser: {
+                mode: 'dereference'
+            },
+            formats: require('./openapi/customFormats.js')
+        })
+    );
+
+    app.use(Auth.middleware());
+
+    // wanted to have a dynamic way to add routes without having to modify main.js
+    const filepaths = fs.readdirSync('./src/Routes');
+    for (const filepath of filepaths)
+    {
+        const router = require(`./src/Routes/${filepath}`);
+        app.use(router);
+        if (process.argv.includes('--routes'))
         {
-            req.session.userGuid = req.headers['x-test-user'];
+            printRoutes(filepath, router.stack);
         }
     }
-    catch (e)
-    {
-        // do nothing
-    }
 
-    next();
-});
+    app.all('*', (req, res) => { res.status(404).send('this endpoint does not exist.'); });
+    app.use(HttpErrorHandler);
 
-// wanted to have a dynamic way to add routes without having to modify main.js
-const filepaths = fs.readdirSync('./src/Routes');
-for (const filepath of filepaths)
-{
-    const router = require(`./src/Routes/${filepath}`);
-    app.use(router);
-    if (process.argv.includes('--routes'))
+    app.listen(process.env.PORT, async (err) =>
     {
-        printRoutes(filepath, router.stack);
-    }
+        if (err) console.log('there is an error lol');
+        console.log('listening on port ', process.env.PORT);
+    });
 }
-
-app.all('*', (req, res) => { res.status(404).send(); });
-app.use(HttpErrorHandler);
-
-app.listen(process.env.PORT, async (err) =>
-{
-    if (err) console.log('there is an error lol');
-    console.log('listening on port ', process.env.PORT);
-});
 
 /**
  * Prints out the routes that are available from this application

@@ -10,8 +10,6 @@ const SFAccount = require('../Models/SFAccount');
 const DateTime = require('luxon').DateTime;
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
-const anonUser = '00000000-0000-0000-0000-000000000000';
-
 class Super extends Loadboard
 {
 
@@ -58,8 +56,8 @@ class Super extends Loadboard
             pickup:
             {
                 first_available_pickup_date: this.data.pickup.dateRequestedStart,
-                scheduled_at: this.data.pickup.dateScheduledStart ? this.data.pickup.dateScheduledStart : this.data.pickup.dateRequestedStart,
-                scheduled_ends_at: this.data.pickup.dateScheduledEnd || this.data.pickup.dateScheduledType != 'estimated' ? this.data.pickup.dateScheduledEnd : this.data.pickup.dateRequestedEnd,
+                scheduled_at: !this.data.pickup.dateScheduledStart.invalid ? this.data.pickup.dateScheduledStart : this.data.pickup.dateRequestedStart,
+                scheduled_ends_at: !this.data.pickup.dateScheduledEnd.invalid ? this.data.pickup.dateScheduledEnd : this.data.pickup.dateRequestedEnd,
                 scheduled_at_by_customer: this.data.pickup.dateRequestedStart,
                 scheduled_ends_at_by_customer: this.data.pickup.dateRequestedEnd,
                 date_type: this.setDateType(this.data.pickup.dateRequestedType),
@@ -68,21 +66,21 @@ class Super extends Loadboard
                 {
                     address: this.data.pickup.terminal.street1,
                     city: this.data.pickup.terminal.city,
-                    state: this.getStateCode(this.data.pickup.terminal.state),
+                    state: this.data.pickup.terminal.state,
                     zip: this.data.pickup.terminal.zipCode,
                     name: this.data.pickup.terminal.name,
                     business_type: this.setBusinessType(this.data.pickup.terminal.locationType),
-                    contact_name: this.data.pickup?.primaryContact?.name,
-                    contact_email: this.data.pickup?.primaryContact?.email,
-                    contact_phone: this.data.pickup?.primaryContact?.phoneNumber,
-                    contact_mobile_phone: this.data.pickup?.primaryContact?.mobileNumber,
+                    contact_name: this.data.pickup?.primaryContact?.name || null,
+                    contact_email: this.data.pickup?.primaryContact?.email || null,
+                    contact_phone: this.data.pickup?.primaryContact?.phoneNumber || null,
+                    contact_mobile_phone: this.data.pickup?.primaryContact?.mobileNumber || null,
                     date_type: this.setDateType(this.data.pickup.dateScheduledType)
                 }
             },
             delivery:
             {
-                scheduled_at: this.data.delivery.dateScheduledStart ? this.data.delivery.dateScheduledStart : this.data.delivery.dateRequestedStart,
-                scheduled_ends_at: this.data.delivery.dateScheduledEnd || this.data.delivery.dateScheduledType != 'estimated' ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
+                scheduled_at: !this.data.delivery.dateScheduledStart ? this.data.delivery.dateScheduledStart : this.data.delivery.dateRequestedStart,
+                scheduled_ends_at: !this.data.delivery.dateScheduledEnd ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
                 scheduled_at_by_customer: this.data.delivery.dateRequestedStart,
                 scheduled_ends_at_by_customer: this.data.delivery.dateRequestedEnd,
                 notes: this.data.delivery.notes,
@@ -91,14 +89,14 @@ class Super extends Loadboard
                 {
                     address: this.data.delivery.terminal.street1,
                     city: this.data.delivery.terminal.city,
-                    state: this.getStateCode(this.data.delivery.terminal.state),
+                    state: this.data.delivery.terminal.state,
                     zip: this.data.delivery.terminal.zipCode,
                     name: this.data.delivery.terminal.name,
                     business_type: this.setBusinessType(this.data.delivery.terminal.locationType),
-                    contact_name: this.data.delivery?.primaryContact?.name,
-                    contact_email: this.data.delivery?.primaryContact?.email,
-                    contact_phone: this.data.delivery?.primaryContact?.phoneNumber,
-                    contact_mobile_phone: this.data.delivery?.primaryContact?.mobileNumber,
+                    contact_name: this.data.delivery?.primaryContact?.name || null,
+                    contact_email: this.data.delivery?.primaryContact?.email || null,
+                    contact_phone: this.data.delivery?.primaryContact?.phoneNumber || null,
+                    contact_mobile_phone: this.data.delivery?.primaryContact?.mobileNumber || null,
                     date_type: this.setDateType(this.data.delivery.dateRequestedType)
                 }
             },
@@ -273,7 +271,7 @@ class Super extends Loadboard
                 const vehicles = this.updateCommodity(job.commodities, response.vehicles);
                 for (const vehicle of vehicles)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
 
@@ -289,7 +287,7 @@ class Super extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -326,7 +324,7 @@ class Super extends Loadboard
                 const vehicles = this.updateCommodity(job.commodities, response.vehicles);
                 for (const vehicle of vehicles)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
 
@@ -344,7 +342,7 @@ class Super extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -379,7 +377,7 @@ class Super extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
@@ -414,7 +412,7 @@ class Super extends Loadboard
                 this.updateCommodity(job.commodities, response.vehicles);
                 for (const vehicle of job.commodities)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
 
@@ -429,7 +427,7 @@ class Super extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -451,7 +449,7 @@ class Super extends Loadboard
         {
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.guid;
-            dispatch.setUpdatedBy(anonUser);
+            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
             await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
 
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
@@ -478,7 +476,7 @@ class Super extends Loadboard
                 const vehicles = this.updateCommodity(job.commodities, response.order.vehicles);
                 for (const vehicle of vehicles)
                 {
-                    vehicle.setUpdatedBy(anonUser);
+                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
                     await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
                 }
 
@@ -505,7 +503,7 @@ class Super extends Loadboard
                 }
                 });
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
             await trx.commit();
@@ -531,21 +529,21 @@ class Super extends Loadboard
                 dateStarted: null,
                 status: 'ready'
             });
-            job.setUpdatedBy(anonUser);
+            job.setUpdatedBy(process.env.SYSTEM_USER);
             await Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid);
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.isPending = false;
             dispatch.isAccepted = false;
             dispatch.isCanceled = true;
-            dispatch.setUpdatedBy(anonUser);
+            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
             const objectionPost = LoadboardPost.fromJson({
                 isSynced: true,
                 guid: dispatch.loadboardPost.guid
             });
             await OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
                 .whereIn('guid',
                     OrderStopLink.query().select('stopGuid')
                         .where({ 'jobGuid': dispatch.jobGuid })
@@ -564,7 +562,7 @@ class Super extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -619,7 +617,7 @@ class Super extends Loadboard
 
                 dispatch.isPending = false;
                 dispatch.isAccepted = true;
-                dispatch.setUpdatedBy(anonUser);
+                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // move queried data into variables
                 // because they are not part of the orer_job_dispatch
@@ -640,7 +638,7 @@ class Super extends Loadboard
                 // update the job status to accepted. It's a string, we can literally write anything to this
                 await Job.query(trx).patch({
                     status: 'dispatched',
-                    updatedByGuid: anonUser
+                    updatedByGuid: process.env.SYSTEM_USER
                 }).findById(dispatch.jobGuid);
 
                 await trx.commit();
@@ -685,7 +683,7 @@ class Super extends Loadboard
                 dispatch.isPending = false;
                 dispatch.isAccepted = false;
                 dispatch.isCanceled = true;
-                dispatch.setUpdatedBy(anonUser);
+                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // move queried data into variables
                 // because they are not part of the orer_job_dispatch
@@ -696,7 +694,7 @@ class Super extends Loadboard
                 delete dispatch.vendorName;
 
                 await OrderStop.query(trx)
-                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: anonUser })
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid')
                             .where({ 'jobGuid': dispatch.jobGuid })
@@ -710,7 +708,7 @@ class Super extends Loadboard
                     dateStarted: null,
                     status: 'declined'
                 });
-                job.setUpdatedBy(anonUser);
+                job.setUpdatedBy(process.env.SYSTEM_USER);
                 await Job.query(trx).patch(job).findById(dispatch.jobGuid);
 
                 // have to put table name because externalGuid is also on loadboard post and not
@@ -722,7 +720,7 @@ class Super extends Loadboard
 
                 StatusManagerHandler.registerStatus({
                     orderGuid,
-                    userGuid: anonUser,
+                    userGuid: process.env.SYSTEM_USER,
                     statusId: 12,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {

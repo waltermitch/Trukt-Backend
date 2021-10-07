@@ -1,4 +1,4 @@
-const Bill = require('../Models/InvoiceBill');
+const QuickBooksService = require('./QuickBooksService');
 const OrderJob = require('../Models/OrderJob');
 const QBO = require('../QuickBooks/API');
 const currency = require('currency.js');
@@ -11,6 +11,7 @@ let transportItem;
 {
     transportItem = await InvoiceLineItem.query().findOne({ name: 'transport' });
 })();
+const Bill = require('../Models/InvoiceBill');
 
 class BillService
 {
@@ -18,14 +19,14 @@ class BillService
     {
         const search = guid.replace(/%/g, '');
 
-        const res = await Bill.query().where('guid', '=', search);
+        const res = await Bill.query().findOne({ 'guid': search });
 
         return res?.[0];
     }
 
     static async createBills(arr)
     {
-        const qb = OrderJob.query().withGraphFetched('[bills.[cosignee, lines.[commodity.[stops.[terminal]], item]], vendor]');
+        const qb = OrderJob.query().withGraphFetched('[bills.[lines.[commodity.[stops.[terminal]], item.qbAccount]], vendor]');
 
         for (const guid of arr)
             qb.orWhere('guid', '=', guid);
@@ -33,7 +34,7 @@ class BillService
         // get all the orders
         const orders = await qb;
 
-        await QBO.createBills(orders);
+        await QuickBooksService.createBills(orders);
     }
 
     /**

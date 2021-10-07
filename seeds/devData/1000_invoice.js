@@ -6,12 +6,12 @@ const Invoice = require('../../src/Models/InvoiceBill');
 const InvoiceLine = require('../../src/Models/InvoiceLine');
 const InvoiceLineItem = require('../../src/Models/InvoiceLineItem');
 const SFAccount = require('../../src/Models/SFAccount');
+const User = require('../../src/Models/User');
 const faker = require('faker');
-
-const test_user = '00000000-0000-0000-0000-000000000000';
 
 exports.seed = async function (knex)
 {
+    const user = await User.query(knex).findOne('name', 'TMS System');
     return knex.transaction(async trx =>
     {
         let client = await SFAccount.query(trx).whereNotNull('guid').limit(1);
@@ -28,18 +28,20 @@ exports.seed = async function (knex)
         const invoice = Invoice.fromJson({
             consigneeGuid: client.guid,
             lines: [],
-            isInvoice: true,
-            createdByGuid: test_user
+            isInvoice: true
         });
+
+        invoice.setCreatedBy(user);
 
         const amount = faker.datatype.number(6) + 4;
         for (let i = 0; i < amount; i++)
         {
             const line = InvoiceLine.fromJson({
                 itemId: faker.random.arrayElement(items).id,
-                amount: faker.datatype.number(1500) + 50,
-                createdByGuid: test_user
+                amount: faker.datatype.number(1500) + 50
             });
+
+            line.setCreatedBy(user);
 
             invoice.lines.push(line);
         }

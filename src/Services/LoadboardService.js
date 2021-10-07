@@ -22,7 +22,6 @@ const queueName = 'loadboard_posts_outgoing';
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
 
-let currentUserGuid = '00000000-0000-0000-0000-000000000000';
 const dispatchableLoadboards = ['SUPERDISPATCH', 'SHIPCARS'];
 let dbLoadboardNames;
 
@@ -41,8 +40,7 @@ class LoadboardService
 
     static async createPostings(jobId, posts, currentUser)
     {
-        currentUserGuid = currentUser;
-        const job = await LoadboardService.getAllPostingData(jobId, posts);
+        const job = await LoadboardService.getAllPostingData(jobId, posts, currentUser);
         const payloads = [];
         let lbPayload;
 
@@ -72,7 +70,6 @@ class LoadboardService
 
     static async postPostings(jobId, posts, currentUser)
     {
-        currentUserGuid = currentUser;
         const dispatches = await OrderJobDispatch.query()
                 .where({ 'rcgTms.orderJobDispatches.jobGuid': jobId }).andWhere(builder =>
                 {
@@ -82,7 +79,7 @@ class LoadboardService
         {
             throw new Error('Cannot post load with active dispatch offers');
         }
-        const job = await LoadboardService.getAllPostingData(jobId, posts);
+        const job = await LoadboardService.getAllPostingData(jobId, posts, currentUser);
         const payloads = [];
         let lbPayload;
         try
@@ -104,6 +101,7 @@ class LoadboardService
         }
         catch (e)
         {
+            console.log(e);
             throw new Error(e.toString());
         }
 
@@ -112,7 +110,6 @@ class LoadboardService
     static async unpostPostings(jobId, posts, currentUser)
     {
         const job = await LoadboardService.getPostRecords(jobId, posts);
-        currentUserGuid = currentUser;
         const payloads = [];
         let lbPayload;
 
@@ -156,7 +153,7 @@ class LoadboardService
         return payloads;
     }
 
-    static async dispatchJob(jobId, body, currentUser)
+    static async dispatchJob(jobId, body, currentUserGuid)
     {
         const trx = await OrderJobDispatch.startTransaction();
         const allPromises = [];
@@ -252,7 +249,7 @@ class LoadboardService
                 vendorGuid: carrier.guid,
                 vendorAgentGuid: carrierContact.guid,
                 dateStarted: DateTime.utc(),
-                updatedByGuid: currentUserGuid,
+                updatedByGuid: currentUser,
                 status: 'pending',
                 actualExpense: currency(body.price).value
             }).findById(job.guid); */
@@ -308,7 +305,7 @@ class LoadboardService
             // that is being to dispatched to now because that loadboard post is now out of sync
             // until the job is completely dispatched and a successful response is returned
             const posts = await LoadboardPost.query(trx).select('loadboard').where({ status: 'posted', isPosted: true, isSynced: true, jobGuid: jobId });
-            this.unpostPostings(jobId, posts, currentUser);
+            this.unpostPostings(jobId, posts, currentUserGuid);
 
             // compose response that can be useful for client
             dispatch.vendor = carrier;
@@ -502,7 +499,7 @@ class LoadboardService
         return job;
     }
 
-    static async createPostRecords(job, posts)
+    static async createPostRecords(job, posts, currentUser)
     {
         const newPosts = [];
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
@@ -533,7 +530,7 @@ class LoadboardService
                         loadboard: post.loadboard,
                         instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
                         values: post.values,
-                        createdByGuid: currentUserGuid
+                        createdByGuid: currentUser
                     });
                     newPosts.push(objectionPost);
                 }
@@ -545,7 +542,7 @@ class LoadboardService
                         instructions: post.loadboardInstructions || job.postObjects[`${post.loadboard}`].loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
                         isSynced: false,
                         values: post.values,
-                        updatedByGuid: currentUserGuid
+                        updatedByGuid: currentUser
                     });
                 }
             }
