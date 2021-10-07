@@ -48,32 +48,38 @@
         {
             "id": 8,
             "category": "jobDispatch",
-            "name": "Dispatched",
-            "order_filter_label": "Dispatched On"
+            "name": "Offer Sent",
+            "order_filter_label": "Offer Sent On"
         },
         {
             "id": 9,
             "category": "jobDispatch",
-            "name": "Dispatcher Accepted",
-            "order_filter_label": "Accepted By Dispatcher On"
+            "name": "Manually Accepted",
+            "order_filter_label": "Manually Accepted On"
         },
         {
             "id": 10,
             "category": "jobDispatch",
-            "name": "Dispatch Canceled",
-            "order_filter_label": "Dispatch Canceled On"
+            "name": "Offer Canceled",
+            "order_filter_label": "Offer Canceled On"
         },
         {
             "id": 11,
             "category": "jobDispatch",
-            "name": "Carrier Accepted",
-            "order_filter_label": "Accepted By Carrier On"
+            "name": "Accepted",
+            "order_filter_label": "Accepted On"
         },
         {
             "id": 12,
             "category": "jobDispatch",
             "name": "Declined",
             "order_filter_label": "Dispatch Declined On"
+        },
+        {
+            "id": 13,
+            "category": "jobDispatch",
+            "name": "Self Assigned",
+            "order_filter_label": "Self Assigned On"
         }
     ]
 }
