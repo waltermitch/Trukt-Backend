@@ -15,6 +15,7 @@ const InvoiceBill = require('../Models/InvoiceBill');
 const OrderStop = require('../Models/OrderStop');
 const OrderStopLink = require('../Models/OrderStopLink');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const BillService = require('./BIllService');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
