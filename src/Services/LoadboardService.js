@@ -418,7 +418,7 @@ class LoadboardService
 
     // This method gets all the job information and creates new post records based on the posts
     // list that is sent in if needed
-    static async getAllPostingData(jobId, posts)
+    static async getAllPostingData(jobId, posts, currentUser)
     {
         const loadboardNames = posts.map((post) => { return post.loadboard; });
         const job = await Job.query().findById(jobId).withGraphFetched(`[
@@ -433,7 +433,7 @@ class LoadboardService
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
 
-        await this.createPostRecords(job, posts);
+        await this.createPostRecords(job, posts, currentUser);
         this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
 
         // delete job.order.invoices;
