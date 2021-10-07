@@ -98,6 +98,7 @@ class LoadboardService
             if (payloads.length != 0)
             {
                 await sender.sendMessages({ body: payloads });
+                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
             }
         }
         catch (e)
@@ -105,7 +106,6 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
-        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
     }
 
     static async unpostPostings(jobId, posts, currentUser)
@@ -129,6 +129,7 @@ class LoadboardService
             if (payloads.length != 0)
             {
                 await sender.sendMessages({ body: payloads });
+                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3, jobId);
             }
         }
         catch (e)
