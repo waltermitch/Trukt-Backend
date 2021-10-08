@@ -17,6 +17,8 @@ const myMessageHandler = async (message) =>
     let jobGuid;
     for (const res of responses)
     {
+        console.log(res);
+
         // for some reason, service bus is sending over empty objects and is completely throwing
         // this handler off, so until we find why service bus is sending over empty objects,
         // we will have to check if the object is empty
@@ -64,13 +66,13 @@ const myMessageHandler = async (message) =>
                         'vendorAgent.email as agentEmail',
                         'vendorAgent.phoneNumber as agentPhone');
 
-                // await pubsub.publishToGroup(`${jobGuid}`, { object: 'dispatch', data: { job } });
+                await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
             }
             else
             {
                 const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
 
-                // await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
+                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
             }
         }
         catch(e)
