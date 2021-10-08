@@ -63,12 +63,14 @@ const myMessageHandler = async (message) =>
                         'vendorAgent.name as agentName',
                         'vendorAgent.email as agentEmail',
                         'vendorAgent.phoneNumber as agentPhone');
-                await pubsub.publishToGroup(`${jobGuid}`, { object: 'dispatch', data: { job } });
+
+                // await pubsub.publishToGroup(`${jobGuid}`, { object: 'dispatch', data: { job } });
             }
             else
             {
                 const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
-                await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
+
+                // await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
             }
         }
         catch(e)
