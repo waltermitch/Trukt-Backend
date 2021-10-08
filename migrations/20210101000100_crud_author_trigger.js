@@ -1,8 +1,10 @@
-const function_name = 'rcg_crud_authors';
+const FUNCTION_NAME = 'rcg_crud_authors';
+const SCHEMA_NAME = 'rcg_tms';
+
 exports.up = function (knex)
 {
     return knex.raw(`
-        CREATE OR REPLACE FUNCTION rcg_tms.${function_name}()
+        CREATE OR REPLACE FUNCTION ${SCHEMA_NAME}.${FUNCTION_NAME}()
             RETURNS trigger
             LANGUAGE 'plpgsql'
             COST 1
@@ -26,12 +28,12 @@ exports.up = function (knex)
         END;
         $BODY$;
 
-        COMMENT ON FUNCTION rcg_tms.${function_name}()
+        COMMENT ON FUNCTION ${SCHEMA_NAME}.${FUNCTION_NAME}()
             IS 'prevents users from changing created and deleted by columns';
   `);
 };
 
 exports.down = function (knex)
 {
-    return knex.raw(`DROP FUNCTION rcg_tms.${function_name}();`);
+    return knex.raw(`DROP FUNCTION ${SCHEMA_NAME}.${FUNCTION_NAME}();`);
 };

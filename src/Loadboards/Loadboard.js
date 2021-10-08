@@ -16,13 +16,40 @@ class Loadboard
 
     static validate() { }
 
+    cleanUp()
+    {
+        // get sketchy information into workable format before being assigned to different payloads
+        this.data.pickup.dateRequestedStart = DateTime.fromISO(this.data.pickup.dateRequestedStart).toUTC();
+        this.data.pickup.dateRequestedEnd = this.data.pickup.dateRequestedType == 'estimated' ? DateTime.fromISO(this.data.pickup.dateRequestedEnd).toUTC() : this.data.pickup.dateRequestedStart;
+        this.data.pickup.dateScheduledStart = DateTime.fromISO(this.data.pickup.dateScheduledStart).toUTC();
+        this.data.pickup.dateScheduledEnd = this.data.pickup.dateScheduledType == 'estimated' ? DateTime.fromISO(this.data.pickup.dateScheduledEnd).toUTC() : this.data.pickup.dateScheduledStart;
+        this.data.pickup.terminal.state = this.getStateCode(this.data.pickup.terminal.state);
+        if(this.data.pickup.primaryContact)
+        {
+            this.data.pickup.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.phoneNumber);
+            this.data.pickup.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.mobileNumber);
+        }
+
+        this.data.delivery.dateRequestedStart = DateTime.fromISO(this.data.delivery.dateRequestedStart).toUTC();
+        this.data.delivery.dateRequestedEnd = this.data.delivery.dateRequestedType == 'estimated' ? DateTime.fromISO(this.data.delivery.dateRequestedEnd).toUTC() : this.data.delivery.dateRequestedStart;
+        this.data.delivery.dateScheduledStart = DateTime.fromISO(this.data.delivery.dateScheduledStart).toUTC();
+        this.data.delivery.dateScheduledEnd = this.data.delivery.dateScheduledType == 'estimated' ? DateTime.fromISO(this.data.delivery.dateScheduledEnd).toUTC() : this.data.delivery.dateScheduledStart;
+        this.data.delivery.terminal.state = this.getStateCode(this.data.delivery.terminal.state);
+        if(this.data.delivery.primaryContact)
+        {
+            this.data.delivery.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.phoneNumber);
+            this.data.delivery.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.mobileNumber);
+        }
+    }
+
     create()
     {
         let payload = {};
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'create';
         payloadMetadata.user = returnTo;
-        payload = this.toJSON();
+        payload = this.adjustDates(this.toJSON());
 
         return { payload, payloadMetadata };
     }
@@ -30,10 +57,11 @@ class Loadboard
     post()
     {
         let payload = {};
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, jobNumber: this.data.number };
         payloadMetadata.action = 'post';
         payloadMetadata.user = returnTo;
-        payload = this.toJSON();
+        payload = this.adjustDates(this.toJSON());
 
         return { payload, payloadMetadata };
     }
@@ -50,21 +78,23 @@ class Loadboard
 
     update()
     {
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName };
-        payloadMetadata.action = ['update'];
+        payloadMetadata.action = 'update';
         payloadMetadata.user = returnTo;
 
-        return { payload: this.toJSON(), payloadMetadata };
+        return { payload: this.adjustDates(this.toJSON()), payloadMetadata };
     }
 
     dispatch()
     {
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
         const payload = {};
 
         // send the order payload because the load may not exist in the loadboard
         // or it needs to be updated after dispatching
-        payload.order = this.toJSON();
+        payload.order = this.adjustDates(this.toJSON());
         payload.dispatch = this.dispatchJSON();
         payloadMetadata.action = 'dispatch';
         payloadMetadata.user = returnTo;
@@ -73,12 +103,13 @@ class Loadboard
 
     undispatch()
     {
+        this.cleanUp();
         const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
         const payload = {};
 
         // sending the order because ship cars archives orders that are canceled
         // so they will need to be recreated
-        payload.order = this.toJSON();
+        payload.order = this.adjustDates(this.toJSON());
         payload.dispatch = { externalLoadGuid: this.postObject.externalGuid, externalDispatchGuid: this.data.dispatch.externalGuid };
         payloadMetadata.action = 'undispatch';
         payloadMetadata.user = returnTo;
@@ -87,7 +118,8 @@ class Loadboard
 
     toStringDate(input)
     {
-        const date = DateTime.fromJSDate(input).c;
+        const date = DateTime.fromISO(input).c;
+        
         return input ? date.year + '-' + date.month + '-' + date.day : null;
     }
 
@@ -109,38 +141,10 @@ class Loadboard
 
     dateAdd(date, amount, type)
     {
-        return date ? DateTime.fromJSDate(date).plus({ [`${type}`]: amount }).toString() : null;
+        return date ? DateTime.fromISO(date).plus({ [`${type}`]: amount }).toString() : null;
     }
 
-    minusMinutes(date, amount)
-    {
-        return DateTime.fromJSDate(date).minus({ minutes: amount }).toUTC().toString();
-    }
-
-    adjustDates()
-    {
-        const now = new Date(Date.now());
-
-        if (this.data.pickup.dateRequestedStart < now)
-        {
-            this.data.pickup.dateRequestedStart = now;
-        }
-
-        if (this.data.pickup.dateRequestedEnd < this.data.pickup.dateRequestedStart)
-        {
-            this.data.pickup.dateRequestedEnd = this.fastForward(this.data.pickup.dateRequestedEnd, this.data.pickup.dateRequestedStart);
-        }
-
-        if (this.data.delivery.dateRequestedStart < this.data.pickup.dateRequestedEnd)
-        {
-            this.data.delivery.dateRequestedStart = this.fastForward(this.data.delivery.dateRequestedStart, this.data.pickup.dateRequestedEnd);
-        }
-
-        if (this.data.delivery.dateRequestedEnd < this.data.delivery.dateRequestedStart)
-        {
-            this.data.delivery.dateRequestedEnd = this.fastForward(this.data.delivery.dateRequestedEnd, this.data.delivery.dateRequestedStart);
-        }
-    }
+    adjustDates(payload){ return payload; }
 
     getDifferencefromToday(date)
     {
@@ -153,10 +157,9 @@ class Loadboard
 
     fastForward(targetDate, secondDate)
     {
-        targetDate = DateTime.fromJSDate(targetDate);
-        secondDate = DateTime.fromJSDate(secondDate);
-        targetDate = secondDate.plus({ hours: 1 });
-        return targetDate.toJSDate();
+        const tempSecondDate = secondDate;
+        targetDate = tempSecondDate.plus({ days: 1, hours: 1 }).toUTC();
+        return targetDate;
     }
 
     getStateCode(state)
@@ -164,7 +167,35 @@ class Loadboard
         return states.getStateCodeByStateName(state) == null ? states.sanitizeStateCode(state) : states.getStateCodeByStateName(state);
     }
 
-    static async handlecreate(post, response)
+    cleanUpPhoneNumber(phone)
+    {
+        if (!phone)
+        {
+            return null;
+        }
+
+        // 0. clean up non-alphanumeric characters
+        phone = phone.replace(/[^\w]|_/g, '');
+
+        // 1. remove extensions
+        phone = phone.replace(/[a-zA-Z]+\d*/, '');
+
+        // 2. count the number of digits
+        if (phone.length === 11 || phone.length === 10)
+        {
+            // 4. construct new phone string
+            const matches = phone.match(/\d?(\d{3})(\d{3})(\d{4})/);
+            phone = `(${matches[1]}) ${matches[2]}-${matches[3]}`;
+        }
+        else
+        {
+            phone = null;
+        }
+
+        return phone;
+    }
+
+    static async handleCreate(post, response)
     {
         return LoadboardPost.fromJson(post);
     }

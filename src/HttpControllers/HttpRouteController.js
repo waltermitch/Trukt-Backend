@@ -1,5 +1,5 @@
 const ErrorHandler = require('../ErrorHandler');
-const Auth = require('./Auth');
+const Auth = require('../Services/Auth');
 
 class HttpRouteController
 {

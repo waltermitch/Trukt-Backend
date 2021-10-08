@@ -1,6 +1,6 @@
-summary: Create invoice
-operationId: postInvoice
-description: Create invoice
+summary: Invoice Orders
+operationId: invoiceOrders
+description: Invoices Orders
 tags:
   - Invoice
 requestBody:
@@ -8,18 +8,18 @@ requestBody:
     application/json:
       schema:
         type: object
-        description: List of order guids
+        description: List of Order guids
         properties:
-          orders: 
+          orders:
             type: array
-            items: 
-              description: order guid
+            items:
+              description: Order guid
               $ref: '..\..\components\schemas\common.yaml#/guid'
             minItems: 1
         required:
           - orders
 responses:
   200:
-    description: invocies
+    description: invoices
     content:
       application/json: {}

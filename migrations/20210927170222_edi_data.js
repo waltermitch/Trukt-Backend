@@ -1,9 +1,11 @@
 const migration_tools = require('../tools/migration');
 
+const SCHEMA_NAME = 'rcg_tms';
 const TABLE_NAME = 'edi_data';
+
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, (table) =>
+    return knex.schema.withSchema(SCHEMA_NAME).createTable(TABLE_NAME, (table) =>
     {
         table.uuid('guid').unique().notNullable();
         table.string('document_number', 10).comment('The EDI document number, i.e. 204, 214');
@@ -16,5 +18,5 @@ exports.up = function (knex)
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(TABLE_NAME);
+    return knex.schema.withSchema(SCHEMA_NAME).dropTableIfExists(TABLE_NAME);
 };

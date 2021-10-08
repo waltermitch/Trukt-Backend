@@ -105,7 +105,29 @@ requestBody:
                 items:
                   type: string
                 minItems: 1
-
+          sort:
+            description: Sort results by field provided
+            type: object
+            properties:
+              field:
+                type: string
+                enum:
+                  - status
+                  - number
+                  - dateCreated
+                  - actualRevenue
+                  - actualExpense
+                  - estimatedExpense
+                  - estimatedRevenue
+              order:
+                description: Sorting order
+                type: string
+                enum:
+                  - asc
+                  - desc
+                default: asc
+            required:
+              - field
 
 
 responses:

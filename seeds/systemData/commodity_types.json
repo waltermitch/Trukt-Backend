@@ -1,0 +1,122 @@
+{
+    "schema": "rcg_tms",
+    "table": "commodity_types",
+    "unique": "id",
+    "data": [
+        {
+            "id": 1,
+            "category": "vehicle",
+            "type": "coupe"
+        },
+        {
+            "id": 2,
+            "category": "vehicle",
+            "type": "convertible"
+        },
+        {
+            "id": 3,
+            "category": "vehicle",
+            "type": "sedan"
+        },
+        {
+            "id": 4,
+            "category": "vehicle",
+            "type": "SUV"
+        },
+        {
+            "id": 5,
+            "category": "vehicle",
+            "type": "minivan"
+        },
+        {
+            "id": 6,
+            "category": "vehicle",
+            "type": "pickup truck (2 door)"
+        },
+        {
+            "id": 7,
+            "category": "vehicle",
+            "type": "pickup truck (4 door)"
+        },
+        {
+            "id": 8,
+            "category": "vehicle",
+            "type": "pickup dually"
+        },
+        {
+            "id": 9,
+            "category": "vehicle",
+            "type": "motorcycle"
+        },
+        {
+            "id": 10,
+            "category": "vehicle",
+            "type": "ATV"
+        },
+        {
+            "id": 11,
+            "category": "vehicle",
+            "type": "boat"
+        },
+        {
+            "id": 12,
+            "category": "vehicle",
+            "type": "RV"
+        },
+        {
+            "id": 13,
+            "category": "vehicle",
+            "type": "trailer (5th wheel)"
+        },
+        {
+            "id": 14,
+            "category": "vehicle",
+            "type": "trailer (bumper pull)"
+        },
+        {
+            "id": 15,
+            "category": "vehicle",
+            "type": "trailer (gooseneck)"
+        },
+        {
+            "id": 16,
+            "category": "vehicle",
+            "type": "cargo van"
+        },
+        {
+            "id": 17,
+            "category": "vehicle",
+            "type": "box truck"
+        },
+        {
+            "id": 18,
+            "category": "vehicle",
+            "type": "day cab"
+        },
+        {
+            "id": 19,
+            "category": "vehicle",
+            "type": "sleeper cab"
+        },
+        {
+            "id": 20,
+            "category": "vehicle",
+            "type": "other"
+        },
+        {
+            "id": 21,
+            "category": "freight",
+            "type": "bulk"
+        },
+        {
+            "id": 22,
+            "category": "freight",
+            "type": "crushed cars"
+        },
+        {
+            "id": 23,
+            "category": "freight",
+            "type": "other"
+        }
+    ]
+}

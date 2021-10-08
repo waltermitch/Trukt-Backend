@@ -8,7 +8,7 @@ const OrderJob = require('../Models/OrderJob');
 const OrderJobType = require('../Models/OrderJobType');
 const SFAccount = require('../Models/SFAccount');
 const SFContact = require('../Models/SFContact');
-const RecordType = require('../Models/RecordType');
+const SFRecordType = require('../Models/SFRecordType');
 const Commodity = require('../Models/Commodity');
 const CommodityType = require('../Models/CommodityType');
 const Vehicle = require('../Models/Vehicle');
@@ -20,6 +20,7 @@ const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Expense = require('../Models/Expense');
 const ComparisonType = require('../Models/ComparisonType');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const StatusLog = require('../Models/StatusLog');
 
 const { MilesToMeters } = require('./../Utils');
 const { DateTime } = require('luxon');
@@ -50,12 +51,23 @@ class OrderService
         dates,
         isTender,
         jobCategory
-    }, page, rowCount)
+    }, page, rowCount, sort
+    )
     {
 
         dateFilterComparisonTypes = dates && await OrderService.getComparisonTypesCached();
+        const jobFieldsToReturn = [
+            'guid',
+            'number',
+            'estimatedExpense',
+            'estimatedRevenue',
+            'status',
+            'dateCreated',
+            'actualRevenue',
+            'actualExpense'
+        ];
 
-        const baseOrderQuery = Order.query().page(page, rowCount);
+        const baseOrderQuery = OrderJob.query().select(jobFieldsToReturn).page(page, rowCount);
 
         const queryFilterPickup = OrderService.addFilterPickups(baseOrderQuery, pickup);
         const queryFilterDelivery = OrderService.addFilterDeliveries(queryFilterPickup, delivery);
@@ -65,11 +77,11 @@ class OrderService
         const queryFilterSalesperson = OrderService.addFilterSalesperson(queryFilterDispatcher, salesperson);
         const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
         const queryFilterDates = OrderService.addFilterDates(queryFilterCarrier, dates);
-        const queryAllFilters = OrderService.addFilterModifiers(queryFilterDates, { isTender, jobCategory });
+        const queryAllFilters = OrderService.addFilterModifiers(queryFilterDates, { isTender, jobCategory, sort });
 
         const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters, jobCategory);
 
-        const { total, results } = await queryWithGraphModifiers.orderBy('number', 'ASC');
+        const { total, results } = await queryWithGraphModifiers;
         const ordersWithDeliveryAddress = {
             results: OrderService.addDeliveryAddress(results),
             page: page + 1,
@@ -161,7 +173,7 @@ class OrderService
         try
         {
             // use trx (transaction) because none of the data should be left in the database if any of it fails
-            const contactRecordType = await RecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact');
+            const contactRecordType = await SFRecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact');
             const commTypes = await CommodityType.query(trx);
             const jobTypes = await OrderJobType.query(trx);
             const invoiceLineItems = await InvoiceLineItem.query(trx);
@@ -748,7 +760,7 @@ class OrderService
     {
         const doesPickupsHaveElements = pickups?.length > 0 ? true : false;
         return doesPickupsHaveElements ? baseQuery.whereExists(
-            Order.relatedQuery('stops').where('stopType', 'pickup').whereExists(
+            OrderJob.relatedQuery('stops').where('stopType', 'pickup').whereExists(
                 OrderService.basePickupDeliveryFilterQuery(pickups)
             )
         ) : baseQuery;
@@ -760,8 +772,8 @@ class OrderService
         if (isDeliveriesEmpty)
             return baseQuery;
 
-        const deliveryQuery = Order.query().select('guid').whereExists(
-            Order.relatedQuery('stops').where('stopType', 'delivery').whereExists(
+        const deliveryQuery = OrderJob.query().select('guid').whereExists(
+            OrderJob.relatedQuery('stops').where('stopType', 'delivery').whereExists(
                 OrderService.basePickupDeliveryFilterQuery(deliveries)
             )
         );
@@ -800,20 +812,24 @@ class OrderService
     {
         const doesCustomerListHaveElements = customerList?.length > 0 ? true : false;
         return doesCustomerListHaveElements ?
-            baseQuery.whereIn('clientGuid', customerList) : baseQuery;
+            baseQuery.whereIn('orderGuid', Order.query().select('guid').whereIn('clientGuid', customerList))
+            : baseQuery;
     }
 
     static addFilterDispatcher(baseQuery, dispatcherList)
     {
         const doesDispatcherListHaveElements = dispatcherList?.length > 0 ? true : false;
         return doesDispatcherListHaveElements ?
-            baseQuery.whereIn('dispatcherGuid', dispatcherList) : baseQuery;
+            baseQuery.whereIn('orderGuid', Order.query().select('guid').whereIn('dispatcherGuid', dispatcherList))
+            : baseQuery;
     }
 
     static addFilterSalesperson(baseQuery, salespersonList)
     {
         const doesSalespersonListHaveElements = salespersonList?.length > 0 ? true : false;
-        return doesSalespersonListHaveElements ? baseQuery.whereIn('salespersonGuid', salespersonList) : baseQuery;
+        return doesSalespersonListHaveElements ?
+            baseQuery.whereIn('orderGuid', Order.query().select('guid').whereIn('salespersonGuid', salespersonList))
+            : baseQuery;
     }
 
     static addFilterDates(baseQuery, dateList)
@@ -831,7 +847,7 @@ class OrderService
                     andWhere('statusId', status);
             };
             return index === 0 ? query.where(comparisonDateAndStatus) : query.orWhere(comparisonDateAndStatus);
-        }, Order.relatedQuery('statusLogs').select('orderGuid'));
+        }, StatusLog.query().select('jobGuid'));
 
         return baseQuery.whereIn('guid', datesQuery);
     }
@@ -840,8 +856,7 @@ class OrderService
     {
         const doesCarrierListHaveElements = carrierList?.length > 0 ? true : false;
         return doesCarrierListHaveElements ?
-            baseQuery.whereIn('guid', Order.relatedQuery('jobs').select('orderGuid')
-                .whereIn('vendorGuid', carrierList)) : baseQuery;
+            baseQuery.whereIn('vendorGuid', carrierList) : baseQuery;
     }
 
     static async getComparisonTypesCached()
@@ -859,26 +874,26 @@ class OrderService
         return cache.get('comparisonTypes');
     }
 
-    static addGraphModifiers(baseQuery, jobCategory = [])
+    static addGraphModifiers(baseQuery)
     {
         return baseQuery
             .withGraphFetched({
-                client: true,
-                clientContact: true,
-                salesperson: true,
-                dispatcher: true,
-                jobs: {
-                    loadboardPosts: true,
-                    vendor: {
-                        rectype: true
-                    },
-                    jobType: true,
-                    stops: {
-                        terminal: true,
-                        commodities: {
-                            commType: true,
-                            vehicle: true
-                        }
+                order: {
+                    client: true,
+                    clientContact: true,
+                    salesperson: true,
+                    dispatcher: true
+                },
+                loadboardPosts: true,
+                vendor: {
+                    rectype: true
+                },
+                jobType: true,
+                stops: {
+                    terminal: true,
+                    commodities: {
+                        commType: true,
+                        vehicle: true
                     }
                 }
             })
@@ -887,22 +902,23 @@ class OrderService
              * Is necessary to use modifyGraph on stops and
              * stops.commodities to avoid duplicate rows
              */
-            .modifyGraph('client', builder => builder.select(
+            .modifyGraph('order.client', builder => builder.select(
                 'guid', 'name'
             ))
-            .modifyGraph('clientContact', builder => builder.select(
+            .modifyGraph('order.clientContact', builder => builder.select(
                 'guid',
                 'name',
                 'phone_number',
                 'email'
             ))
-            .modifyGraph('salesperson', builder => builder.select(
+            .modifyGraph('order.salesperson', builder => builder.select(
                 'guid', 'name'
             ))
-            .modifyGraph('dispatcher', builder => builder.select(
+
+            .modifyGraph('order.dispatcher', builder => builder.select(
                 'guid', 'name'
             ))
-            .modifyGraph('jobs.stops', builder => builder.select(
+            .modifyGraph('stops', builder => builder.select(
                 'guid',
                 'stopType',
                 'status',
@@ -911,9 +927,10 @@ class OrderService
                 'dateScheduledType',
                 'dateRequestedStart',
                 'dateRequestedEnd',
-                'dateRequestedType'
+                'dateRequestedType',
+                'sequence'
             ).distinct('guid'))
-            .modifyGraph('jobs.stops.commodities', builder => builder.select(
+            .modifyGraph('stops.commodities', builder => builder.select(
                 'guid',
                 'damaged',
                 'inoperable',
@@ -926,7 +943,7 @@ class OrderService
                     'guid'
                 )
             )
-            .modifyGraph('jobs.stops.terminal', builder => builder.select(
+            .modifyGraph('stops.terminal', builder => builder.select(
                 'name',
                 'guid',
                 'street1',
@@ -936,47 +953,30 @@ class OrderService
                 'country',
                 'zipCode'
             ).distinct())
-            .modifyGraph('jobs', builder =>
-            {
-                const baseBuilder = builder.select(
-                    'guid',
-                    'number',
-                    'estimatedExpense',
-                    'estimatedRevenue',
-                    'status'
-                ).distinct();
-                if (jobCategory.length > 0)
-                    baseBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(jobCategory));
-            })
-            .modifyGraph('jobs.loadboardPosts', builder => builder.select('loadboard', 'isPosted', 'status').distinct())
-            .modifyGraph('jobs.vendor', builder => builder.select('guid', 'name').distinct())
-            .modifyGraph('jobs.vendor.rectype', builder => builder.select('name').distinct());
+            .modifyGraph('loadboardPosts', builder => builder.select('loadboard', 'isPosted', 'status').distinct())
+            .modifyGraph('vendor', builder => builder.select('guid', 'name').distinct())
+            .modifyGraph('vendor.rectype', builder => builder.select('name').distinct());
 
     }
 
     static addFilterModifiers(baseQuery, filters)
     {
-        const { isTender, jobCategory } = filters;
+        const { isTender, jobCategory, sort } = filters;
         return baseQuery
             .modify('filterIsTender', isTender)
-            .modify('filterJobCategories', jobCategory);
+            .modify('filterJobCategories', jobCategory)
+            .modify('sorted', sort);
     }
 
-    static addDeliveryAddress(ordersArray)
+    static addDeliveryAddress(jobsArray)
     {
-        return ordersArray.map((order) =>
+        return jobsArray.map(job =>
         {
-            const jobsWithDeliveryAddress = order.jobs.map((job) =>
-            {
-                const { terminal } = job.stops.length > 0 && job.stops.reduce((acumulatorStop, stop) =>
-                {
-                    return OrderService.getLastDeliveryBetweenStops(acumulatorStop, stop);
-                });
-                job.deliveryAddress = terminal || null;
-                return job;
-            });
-            order.jobs = jobsWithDeliveryAddress;
-            return order;
+            const { terminal } = job.stops.length > 0 && job.stops.reduce((acumulatorStop, stop) =>
+                OrderService.getLastDeliveryBetweenStops(acumulatorStop, stop)
+            );
+            job.deliveryAddress = terminal || null;
+            return job;
         });
     }
 
@@ -1021,7 +1021,8 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
-            expenses = []
+            expenses = [],
+            ...orderData
         } = orderInput;
 
         try
@@ -1035,7 +1036,7 @@ class OrderService
                 referencesChecked
             ] =
                 await Promise.all([
-                    clientContact ? RecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact') : null,
+                    clientContact ? SFRecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact') : null,
                     client?.guid ? OrderService.findSFClient(client.guid, trx) :
                         undefined,
                     commodities.length > 0 ? CommodityType.query(trx) : null,
@@ -1045,9 +1046,7 @@ class OrderService
                 ]);
 
             /**
-             * terminalsChecked and stopsChecked are the same objects from the user input but they may or may not have the GUID
-             * prvovided by the user, pending on those references are being use in another orders, that is to now if they
-             * have to be created or updated
+             * terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
              */
             const { newOrderContactChecked, terminalsChecked, stopsChecked } = referencesChecked;
 
@@ -1062,8 +1061,8 @@ class OrderService
                 currentUser, trx
             );
 
-            // Create stop contacts using terminals and return an object to faciliatet access
-            const stopContactsGraphMap = OrderService.createStopContactsMap(stopsChecked, terminalsMap, currentUser, trx);
+            // Create stop contacts using terminals and return an object to faciliatet access, it uses the action from stopsChecked
+            const stopContactsGraphMap = await OrderService.createStopContactsMap(stopsChecked, terminalsMap, currentUser, trx);
 
             const stopsToUpdate = OrderService.createStopsGraph(stopsChecked, terminalsMap, stopContactsGraphMap, currentUser);
             const jobsToUpdate = OrderService.createJobsGraph(jobs, jobTypes, currentUser);
@@ -1081,24 +1080,26 @@ class OrderService
             const orderGraph = Order.fromJson({
                 guid,
                 updatedByGuid: currentUser,
-                dispatcherGuid: dispatcher?.guid,
-                referrerGuid: referrer?.guid,
-                salespersonGuid: salesperson?.guid,
+                dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
+                referrerGuid: OrderService.getObjectContactReference(referrer),
+                salespersonGuid: OrderService.getObjectContactReference(salesperson),
                 clientGuid: client?.guid,
                 consigneeGuid: consignee?.guid,
                 instructions,
                 clientContactGuid: orderContactCreated,
                 stops: stopsToUpdate,
                 jobs: jobsWithExpensesGraph,
-                invoices: orderInvoices
+                invoices: orderInvoices,
+                ...orderData
             });
 
             const orderToUpdate = Order.query(trx).skipUndefined().upsertGraphAndFetch(orderGraph, {
                 relate: true,
-                noDelete: true
+                noDelete: true,
+                allowRefs: true
             });
 
-            const [orderUpdated] = await Promise.all([orderToUpdate, Promise.all([stopLinksToUpdate])]);
+            const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
             await trx.commit();
             return orderUpdated;
@@ -1108,6 +1109,12 @@ class OrderService
             await trx.rollback();
             throw { message: error?.nativeError?.detail || error?.message || error };
         }
+    }
+
+    // If contactObject is null -> reference should be removed
+    static getObjectContactReference(contactObject)
+    {
+        return contactObject === null ? null : contactObject?.guid;
     }
 
     static async validateReferencesBeforeUpdate(orderContact, orderGuid, stops, terminals)
@@ -1133,38 +1140,25 @@ class OrderService
             const { guid: orderContactGuid, ...orderContactData } = orderContact;
             newOrderContactChecked = orderContactData;
         }
+        else if (orderContact && orderChecked === 'removeContact')
+            newOrderContactChecked = { guid: null };
 
         return { newOrderContactChecked, terminalsChecked, stopsChecked };
     }
     static async getStopsWithInfoChecked(stop, orderGuid)
     {
-        // If no contact is provided, then this value is not use
-        let stopPrimaryContactPromise = 'createNewTerminalContact';
-        let stopAlternativeContactPromise = 'createNewTerminalContact';
+        const contacTypes = ['primaryContact', 'alternativeContact'];
+        const contactsActionPromise = contacTypes.map(contactType =>
+            OrderService.checkTerminalContacReference(stop[contactType], orderGuid)
+        );
 
-        if (stop.primaryContact?.guid)
-            stopPrimaryContactPromise = OrderService.checkTerminalContacReference(stop.primaryContact.guid, orderGuid);
+        const [primaryContactAction, alternativeContactAction] = await Promise.all(contactsActionPromise);
 
-        if (stop.alternativeContact?.guid)
-            stopAlternativeContactPromise = OrderService.checkTerminalContacReference(stop.alternativeContact.guid, orderGuid);
-
-        const [primaryContactResolve, alternativeContactResolve] = await Promise.all([stopPrimaryContactPromise, stopAlternativeContactPromise]);
-
-        const stopChecked = stop;
-
-        // Remove guid if needs to be created
-        if (stop.primaryContact && Object.keys(stop.primaryContact).length > 0 && primaryContactResolve === 'createNewTerminalContact')
-        {
-            const { guid: stopPrimaryContactGuid, ...newStopPrimaryContactData } = stop.primaryContact;
-            stopChecked.primaryContact = newStopPrimaryContactData;
-        }
-
-        // Remove guid if needs to be created
-        if (stop.alternativeContact && Object.keys(stop.alternativeContact).length > 0 && alternativeContactResolve === 'createNewTerminalContact')
-        {
-            const { guid: stopAlternativeContactGuid, ...newStopAlternativeContactData } = stop.alternativeContact;
-            stopChecked.alternativeContact = newStopAlternativeContactData;
-        }
+        const stopChecked = {
+            primaryContactAction,
+            alternativeContactAction,
+            ...stop
+        };
 
         return stopChecked;
     }
@@ -1172,19 +1166,11 @@ class OrderService
     static async getTerminalWithInfoChecked(terminal, orderGuid)
     {
         let terminalPromise = 'createNewTerminal';
-        let terminalPrimaryContactPromise = 'createNewTerminalContact';
-        let terminalAlternativeContactPromise = 'createNewTerminalContact';
 
         if (terminal.guid)
             terminalPromise = OrderService.checkTerminalReference(terminal.guid, orderGuid);
 
-        if (terminal.primaryContact?.guid)
-            terminalPrimaryContactPromise = OrderService.checkTerminalContacReference(terminal.primaryContact?.guid, orderGuid);
-
-        if (terminal.alternativeContact?.guid)
-            terminalAlternativeContactPromise = OrderService.checkTerminalContacReference(terminal.alternativeContact?.guid, orderGuid);
-
-        const [terminalResolve, primaryContactResolve, alternativeContactResolve] = await Promise.all([terminalPromise, terminalPrimaryContactPromise, terminalAlternativeContactPromise]);
+        const terminalResolve = await terminalPromise;
 
         let terminalChecked = terminal;
 
@@ -1195,26 +1181,14 @@ class OrderService
             terminalChecked = newTerminalData;
         }
 
-        // Remove guid if needs to be created
-        if (terminal.primaryContact && Object.keys(terminal.primaryContact).length > 0 && primaryContactResolve === 'createNewTerminalContact')
-        {
-            const { guid: terminalPrimaryConatctGuid, ...newTerminalPrimaryContactData } = terminal.primaryContact;
-            terminalChecked.primaryContact = newTerminalPrimaryContactData;
-        }
-
-        // Remove guid if needs to be created
-        if (terminal.alternativeContact && Object.keys(terminal.alternativeContact).length > 0 && alternativeContactResolve === 'createNewTerminalContact')
-        {
-            const { guid: terminalAlternativeConatctGuid, ...newTerminalAlternativeContactData } = terminal.alternativeContact;
-            terminalChecked.alternativeContact = newTerminalAlternativeContactData;
-        }
-
         return terminalChecked;
     }
 
     static async checkContactReference(contact, orderGuid)
     {
-        if (!contact.guid)
+        if (contact.guid === null && Object.keys(contact).length === 1)
+            return 'removeContact';
+        else if (!contact.guid)
             return 'createNewContact';
 
         const searchInOrder = Order.query().count('guid')
@@ -1233,20 +1207,45 @@ class OrderService
         return 'updateContact';
     }
 
-    // If TerminalContact is being reference elseWhere, a new contact will be created
-    static async checkTerminalContacReference(terminalContacGuid, orderGuid)
+    /**
+     * This check is to avoid creating innecesary entries, we check by guid first to know if that TC can be updated or not
+     * TC: Terminal contact
+     * Key: The primary compaund key of a TC, TerminalGuid, name and phoneNumber
+     * Rules:
+     * 1) If non GUID is provided -> findOrCreate
+     * 2) If GUID is provided -> Check if TC being used in other orders
+     *    -> If it is being use -> findOrCreate (You can not update it, you can use the TC if exists or create a new one)
+     *    -> If it is not used -> findAndUpdate (You can updated the Key if new one does not exists in DB, if it does, use the existing TC, if not, use current TC,
+     *      then update the TC with the new information), this is in case you try to change the name, but that TC key exists, so we need to use the existing TC, but that
+     *      TC does not have the new email or mobileNumber, so if needs to updated)
+     * @param {*} terminalContacGuid
+     * @param {*} orderGuid
+     * @param {*} stopTerminalContactInput
+     * @returns string with the action to perform later by updateCreateStopContacts function
+     */
+    static async checkTerminalContacReference(terminalContact, orderGuid)
     {
-        const [{ count }] = await OrderStopLink.query().count('orderGuid').whereIn(
-            'stopGuid', OrderStop.query().select('guid').whereIn(
-                'terminalGuid', Terminal.query().select('guid').whereIn(
-                    'guid', Contact.query().select('terminalGuid').where('guid', terminalContacGuid)
+        if (terminalContact === null)
+            return 'remove';
+        else if (terminalContact === undefined)
+            return 'nothingToDo';
+        else if (terminalContact?.guid === undefined)
+            return 'findOrCreate';
+        else
+        {
+            const [{ count }] = await OrderStopLink.query().count('orderGuid').whereIn(
+                'stopGuid', OrderStop.query().select('guid').whereIn(
+                    'terminalGuid', Terminal.query().select('guid').whereIn(
+                        'guid', Contact.query().select('terminalGuid').where('guid', terminalContact.guid)
+                    )
                 )
-            )
-        ).andWhereNot('orderGuid', orderGuid);
+            ).andWhereNot('orderGuid', orderGuid);
+            const useInOtherOrders = count > 0 ? true : false;
 
-        if (count > 0)
-            return 'createNewTerminalContact';
-        return 'updateTerminalContact';
+            if (useInOtherOrders)
+                return 'findOrCreate';
+            return 'findAndUpdate';
+        }
     }
 
     // If Terminal is being reference elseWhere, a new terminal will be created
@@ -1334,8 +1333,6 @@ class OrderService
     static async updateCreateTerminal(terminalInput, currentUser, trx)
     {
         const { index,
-            primaryContact: primaryContactInput,
-            alternativeContact: alternativeContactInput,
             ...terminalData
         } = terminalInput;
 
@@ -1343,7 +1340,7 @@ class OrderService
          * If only has 1 property for GUID, it is not necessary to update it because that means
          * the terminal is only being use to reference other elements in the update
          */
-        if (Object.keys(terminalData).length === 1 && !primaryContactInput && !alternativeContactInput)
+        if (Object.keys(terminalData).length === 1)
             return { terminal: terminalData, index };
 
         const terminal = Terminal.fromJson(terminalData);
@@ -1371,14 +1368,16 @@ class OrderService
 
         return terminalContactGraph;
     }
-    static createStopContactsMap(stops, terminalsMap, currentUser, trx)
+    static async createStopContactsMap(stops, terminalsMap, currentUser, trx)
     {
-        const stopsWithContacts = stops?.filter(stop => OrderStop.hasContact(stop)) || [];
-        const stopsContactsToUpdate = stopsWithContacts?.map(stopWithContact =>
+        const stopsWithContacts = stops?.filter(stop => OrderStop.hasContact(stop) || OrderStop.removeContact(stop)) || [];
+        const stopsContactsToUpdate = [];
+        for (const stopWithContact of stopsWithContacts)
         {
             const terminal = terminalsMap[stopWithContact.terminal];
-            return OrderService.updateCreateStopContacts(stopWithContact, terminal, currentUser, trx);
-        });
+            const stopContactsUpdated = await OrderService.updateCreateStopContacts(stopWithContact, terminal, currentUser, trx);
+            stopsContactsToUpdate.push(stopContactsUpdated);
+        }
 
         return stopsContactsToUpdate.reduce((map, { contacts, index }) =>
         {
@@ -1388,10 +1387,14 @@ class OrderService
     }
     static async createOrderContactCommoditiesTerminalsMap(contactInfo, commoditiesInfo, terminals, currentUser, trx)
     {
-        const { contact, contactRecordType, client } = contactInfo;
+        const { contact = {}, contactRecordType, client } = contactInfo;
         const { commodities, commodityTypes } = commoditiesInfo;
 
-        const orderContactTocreate = OrderService.createSFContact(contact, contactRecordType, client, trx);
+        let orderContactTocreate;
+        if (contact === null)
+            orderContactTocreate = null;
+        else if (contact && Object.keys(contact).length > 0)
+            orderContactTocreate = OrderService.createSFContact(contact, contactRecordType, client, trx);
 
         const commoditiesToUpdate = commodities?.map(commodity => OrderService.updateCreateCommodity(commodity, commodityTypes, currentUser, trx)) || [];
         const terminalsToUpdate = terminals?.map(terminal => OrderService.updateCreateTerminal(terminal, currentUser, trx)) || [];
@@ -1413,18 +1416,87 @@ class OrderService
         return { orderContactCreated, commoditiesMap, terminalsMap };
     }
 
-    static updateCreateStopContacts(stopWithContactInput, terminal, currentUser)
+    /**
+     * This returns the terminal contacts wether they are creates, found or updated. depending on the action it has to be performed.
+     * each stopWithContactInput has a parametter call primaryContactAction or alternativeContactAction with teh following values:
+     * 1) remove: The conatct should be removed from teh stop
+     * 2) findOrCreate: The contact maybe exists, so it should be search by KEY (name, phoneNumber and temrinalGuid), if it is found the use that one, if not create a new one
+     * 3) findAndUpdate: The contact should be reuse, find if there is a TC with the same key, if so, use that one if not, use the existing one, after either case, we can
+     *      update the information
+     * 4) nothingToDo: The contact was not pass so there is nothing to do
+     * @param {*} stopWithContactInput
+     * @param {*} terminal
+     * @param {*} terminalContactsNoDuplicates
+     * @param {*} currentUser
+     * @returns
+     */
+    static async updateCreateStopContacts(stopWithContactInput, terminal, currentUser, trx)
     {
-        const { primaryContact, alternativeContact, index } = stopWithContactInput;
+        const contacTypes = ['primaryContact', 'alternativeContact'];
+        const contactsUpdated = {
+            primaryContact: undefined,
+            alternativeContact: undefined
+        };
+        for (const contactType of contacTypes)
+        {
+            const contactAction = stopWithContactInput[`${contactType}Action`];
+            const contactInput = stopWithContactInput[contactType];
 
-        const primaryContactGraph = primaryContact && OrderService.createTerminalContactGraph(primaryContact, terminal, currentUser);
-        const alternativeContactGraph = alternativeContact && OrderService.createTerminalContactGraph(alternativeContact, terminal, currentUser);
+            switch (contactAction)
+            {
+                case 'findOrCreate':
+                    const terminalContactFound = await Contact.query().findOne({
+                        terminalGuid: terminal.guid,
+                        name: contactInput.name,
+                        phoneNumber: contactInput.phoneNumber
+                    });
+
+                    // Contact exists, now we have to add non essential information
+                    if (terminalContactFound)
+                    {
+                        terminalContactFound.setUpdatedBy(currentUser);
+                        terminalContactFound.email = contactInput.email;
+                        terminalContactFound.mobileNumber = contactInput.mobileNumber;
+                        contactsUpdated[contactType] = await Contact.query(trx).patchAndFetchById(terminalContactFound.guid, terminalContactFound);
+                    }
+                    else
+                    {
+                        // Guid is not use because it has to be created
+                        const { guid, ...contactData } = contactInput;
+                        const contactGraphToCreate = OrderService.createTerminalContactGraph(contactData, terminal, currentUser);
+                        contactsUpdated[contactType] = await Contact.query(trx).insertAndFetch(contactGraphToCreate);
+                    }
+                    break;
+                case 'findAndUpdate':
+                    let terminalContactToUpdate = await Contact.query().findOne({
+                        terminalGuid: terminal.guid,
+                        name: contactInput.name,
+                        phoneNumber: contactInput.phoneNumber
+                    });
+
+                    // Update contact with new information
+                    if (terminalContactToUpdate)
+                    {
+                        terminalContactToUpdate.setUpdatedBy(currentUser);
+                        terminalContactToUpdate.email = contactInput.email;
+                        terminalContactToUpdate.mobileNumber = contactInput.mobileNumber;
+                    }
+                    else
+                        terminalContactToUpdate = OrderService.createTerminalContactGraph(contactInput, terminal, currentUser);
+
+                    contactsUpdated[contactType] = await Contact.query(trx).patchAndFetchById(terminalContactToUpdate.guid, terminalContactToUpdate);
+                    break;
+                default:
+                    // Null means that should be delete, the real remove happens in createSingleStopGraph
+                    contactsUpdated[contactType] = contactAction === 'remove' ? null : undefined;
+            }
+        }
 
         return {
-            index,
+            index: stopWithContactInput.index,
             contacts: {
-                primaryContact: primaryContactGraph,
-                alternativeContact: alternativeContactGraph
+                primaryContact: contactsUpdated.primaryContact,
+                alternativeContact: contactsUpdated.alternativeContact
             }
         };
     }
@@ -1433,7 +1505,10 @@ class OrderService
     {
         return stopsInput?.map(stop =>
         {
-            // commodities, primaryContact, alternativeContact are remove from the rest of stopData because they are not use in this step
+            /**
+             * commodities, primaryContact, alternativeContact, primaryContactAction and alternativeContactAction
+             * are remove from the rest of stopData because they are not use in this step
+             */
             const { index: stopIndex,
                 terminal: terminalIndex,
                 // eslint-disable-next-line no-unused-vars
@@ -1442,6 +1517,10 @@ class OrderService
                 alternativeContact: alternativeContactDataNotUseHere,
                 // eslint-disable-next-line no-unused-vars
                 commodities: commoditiesDataNotUseHere,
+                // eslint-disable-next-line no-unused-vars
+                primaryContactAction,
+                // eslint-disable-next-line no-unused-vars
+                alternativeContactAction,
                 ...stopData
             } = stop;
 
@@ -1457,10 +1536,25 @@ class OrderService
         const stop = OrderStop.fromJson({ ...stopInput, terminalGuid });
         stop.setUpdatedBy(currentUser);
 
-        stop.primaryContact = primaryContact;
-        stop.alternativeContact = alternativeContact;
+        if (OrderService.isTerminalContactToBeDeleted(primaryContact))
+            stop.primaryContactGuid = null;
+        else
+            stop.primaryContact = primaryContact;
+        if (OrderService.isTerminalContactToBeDeleted(alternativeContact))
+            stop.alternativeContactGuid = null;
+        else
+            stop.alternativeContact = alternativeContact;
+
         return stop;
     }
+
+    static isTerminalContactToBeDeleted(terminalContact)
+    {
+        if (terminalContact === null)
+            return true;
+        return false;
+    }
+
     static createJobsGraph(jobsInput, jobTypes, currentUser)
     {
         return jobsInput?.map(job =>
@@ -1473,7 +1567,9 @@ class OrderService
 
     static createSingleJobGraph(jobInput, jobTypes, currentUser)
     {
-        const jobGraph = OrderJob.fromJson(jobInput);
+        const jobWithContactReferences = OrderService.createJobContactReferences(jobInput);
+        const jobGraph = OrderJob.fromJson(jobWithContactReferences);
+
         if (jobGraph?.jobType?.category && jobGraph?.jobType?.type)
         {
             const jobType = jobTypes?.find(jobType => OrderJobType.compare(jobGraph, jobType));
@@ -1488,12 +1584,25 @@ class OrderService
         return jobGraph;
     }
 
+    static createJobContactReferences(jobInput)
+    {
+        const { dispatcher, vendor, vendorAgent, vendorContact, ...jobData } = jobInput;
+
+        return {
+            dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
+            vendorGuid: OrderService.getObjectContactReference(vendor),
+            vendorAgentGuid: OrderService.getObjectContactReference(vendorAgent),
+            vendorContactGuid: OrderService.getObjectContactReference(vendorContact),
+            ...jobData
+        };
+    }
+
     /**
      * Insert or update of stopLInks was done manually because upsert wasn't working for stopLinks graph
      * so the process was to find if the stoplink if exists, if it does udpate it, if not, create it
      * TODO Check if this can be redo using upsert
      */
-    static async updateCreateStopLinks(stopsFromInput, jobs, orderGuid, commoditiesMap, currentUser, trx)
+    static updateCreateStopLinks(stopsFromInput, jobs, orderGuid, commoditiesMap, currentUser, trx)
     {
         const stopLinksByJob = OrderService.createJobStopLinksObjects(jobs, stopsFromInput, commoditiesMap);
         const stopLinksByStops = OrderService.createStopLinksObjects(stopsFromInput, commoditiesMap, orderGuid);
@@ -1510,7 +1619,11 @@ class OrderService
         });
 
         if (stopLinkFound)
-            return await OrderStopLink.query(trx).patchAndFetchById([orderGuid, stopGuid, commodityGuid], { lotNumber, updatedByGuid: currentUser });
+        {
+            return await OrderStopLink.query(trx)
+                .patch({ lotNumber, updatedByGuid: currentUser })
+                .where('id', stopLinkFound.id);
+        }
         else
         {
             const stopLinkToInsert = OrderStopLink.fromJson(stopLinkData);

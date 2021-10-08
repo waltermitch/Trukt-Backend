@@ -109,6 +109,20 @@ guidObject:
   properties:
     guid:
       $ref: '#/guid'
+guidObjectNullable:
+  type: object
+  nullable: true
+  required:
+    - guid
+  properties:
+    guid:
+      $ref: '#/guid'
+guidNullable:
+  type: string
+  format: uuid
+  pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
+  example: '00000000-0000-0000-0000-000000000000'
+  nullable: true
 phoneNumber:
   type: string
   pattern: \d+
@@ -383,3 +397,8 @@ Enums:
     enum:
       - accept
       - reject
+  noteObject:
+    type: string
+    enum: 
+      - job
+      - order

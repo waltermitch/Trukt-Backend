@@ -22,6 +22,11 @@ class ErrorHandler
             this.status = err.status;
             this.data = err.data;
         }
+        else if (!err.status && err.data)
+        {
+            this.status = 422;
+            this.data = err.data;
+        }
         else if (err?.errors)
         {
             this.data = err;
