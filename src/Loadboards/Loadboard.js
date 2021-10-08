@@ -20,9 +20,9 @@ class Loadboard
     {
         // get sketchy information into workable format before being assigned to different payloads
         this.data.pickup.dateRequestedStart = DateTime.fromISO(this.data.pickup.dateRequestedStart).toUTC();
-        this.data.pickup.dateRequestedEnd = DateTime.fromISO(this.data.pickup.dateRequestedEnd).toUTC();
+        this.data.pickup.dateRequestedEnd = this.data.pickup.dateRequestedType == 'estimated' ? DateTime.fromISO(this.data.pickup.dateRequestedEnd).toUTC() : this.data.pickup.dateRequestedStart;
         this.data.pickup.dateScheduledStart = DateTime.fromISO(this.data.pickup.dateScheduledStart).toUTC();
-        this.data.pickup.dateScheduledEnd = DateTime.fromISO(this.data.pickup.dateScheduledEnd).toUTC();
+        this.data.pickup.dateScheduledEnd = this.data.pickup.dateScheduledType == 'estimated' ? DateTime.fromISO(this.data.pickup.dateScheduledEnd).toUTC() : this.data.pickup.dateScheduledStart;
         this.data.pickup.terminal.state = this.getStateCode(this.data.pickup.terminal.state);
         if(this.data.pickup.primaryContact)
         {
@@ -31,9 +31,9 @@ class Loadboard
         }
 
         this.data.delivery.dateRequestedStart = DateTime.fromISO(this.data.delivery.dateRequestedStart).toUTC();
-        this.data.delivery.dateRequestedEnd = DateTime.fromISO(this.data.delivery.dateRequestedEnd).toUTC();
+        this.data.delivery.dateRequestedEnd = this.data.delivery.dateRequestedType == 'estimated' ? DateTime.fromISO(this.data.delivery.dateRequestedEnd).toUTC() : this.data.delivery.dateRequestedStart;
         this.data.delivery.dateScheduledStart = DateTime.fromISO(this.data.delivery.dateScheduledStart).toUTC();
-        this.data.delivery.dateScheduledEnd = DateTime.fromISO(this.data.delivery.dateScheduledEnd).toUTC();
+        this.data.delivery.dateScheduledEnd = this.data.delivery.dateScheduledType == 'estimated' ? DateTime.fromISO(this.data.delivery.dateScheduledEnd).toUTC() : this.data.delivery.dateScheduledStart;
         this.data.delivery.terminal.state = this.getStateCode(this.data.delivery.terminal.state);
         if(this.data.delivery.primaryContact)
         {
