@@ -15,7 +15,6 @@ const myMessageHandler = async (message) =>
 {
     const responses = message.body;
     let jobGuid;
-    console.log(responses.length);
     for (const res of responses)
     {
         // for some reason, service bus is sending over empty objects and is completely throwing
@@ -41,33 +40,40 @@ const myMessageHandler = async (message) =>
 
     if (jobGuid)
     {
-        const pubsubAction = responses[0].payloadMetadata.action;
-
-        // publish to a group that is named after the the jobGuid which
-        // should be listening on messages posted to the group
-        if (
-            pubsubAction == 'dispatch' ||
-            pubsubAction == 'undispatch' ||
-            pubsubAction == 'carrierAcceptDispatch' ||
-            pubsubAction == 'carrierDeclineDispatch')
+        try
         {
-            const job = await OrderJob.query().leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
-                .findOne({ 'rcgTms.orderJobs.guid': jobGuid })
-                .select(
-                    'rcgTms.OrderJobs.status as jobStatus',
-                    'vendor.name as vendorName',
-                    'vendor.dotNumber',
-                    'vendor.email as vendorEmail',
-                    'vendor.phoneNumber as vendorPhone',
-                    'vendorAgent.name as agentName',
-                    'vendorAgent.email as agentEmail',
-                    'vendorAgent.phoneNumber as agentPhone');
-            await pubsub.publishToGroup(`${jobGuid}`, { object: 'dispatch', data: { job } });
+            const pubsubAction = responses[0].payloadMetadata.action;
+    
+            // publish to a group that is named after the the jobGuid which
+            // should be listening on messages posted to the group
+            if (
+                pubsubAction == 'dispatch' ||
+                pubsubAction == 'undispatch' ||
+                pubsubAction == 'carrierAcceptDispatch' ||
+                pubsubAction == 'carrierDeclineDispatch')
+            {
+                const job = await OrderJob.query().leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
+                    .findOne({ 'rcgTms.orderJobs.guid': jobGuid })
+                    .select(
+                        'rcgTms.OrderJobs.status as jobStatus',
+                        'vendor.name as vendorName',
+                        'vendor.dotNumber',
+                        'vendor.email as vendorEmail',
+                        'vendor.phoneNumber as vendorPhone',
+                        'vendorAgent.name as agentName',
+                        'vendorAgent.email as agentEmail',
+                        'vendorAgent.phoneNumber as agentPhone');
+                await pubsub.publishToGroup(`${jobGuid}`, { object: 'dispatch', data: { job } });
+            }
+            else
+            {
+                const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
+                await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
+            }
         }
-        else
+        catch(e)
         {
-            const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
-            await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
+            throw new Error(`Something has gone wrong while sending a pubsub message to ${jobGuid}`, e);
         }
     }
 };
