@@ -107,8 +107,17 @@ const myErrorHandler = async (args) =>
     }
     else
     {
-        console.log('Not a service bus error, closing the subscription');
-        await subscription.close();
+        console.log('Not a service bus error, removing messages from the topic that are also stuck');
+        const messages = await receiver.receiveMessages(10, {
+            maxWaitTimeInMs: 10 * 1000
+        });
+        for (const message of messages)
+        {
+            console.log(` Message: '${message.body}'`);
+
+            // completing the message will remove it from the remote queue or subscription.
+            await receiver.completeMessage(message);
+        }
     }
 
 };
