@@ -2,7 +2,7 @@ const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJob = require('../Models/OrderJob');
 const R = require('ramda');
-const { ServiceBusClient } = require('@azure/service-bus');
+const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const topicName = 'loadboard_incoming';
@@ -15,7 +15,6 @@ const myMessageHandler = async (message) =>
 {
     const responses = message.body;
     let jobGuid;
-    console.log(responses.length);
     for (const res of responses)
     {
         // for some reason, service bus is sending over empty objects and is completely throwing
@@ -62,12 +61,14 @@ const myMessageHandler = async (message) =>
                     'vendorAgent.name as agentName',
                     'vendorAgent.email as agentEmail',
                     'vendorAgent.phoneNumber as agentPhone');
-            await pubsub.publishToGroup(`${jobGuid}`, { object: 'dispatch', data: { job } });
+
+            await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
         }
         else
         {
             const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
-            await pubsub.publishToGroup(`${jobGuid}`, { object: 'posting', data: { posts } });
+
+            await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
         }
     }
 };
@@ -77,9 +78,51 @@ const myErrorHandler = async (args) =>
         `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
     );
+
+    // the `subscribe() call will not stop trying to receive messages without explicit intervention from you.
+    if (isServiceBusError(args.error))
+    {
+        switch (args.error.code)
+        {
+          case 'MessagingEntityDisabled':
+          case 'MessagingEntityNotFound':
+          case 'UnauthorizedAccess':
+            // It's possible you have a temporary infrastructure change (for instance, the entity being
+            // temporarily disabled). The handler will continue to retry if `close()` is not called on the subscription - it is completely up to you
+            // what is considered fatal for your program.
+            console.log(
+              `An unrecoverable error occurred. Stopping processing. ${args.error.code}`,
+              args.error
+            );
+            await subscription.close();
+            break;
+          case 'MessageLockLost':
+            console.log('Message lock lost for message', args.error);
+            break;
+          case 'ServiceBusy':
+            // choosing an arbitrary amount of time to wait.
+            await delay(1000);
+            break;
+        }
+    }
+    else
+    {
+        console.log('Not a service bus error, removing messages from the topic that are also stuck');
+        const messages = await receiver.receiveMessages(10, {
+            maxWaitTimeInMs: 10 * 1000
+        });
+        for (const message of messages)
+        {
+            console.log(` Message: '${message.body}'`);
+
+            // completing the message will remove it from the remote queue or subscription.
+            await receiver.completeMessage(message);
+        }
+    }
+
 };
 
-receiver.subscribe({
+const subscription = receiver.subscribe({
     processMessage: myMessageHandler,
     processError: myErrorHandler
 });
