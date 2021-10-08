@@ -75,6 +75,8 @@ const myMessageHandler = async (message) =>
 const myErrorHandler = async (args) =>
 {
     // console.log('all args ', args);
+    try
+{
     console.log(
         `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
@@ -129,7 +131,11 @@ const myErrorHandler = async (args) =>
             await receiver.completeMessage(message);
         }
     }
-
+    }
+ catch(e)
+    {
+        console.log(e);
+    }
 };
 
 const subscription = receiver.subscribe({
