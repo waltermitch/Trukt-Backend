@@ -74,11 +74,21 @@ const myMessageHandler = async (message) =>
 };
 const myErrorHandler = async (args) =>
 {
-    console.log('all args ', args);
+    // console.log('all args ', args);
     console.log(
         `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
     );
+
+    const messages = await receiver.receiveMessages(1);
+    console.log('\nnum of messages ', messages.length);
+    for (const message of messages)
+    {
+        console.log(` Message: '${message.body}'`);
+
+        // completing the message will remove it from the remote queue or subscription.
+        await receiver.completeMessage(message);
+    }
 
     // the `subscribe() call will not stop trying to receive messages without explicit intervention from you.
     if (isServiceBusError(args.error))
