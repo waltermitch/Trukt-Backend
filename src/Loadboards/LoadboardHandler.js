@@ -2,7 +2,7 @@ const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJob = require('../Models/OrderJob');
 const R = require('ramda');
-const { ServiceBusClient } = require('@azure/service-bus');
+const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const topicName = 'loadboard_incoming';
@@ -40,55 +40,80 @@ const myMessageHandler = async (message) =>
 
     if (jobGuid)
     {
-        // try
-        // {
-            const pubsubAction = responses[0].payloadMetadata.action;
-    
-            // publish to a group that is named after the the jobGuid which
-            // should be listening on messages posted to the group
-            if (
-                pubsubAction == 'dispatch' ||
-                pubsubAction == 'undispatch' ||
-                pubsubAction == 'carrierAcceptDispatch' ||
-                pubsubAction == 'carrierDeclineDispatch')
-            {
-                const job = await OrderJob.query().leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
-                    .findOne({ 'rcgTms.orderJobs.guid': jobGuid })
-                    .select(
-                        'rcgTms.OrderJobs.status as jobStatus',
-                        'vendor.name as vendorName',
-                        'vendor.dotNumber',
-                        'vendor.email as vendorEmail',
-                        'vendor.phoneNumber as vendorPhone',
-                        'vendorAgent.name as agentName',
-                        'vendorAgent.email as agentEmail',
-                        'vendorAgent.phoneNumber as agentPhone');
+        const pubsubAction = responses[0].payloadMetadata.action;
 
-                await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
-            }
-            else
-            {
-                const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
+        // publish to a group that is named after the the jobGuid which
+        // should be listening on messages posted to the group
+        if (
+            pubsubAction == 'dispatch' ||
+            pubsubAction == 'undispatch' ||
+            pubsubAction == 'carrierAcceptDispatch' ||
+            pubsubAction == 'carrierDeclineDispatch')
+        {
+            const job = await OrderJob.query().leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
+                .findOne({ 'rcgTms.orderJobs.guid': jobGuid })
+                .select(
+                    'rcgTms.OrderJobs.status as jobStatus',
+                    'vendor.name as vendorName',
+                    'vendor.dotNumber',
+                    'vendor.email as vendorEmail',
+                    'vendor.phoneNumber as vendorPhone',
+                    'vendorAgent.name as agentName',
+                    'vendorAgent.email as agentEmail',
+                    'vendorAgent.phoneNumber as agentPhone');
 
-                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
-            }
+            await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
+        }
+        else
+        {
+            const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
 
-        // }
-        // catch(e)
-        // {
-        //     throw new Error(`Something has gone wrong while sending a pubsub message to ${jobGuid}`, e);
-        // }
+            await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
+        }
     }
 };
 const myErrorHandler = async (args) =>
 {
     console.log(
-        `Error ${args.error.code} occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
+        `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
     );
+
+    // the `subscribe() call will not stop trying to receive messages without explicit intervention from you.
+    if (isServiceBusError(args.error))
+    {
+        switch (args.error.code)
+        {
+          case 'MessagingEntityDisabled':
+          case 'MessagingEntityNotFound':
+          case 'UnauthorizedAccess':
+            // It's possible you have a temporary infrastructure change (for instance, the entity being
+            // temporarily disabled). The handler will continue to retry if `close()` is not called on the subscription - it is completely up to you
+            // what is considered fatal for your program.
+            console.log(
+              `An unrecoverable error occurred. Stopping processing. ${args.error.code}`,
+              args.error
+            );
+            await subscription.close();
+            break;
+          case 'MessageLockLost':
+            console.log('Message lock lost for message', args.error);
+            break;
+          case 'ServiceBusy':
+            // choosing an arbitrary amount of time to wait.
+            await delay(1000);
+            break;
+        }
+    }
+    else
+    {
+        console.log('Not a service bus error, closing the subscription');
+        await subscription.close();
+    }
+
 };
 
-receiver.subscribe({
+const subscription = receiver.subscribe({
     processMessage: myMessageHandler,
     processError: myErrorHandler
 });
