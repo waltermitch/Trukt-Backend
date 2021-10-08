@@ -1,7 +1,7 @@
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJob = require('../Models/OrderJob');
-
+const R = require('ramda');
 const { ServiceBusClient } = require('@azure/service-bus');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
@@ -15,21 +15,27 @@ const myMessageHandler = async (message) =>
 {
     const responses = message.body;
     let jobGuid;
-
+    console.log(responses.length);
     for (const res of responses)
     {
-        const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
-
-        try
+        // for some reason, service bus is sending over empty objects and is completely throwing
+        // this handler off, so until we find why service bus is sending over empty objects,
+        // we will have to check if the object is empty
+        if(!R.isEmpty(res))
         {
-            // make the first letter of the action uppercase so that we can call the the loadboards action
-            // handler based off this string i.e post -> Post to be handled by method handlePost
-            const action = res.payloadMetadata.action.charAt(0).toUpperCase() + res.payloadMetadata.action.slice(1);
-            jobGuid = await lbClass[`handle${action}`](res.payloadMetadata, res[`${res.payloadMetadata.action}`]);
-        }
-        catch (e)
-        {
-            throw new Error(e.toString());
+            const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
+    
+            try
+            {
+                // make the first letter of the action uppercase so that we can call the the loadboards action
+                // handler based off this string i.e post -> Post to be handled by method handlePost
+                const action = res.payloadMetadata.action.charAt(0).toUpperCase() + res.payloadMetadata.action.slice(1);
+                jobGuid = await lbClass[`handle${action}`](res.payloadMetadata, res[`${res.payloadMetadata.action}`]);
+            }
+            catch (e)
+            {
+                throw new Error(e.toString());
+            }
         }
     }
 
