@@ -17,8 +17,6 @@ const myMessageHandler = async (message) =>
     let jobGuid;
     for (const res of responses)
     {
-        console.log(res);
-
         // for some reason, service bus is sending over empty objects and is completely throwing
         // this handler off, so until we find why service bus is sending over empty objects,
         // we will have to check if the object is empty
