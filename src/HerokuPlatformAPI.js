@@ -1,12 +1,18 @@
-const AuthController = require('./AuthController');
+const Axios = require('axios');
+const https = require('https');
 
+const baseURL = 'https://api.heroku.com';
+const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/vnd.heroku+json; version=3',
+    'Authorization': `Bearer ${process.env['heroku.accessToken']}`
+};
+
+// Stores the active axios http client
 let api;
 
 class Heroku
 {
-    constructor()
-    { }
-
     static async getConfig()
     {
         // ensure connection
@@ -14,27 +20,35 @@ class Heroku
 
         // search for config
         const res = await api.get(`/apps/${process.env['heroku.appId']}/config-vars`);
-
-        return res.data;
+        if (res.data?.DATABASE_URL)
+        {
+            return res.data;
+        }
+        else
+        {
+            // The returned object will have multiple connections strings.
+            // The database credentials are always going to rotate so the key is unknown at all times.
+            // What is known is that POSTGRESQL will appear in the key somewhere.
+            for (const key of Object.keys(res.data))
+            {
+                if (key.includes('POSTGRESQL'))
+                {
+                    return { 'DATABASE_URL': res.data[key] };
+                }
+            }
+        }
     }
 
-    static connect()
+    static connect(opts)
     {
+        // Client doesnt need to keep-alive because fetching only the config and thats it.
         if (!api)
         {
-            const opts =
-            {
-                url: 'https://api.heroku.com',
-                headers:
-                {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/vnd.heroku+json; version=3',
-                    'Authorization': `Bearer ${process.env['heroku.accessToken']}`
-                }
-            };
-
-            // init
-            api = new AuthController(opts).connect();
+            api = Axios.create({
+                baseURL,
+                headers,
+                httpsAgent: new https.Agent(opts)
+            });
         }
 
         return api;

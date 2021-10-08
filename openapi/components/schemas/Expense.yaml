@@ -1,0 +1,59 @@
+expense:
+  type: object
+  properties:
+    notes:
+      description: Optional notes
+      type: string
+      nullable: true
+    amount:
+      description: New expense amount
+      oneOf:
+        - type: number
+        - type: string
+    itemId:
+      description: New item id
+      type: number
+    commodityGuid:
+      description: New commodity guid
+      type: string
+      format: uuid
+    guid:
+      description: expense guid
+      type: string
+      format: uuid
+    invoiceGuid:
+      description: Related invoice guid
+      type: string
+      format: uuid
+    isPaid:
+      description: Is expense paid
+      type: boolean
+  required:
+    - itemId
+    - amount
+orderExpense:
+  type: object
+  properties:
+    account:
+      type: string
+      enum:
+        - client
+        - vendor
+        - salesperson
+        - referrer
+        - dispatcher
+    amount:
+      allOf:
+        - $ref: ..\..\components\schemas\Common.yaml#/currency
+        - description: The amount that is owed for this expense.
+          minimum: 0
+    item:
+      description: The invoice line item name that this expense references.
+      type: string
+    commodity:
+      description: The index field in the commodities array in this payload.
+      type: string
+  required:
+    - account
+    - amount
+    - item

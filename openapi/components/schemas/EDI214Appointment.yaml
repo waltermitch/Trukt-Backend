@@ -1,0 +1,14 @@
+allOf:
+  - $ref: .\EDI214Status.yaml
+  - type: object
+    required:
+      - code
+      - type
+      - reason
+    properties:
+      type:
+        $ref: '.\Common.yaml#/Enums/edi214Type'
+      code:
+        $ref: '.\Common.yaml#/Enums/edi214AppointmentCodeType'
+      reason:
+        description: EDI 214 AT704 appointment status reason code

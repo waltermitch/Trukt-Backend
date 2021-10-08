@@ -1,0 +1,16 @@
+summary: Get Attachment
+operationId: getAttachment
+description: Get Attachment by guid
+tags:
+  - Attachments
+parameters:
+  - in: path
+    name: guid
+    schema:
+      $ref: '..\..\components\schemas\common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: Attachment
+    content:
+      application/json: {}

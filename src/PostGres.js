@@ -1,57 +1,34 @@
-const urlParser = require('pg-connection-string').parse;
-const Heroku = require('./HerokuPlatformAPI');
+const knexfile = require('../knexfile');
+const { Pool } = require('pg');
 const Knex = require('knex');
 
 let db;
 
 class PG
 {
-    constructor() { }
-
     static async connect()
     {
         if (!db)
-        {
-            // get url
-            const res = await Heroku.getConfig();
-
-            // parse url and no ssl
-            const opts = Object.assign({ ssl: { rejectUnauthorized: false } }, urlParser(res.DATABASE_URL));
-
-            // connect
-            db = await Knex(
-                {
-                    client: 'pg',
-                    connection: opts,
-                    searchPath: ['rcg_tms', 'salesforce']
-                });
-        }
+            db = await Knex(knexfile());
 
         return db;
     }
 
-    static async getVariable(value)
+    static async getRawConnection()
     {
         const db = await PG.connect();
 
-        const res = await db.select('data').from('variables').where({ name: value });
+        let config;
+        if (Object.prototype.toString.call(db.client.config.connection) === '[object AsyncFunction]')
+            config = await db.client.config.connection();
+        else
+            config = db.client.config.connection;
 
-        // return the first element and the data object because it comes in a dumb format
-        return res?.[0]?.data || {};
-    }
+        const conn = new Pool(config);
 
-    static async upsertVariable(payload)
-    {
-        const db = await PG.connect();
+        const rawClient = await conn.connect();
 
-        await db.insert({ 'data': JSON.stringify(payload), 'name': payload.name }).into('variables')
-            .onConflict('name')
-            .merge();
-    }
-
-    static getRecordTypeId(objectName, recordTypeName)
-    {
-        return config.SF.RecordTypeIds?.[`${objectName}`]?.[`${recordTypeName}`];
+        return rawClient;
     }
 }
 

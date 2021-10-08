@@ -1,0 +1,14 @@
+{
+    "schema": "rcg_tms",
+    "table": "invoice_bill_line_items",
+    "unique": "name",
+    "data": [
+        {
+            "id": 1,
+            "name": "transport",
+            "type": "revenue",
+            "is_accessorial": false,
+            "is_deprecated": false
+        }
+    ]
+}

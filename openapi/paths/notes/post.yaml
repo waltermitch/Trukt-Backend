@@ -1,0 +1,69 @@
+summary: Create Internal and external notes
+operationId: createNotes
+description: Create internal and external notes
+tags:
+  - Notes
+parameters:
+  - in: path
+    name: object
+    schema: 
+      $ref: '..\..\components\schemas\Common.yaml#/Enums/noteObject' 
+    required: true  
+  - in: path
+    name: objectGuid
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          title:
+            type: string
+            description: This is a useless field, so fill it up as you wish.
+          body: 
+            description: Note for internal use only.
+            type: string
+            maxLength: 3000
+          type:
+            type: string
+            enum: [lead, flag, update]
+            description: types of notes that internal notes store
+            example: lead
+        required:
+          - body 
+          - type                 
+
+responses:
+  200:
+    description: Notes have been created
+    content:
+      application/json: 
+        schema:
+          type: object
+          properties:
+            title: 
+              $ref: '#/requestBody/content/application~1json/schema/properties/title'
+            body:
+              $ref: '#/requestBody/content/application~1json/schema/properties/body'
+            type:
+              $ref: '#/requestBody/content/application~1json/schema/properties/type'
+            createdByGuid:
+              $ref: ..\..\components\schemas\Common.yaml#/createdByGuid
+            job:
+              type: object
+              properties: 
+                guid:  
+                  $ref: '..\..\components\schemas\Common.yaml#/guid'
+            guid:
+              $ref: '..\..\components\schemas\Common.yaml#/guid'              
+
+  400:
+    description: Unable to create notes
+    content:
+      application/json:
+        schema:
+          type: string
+          example: Some Error for DB

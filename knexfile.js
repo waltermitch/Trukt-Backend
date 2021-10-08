@@ -1,13 +1,12 @@
+require('./local.settings.js');
 const urlParser = require('pg-connection-string').parse;
 const Heroku = require('./src/HerokuPlatformAPI');
 const { knexSnakeCaseMappers } = require('objection');
 
-require('./local.settings.js');
-
 const env = process.env.NODE_ENV || process.env.ENV;
 const conConfig = {
     client: process.env['knex.client'],
-    searchPath: ['rcg_tms'],
+    searchPath: ['rcg_tms', 'public', 'salesforce'],
     migrations: {
         tableName: process.env['knex.migration.table']
     },

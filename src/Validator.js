@@ -7,8 +7,6 @@ let schemas;
 
 class Validator
 {
-    constructor() { }
-
     static evalSchema(name, payload)
     {
         // check for initialization

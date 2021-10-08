@@ -1,9 +1,9 @@
 const migration_tools = require('../tools/migration');
 
-const table_name = 'order_stop_links';
+const TABLE_NAME = 'order_stop_links';
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, (table) =>
     {
         table.increments('id', { primaryKey: true }).notNullable();
         const commodityfn = 'commodity_guid';
@@ -12,7 +12,7 @@ exports.up = function (knex)
         const orderfn = 'order_guid';
         table.uuid(commodityfn).notNullable();
         table.foreign(commodityfn).references('guid').inTable('rcg_tms.commodities');
-        table.uuid(orderfn).notNullable();
+        table.uuid(orderfn);
         table.foreign(orderfn).references('guid').inTable('rcg_tms.orders');
         table.uuid(jobfn);
         table.foreign(jobfn).references('guid').inTable('rcg_tms.order_jobs');
@@ -29,11 +29,14 @@ exports.up = function (knex)
             stopfn,
             commodityfn
         ]);
-        migration_tools.timestamps(knex, table);
-    }).raw(migration_tools.timestamps_trigger(table_name));
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
+    })
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME))
+        .raw(migration_tools.authors_trigger(TABLE_NAME));
 };
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(table_name);
+    return knex.schema.withSchema('rcg_tms').dropTableIfExists(TABLE_NAME);
 };

@@ -1,0 +1,31 @@
+type: object
+required:
+  - name
+  - zipCode
+properties:
+  name:
+    description: A non-unique name for this terminal that will be displayed to the users.
+    type: string
+    maxLength: 255
+  street1:
+    type: string
+    maxLength: 64
+  street2:
+    type: string
+    maxLength: 64
+    nullable: true
+  state:
+    type: string
+    maxLength: 100
+  city:
+    type: string
+    maxLength: 64
+  country:
+    type: string
+    maxLength: 64
+  zipCode:
+    $ref: '.\Common.yaml#/zipCode'
+  latitude:
+    $ref: '.\Common.yaml#/latitude'
+  longitude:
+    $ref: '.\Common.yaml#/longitude'

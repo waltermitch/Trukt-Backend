@@ -1,11 +1,10 @@
 const migration_tools = require('../tools/migration');
 
-const guid_function = migration_tools.guid_function;
-const table_name = 'order_stops';
+const TABLE_NAME = 'order_stops';
 
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, (table) =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, (table) =>
     {
         table.uuid('guid').unique().notNullable();
         table.enu('stop_type', ['pickup', 'delivery'],
@@ -17,7 +16,7 @@ exports.up = function (knex)
         {
             const fieldname = `${type}_contact_guid`;
             table.uuid(fieldname);
-            table.foreign(fieldname).references('guid').inTable('rcg_tms.contacts');
+            table.foreign(fieldname).references('guid').inTable('rcg_tms.terminal_contacts');
         }
 
         let exists = false;
@@ -42,15 +41,19 @@ exports.up = function (knex)
         table.integer('sequence').comment('describes the order the stops need to be visited in');
 
         table.string('status', 24).comment('do not modify this status field, it is purely for displaying to users');
-        migration_tools.timestamps(knex, table);
+        migration_tools.timestamps(table);
+        migration_tools.authors(table);
 
-    }).raw(guid_function(table_name)).raw(migration_tools.timestamps_trigger(table_name));
+    })
+        .raw(migration_tools.guid_function(TABLE_NAME))
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME))
+        .raw(migration_tools.authors_trigger(TABLE_NAME));
 };
 
 exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .dropTableIfExists(table_name)
+        .dropTableIfExists(TABLE_NAME)
         .raw('DROP TYPE IF EXISTS rcg_tms.date_schedule_types CASCADE;')
         .raw('DROP TYPE IF EXISTS rcg_tms.stop_types CASCADE;');
 };

@@ -1,0 +1,25 @@
+summary: Create Loadboard Request
+operationId: createLoadboardRequest
+description: Create loaboard request from incoming payload
+tags:
+  - Loadboard
+requestBody:
+  content:
+    application/json:
+      schema:
+        $ref: ../../../components/schemas/LoadboardRequest.yaml#/postRequestPayload
+
+responses:
+  200:
+    description: Request has been created
+    content:
+      application/json: 
+        schema:
+          $ref: ../../../components/schemas/LoadboardRequest.yaml#/mainResponsePayload
+  404:
+    description: Posting doesn't exist
+    content:
+      application/json:
+        schema:
+          type: string
+          example: Posting doesn't exist

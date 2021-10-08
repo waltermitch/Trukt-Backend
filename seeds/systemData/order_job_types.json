@@ -1,0 +1,42 @@
+{
+    "schema": "rcg_tms",
+    "table": "order_job_types",
+    "unique": "id",
+    "data": [
+        {
+            "id": 1,
+            "category": "transport",
+            "type": "transport"
+        },
+        {
+            "id": 2,
+            "category": "service",
+            "type": "locksmith"
+        },
+        {
+            "id": 3,
+            "category": "service",
+            "type": "unloading"
+        },
+        {
+            "id": 4,
+            "category": "service",
+            "type": "loading"
+        },
+        {
+            "id": 5,
+            "category": "service",
+            "type": "repair"
+        },
+        {
+            "id": 6,
+            "category": "service",
+            "type": "diagnostics"
+        },
+        {
+            "id": 7,
+            "category": "service",
+            "type": "dry run"
+        }
+    ]
+}

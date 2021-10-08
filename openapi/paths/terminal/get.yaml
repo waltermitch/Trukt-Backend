@@ -1,0 +1,40 @@
+summary: Get terminal by guid
+operationId: getTerminals
+description: Get terminal by guid
+tags:
+  - Terminals
+parameters:
+  - in: path
+    name: terminalGuid
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: terminals
+    content:
+      application/json:
+        schema:
+          allOf:
+            - $ref: ..\..\components\schemas\Common.yaml#/guidObject
+            - $ref: ..\..\components\schemas\Terminal.yaml
+            - type: object
+              properties:
+                locationType:
+                  type: string
+                  enum:
+                    - dealer
+                    - private
+                    - auction
+                    - repo yard
+                    - port
+                    - business
+                primaryContact:
+                  $ref: ..\..\components\schemas\Contact.yaml
+                alternativeContact:
+                  $ref: ..\..\components\schemas\Contact.yaml
+                contacts:
+                  type: array
+                  items:
+                    $ref: ..\..\components\schemas\Contact.yaml

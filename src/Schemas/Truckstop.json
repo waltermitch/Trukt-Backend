@@ -1,0 +1,47 @@
+{
+    "$id": "TRUCKSTOP",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "contact",
+        "loadType",
+        "equipmentType",
+        "length",
+        "weight"
+    ],
+    "properties": {
+        "contact": {
+            "type": "integer",
+            "enum": [
+                1,
+                2,
+                4,
+                5,
+                3
+            ]
+        },
+        "loadType": {
+            "type": "integer",
+            "enum": [0]
+        },
+        "equipmentType": {
+            "type": "integer",
+            "enum": [
+                3,
+                4,
+                5,
+                6,
+                7
+            ]
+        },
+        "equipmentOptions": {
+            "type": "array"
+        },
+        "length": {
+            "type": "number"
+        },
+        "weight": {
+            "type": "number"
+        }
+    }
+}

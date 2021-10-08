@@ -1,3 +1,4 @@
+/* eslint-disable */
 module.exports = (err, request, response, next) =>
 {
     let status;

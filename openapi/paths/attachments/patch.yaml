@@ -1,0 +1,20 @@
+summary: Update Attachment
+operationId: updateAttachment
+description: Update Attachment of a given job/order
+tags:
+  - Attachments
+parameters:
+  - in: path
+    name: guid
+    schema:
+      $ref: '..\..\components\schemas\common.yaml#/guid'
+    required: true
+requestBody:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: ..\..\components\schemas\Attachment.yaml
+responses:
+  "204":
+    description: updated Attachment

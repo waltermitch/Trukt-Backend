@@ -1,0 +1,19 @@
+{
+    "schema": "rcg_tms",
+    "table": "comparison_types",
+    "unique": "label",
+    "data": [
+        {
+            "label": "equal",
+            "value": "="
+        },
+        {
+            "label": "before",
+            "value": "<"
+        },
+        {
+            "label": "after",
+            "value": ">"
+        }
+    ]
+}

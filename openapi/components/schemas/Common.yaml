@@ -1,0 +1,399 @@
+dateCreated:
+  allOf:
+    - $ref: '#/dateTime'
+    - type: string
+      description: The date this record was created.
+      readOnly: true
+      nullable: false
+      example: '2021-09-23T12:14:45.000Z'
+dateUpdated:
+  allOf:
+    - $ref: '#/dateTime'
+    - type: string
+      format: date-time
+      description: The date this record was last updated.
+      readOnly: true
+      nullable: false
+dateDeleted:
+  allOf:
+    - $ref: '#/dateTime'
+    - type: string
+      format: date-time
+      description: The date this record was deleted.
+      readOnly: true
+      nullable: false
+createdByGuid:
+  allOf:
+    - $ref: '#/guid'
+    - type: string
+      description: The TMS User account that created this record.
+      readOnly: true
+      nullable: false
+updatedByGuid:
+  allOf:
+    - $ref: '#/guid'
+    - type: string
+      description: The TMS User account that last updated this record.
+      readOnly: true
+      nullable: false
+deletedByGuid:
+  allOf:
+    - $ref: '#/guid'
+    - type: string
+      description: The TMS User account that last deleted this record.
+      readOnly: true
+      nullable: false
+currency:
+  type: string
+  format: currency
+  pattern: ^(?:[1-9][0-9]*|0)\.[0-9]{2}$
+  example: '12345.67'
+date:
+  type: string
+  format: date
+  example: '2021-12-31'
+dateTime:
+  type: string
+  format: date-time
+  example: '2021-08-10T07:59:59.000Z'
+indexObject:
+  type: object
+  properties:
+    index:
+      $ref: '#/index'
+  required:
+    - index
+index:
+  type: string
+  description: A unique and arbitrary string that will be used to reference this record in this payload.
+  example: 'record_1234'
+page:
+  description: For pagination purposes, page to return.
+  type: integer
+  minimum: 1
+  default: 1
+  example: 1
+rowCount:
+  description: For pagination purposes, number of entries per page.
+  type: integer
+  default: 25
+longitude:
+  description: Number describing the longitude coordinate.
+  example: 45.6208283
+  type: number
+  format: float
+  minimum: -180
+  maximum: 180
+latitude:
+  description: Number describing the latitude coordinate.
+  example: 12.5372125
+  type: number
+  format: float
+  minimum: -90
+  maximum: 90
+guid:
+  type: string
+  format: uuid
+  pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
+  example: '00000000-0000-0000-0000-000000000000'
+zipCode:
+  type: string
+  example: '98765'
+email:
+  type: string
+  format: email
+guidObject:
+  type: object
+  required:
+    - guid
+  properties:
+    guid:
+      $ref: '#/guid'
+guidObjectNullable:
+  type: object
+  nullable: true
+  required:
+    - guid
+  properties:
+    guid:
+      $ref: '#/guid'
+guidNullable:
+  type: string
+  format: uuid
+  pattern: ^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$
+  example: '00000000-0000-0000-0000-000000000000'
+  nullable: true
+phoneNumber:
+  type: string
+  pattern: \d+
+  example: '(916) 999-1234'
+stringNullable:
+  type: string
+  nullable: true
+numberNullable:
+  type: number
+  nullable: true
+Enums:
+  accountType:
+    type: string
+    enum:
+      - client
+      - carrier
+      - referrer
+      - employee
+      - dispatcher
+  inspectionType:
+    type: string
+    enum:
+      - standard
+      - advanced
+    default: standard
+  stopType:
+    description: >-
+      Describes the type of stop, use pickup to indicate that the stop is for
+      picking up commodities, use delivery for dropping off commodities.
+    type: string
+    enum:
+      - pickup
+      - delivery
+  stopDateType:
+    type: string
+    enum:
+      - estimated
+      - exactly
+      - no later than
+      - no earlier than
+  terminalLocationType:
+    type: string
+    enum:
+      - dealer
+      - private
+      - auction
+      - repo yard
+      - port
+      - business
+  commodityCategoryType:
+    description: The category of the commodity.
+    type: string
+    enum:
+      - vehicle
+      - freight
+  commodityType:
+    description: The type of the commodity. Not all of these types can be matched to a category.
+    type: string
+    enum:
+      - coupe
+      - convertible
+      - sedan
+      - SUV
+      - minivan
+      - pickup truck (2 door)
+      - pickup truck (4 door)
+      - pickup dually
+      - motorcycle
+      - ATV
+      - boat
+      - RV
+      - trailer (5th wheel)
+      - trailer (bumper pull)
+      - trailer (gooseneck)
+      - cargo van
+      - box truck
+      - day cab
+      - sleeper cab
+      - bulk
+      - crushed cars
+      - other
+  edi214AppointmentCodeType:
+    description: EDI 214  AT703 appointment status code
+    type: string
+    enum:
+      - AA
+      - AB
+      - AC
+      - ED
+      - EP
+      - LD
+      - LP
+      - X9
+      - XA
+  edi214Type:
+    type: string
+    enum:
+      - status
+      - appointment
+  edi214StatusReasonType:
+    type: string
+    enum:
+      - A1
+      - A2
+      - A3
+      - A5
+      - A6
+      - AA
+      - AD
+      - AE
+      - AF
+      - AG
+      - AH
+      - AI
+      - AJ
+      - AK
+      - AL
+      - AM
+      - AN
+      - AO
+      - AP
+      - AQ
+      - AR
+      - AS
+      - AT
+      - AU
+      - AV
+      - AW
+      - AX
+      - AY
+      - AZ
+      - B1
+      - B2
+      - B4
+      - B5
+      - B8
+      - B9
+      - BB
+      - BC
+      - BD
+      - BE
+      - BF
+      - BG
+      - BH
+      - BI
+      - BJ
+      - BK
+      - BL
+      - BM
+      - BN
+      - BO
+      - BP
+      - BQ
+      - BR
+      - BS
+      - BT
+      - C1
+      - C2
+      - C3
+      - C4
+      - C5
+      - C6
+      - C7
+      - C8
+      - C9
+      - CA
+      - CB
+      - CC
+      - D1
+      - D2
+      - F1
+      - F2
+      - HB
+      - NA
+      - NS
+      - P1
+      - P2
+      - P3
+      - P4
+      - RC
+      - S1
+      - T1
+      - T2
+      - T3
+      - T4
+      - T5
+      - T6
+      - T7
+    minLength: 2
+    maxLength: 2
+  edi214StopCodeType:
+    description: EDI 214  AT701 appointment status code
+    type: string
+    enum:
+      - A3
+      - A7
+      - A9
+      - AF
+      - AG
+      - AH
+      - AI
+      - AJ
+      - AM
+      - AN
+      - AP
+      - AR
+      - AV
+      - B6
+      - BA
+      - BC
+      - C1
+      - CA
+      - CD
+      - CL
+      - CP
+      - D1
+      - I1
+      - J1
+      - K1
+      - L1
+      - OA
+      - OO
+      - P1
+      - PR
+      - R1
+      - RL
+      - S1
+      - SD
+      - X1
+      - X2
+      - X3
+      - X4
+      - X5
+      - X6
+      - X8
+      - XB
+  ediActionType:
+    type: string
+    enum:
+      - accept
+      - decline
+  orderStatus:
+    type: string
+    enum:
+      - New
+      - On Hold
+      - Ready
+      - Posted
+      - Requests
+      - Pending
+      - Declined
+      - Picked Up
+      - Delivered
+      - Canceled
+      - Deleted
+  Loadboard Name:
+    type: string
+    enum: 
+      - SUPERDISPATCH
+      - CENTRALDISPATCH
+      - SHIPCARS
+      - CARDELIVERYNETWORK
+  LoadBoard Request Status:
+    type: string
+    enum: 
+      - Accepted
+      - Canceled
+      - New
+      - Declined
+  noteObject:
+    type: string
+    enum: 
+      - job
+      - order

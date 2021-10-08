@@ -2,8 +2,8 @@ const controller = require('../HttpControllers/PicklistController');
 const router = require('express').Router();
 
 const prefix = '/picklist/options';
+
 router
-    .put(prefix, controller.constructor.update)
-    .get(prefix, controller.constructor.getAll);
+    .get(prefix, (req, res) => http(req, res, controller.get));
 
 module.exports = router;
