@@ -2,19 +2,25 @@
     "SFAccount": {
         "hide": {
             "database": {
-                "outa": [
+                "outa": [],
+                "into": []
+            },
+            "external": {
+                "outa": [],
+                "into": [
                     "accountNameDuplicate",
                     "accountNumber",
                     "accountSource",
+                    "active",
                     "auctionId",
-                    "autoimsClientId",
                     "autoInsuranceExpiration",
+                    "autoimsClientId",
+                    "azureId",
                     "bankAccountName",
                     "bankAccountNumber",
                     "bankAccountType",
                     "bankRoutingNumber",
                     "billingGeocodeAccuracy",
-                    "blacklist",
                     "brokerAuthority",
                     "businessType",
                     "cargoInsuranceExpiration",
@@ -38,15 +44,17 @@
                     "dotNumberStatus",
                     "emergencyPhone",
                     "factoringCompany",
+                    "fax",
                     "firstName",
                     "flag",
                     "flagHistory",
                     "fraudIdentityTheftStatus",
                     "freePhone",
-                    "inactive",
                     "icpEligible",
                     "icpGp",
                     "icpMultiplier",
+                    "id",
+                    "inactive",
                     "industry",
                     "insuranceExpiration",
                     "insuranceOnFile",
@@ -55,6 +63,7 @@
                     "isDeleted",
                     "isPartner",
                     "isPersonAccount",
+                    "isSyncedInSuper",
                     "jobTitle",
                     "lastModifiedDate",
                     "lastName",
@@ -64,7 +73,6 @@
                     "lkqTrainingItems",
                     "masterRecordGuid",
                     "masterRecordId",
-                    "mcNumber",
                     "notes",
                     "numberOfEmployees",
                     "numberOfLocations",
@@ -109,16 +117,14 @@
                     "photoUrl",
                     "pickupNotes",
                     "portfolioCode",
-                    "preferred",
+                    "primaryContactId",
                     "primaryContactPersonId",
-                    "qbId",
                     "rating",
                     "recordTypeId",
                     "referralCode",
                     "requiresAttention",
                     "salesAccountManager",
                     "salutation",
-                    "sdGuid",
                     "searchAddress",
                     "shippingGeocodeAccuracy",
                     "sic",
@@ -128,7 +134,6 @@
                     "slaDays",
                     "slaExpirationDate",
                     "slaSerialNumber",
-                    "status",
                     "subIndustry",
                     "suite",
                     "systemModStamp",
@@ -145,22 +150,6 @@
                     "usesFactoringCompany",
                     "vendorType",
                     "website"
-                ],
-                "into": []
-            },
-            "external": {
-                "outa": [],
-                "into": [
-                    "sfId",
-                    "isDeleted",
-                    "id",
-                    "dotNumberStatus",
-                    "type",
-                    "firstName",
-                    "lastName",
-                    "fax",
-                    "azureId",
-                    "primaryContactId"
                 ]
             }
         }
@@ -168,7 +157,12 @@
     "SFContact": {
         "hide": {
             "database": {
-                "outa": [
+                "outa": [],
+                "into": []
+            },
+            "external": {
+                "outa": [],
+                "into": [
                     "accountingContact",
                     "assistantName",
                     "assistantPhone",
@@ -178,10 +172,15 @@
                     "description",
                     "emailBouncedDate",
                     "emailBouncedReason",
+                    "fax",
+                    "firstName",
                     "homePhone",
+                    "id",
                     "individualId",
+                    "isDeleted",
                     "isEmailBounced",
                     "isPersonAccount",
+                    "lastName",
                     "leadSource",
                     "lkqTrainingItems",
                     "mailingCity",
@@ -203,26 +202,16 @@
                     "otherStreet",
                     "photoUrl",
                     "primaryContact",
+                    "recordTypeId",
                     "salutation",
                     "sdGuid",
                     "secondaryContact",
+                    "sfId",
                     "systemModStamp",
                     "title",
                     "trainer",
                     "trainingDate",
                     "trainingItems"
-                ],
-                "into": []
-            },
-            "external": {
-                "outa": [],
-                "into": [
-                    "id",
-                    "sfId",
-                    "accountId",
-                    "isDeleted",
-                    "recordTypeId",
-                    "fax"
                 ]
             }
         }
@@ -230,7 +219,123 @@
     "Terminal": {
         "hide": {
             "external": {
-                "into": ["isResolved", "dateDeleted", "deletedBy"]
+                "into": [
+                    "isResolved",
+                    "isDeleted",
+                    "dateDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "deletedByGuid",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "primaryContactGuid",
+                    "alternativeContactGuid"
+                ]
+            }
+        }
+    },
+    "Commodity": {
+        "hide": {
+            "external": {
+                "into": [
+                    "typeId",
+                    "vehicleId",
+                    "isDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid"
+                ]
+            }
+        }
+    },
+    "Order": {
+        "hide": {
+            "external": {
+                "into": [
+                    "clientGuid",
+                    "clientContactGuid",
+                    "consigneeGuid",
+                    "referrerGuid",
+                    "salespersonGuid",
+                    "dispatcherGuid",
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid"
+                ]
+            }
+        }
+    },
+    "OrderJob": {
+        "hide": {
+            "external": {
+                "into": [
+                    "vendorGuid",
+                    "vendorContactGuid",
+                    "vendorAgentGuid",
+                    "dispatcherGuid",
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid",
+                    "orderGuid"
+                ]
+            }
+        }
+    },
+    "User": {
+        "hide": {
+            "external": {
+                "into": ["dateCreated", "dateUpdated", "dateDeleted"]
+            }
+        }
+    },
+    "OrderStop": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid",
+                    "primaryContactGuid",
+                    "alternativeContactGuid",
+                    "terminalGuid"
+                ]
+            }
+        }
+    },
+    "TerminalContact": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid",
+                    "terminalGuid"
+                ]
+            }
+        }
+    },
+    "Attachment": {
+        "hide": {
+            "external": {
+                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
+            }
+        }
+    },
+    "InvoiceLine": {
+        "hide": {
+            "external": {
+                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
             }
         }
     }

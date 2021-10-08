@@ -1,37 +1,64 @@
 const Attachment = require('../Models/Attachment');
 const AzureStorage = require('../Azure/Storage');
-const multipart = require('parse-multipart');
+const { DateTime } = require('luxon');
 const uuid = require('uuid');
 
 const baseURL = AzureStorage.getBaseUrl();
 
 class AttachmentService
 {
-    static async searchByParent(parent, parentType, attachmentType)
+
+    static async get(guid)
     {
-        const attachments = await Attachment.query().where('parent', '=', `${parent}`).where('parent_table', '=', `${parentType}`).where(builder =>
-        {
-            if (attachmentType)
-                builder.where('type', '=', `${attachmentType}`);
-        });
+        const attachment = await Attachment.query().findById(guid);
+
+        if (!attachment)
+            return null;
 
         // get sas
         const sas = AzureStorage.getSAS();
 
         // append security key
-        for (const atchs of attachments)
-            atchs.url += sas;
+        attachment.url += sas;
+
+        // convert visbililty to array
+        attachment.visibility = AttachmentService.convertArray(attachment.visibility);
+
+        return attachment;
+    }
+
+    static async searchByParent({ parent, parentType, attachmentType, visibility })
+    {
+        const builder = Attachment.query()
+            .where('parent', '=', `${parent}`)
+            .where('parent_table', '=', `${parentType}`)
+            .where('is_deleted', '=', false);
+
+        if (attachmentType)
+            builder.where('type', '=', attachmentType);
+
+        if (visibility)
+            builder.where('visibility', '@>', visibility);
+
+        const attachments = await builder;
+
+        // get sas
+        const sas = AzureStorage.getSAS();
+
+        // append security key
+        for (const atch of attachments)
+        {
+            atch.visibility = AttachmentService.convertArray(atch.visibility);
+            atch.url += sas;
+        }
 
         return attachments;
     }
 
-    static async insert(body, headers, opts)
+    static async insert(files, opts, currentUser)
     {
         if (['job'].includes(opts.parentType))
             return { 'status': 400, 'data': 'Not An Allowed parentType' };
-
-        // parse form data into buffer
-        const files = AttachmentService.parse(body, headers);
 
         // get sas
         const sas = AzureStorage.getSAS();
@@ -50,36 +77,62 @@ class AttachmentService
             {
                 'guid': guid,
                 'type': opts.attachmentType,
-                'url': `${baseURL}/${path}/${guid}/${files[i].filename}`,
-                'extension': files[i].type,
-                'name': files[i].filename,
+                'url': `${baseURL}/${path}/${guid}/${files[i].originalname}`,
+                'extension': files[i].mimetype,
+                'name': files[i].originalname,
                 'parent': opts.parent,
-                'parent_table': opts.parentType
+                'parent_table': opts.parentType,
+                'visibility': opts.visibility,
+                'createdByGuid': currentUser
             };
 
             // compose full path of file
             const fullPath = `${path}/${guid}/${file.name}`;
 
-            await Promise.all([AzureStorage.storeBlob(fullPath, files[i].data), Attachment.query().insert(file)]);
+            const res = await Promise.all([AzureStorage.storeBlob(fullPath, files[i].buffer), Attachment.query().insert(file)]);
 
-            urls.push({ 'url': file.url + sas, 'name': file.name, 'guid': guid });
+            urls.push({ 'url': res[1].url + sas, 'name': res[1].name, 'guid': res[1].guid, 'extension': res[1].extension, 'type': res[1].type, 'visibility': res[1].visibility || ['internal'], 'createdByGuid': res[1].createdByGuid, 'dateCreated': DateTime.utc().toString() });
         }
 
         return urls;
     }
 
-    static parse(body, headers)
+    static async update(guid, data, currentUser)
     {
-        // get boundary from headers
-        const boundary = multipart.getBoundary(headers['content-type']);
+        const payload =
+        {
+            type: data?.type,
+            visibility: Array.isArray(data?.visibility) ? data?.visibility : data?.visibility?.split(','),
+            updatedByGuid: currentUser
+        };
 
-        // convert to buffer
-        const parsedBody = Buffer.from(body);
+        const res = await Attachment.query().patchAndFetchById(guid, payload);
 
-        // break down buffer
-        const arr = multipart.Parse(parsedBody, boundary);
+        // convert visibility to array
+        res.visibility = AttachmentService.convertArray(res.visibility);
 
-        return arr;
+        return res;
+    }
+
+    static async delete(guid, currentUser)
+    {
+        const payload =
+        {
+            deletedByGuid: currentUser,
+            is_deleted: true
+        };
+
+        const res = await Attachment.query().patchAndFetchById(guid, payload);
+
+        return res;
+    }
+
+    // converts PostGres String array to JS array
+    static convertArray(string)
+    {
+        string = string.replace(/{|}/g, '');
+
+        return string.split(',');
     }
 }
 

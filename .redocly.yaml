@@ -1,0 +1,9 @@
+apiDefinitions:
+  main: openapi/openapi.yaml
+
+lint:
+  extends:
+    - recommended
+  rules:
+    info-license: off
+    info-license-url: off

@@ -1,0 +1,74 @@
+put:
+  summary: Update a load tender status
+  operationId: updateLoadTenderStatus
+  description: >
+    Update the status or set appointment of a load tender.
+  tags:
+    - EDI
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - partner
+            - reference
+            - location
+            - status
+            - datetime
+          properties:
+            partner:
+              description: The partner that wishes to update a load tender
+              oneOf:
+                - $ref: ..\..\..\components\schemas\SFID.yaml
+                - type: string
+                  format: uuid
+            reference:
+              description: >
+                The shipment/reference number from the load that was created via
+                EDI 204 load tender
+              type: string
+              maxLength: 64
+            commodity:
+              description: >
+                The identifier field from a commodity that was created via EDI 204
+                load tender
+              type: string
+              maxLength: 255
+            location:
+              description: Include the location to update the respective stop
+              type: object
+              properties:
+                city:
+                  type: string
+                  maxLength: 64
+                state:
+                  type: string
+                  maxLength: 100
+                country:
+                  type: string
+                  maxLength: 64
+                latitude:
+                  $ref: '..\..\..\components\schemas\Common.yaml#/latitude'
+                longitude:
+                  $ref: '..\..\..\components\schemas\Common.yaml#/longitude'
+            status:
+              oneOf:
+                - $ref: ..\..\..\components\schemas\EDI214StopStatus.yaml
+                - $ref: ..\..\..\components\schemas\EDI214Appointment.yaml
+              description: Represents the status/appointment update for the load tender.
+              type: object
+              discriminator:
+                propertyName: type
+                mapping:
+                  status: ..\..\..\components\schemas\EDI214StopStatus.yaml
+                  appointment: ..\..\..\components\schemas\EDI214Appointment.yaml
+            datetime:
+              type: string
+              format: date-time
+  responses:
+    '200':
+      description: Updated Load Tender status.
+      content:
+        application/json: {}

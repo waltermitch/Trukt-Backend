@@ -1,0 +1,17 @@
+summary: Search Expenses
+operationId: searchExpense
+description: Search Expenses related to Order
+tags:
+  - Expense
+parameters:
+  - in: query
+    name: order
+    schema:
+      type: string
+      format: uuid
+    required: true
+responses:
+  200:
+    description: expense
+    content:
+      application/json: {}

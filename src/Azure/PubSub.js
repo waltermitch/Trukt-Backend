@@ -7,9 +7,9 @@ const service = new WebPubSubServiceClient(connectionString, hubName, { keepAliv
 
 class PubSub
 {
-    static async getSubToken(groupName, userId)
+    static async getSubToken(userId)
     {
-        const token = await service.getAuthenticationToken({ roles: [`webpubsub.joinLeaveGroup.${groupName}`], userId: userId, 'ttl': 1440 });
+        const token = await service.getAuthenticationToken({ roles: ['webpubsub.joinLeaveGroup'], userId: userId, 'ttl': 1440 });
 
         return token;
     }

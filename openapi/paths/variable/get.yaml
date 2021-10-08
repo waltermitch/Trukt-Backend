@@ -1,0 +1,17 @@
+summary: Get variable by name
+operationId: getVariable
+description:  Get variable by name
+tags:
+  - Variable
+parameters:
+  - in: path
+    name: name
+    schema:
+      type: string
+    required: true
+      
+responses:
+  200:
+    description: variable
+    content:
+      application/json: {}

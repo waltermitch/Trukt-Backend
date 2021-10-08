@@ -1,0 +1,25 @@
+summary: Invoice Orders
+operationId: invoiceOrders
+description: Invoices Orders
+tags:
+  - Invoice
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        description: List of Order guids
+        properties:
+          orders:
+            type: array
+            items:
+              description: Order guid
+              $ref: '..\..\components\schemas\common.yaml#/guid'
+            minItems: 1
+        required:
+          - orders
+responses:
+  200:
+    description: invoices
+    content:
+      application/json: {}

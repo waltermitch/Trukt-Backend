@@ -35,7 +35,7 @@ class SFAccount extends BaseModel
             },
             rectype: {
                 relation: BaseModel.HasOneRelation,
-                modelClass: require('./RecordType'),
+                modelClass: require('./SFRecordType'),
                 join: {
                     from: 'salesforce.accounts.recordTypeId',
                     to: 'salesforce.record_types.sfId'
@@ -49,21 +49,41 @@ class SFAccount extends BaseModel
         {
             const qb = query.leftJoinRelated('rectype');
 
-            if (type === 'client')
+            switch (type)
             {
-                qb.select(raw('\'client\' as rtype'), 'salesforce.accounts.*');
-                qb.where(builder =>
-                {
-                    builder.orWhere('rectype.name', 'ilike', 'client');
-                    builder.orWhere('rectype.name', 'ilike', 'person account');
-                });
-            }
-            else
-            {
-                qb.select('rectype.name as rtype', 'salesforce.accounts.*');
-                qb.where('rectype.name', 'ilike', type);
+                case 'client':
+                    qb.select(raw('\'client\' as rtype'), 'salesforce.accounts.*');
+                    qb.where(builder =>
+                    {
+                        builder.orWhere('rectype.name', 'ilike', 'client');
+                        builder.orWhere('rectype.name', 'ilike', 'person account');
+                    });
+                    break;
+                case 'dispatcher':
+                    qb.select(raw('\'employee\' as rtype'), 'salesforce.accounts.*');
+                    qb.where('rectype.name', 'ilike', 'employee')
+                        .where('salesforce.accounts.userRole', 'ilike', 'dispatcher');
+                    break;
+                default:
+                    qb.select('rectype.name as rtype', 'salesforce.accounts.*');
+                    qb.where('rectype.name', 'ilike', type);
             }
 
+            return qb;
+        },
+        byId(query, id)
+        {
+            query.where(query =>
+            {
+                query.orWhere('salesforce.accounts.guid', id)
+                    .orWhere('salesforce.accounts.sfId', id);
+            });
+        },
+        carrier(query)
+        {
+            const qb = query.leftJoinRelated('rectype');
+            qb.select(raw('\'carrier\' as rtype'), 'salesforce.accounts.*');
+            qb.where({ 'rectype.name': 'Carrier' });
             return qb;
         }
     }
@@ -85,14 +105,20 @@ class SFAccount extends BaseModel
                 case 'client':
                     delete json.dotNumber;
                     delete json.referralAmount;
-
+                    delete json.mcNumber;
+                    delete json.preferred;
+                    delete json.blacklist;
                     break;
                 case 'carrier':
                     delete json.loadboardInstructions;
                     delete json.orderInstructions;
-
                     break;
+                case 'dispatcher':
+                case 'employee':
+                    delete json.referralAmount;
                 case 'referrer':
+                    delete json.preferred;
+                    delete json.blacklist;
                     delete json.dotNumber;
                     for (const field of [
                         'Street',
@@ -111,11 +137,23 @@ class SFAccount extends BaseModel
 
                     delete json.orderInstructions;
                     delete json.loadboardInstructions;
+                    delete json.mcNumber;
                     break;
             }
         }
         return json;
     }
+
+    linkRecordType(recType)
+    {
+        this.recordTypeId = recType.sfId;
+    }
+
+    linkPrimaryContact(contact)
+    {
+        this.primaryContactId = contact.sfId;
+    }
+
 }
 
 module.exports = SFAccount;

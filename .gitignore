@@ -26,6 +26,9 @@ dist/
 # JetBrains IDE
 .idea/
 
+# vscode files
+.vscode/
+
 # Unit test reports
 TEST*.xml
 
@@ -63,3 +66,11 @@ file.js
 test.js
 *.data
 /secrets
+/localdata
+TestController.js
+Test.js
+local.settings.copy*
+test
+
+/edi
+/sql

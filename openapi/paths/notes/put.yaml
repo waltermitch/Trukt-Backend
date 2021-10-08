@@ -1,0 +1,49 @@
+summary: Update notes
+operationId: updateNotes
+description: Update internal and external notes
+tags:
+  - Notes
+parameters:
+  - in: path
+    name: noteGuid
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          title:
+            type: string
+            description: This is a useless field, so fill it up as you wish.
+          body: 
+            description: Note for external use only.
+            type: string
+            maxLength: 3000
+          type:
+            type: string
+            enum: [lead, flag, update]
+            description: types of notes that internal notes store
+            example: lead
+        required:
+          - body  
+          - type                 
+
+responses:
+  204:
+    description: Notes have been updated
+    content:
+      application/json: {}   
+  400: 
+    description: Failed to update data note with input values
+    content:
+      application/json: {}          
+  404:
+    description: Note does not exist
+    content:
+      application/json:
+        schema:
+          type: string
+          example: Note does not exist

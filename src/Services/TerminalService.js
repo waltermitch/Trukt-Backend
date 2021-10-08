@@ -29,9 +29,9 @@ class TerminalService
         // query will be an object with key being the query word
         // min 1 page, with default page 1 (1st page)
         // objection is 0 index, so is postgress, user input will be starting page index at 1
-        const pg = Math.max(1, query.pg || 1) - 1;
+        const pg = Math.max(0, query.pg || 0);
 
-        // clamp between 0 and 100 with default value of 10
+        // clamp between 1 and 100 with default value of 10
         const rc = Math.min(100, Math.max(1, query.rc || 10));
 
         let qb = Terminal.query();

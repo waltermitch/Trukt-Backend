@@ -16,21 +16,27 @@ const searchableFields = [
 
 class TerminalController extends HttpRouteController
 {
-
-    static async search(req, res)
+    static async search(req, res, next)
     {
-        const queryFields = Object.keys(req.query || {});
-
-        if (searchableFields.reduce((acc, value) => { return acc || queryFields.includes(value); }, false))
+        try
         {
-            const result = await TerminalService.search(req.query);
-            res.status(200);
-            res.json(result);
+            const queryFields = Object.keys(req.query || {});
+            if (searchableFields.reduce((acc, value) => { return acc || queryFields.includes(value); }, false))
+            {
+                const result = await TerminalService.search(req.query);
+                res.status(200);
+                res.json(result);
+            }
+            else
+            {
+                const err = new Error('Missing search parameters.');
+                err.status = 400;
+                throw err;
+            }
         }
-        else
+        catch (err)
         {
-            res.status(400);
-            res.send('missing search parameters');
+            next(err);
         }
     }
 

@@ -1,0 +1,58 @@
+{
+    "schema": "rcg_tms",
+    "table": "loadboards",
+    "unique": "name",
+    "data": [
+        {
+            "name": "SUPERDISPATCH",
+            "requires_options": false,
+            "allows_bulk": true
+        },
+        {
+            "name": "CENTRALDISPATCH",
+            "requires_options": false,
+            "allows_bulk": true
+        },
+        {
+            "name": "SHIPCARS",
+            "requires_options": false,
+            "allows_bulk": true
+        },
+        {
+            "name": "CARDELIVERYNETWORK",
+            "requires_options": false,
+            "allows_bulk": false
+        },
+        {
+            "name": "DAT",
+            "requires_options": true,
+            "allows_bulk": true,
+            "required_fields": {
+                "requiredFields": [
+                    "contact",
+                    "loadType",
+                    "equipmentType",
+                    "length",
+                    "weight",
+                    "commodity",
+                    "comment1",
+                    "comment2"
+                ]
+            }
+        },
+        {
+            "name": "TRUCKSTOP",
+            "requires_options": true,
+            "allows_bulk": false,
+            "required_fields": {
+                "requiredFields": [
+                    "contact",
+                    "loadType",
+                    "equipmentType",
+                    "length",
+                    "weight"
+                ]
+            }
+        }
+    ]
+}

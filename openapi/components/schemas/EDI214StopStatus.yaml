@@ -1,0 +1,8 @@
+allOf:
+  - $ref: .\EDI214Status.yaml
+  - type: object
+    properties:
+      code:
+        $ref: '.\Common.yaml#/Enums/edi214StopCodeType'
+      reason:
+        description: EDI 214 AT702 appointment status reason code

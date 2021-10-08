@@ -1,0 +1,14 @@
+summary: Delete Attachment
+operationId: deleteAttachment
+description: Delete Attachment of a given job/order
+tags:
+  - Attachments
+parameters:
+  - in: path
+    name: guid
+    schema:
+      $ref: '..\..\components\schemas\common.yaml#/guid'
+    required: true
+responses:
+  "204":
+    description: Deleted Attachment

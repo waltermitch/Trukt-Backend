@@ -1,0 +1,66 @@
+description: >-
+  The parameters required for attachments
+type: object
+title: AttachmentParams
+required:
+  - parent
+  - parentType
+properties:
+  - in: query
+    name: parent
+    required: true
+    allowEmptyValue: false
+    schema:
+      $ref: '.\Common.yaml#/guid'
+    description: The guid of the parent object
+  - in: query
+    name: parentType
+    required: true
+    allowEmptyValue: false
+    description: The type of the parent object (i.e job, order)
+    schema:
+      enum: [jobs]
+  - in: query
+    name: attachmentType
+    required: false
+    allowEmptyValue: true
+    description: The type of attachment (i.e. photo, billOfLading, etc)
+    schema:
+      enum:
+        [
+          vendorInvoice,
+          billOfLading,
+          proofOfDelivery,
+          lumperTicket,
+          scaleTicket,
+          inGateTicket,
+          outGateTicket,
+          miscellaneous,
+          accessorialAgreement,
+          rateConfirmation,
+          loadTender,
+          invoice,
+          customsDocuments,
+          invoiceWithPaperwork,
+          detentionLoading,
+          detentionUnloading,
+          palletReceipt,
+          spotApproval,
+          truckNotUsed,
+          exitPass,
+          balanceDue,
+          packingList,
+          photo,
+        ]
+  - in: query
+    name: visibility
+    schema:
+      type: array
+      items:
+        type: string
+        enum: [carrier, client, internal]
+        default: [internal]
+    required: false
+    explode: false
+    allowEmptyValue: true
+    description: The visibility of the attachment (i.e. carrier, internal)

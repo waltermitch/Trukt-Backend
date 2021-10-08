@@ -1,0 +1,12 @@
+summary: Get next order index number
+operationId: getOrderIndex
+description: Get next order index number
+tags:
+  - Index
+  - Order
+responses:
+  200:
+    description: index
+    content:
+      application/json: {}
+

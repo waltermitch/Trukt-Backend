@@ -1,0 +1,15 @@
+type: object
+description: Represents the status/appointment update for the load tender
+required:
+  - code
+  - type
+  - reason
+properties:
+  type:
+    $ref: '.\Common.yaml#/Enums/edi214Type'
+  code:
+    type: string
+    minLength: 2
+    maxLength: 2
+  reason:
+    $ref: '.\Common.yaml#/Enums/edi214StatusReasonType'

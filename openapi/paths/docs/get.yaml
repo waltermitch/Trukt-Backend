@@ -1,0 +1,10 @@
+summary: Get API documentation
+operationId: getApiDocs
+description: Get API documentation
+tags:
+  - Docs
+responses:
+  200:
+    description: Documentation
+    content:
+      application/json: {}
