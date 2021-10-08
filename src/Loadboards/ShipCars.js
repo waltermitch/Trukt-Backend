@@ -68,7 +68,6 @@ class ShipCars extends Loadboard
             payment_term_business_days: 2
         };
 
-        // console.log(payload);
         return payload;
     }
 
