@@ -74,6 +74,7 @@ const myMessageHandler = async (message) =>
 };
 const myErrorHandler = async (args) =>
 {
+    console.log('all args ', args);
     console.log(
         `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
@@ -107,10 +108,9 @@ const myErrorHandler = async (args) =>
     }
     else
     {
-        console.log('Not a service bus error, removing messages from the topic that are also stuck');
-        const messages = await receiver.receiveMessages(10, {
-            maxWaitTimeInMs: 10 * 1000
-        });
+        console.log('\nNot a service bus error, removing messages from the topic that are also stuck');
+        const messages = await receiver.receiveMessages(1);
+        console.log('\nnum of messages ', messages.length);
         for (const message of messages)
         {
             console.log(` Message: '${message.body}'`);

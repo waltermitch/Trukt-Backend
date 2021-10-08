@@ -16,7 +16,15 @@ class PubSub
 
     static async publishToGroup(groupName, message)
     {
-        await service.group(groupName).sendToAll(message);
+        try
+{
+            await service.group(groupName).sendToAll(message);
+        }
+        catch(e)
+        {
+            console.log('error sending message to pubsub');
+            console.log(e);
+        }
     }
 }
 
