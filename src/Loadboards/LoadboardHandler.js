@@ -84,6 +84,7 @@ const myMessageHandler = async (message) =>
         catch(e)
         {
             console.log('\ncaught an error, deleting message');
+            console.log(e);
             await receiver.completeMessage(message);
         }
     }
