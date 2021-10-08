@@ -17,8 +17,6 @@ const myMessageHandler = async (message) =>
     let jobGuid;
     for (const res of responses)
     {
-        console.log(res);
-
         // for some reason, service bus is sending over empty objects and is completely throwing
         // this handler off, so until we find why service bus is sending over empty objects,
         // we will have to check if the object is empty
@@ -42,8 +40,8 @@ const myMessageHandler = async (message) =>
 
     if (jobGuid)
     {
-        try
-        {
+        // try
+        // {
             const pubsubAction = responses[0].payloadMetadata.action;
     
             // publish to a group that is named after the the jobGuid which
@@ -74,17 +72,18 @@ const myMessageHandler = async (message) =>
 
                 await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
             }
-        }
-        catch(e)
-        {
-            throw new Error(`Something has gone wrong while sending a pubsub message to ${jobGuid}`, e);
-        }
+
+        // }
+        // catch(e)
+        // {
+        //     throw new Error(`Something has gone wrong while sending a pubsub message to ${jobGuid}`, e);
+        // }
     }
 };
 const myErrorHandler = async (args) =>
 {
     console.log(
-        `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
+        `Error ${args.error.code} occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
     );
 };
