@@ -148,7 +148,6 @@ class Truckstop extends Loadboard
                 objectionPost.isSynced = false;
                 objectionPost.hasError = true;
                 objectionPost.apiError = response.errors;
-                console.log(response.errors);
             }
             else
             {
