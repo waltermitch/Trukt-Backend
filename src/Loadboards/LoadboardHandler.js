@@ -11,6 +11,13 @@ const receiver = sbClient.createReceiver(topicName, process.env['azure.servicebu
 
 const pubsub = require('../Azure/PubSub');
 
+const { WebPubSubServiceClient } = require('@azure/web-pubsub');
+
+const pubSubConnectionString = process.env['azure.pubsub.connectionString'];
+const hubName = process.env['azure.pubsub.hub'];
+
+const service = new WebPubSubServiceClient(pubSubConnectionString, hubName, { keepAliveOptions: { enable: true } });
+
 const myMessageHandler = async (message) =>
 {
     const responses = message.body;
@@ -70,11 +77,13 @@ const myMessageHandler = async (message) =>
             {
                 const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
 
-                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
+                // await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
+                await service.group(jobGuid).sendToAll({ object: 'posting', data: { posts } });
             }
         }
         catch(e)
         {
+            console.log('\ncaught an error, deleting message');
             await receiver.completeMessage(message);
         }
     }
