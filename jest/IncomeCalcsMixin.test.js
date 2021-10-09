@@ -1,6 +1,10 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 /* eslint-disable padding-line-between-statements */
+<<<<<<< HEAD
+=======
+const { ExpiringAccessTokenCache } = require('@azure/core-http');
+>>>>>>> staging
 const IncomeCalcs = require('../src/Models/Mixins/IncomeCalcs');
 
 describe('Tests the added functions in the mixin', () =>
