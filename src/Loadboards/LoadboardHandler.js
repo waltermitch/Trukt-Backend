@@ -11,44 +11,38 @@ const receiver = sbClient.createReceiver(topicName, process.env['azure.servicebu
 
 const pubsub = require('../Azure/PubSub');
 
-const { WebPubSubServiceClient } = require('@azure/web-pubsub');
-
-const pubSubConnectionString = process.env['azure.pubsub.connectionString'];
-const hubName = process.env['azure.pubsub.hub'];
-
-const service = new WebPubSubServiceClient(pubSubConnectionString, hubName, { keepAliveOptions: { enable: true } });
-
 const myMessageHandler = async (message) =>
 {
     const responses = message.body;
     let jobGuid;
-    for (const res of responses)
+    try
     {
-        // for some reason, service bus is sending over empty objects and is completely throwing
-        // this handler off, so until we find why service bus is sending over empty objects,
-        // we will have to check if the object is empty
-        if(!R.isEmpty(res))
+        for (const res of responses)
         {
-            const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
-    
-            try
+            // for some reason, service bus is sending over empty objects and is completely throwing
+            // this handler off, so until we find why service bus is sending over empty objects,
+            // we will have to check if the object is empty
+            if(!R.isEmpty(res))
             {
-                // make the first letter of the action uppercase so that we can call the the loadboards action
-                // handler based off this string i.e post -> Post to be handled by method handlePost
-                const action = res.payloadMetadata.action.charAt(0).toUpperCase() + res.payloadMetadata.action.slice(1);
-                jobGuid = await lbClass[`handle${action}`](res.payloadMetadata, res[`${res.payloadMetadata.action}`]);
-            }
-            catch (e)
-            {
-                throw new Error(e.toString());
+                const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
+        
+                try
+                {
+                    // make the first letter of the action uppercase so that we can call the the loadboards action
+                    // handler based off this string i.e post -> Post to be handled by method handlePost
+                    const action = res.payloadMetadata.action.charAt(0).toUpperCase() + res.payloadMetadata.action.slice(1);
+                    jobGuid = await lbClass[`handle${action}`](res.payloadMetadata, res[`${res.payloadMetadata.action}`]);
+                }
+                catch (e)
+                {
+                    throw new Error(e.toString());
+                }
             }
         }
-    }
 
-    if (jobGuid)
-    {
-        try
+        if (jobGuid)
         {
+            
             const pubsubAction = responses[0].payloadMetadata.action;
 
             // publish to a group that is named after the the jobGuid which
@@ -77,61 +71,45 @@ const myMessageHandler = async (message) =>
             {
                 const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
 
-                // await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
-                await pubsub.publishToGroup(jobGuid, { message: 'womp womp' });
-
-                // await service.group(jobGuid).sendToAll({ object: 'posting', data: { posts } });
+                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
             }
+            
         }
-        catch(e)
-        {
-            console.log('\ncaught an error, deleting message');
-            console.log(e);
-            await receiver.completeMessage(message);
-        }
+    }
+    catch(e)
+    {
+        await receiver.completeMessage(message);
     }
 };
 const myErrorHandler = async (args) =>
 {
-    // console.log('all args ', args);
-    try
-{
+ 
     console.log(
         `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
     );
-
-    const messages = await receiver.receiveMessages(1);
-    console.log('\nnum of messages ', messages.length);
-    for (const message of messages)
-    {
-        console.log(` Message: '${message.body}'`);
-
-        // completing the message will remove it from the remote queue or subscription.
-        await receiver.completeMessage(message);
-    }
 
     // the `subscribe() call will not stop trying to receive messages without explicit intervention from you.
     if (isServiceBusError(args.error))
     {
         switch (args.error.code)
         {
-          case 'MessagingEntityDisabled':
-          case 'MessagingEntityNotFound':
-          case 'UnauthorizedAccess':
+        case 'MessagingEntityDisabled':
+        case 'MessagingEntityNotFound':
+        case 'UnauthorizedAccess':
             // It's possible you have a temporary infrastructure change (for instance, the entity being
             // temporarily disabled). The handler will continue to retry if `close()` is not called on the subscription - it is completely up to you
             // what is considered fatal for your program.
             console.log(
-              `An unrecoverable error occurred. Stopping processing. ${args.error.code}`,
-              args.error
+            `An unrecoverable error occurred. Stopping processing. ${args.error.code}`,
+            args.error
             );
             await subscription.close();
             break;
-          case 'MessageLockLost':
+        case 'MessageLockLost':
             console.log('Message lock lost for message', args.error);
             break;
-          case 'ServiceBusy':
+        case 'ServiceBusy':
             // choosing an arbitrary amount of time to wait.
             await delay(1000);
             break;
@@ -139,9 +117,7 @@ const myErrorHandler = async (args) =>
     }
     else
     {
-        console.log('\nNot a service bus error, removing messages from the topic that are also stuck');
         const messages = await receiver.receiveMessages(1);
-        console.log('\nnum of messages ', messages.length);
         for (const message of messages)
         {
             console.log(` Message: '${message.body}'`);
@@ -149,11 +125,6 @@ const myErrorHandler = async (args) =>
             // completing the message will remove it from the remote queue or subscription.
             await receiver.completeMessage(message);
         }
-    }
-    }
- catch(e)
-    {
-        console.log(e);
     }
 };
 
