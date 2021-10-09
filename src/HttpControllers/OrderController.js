@@ -43,6 +43,7 @@ class OrderController extends HttpRouteController
             let order = await OrderService.create(req.body, req.session.userGuid);
             order = await OrderService.getOrderByGuid(order.guid);
 
+            // registering order to status manager
             OrderService.registerCreateOrderStatusManager(order, req.session.userGuid);
             res.status(201);
             res.json(order);
