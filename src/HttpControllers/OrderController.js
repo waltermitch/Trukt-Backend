@@ -98,10 +98,15 @@ class OrderController extends HttpRouteController
                 res.status(404);
                 res.json(err.message);
             }
+
+            // customizing their error into response for front end
+            if (err.message == 'Logic App Response')
+            {
+                res.status(400);
+                res.json({ Error: '400 error', ErrorMsg: 'PartnerId not found' });
+            }
             res.status(400);
             res.json(err.message);
-
-            // next(err);
         }
     }
 
