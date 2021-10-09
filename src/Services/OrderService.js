@@ -622,32 +622,33 @@ class OrderService
 
         console.log('Payload', logicAppPayload);
 
-        // sending request to logic app with correct payload
-        const response = await logicAppInstance.post(process.env['azure.logicApp.params'], logicAppPayload);
-        console.log('Logic Response', response);
-
-        // handling differnet responses from logic app
-        if (response.status == 200)
+        try
         {
-            return;
+            // sending request to logic app with correct payload
+            const response = await logicAppInstance.post(process.env['azure.logicApp.params'], logicAppPayload);
+            if (response.status == 200)
+            {
+                return;
+            }
         }
-        else
+        catch (error)
         {
-            throw new Error('Something happened Failed');
+            throw new Error('Logic App Response');
         }
     }
 
     static async acceptLoadTender(orderGuid, currentUser)
     {
+        // exucuting accept options
         await OrderService.loadTenders('accept', orderGuid);
 
-        // update Order and status Manager
+        // if executing is successfull, will update table
         await Order.query().skipUndefined().findById(orderGuid).patch({
             isTender: false,
             status: 'New'
         });
 
-        // status update
+        // update status
         await StatusManagerHandler.registerStatus({
             orderGuid: orderGuid,
             userGuid: currentUser,
@@ -661,8 +662,11 @@ class OrderService
         {
             throw new Error('Missing reason');
         }
+
+        // executing reject options with reason
         await OrderService.loadTenders('reject', orderGuid, reason);
 
+        // updating tender to deleted option
         await Order.query().skipUndefined().findById(orderGuid).patch({
             isDeleted: true,
             status: 'Deleted'
