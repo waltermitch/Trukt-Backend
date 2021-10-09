@@ -1684,7 +1684,7 @@ paths:
     put:
       summary: Accept load Tenders
       operationId: acceptOrderbyGuid
-      description: Accept Tender by order GUID and action type
+      description: Accept Tender by order GUID
       tags:
         - Order
       parameters:
@@ -1714,9 +1714,9 @@ paths:
                 example: Order doesn't exist
   '/order/{orderGuid}/tender/reject':
     put:
-      summary: Accept load Tenders
+      summary: Reject load Tenders
       operationId: rejectOrderbyGuid
-      description: Accept Tender by order GUID and action type
+      description: Reject Tender by order GUID
       tags:
         - Order
       parameters:
@@ -1738,7 +1738,7 @@ paths:
                 - reason
       responses:
         '200':
-          description: Order
+          description: Tender
           content:
             application/json: {}
         '400':

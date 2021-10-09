@@ -1,6 +1,6 @@
 summary: Accept load Tenders
 operationId: acceptOrderbyGuid
-description: Accept Tender by order GUID and action type
+description: Accept Tender by order GUID
 tags:
   - Order
 parameters:
@@ -9,11 +9,6 @@ parameters:
     schema:
       $ref: '..\..\components\schemas\Common.yaml#/guid'
     required: true
-  # - in: path
-  #   name: action
-  #   schema:
-  #     $ref: '..\..\components\schemas\Common.yaml#/Enums/Action Type'
-  #   required: true
 
 responses:
   200:

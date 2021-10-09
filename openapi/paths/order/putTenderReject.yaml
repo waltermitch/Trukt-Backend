@@ -1,6 +1,6 @@
-summary: Accept load Tenders
+summary: Reject load Tenders
 operationId: rejectOrderbyGuid
-description: Accept Tender by order GUID and action type
+description: Reject Tender by order GUID
 tags:
   - Order
 parameters:
@@ -23,7 +23,7 @@ requestBody:
 
 responses:
   200:
-    description: Order
+    description: Tender
     content:
       application/json: {}
   400:
