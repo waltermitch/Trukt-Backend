@@ -78,7 +78,9 @@ const myMessageHandler = async (message) =>
                 const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
 
                 // await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
-                await service.group(jobGuid).sendToAll({ object: 'posting', data: { posts } });
+                await pubsub.publishToGroup(jobGuid, { message: 'womp womp' });
+
+                // await service.group(jobGuid).sendToAll({ object: 'posting', data: { posts } });
             }
         }
         catch(e)
