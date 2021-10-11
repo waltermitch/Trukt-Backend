@@ -23,11 +23,20 @@ const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusLog = require('../Models/StatusLog');
 
 const { MilesToMeters } = require('./../Utils');
+const { DateTime } = require('luxon');
+const axios = require('axios');
+const https = require('https');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
 
 let dateFilterComparisonTypes;
+
+const logicAppInstance = axios.create({
+    baseURL: process.env['azure.logicApp.BaseUrl'],
+    httpsAgent: new https.Agent({ keepAlive: true }),
+    headers: { 'Content-Type': 'application/json' }
+});
 
 class OrderService
 {
@@ -641,6 +650,109 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static async loadTenders(action, orderGuid, reason)
+    {
+        // getting order with client and ediData to create payload for logic app
+        const order = await Order.query().skipUndefined().findById(orderGuid).withGraphJoined('[client, ediData]');
+
+        // if order doesn't exist
+        if (order == undefined)
+        {
+            throw new Error('Order doesn\'t exist');
+        }
+
+        // if tender is an order
+        if (order.isTender == false)
+        {
+            throw new Error('Order is not a load Tender');
+        }
+
+        // if tender is deleted
+        if (order.isDeleted == true)
+        {
+            throw new Error('Order Already Rejected');
+        }
+
+        // composing payload for logic app
+        const logicAppPayload = {
+            order: {
+                guid: order.guid,
+                number: order.number
+            },
+            partner: order.client.sfId,
+            refrence: order.referenceNumber,
+            action: action,
+            date: DateTime.utc().toString(),
+            scac: 'RCGQ',
+            edi: order.ediData?.[0].data
+        };
+
+        // if reason append to logic payload
+        if (reason)
+        {
+            Object.assign(logicAppPayload, { reason: reason });
+        }
+
+        console.log('Payload', logicAppPayload);
+
+        try
+        {
+            // sending request to logic app with correct payload
+            const response = await logicAppInstance.post(process.env['azure.logicApp.params'], logicAppPayload);
+            if (response.status == 200)
+            {
+                return;
+            }
+        }
+        catch (error)
+        {
+            throw new Error('Logic App Response');
+        }
+    }
+
+    static async acceptLoadTender(orderGuid, currentUser)
+    {
+        // exucuting accept options
+        await OrderService.loadTenders('accept', orderGuid);
+
+        // if executing is successfull, will update table
+        await Order.query().skipUndefined().findById(orderGuid).patch({
+            isTender: false,
+            status: 'New'
+        });
+
+        // update status
+        await StatusManagerHandler.registerStatus({
+            orderGuid: orderGuid,
+            userGuid: currentUser,
+            statusId: 8
+        });
+    }
+
+    static async rejectLoadTender(orderGuid, reason, currentUser)
+    {
+        if (!reason)
+        {
+            throw new Error('Missing reason');
+        }
+
+        // executing reject options with reason
+        await OrderService.loadTenders('reject', orderGuid, reason);
+
+        // updating tender to deleted option
+        await Order.query().skipUndefined().findById(orderGuid).patch({
+            isDeleted: true,
+            status: 'Deleted'
+        });
+
+        // status update
+        await StatusManagerHandler.registerStatus({
+            orderGuid: orderGuid,
+            userGuid: currentUser,
+            statusId: 9
+        });
     }
 
     /**

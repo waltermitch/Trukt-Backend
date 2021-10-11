@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 /* eslint-disable padding-line-between-statements */
-const { ExpiringAccessTokenCache } = require('@azure/core-http');
 const IncomeCalcs = require('../src/Models/Mixins/IncomeCalcs');
 
 describe('Tests the added functions in the mixin', () =>
@@ -46,7 +45,7 @@ describe('Tests the added functions in the mixin', () =>
             }
         ];
 
-        for(const order of orders)
+        for (const order of orders)
         {
             const res = IncomeCalcs.calculateNetProfitMargin(order.actualRevenue, order.actualExpense);
             expect(res).toBe(order.expectedNetProfitMargin);
