@@ -252,11 +252,9 @@ class LoadboardService
                 vendorGuid: carrier.guid,
                 vendorAgentGuid: carrierContact.guid,
                 dateStarted: DateTime.utc(),
-                status: 'pending',
-                actualExpense: currency(body.price).value
+                status: 'pending'
             });
             jobForUpdate.setUpdatedBy(currentUser);
-            job.actualExpense = currency(body.price).value;
             job.vendor = carrier;
             job.vendorAgent = driver;
 

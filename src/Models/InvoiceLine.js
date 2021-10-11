@@ -50,7 +50,7 @@ class InvoiceLine extends BaseModel
             {
                 builder.join('rcgTms.invoiceBillLineItems', 'rcgTms.InvoiceBillLines.itemId', 'rcgTms.invoiceBillLineItems.id').where(builder =>
                 {
-                    builder.where({ 'rcgTms.invoiceBillLineItems.name': 'Transport', 'rcgTms.invoiceBillLineItems.type': 'revenue' });
+                    builder.where({ 'rcgTms.invoiceBillLineItems.name': 'transport', 'rcgTms.invoiceBillLineItems.type': 'revenue' });
                 });
             }
         };
