@@ -285,7 +285,6 @@ class ShipCars extends Loadboard
         }
         catch (err)
         {
-            console.log(err);
             await trx.rollback();
         }
     }

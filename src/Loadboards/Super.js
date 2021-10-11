@@ -511,7 +511,6 @@ class Super extends Loadboard
         }
         catch (e)
         {
-            console.log(e);
             await trx.rollback();
         }
     }
@@ -596,7 +595,6 @@ class Super extends Loadboard
         }
         catch (e)
         {
-            console.log(e);
             await trx.rollback();
         }
 
