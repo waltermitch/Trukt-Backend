@@ -963,15 +963,50 @@ class OrderService
         if (isDateListEmpty)
             return baseQuery;
 
-        const datesQuery = dateList.reduce((query, { date, status, comparison }, index) =>
+        const datesGroupByStatus = dateList.reduce((datesGrouped, date) =>
         {
-            const comparisonValue = dateFilterComparisonTypes[comparison] || dateFilterComparisonTypes.equal;
-            const comparisonDateAndStatus = function ()
+            const datesKey = date.status;
+            if (!datesGrouped[datesKey])
+                datesGrouped[datesKey] = [];
+
+            datesGrouped[datesKey].push(date);
+            return datesGrouped;
+        }, {});
+
+        const datesQuery = Object.keys(datesGroupByStatus).reduce((query, statusKey) =>
+        {
+            const datesByStatus = datesGroupByStatus[statusKey];
+            const comparisonDatesByStatus = function ()
             {
-                this.whereRaw(`date_created::date ${comparisonValue} ?`, [date]).
-                    andWhere('statusId', status);
+                return datesByStatus.reduce((query, dateElement, index) =>
+                {
+                    const { comparison, status } = dateElement;
+                    const comparisonValue = dateFilterComparisonTypes[comparison] || dateFilterComparisonTypes.equal;
+
+                    const comparisonDateAndStatus = function ()
+                    {
+                        if (comparisonValue === 'between')
+                        {
+                            const { date1, date2 } = dateElement;
+                            this.whereRaw('date_created::date > ? and date_created::date < ?', [date1, date2]).
+                                andWhere('statusId', status);
+                        }
+                        else
+                        {
+                            const { date } = dateElement;
+                            this.whereRaw(`date_created::date ${comparisonValue} ?`, [date]).
+                                andWhere('statusId', status);
+                        }
+                    };
+
+                    if (index === 0)
+                        return query.where(comparisonDateAndStatus);
+
+                    return query.orWhere(comparisonDateAndStatus);
+                }, this);
             };
-            return index === 0 ? query.where(comparisonDateAndStatus) : query.orWhere(comparisonDateAndStatus);
+
+            return query.andWhere(comparisonDatesByStatus);
         }, StatusLog.query().select('jobGuid'));
 
         return baseQuery.whereIn('guid', datesQuery);
