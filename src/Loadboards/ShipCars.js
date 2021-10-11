@@ -499,23 +499,13 @@ class ShipCars extends Loadboard
             const allPromises = [];
             try
             {
-                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
+                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 dispatch.isPending = false;
                 dispatch.isAccepted = true;
                 dispatch.setUpdatedBy(process.env.SYSTEM_USER);
-
-                // move queried data into variables
-                // because they are not part of the orer_job_dispatch
-                // table and will cause dml errors
-                const orderGuid = dispatch.orderGuid;
-                const vendorName = dispatch.vendorName;
-                const vendorAgentName = dispatch.vendorAgentName;
-                delete dispatch.orderGuid;
-                delete dispatch.vendorName;
-                delete dispatch.vendorAgentName;
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
@@ -566,7 +556,7 @@ class ShipCars extends Loadboard
             try
             {
                 // 1. Set Dispatch record to canceled
-                const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
 
@@ -574,16 +564,6 @@ class ShipCars extends Loadboard
                 dispatch.isAccepted = false;
                 dispatch.isCanceled = true;
                 dispatch.setUpdatedBy(process.env.SYSTEM_USER);
-
-                // move queried data into variables
-                // because they are not part of the orer_job_dispatch
-                // table and will cause dml errors
-                const orderGuid = dispatch.orderGuid;
-                const vendorName = dispatch.vendorName;
-                const vendorAgentName = dispatch.vendorAgentName;
-                delete dispatch.orderGuid;
-                delete dispatch.vendorName;
-                delete dispatch.vendorAgentName;
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous

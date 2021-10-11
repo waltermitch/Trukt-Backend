@@ -609,23 +609,13 @@ class Super extends Loadboard
             const trx = await OrderJobDispatch.startTransaction();
             try
             {
-                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
+                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 dispatch.isPending = false;
                 dispatch.isAccepted = true;
                 dispatch.setUpdatedBy(process.env.SYSTEM_USER);
-
-                // move queried data into variables
-                // because they are not part of the orer_job_dispatch
-                // table and will cause dml errors
-                const orderGuid = dispatch.orderGuid;
-                const vendorName = dispatch.vendorName;
-                const vendorAgentName = dispatch.vendorAgentName;
-                delete dispatch.orderGuid;
-                delete dispatch.vendorName;
-                delete dispatch.vendorAgentName;
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
@@ -676,7 +666,7 @@ class Super extends Loadboard
             {
                 // getting the dispatch record because it has the job guid, which we need in order to operate
                 // on the job
-                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
+                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
@@ -684,16 +674,6 @@ class Super extends Loadboard
                 dispatch.isAccepted = false;
                 dispatch.isCanceled = true;
                 dispatch.setUpdatedBy(process.env.SYSTEM_USER);
-
-                // move queried data into variables
-                // because they are not part of the orer_job_dispatch
-                // table and will cause dml errors
-                const orderGuid = dispatch.orderGuid;
-                const vendorName = dispatch.vendorName;
-                const vendorAgentName = dispatch.vendorAgentName;
-                delete dispatch.orderGuid;
-                delete dispatch.vendorName;
-                delete dispatch.vendorAgentName;
 
                 await OrderStop.query(trx)
                     .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
@@ -715,7 +695,6 @@ class Super extends Loadboard
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
-                // await OrderJobDispatch.query().patch(dispatch).where({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid, isPending: true, isAccepted: false });
                 await OrderJobDispatch.query().patch(dispatch).findById(dispatch.guid);
 
                 await trx.commit();
