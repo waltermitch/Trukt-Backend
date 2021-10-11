@@ -173,7 +173,7 @@ class LoadboardService
             }
             else
             {
-                job = await this.getAllPostingData(jobId, [{ loadboard: body.loadboard }]);
+                job = await this.getAllPostingData(jobId, [{ loadboard: body.loadboard }], currentUser);
                 job.dispatches = await OrderJobDispatch.query(trx).where({ jobGuid: jobId }).where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
             }
 
