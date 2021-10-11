@@ -5,10 +5,12 @@ const Triumph = require('../Triumph/API');
 const QBO = require('../QuickBooks/API');
 const Super = require('../Super/API');
 const Cron = require('node-cron');
+const TerminalsHandler = require('../EventManager/TerminalsHandler');
 
 const expressions =
 {
     second: '*/1 * * * * *',
+    tenSeconds: '*/10 * * * * *',
     minute: '0 */1 * * * *',
     fiveMinutes: '0 */5 * * * *',
     thirtyMinutes: '0 */30 * * * *',
@@ -54,4 +56,9 @@ Cron.schedule(expressions.daily, async () =>
 Cron.schedule(expressions.second, async () =>
 {
     await StatusManagerHandler.checkStatus();
+});
+
+Cron.schedule(expressions.tenSeconds, async () =>
+{
+    await TerminalsHandler.verifyPendingTerminals();
 });
