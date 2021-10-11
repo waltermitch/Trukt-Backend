@@ -21,6 +21,7 @@ const Expense = require('../Models/Expense');
 const ComparisonType = require('../Models/ComparisonType');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusLog = require('../Models/StatusLog');
+const GeneralFuncApi = require('../Azure/GeneralFuncApi');
 
 const { MilesToMeters } = require('./../Utils');
 const { DateTime } = require('luxon');
@@ -29,13 +30,6 @@ const https = require('https');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
-
-const generalFuncAPI = axios.create({
-    baseURL: process.env['azure.generalFunc.baseurl'],
-    httpsAgent: new https.Agent({ keepAlive: true }),
-    headers: { 'Content-Type': 'application/json' },
-    params: { code: process.env['azure.generalFunc.funcCode'] }
-});
 
 let dateFilterComparisonTypes;
 
@@ -593,10 +587,8 @@ class OrderService
         // converting terminals into address strings
         const terminalStrings = stops.map((stop) => { return JSON.parse(stop.terminal.toApiString()); });
 
-        // send all terminals to the General Function app
-        const response = await generalFuncAPI.post('/calculateDistance', terminalStrings);
-
-        return response.data;
+        // send all terminals to the General Function app and recieve only the distance value
+        return await GeneralFuncApi.calculateDistances(terminalStrings);
     }
 
     static async loadTenders(action, orderGuid, reason)
