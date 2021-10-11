@@ -361,7 +361,7 @@ class ShipCars extends Loadboard
                 await StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
-                    statusId: 8,
+                    statusId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
                         dispatchedTo: this.loadboardName,
@@ -471,7 +471,7 @@ class ShipCars extends Loadboard
             StatusManagerHandler.registerStatus({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
-                statusId: 10,
+                statusId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
                     undispatchedFrom: this.loadboardName,
@@ -525,7 +525,7 @@ class ShipCars extends Loadboard
                 StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
-                    statusId: 11,
+                    statusId: 13,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
                         dispatchedTo: this.loadboardName,
@@ -624,7 +624,7 @@ class ShipCars extends Loadboard
                 StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
-                    statusId: 11,
+                    statusId: 14,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
                         dispatchedTo: this.loadboardName,
