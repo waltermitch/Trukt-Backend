@@ -455,8 +455,6 @@ class Super extends Loadboard
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.guid;
             dispatch.setUpdatedBy(dispatch.createdByGuid);
-
-            // await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
             allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid));
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
             if (response.hasErrors)
