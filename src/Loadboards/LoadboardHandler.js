@@ -22,10 +22,10 @@ const myMessageHandler = async (message) =>
             // for some reason, service bus is sending over empty objects and is completely throwing
             // this handler off, so until we find why service bus is sending over empty objects,
             // we will have to check if the object is empty
-            if(!R.isEmpty(res))
+            if (!R.isEmpty(res))
             {
                 const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
-        
+
                 try
                 {
                     // make the first letter of the action uppercase so that we can call the the loadboards action
@@ -42,7 +42,7 @@ const myMessageHandler = async (message) =>
 
         if (jobGuid)
         {
-            
+
             const pubsubAction = responses[0].payloadMetadata.action;
 
             // publish to a group that is named after the the jobGuid which
@@ -73,17 +73,17 @@ const myMessageHandler = async (message) =>
 
                 await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
             }
-            
+
         }
     }
-    catch(e)
+    catch (e)
     {
         await receiver.completeMessage(message);
     }
 };
 const myErrorHandler = async (args) =>
 {
- 
+
     console.log(
         `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
@@ -94,25 +94,25 @@ const myErrorHandler = async (args) =>
     {
         switch (args.error.code)
         {
-        case 'MessagingEntityDisabled':
-        case 'MessagingEntityNotFound':
-        case 'UnauthorizedAccess':
-            // It's possible you have a temporary infrastructure change (for instance, the entity being
-            // temporarily disabled). The handler will continue to retry if `close()` is not called on the subscription - it is completely up to you
-            // what is considered fatal for your program.
-            console.log(
-            `An unrecoverable error occurred. Stopping processing. ${args.error.code}`,
-            args.error
-            );
-            await subscription.close();
-            break;
-        case 'MessageLockLost':
-            console.log('Message lock lost for message', args.error);
-            break;
-        case 'ServiceBusy':
-            // choosing an arbitrary amount of time to wait.
-            await delay(1000);
-            break;
+            case 'MessagingEntityDisabled':
+            case 'MessagingEntityNotFound':
+            case 'UnauthorizedAccess':
+                // It's possible you have a temporary infrastructure change (for instance, the entity being
+                // temporarily disabled). The handler will continue to retry if `close()` is not called on the subscription - it is completely up to you
+                // what is considered fatal for your program.
+                console.log(
+                    `An unrecoverable error occurred. Stopping processing. ${args.error.code}`,
+                    args.error
+                );
+                await subscription.close();
+                break;
+            case 'MessageLockLost':
+                console.log('Message lock lost for message', args.error);
+                break;
+            case 'ServiceBusy':
+                // choosing an arbitrary amount of time to wait.
+                await delay(1000);
+                break;
         }
     }
     else

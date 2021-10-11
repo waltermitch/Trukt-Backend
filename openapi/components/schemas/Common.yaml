@@ -392,6 +392,11 @@ Enums:
       - Canceled
       - New
       - Declined
+  Action Type:
+    type: string
+    enum:
+      - accept
+      - reject
   noteObject:
     type: string
     enum: 
