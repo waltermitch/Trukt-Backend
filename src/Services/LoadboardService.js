@@ -100,7 +100,6 @@ class LoadboardService
         }
         catch (e)
         {
-            console.log(e);
             throw new Error(e.toString());
         }
 
@@ -437,10 +436,16 @@ class LoadboardService
         });
 
         await this.createPostRecords(job, posts, currentUser);
-        this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
+        if(job.order.invoices.length != 0)
+        {
+            this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
+        }
 
         // delete job.order.invoices;
-        this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
+        if(job.bills.length != 0)
+        {
+            this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
+        }
 
         // delete job.bills;
         const stops = await this.getFirstAndLastStops(job.stops);

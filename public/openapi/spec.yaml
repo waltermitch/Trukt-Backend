@@ -1645,8 +1645,8 @@ paths:
                         - number
                         - dateCreated
                         - actualRevenue
-                        - 'actualExpense,'
-                        - 'estimatedExpense,'
+                        - actualExpense
+                        - estimatedExpense
                         - estimatedRevenue
                     order:
                       description: Sorting order
