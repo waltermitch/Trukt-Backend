@@ -29,7 +29,7 @@ module.exports = (err, request, response, next) =>
     }
     else
     {
-        status = 500;
+        status = err.status || 500;
         data = err.toString();
     }
 

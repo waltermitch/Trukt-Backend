@@ -76,6 +76,40 @@ class OrderController extends HttpRouteController
 
     }
 
+    static async handleTenders(req, res, next)
+    {
+        try
+        {
+            if (req.params.action == 'accept')
+            {
+                await OrderService.acceptLoadTender(req.params.orderGuid, req.session.userGuid);
+            }
+            else if (req.params.action == 'reject')
+            {
+                await OrderService.rejectLoadTender(req.params.orderGuid, req.body.reason, req.session.userGuid);
+            }
+            res.status(200);
+            res.send();
+        }
+        catch (err)
+        {
+            if (err.message == 'Order doesn\'t exist')
+            {
+                res.status(404);
+                res.json(err.message);
+            }
+
+            // customizing their error into response for front end
+            if (err.message == 'Logic App Response')
+            {
+                res.status(400);
+                res.json({ Error: '400 error', ErrorMsg: 'PartnerId not found' });
+            }
+            res.status(400);
+            res.json(err.message);
+        }
+    }
+
     static async patchOrder(req, res, next)
     {
         try
