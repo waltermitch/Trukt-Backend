@@ -4,11 +4,11 @@ info:
   title: Trukt
   description: Transportation management system
 servers:
-  - url: "https://truktbackend-dev.rcgauto.p.azurewebsites.net"
+  - url: 'https://truktapi-dev.rcgauto.net'
     description: Development server
-  - url: "https://truktbackend-staging.rcgauto.p.azurewebsites.net"
+  - url: 'https://truktapi-staging.rcgauto.net'
     description: Staging server
-  - url: "https://truktbackend.rcgauto.p.azurewebsites.net"
+  - url: 'https://truktapi.rcgauto.net'
     description: Production server
 paths:
   /attachments:
@@ -45,6 +45,9 @@ paths:
   /order/{guid}:
     get:
       $ref: paths\order\get.yaml
+  /order/find_by_vin/{vin}:
+    get:
+      $ref: paths\order\findByVin.yaml
   /order/{orderGuid}/tender/accept:
     put:
       $ref: paths\order\putTenderAccept.yaml

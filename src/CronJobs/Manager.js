@@ -1,6 +1,7 @@
 const SystemManagementService = require('../Services/SystemManagementService');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const AccountUpdateManager = require('../EventManager/AccountUpdateManager');
+const CoupaManager = require('../EventManager/CoupaManager');
 const Triumph = require('../Triumph/API');
 const QBO = require('../QuickBooks/API');
 const Super = require('../Super/API');
@@ -21,6 +22,12 @@ const expressions =
 Cron.schedule(expressions.second, async () =>
 {
     await AccountUpdateManager.checkAccountUpdatedQueue();
+});
+
+// every 5 minutes
+Cron.schedule(expressions.fiveMinutes, async () =>
+{
+    await CoupaManager.checkCoupaQueue();
 });
 
 // every 30 minutes

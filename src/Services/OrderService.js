@@ -52,7 +52,8 @@ class OrderService
         dates,
         isTender,
         jobCategory
-    }, page, rowCount, sort
+
+    }, page, rowCount, sort, globalSearch
     )
     {
 
@@ -69,6 +70,13 @@ class OrderService
         ];
 
         const baseOrderQuery = OrderJob.query().select(jobFieldsToReturn).page(page, rowCount);
+
+        // if global search is enabled
+        // global search includes job#, customerName, customerContactName, customerContactEmail, Vin, lot, carrierName
+        if (globalSearch?.query)
+        {
+            OrderService.addGlobalSearch(baseOrderQuery, globalSearch);
+        }
 
         const queryFilterPickup = OrderService.addFilterPickups(baseOrderQuery, pickup);
         const queryFilterDelivery = OrderService.addFilterDeliveries(queryFilterPickup, delivery);
@@ -91,6 +99,73 @@ class OrderService
         };
 
         return ordersWithDeliveryAddress;
+    }
+
+    // global search method
+    static addGlobalSearch(baseQuery, { query: q })
+    {
+        OrderService.searchJobAttributes(baseQuery, q);
+        OrderService.searchCommodityAttributes(baseQuery, q);
+        OrderService.searchCustomerAttributes(baseQuery, q);
+        OrderService.searchVendorAttributes(baseQuery, q);
+        OrderService.searchTerminalAttributes(baseQuery, q);
+        OrderService.searchOrderStopLinks(baseQuery, q);
+    }
+
+    // or where orderStopLink attributes
+    static searchOrderStopLinks(baseQuery, q)
+    {
+        baseQuery
+            .orWhereExists(
+                OrderJob.relatedQuery('stopLinks').where('lotNumber', 'ilike', `%${q}%`));
+    }
+
+    // or where pickup/delivery attributes
+    static searchTerminalAttributes(baseQuery, q)
+    {
+        baseQuery
+            .orWhereExists(
+                OrderJob.relatedQuery('stops').whereExists(OrderStop.relatedQuery('terminal')
+                    .where('city', 'ilike', `%${q}%`)
+                    .orWhere('state', 'ilike', `%${q}%`)
+                    .orWhere('zipCode', 'ilike', `%${q}%`)));
+    }
+
+    // or where vendor attributes
+    static searchVendorAttributes(baseQuery, q)
+    {
+        baseQuery.orWhereExists(
+            OrderJob.relatedQuery('vendor').where('name', 'ilike', `%${q}%`));
+    }
+
+    // or where customer attributes
+    static searchCustomerAttributes(baseQuery, q)
+    {
+        baseQuery
+            .orWhereExists(
+                OrderJob.relatedQuery('order').whereExists(Order.relatedQuery('client')
+                    .where('name', 'ilike', `%${q}%`)))
+            .orWhereExists(
+                OrderJob.relatedQuery('order').whereExists(Order.relatedQuery('clientContact')
+                    .where('name', 'ilike', `%${q}%`).orWhere('email', 'ilike', `%${q}%`)));
+    }
+
+    // or where commodity attributes
+    static searchCommodityAttributes(baseQuery, q)
+    {
+        baseQuery
+            .orWhereExists(
+                OrderJob.relatedQuery('commodities').where('identifier', 'ilike', `%${q}%`))
+            .orWhereExists(
+                OrderJob.relatedQuery('commodities').whereExists(Commodity.relatedQuery('vehicle')
+                    .where('name', 'ilike', `%${q}%`)));
+    }
+
+    // or where job attributes
+    static searchJobAttributes(baseQuery, q)
+    {
+        // search job number
+        baseQuery.orWhere('number', 'ilike', `%${q}%`);
     }
 
     static async getOrderByGuid(orderGuid)
@@ -1788,6 +1863,17 @@ class OrderService
         }
 
         return { orderInvoices, jobs };
+    }
+
+    static async findByVin(vin)
+    {
+        // find order where commodity has vin
+        const comms = await Commodity.query().where({ 'identifier': vin }).withGraphJoined('order').orderBy('order.dateCreated', 'desc');
+
+        return comms.map((com) =>
+        {
+            return { 'guid': com.order?.guid, 'number': com.order?.number, 'dateCreated': com.order?.dateCreated };
+        });
     }
 }
 

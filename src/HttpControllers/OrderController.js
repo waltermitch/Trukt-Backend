@@ -58,11 +58,11 @@ class OrderController extends HttpRouteController
     {
         try
         {
-            const { filters = {}, page: pageByUser, rowCount, sort } = req.body;
+            const { filters = {}, page: pageByUser, rowCount, sort, globalSearch } = req.body;
 
             // Backend uses pagination starting on 0 but client starts on 1
             const page = pageByUser - 1;
-            const orders = await OrderService.getOrders(filters, page, rowCount, sort);
+            const orders = await OrderService.getOrders(filters, page, rowCount, sort, globalSearch);
 
             res.status(200);
             res.json(orders);
@@ -128,8 +128,28 @@ class OrderController extends HttpRouteController
                 data: { message: error?.message || 'Internal server error' }
             });
         }
-
     }
+
+    // find order by vin
+    static async findOrdersByVin(req, res, next)
+    {
+        try
+        {
+            const { vin } = req.params;
+            const orders = await OrderService.findByVin(vin);
+
+            res.status(200);
+            res.json(orders);
+        }
+        catch (error)
+        {
+            next({
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
 }
 
 const controller = new OrderController();

@@ -1,0 +1,17 @@
+summary: Find By VIN
+operationId: findByVin
+description: Find All Orders By VIN
+tags:
+  - Order
+parameters:
+  - in: path
+    name: vin
+    schema:
+      type: string
+    required: true
+
+responses:
+  200:
+    description: order
+    content:
+      application/json: {}
