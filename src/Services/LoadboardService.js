@@ -434,6 +434,10 @@ class LoadboardService
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
+        if(!job)
+        {
+            throw new Error('Job not found');
+        }
 
         await this.createPostRecords(job, posts, currentUser);
         if(job.order.invoices.length != 0)
