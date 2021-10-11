@@ -56,6 +56,42 @@
             "category": "order",
             "name": "Tender Declined",
             "order_filter_label": "Tender Declined"
+        },
+        {
+            "id": 10,
+            "category": "jobDispatch",
+            "name": "Offer Sent",
+            "order_filter_label": "Offer Sent On"
+        },
+        {
+            "id": 11,
+            "category": "jobDispatch",
+            "name": "Manually Accepted",
+            "order_filter_label": "Manually Accepted On"
+        },
+        {
+            "id": 12,
+            "category": "jobDispatch",
+            "name": "Offer Canceled",
+            "order_filter_label": "Offer Canceled On"
+        },
+        {
+            "id": 13,
+            "category": "jobDispatch",
+            "name": "Accepted",
+            "order_filter_label": "Accepted On"
+        },
+        {
+            "id": 14,
+            "category": "jobDispatch",
+            "name": "Declined",
+            "order_filter_label": "Dispatch Declined On"
+        },
+        {
+            "id": 15,
+            "category": "jobDispatch",
+            "name": "Self Assigned",
+            "order_filter_label": "Self Assigned On"
         }
     ]
 }

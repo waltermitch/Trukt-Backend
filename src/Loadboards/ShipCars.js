@@ -206,7 +206,7 @@ class ShipCars extends Loadboard
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(post);
-
+        const allPromises = [];
         try
         {
             if (response.hasErrors)
@@ -219,21 +219,21 @@ class ShipCars extends Loadboard
             else
             {
                 const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
-                this.updateCommodity(job.commodities, response.vehicles);
-                for (const vehicle of job.commodities)
+                const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
+                for(const comPromise of commodityPromises)
                 {
-                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
-                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                    comPromise.transacting(trx);
                 }
+                allPromises.push(...commodityPromises);
+
                 objectionPost.externalGuid = response.id;
                 objectionPost.status = 'created';
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
-
+            allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id));
+            Promise.all(allPromises);
             await trx.commit();
 
             return objectionPost.jobGuid;
@@ -248,7 +248,7 @@ class ShipCars extends Loadboard
     {
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-
+        const allPromises = [];
         try
         {
             if (response.hasErrors)
@@ -261,13 +261,13 @@ class ShipCars extends Loadboard
             else
             {
                 const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
-                this.updateCommodity(job.commodities, response.vehicles);
-
-                for (const vehicle of job.commodities)
+                const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
+                for(const comPromise of commodityPromises)
                 {
-                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
-                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                    comPromise.transacting(trx);
                 }
+                allPromises.push(...commodityPromises);
+
                 objectionPost.externalGuid = response.id;
                 objectionPost.externalPostGuid = response.id;
                 objectionPost.status = 'posted';
@@ -277,8 +277,8 @@ class ShipCars extends Loadboard
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-
+            allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
+            await Promise.all(allPromises);
             await trx.commit();
 
             return objectionPost.jobGuid;
@@ -325,14 +325,14 @@ class ShipCars extends Loadboard
     static async handleDispatch(payloadMetadata, response)
     {
         const trx = await OrderJobDispatch.startTransaction();
-
+        const allPromises = [];
         try
         {
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.externalGuid = response.dispatchRes.id;
-            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
-            await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
+            dispatch.setUpdatedBy(dispatch.createdByGuid);
 
+            allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid));
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
             if (response.hasErrors)
             {
@@ -348,22 +348,34 @@ class ShipCars extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
-                if (objectionPost.externalGuid == null)
-                {
-                    objectionPost.externalGuid = response.order.id;
+                objectionPost.externalGuid = response.order.id;
 
-                    const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
-                    this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
-                    for (const vehicle of job.commodities)
-                    {
-                        vehicle.setUpdatedBy(process.env.SYSTEM_USER);
-                        await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
-                    }
+                const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle], vendor, vendorAgent]');
+                const commodityPromises = this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
+                for(const comPromise of commodityPromises)
+                {
+                    comPromise.transacting(trx);
                 }
+                allPromises.push(...commodityPromises);
+
+                await StatusManagerHandler.registerStatus({
+                    orderGuid: job.orderGuid,
+                    userGuid: dispatch.createdByGuid,
+                    statusId: 10,
+                    jobGuid: dispatch.jobGuid,
+                    extraAnnotations: {
+                        dispatchedTo: this.loadboardName,
+                        vendorGuid: job.vendorGuid,
+                        vendorAgentGuid: job.vendorAgentGuid,
+                        vendorName: job.vendor.name,
+                        vendorAgentName: job.vendorAgent.name,
+                        code: 'pending'
+                }
+                });
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-            
+            allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
+            await Promise.all(allPromises);
             trx.commit();
 
             return objectionPost.jobGuid;
@@ -377,6 +389,7 @@ class ShipCars extends Loadboard
     static async handleUndispatch(payloadMetadata, response)
     {
         const trx = await OrderJobDispatch.startTransaction();
+        const allPromises = [];
         try
         {
             const job = Job.fromJson({
@@ -387,13 +400,14 @@ class ShipCars extends Loadboard
                 status: 'ready'
             });
             job.setUpdatedBy(process.env.SYSTEM_USER);
-            await Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid);
+
+            allPromises.push(Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.isPending = false;
             dispatch.isAccepted = false;
             dispatch.isCanceled = true;
-            dispatch.setUpdatedBy(process.env.SYSTEM_USER);
+            dispatch.setUpdatedBy(dispatch.updatedByGuid);
 
             const objectionPost = dispatch.loadboardPost;
             objectionPost.externalGuid = response.id;
@@ -402,13 +416,13 @@ class ShipCars extends Loadboard
             objectionPost.isPosted = false;
             objectionPost.isSynced = true;
 
-            await OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
-                .whereIn('guid',
-                    OrderStopLink.query(trx).select('stopGuid')
-                        .where({ 'jobGuid': dispatch.jobGuid })
-                        .distinctOn('stopGuid')
-                );
+            allPromises.push(OrderStop.query(trx)
+            .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
+            .whereIn('guid',
+                OrderStopLink.query(trx).select('stopGuid')
+                    .where({ 'jobGuid': dispatch.jobGuid })
+                    .distinctOn('stopGuid')
+            ));
 
             if (response.hasErrors)
             {
@@ -429,21 +443,45 @@ class ShipCars extends Loadboard
                 OrderStopLink.query(trx).select('commodityGuid')
                     .where({ 'jobGuid': dispatch.jobGuid })
                     .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
-            this.updateCommodity(commodities, response.vehicles);
-            for (const vehicle of commodities)
+            const commodityPromises = this.updateCommodity(commodities, response.vehicles, trx);
+            for(const comPromise of commodityPromises)
             {
-                vehicle.setUpdatedBy(process.env.SYSTEM_USER);
-                await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                comPromise.transacting(trx);
             }
+            allPromises.push(...commodityPromises);
 
             delete dispatch.job;
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
+            allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
 
-            await OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid);
+            allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid));
 
+            const vendor = await SFAccount.query(trx)
+            .findById(dispatch.vendorGuid)
+            .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
+            .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+            .select('salesforce.accounts.name as vendorName',
+            'salesforce.accounts.guid as vendorGuid',
+            'salesforce.contacts.guid as agentGuid',
+            'salesforce.contacts.name as agentName');
+
+            await Promise.all(allPromises);
             await trx.commit();
 
+            StatusManagerHandler.registerStatus({
+                orderGuid: dispatch.job.orderGuid,
+                userGuid: dispatch.updatedByGuid,
+                statusId: 12,
+                jobGuid: dispatch.jobGuid,
+                extraAnnotations: {
+                    undispatchedFrom: this.loadboardName,
+                    code: 'offer canceled',
+                    vendorGuid: vendor.vendorGuid,
+                    vendorAgentGuid: vendor.agentGuid,
+                    vendorName: vendor.vendorName,
+                    vendorAgentName: vendor.agentName
+                }
+            });
             return objectionPost.jobGuid;
         }
         catch (e)
@@ -457,38 +495,47 @@ class ShipCars extends Loadboard
         if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
         {
             const trx = await OrderJobDispatch.startTransaction();
+            const allPromises = [];
             try
             {
-                const dispatch = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor')
+                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 dispatch.isPending = false;
                 dispatch.isAccepted = true;
                 dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
-                // move queried data into variables
-                // because they are not part of the orer_job_dispatch
-                // table and will cause dml errors
-                const orderGuid = dispatch.orderGuid;
-                const vendorName = dispatch.vendorName;
-                delete dispatch.orderGuid;
-                delete dispatch.vendorName;
-
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
-                await OrderJobDispatch.query(trx).patch(dispatch).where({
+                allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).where({
                     'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
                     isPending: true,
                     isCanceled: false
-                });
+                }));
 
-                await Job.query(trx).patch({
+                allPromises.push(Job.query(trx).patch({
                     status: 'dispatched',
                     updatedByGuid: process.env.SYSTEM_USER
-                }).findById(dispatch.jobGuid);
+                }).findById(dispatch.jobGuid));
 
+                await Promise.all(allPromises);
                 await trx.commit();
+
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    userGuid: process.env.SYSTEM_USER,
+                    statusId: 13,
+                    jobGuid: dispatch.jobGuid,
+                    extraAnnotations: {
+                        dispatchedTo: this.loadboardName,
+                        code: 'dispatched',
+                        vendorGuid: dispatch.vendorGuid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: vendorName,
+                        vendorAgentName: vendorAgentName
+                    }
+                });
 
                 return dispatch.jobGuid;
             }
@@ -504,11 +551,11 @@ class ShipCars extends Loadboard
         if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
         {
             const trx = await OrderJobDispatch.startTransaction();
-
+            const allPromises = [];
             try
             {
                 // 1. Set Dispatch record to canceled
-                const dispatch = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
 
@@ -517,21 +564,13 @@ class ShipCars extends Loadboard
                 dispatch.isCanceled = true;
                 dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
-                // move queried data into variables
-                // because they are not part of the orer_job_dispatch
-                // table and will cause dml errors
-                const orderGuid = dispatch.orderGuid;
-                const vendorName = dispatch.vendorName;
-                delete dispatch.orderGuid;
-                delete dispatch.vendorName;
-
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
-                await OrderJobDispatch.query(trx).patch(dispatch).where({
+                allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).where({
                     'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
                     isPending: true,
                     isCanceled: false
-                });
+                }));
 
                 // 2. Remove vendor fields from the job
                 const job = Job.fromJson({
@@ -542,7 +581,7 @@ class ShipCars extends Loadboard
                     status: 'declined'
                 });
                 job.setUpdatedBy(process.env.SYSTEM_USER);
-                await Job.query(trx).patch(job).findById(dispatch.jobGuid);
+                allPromises.push(Job.query(trx).patch(job).findById(dispatch.jobGuid));
 
                 // 3. Set the loadboard post record external guid to the new
                 // load that has been created
@@ -555,30 +594,47 @@ class ShipCars extends Loadboard
                     apiError: null
                 });
                 objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-                await LoadboardPost.query(trx).patch(objectionPost).findById(dispatch.loadboardPostGuid);
+                allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(dispatch.loadboardPostGuid));
 
                 // 4. update the vehicle ship car ids
                 const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
                     OrderStopLink.query().select('commodityGuid')
                         .where({ 'jobGuid': dispatch.jobGuid })
                         .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
-                const vehicles = this.updateCommodity(commodities, response.vehicles);
-                for (const vehicle of vehicles)
+                const commodityPromises = this.updateCommodity(commodities, response.vehicles);
+                for(const comPromise of commodityPromises)
                 {
-                    vehicle.setUpdatedBy(process.env.SYSTEM_USER);
-                    await Commodity.query(trx).patch(vehicle).findById(vehicle.guid);
+                    comPromise.transacting(trx);
                 }
+                allPromises.push(...commodityPromises);
 
                 // 5. unset the stop scheduled dates
-                await OrderStop.query(trx)
-                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
-                    .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid')
-                            .where({ 'jobGuid': dispatch.jobGuid })
-                            .distinctOn('stopGuid')
-                    );
+                allPromises.push(OrderStop.query(trx)
+                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
+                .whereIn('guid',
+                    OrderStopLink.query().select('stopGuid')
+                        .where({ 'jobGuid': dispatch.jobGuid })
+                        .distinctOn('stopGuid')
+                ));
+
+                await Promise.all(allPromises);
 
                 await trx.commit();
+
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    userGuid: process.env.SYSTEM_USER,
+                    statusId: 14,
+                    jobGuid: dispatch.jobGuid,
+                    extraAnnotations: {
+                        dispatchedTo: this.loadboardName,
+                        code: 'dispatched',
+                        vendorGuid: dispatch.vendorGuid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: vendorName,
+                        vendorAgentName: vendorAgentName
+                    }
+                });
 
                 return dispatch.jobGuid;
             }
@@ -596,6 +652,7 @@ class ShipCars extends Loadboard
         // integration easier
         const shipCarsVehicles = newCommodities.reduce((acc, curr) => (acc[curr.shipper_vehicle_id] = curr, acc), {});
 
+        const commodityPromises = [];
         for (const com of ogCommodities)
         {
             if (com.extraExternalData == undefined)
@@ -603,7 +660,10 @@ class ShipCars extends Loadboard
                 com.extraExternalData = {};
             }
             com.extraExternalData.scGuid = shipCarsVehicles[`${com.guid}`].id;
+            com.setUpdatedBy(process.env.SYSTEM_USER);
+            commodityPromises.push(Commodity.query().patch(com).findById(com.guid));
         }
+        return commodityPromises;
     }
 }
 
