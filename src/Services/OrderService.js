@@ -21,6 +21,7 @@ const Expense = require('../Models/Expense');
 const ComparisonType = require('../Models/ComparisonType');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusLog = require('../Models/StatusLog');
+const GeneralFuncApi = require('../Azure/GeneralFuncApi');
 
 const { MilesToMeters } = require('./../Utils');
 const { DateTime } = require('luxon');
@@ -512,6 +513,7 @@ class OrderService
                         invoices[invoiceKey] = invoiceBill;
                     }
                     const invoice = invoices[invoiceKey];
+
                     const lineItem = invoiceLineItems.find((it) => expense.item === it.name && expense.item);
                     if (!lineItem)
                     {
@@ -575,6 +577,18 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static async calculateTotalDistance(stops)
+    {
+        // go through every order stop
+        stops.sort((firstStop, secondStop) => firstStop.sequence - secondStop.sequence);
+
+        // converting terminals into address strings
+        const terminalStrings = stops.map((stop) => { return JSON.parse(stop.terminal.toApiString()); });
+
+        // send all terminals to the General Function app and recieve only the distance value
+        return await GeneralFuncApi.calculateDistances(terminalStrings);
     }
 
     static async loadTenders(action, orderGuid, reason)
