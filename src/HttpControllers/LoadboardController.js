@@ -40,8 +40,13 @@ class LoadboardController extends HttpRouteController
         }
         catch (e)
         {
+            let status = 400;
+            if(e.toString() == 'Error: Job not found')
+            {
+                status = 404;
+            }
             next({
-                status: 400,
+                status,
                 data: { message: e.toString() || 'Internal server error' }
             });
         }
@@ -61,8 +66,13 @@ class LoadboardController extends HttpRouteController
         }
         catch (e)
         {
+            let status = 400;
+            if(e.toString() == 'Error: Job not found')
+            {
+                status = 404;
+            }
             next({
-                status: 400,
+                status,
                 data: { message: e.toString() || 'Internal server error' }
             });
         }
@@ -79,8 +89,13 @@ class LoadboardController extends HttpRouteController
         }
         catch (e)
         {
+            let status = 400;
+            if(e.toString() == 'Error: Job not found')
+            {
+                status = 404;
+            }
             next({
-                status: 500,
+                status,
                 data: { message: e.toString() || 'Internal server error' }
             });
         }
@@ -96,8 +111,13 @@ class LoadboardController extends HttpRouteController
         }
         catch (err)
         {
+            let status = 400;
+            if(err.toString() == 'Error: Job not found')
+            {
+                status = 404;
+            }
             next({
-                status: 400,
+                status,
                 data: { message: err.toString() }
             });
         }
@@ -113,8 +133,13 @@ class LoadboardController extends HttpRouteController
         }
         catch (err)
         {
+            let status = 400;
+            if(err.toString() == 'Error: No active offers to undispatch')
+            {
+                status = 404;
+            }
             next({
-                status: 400,
+                status,
                 data: { message: err.toString() }
             });
         }

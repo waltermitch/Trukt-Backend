@@ -34,7 +34,12 @@ class LoadboardService
 
     static async getAllLoadboardPosts(jobId)
     {
-        return (await LoadboardPost.query().where({ jobGuid: jobId })).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        const posts = (await LoadboardPost.query().where({ jobGuid: jobId })).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        if(!posts)
+        {
+            throw new Error('Job not found');
+        }
+        return posts;
     }
 
     static async createPostings(jobId, posts, currentUser)
@@ -474,6 +479,10 @@ class LoadboardService
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
+        if(!job)
+        {
+            throw new Error('Job not found');
+        }
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
