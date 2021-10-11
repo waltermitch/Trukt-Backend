@@ -44,6 +44,18 @@
             "category": "loadRequest",
             "name": "Declined",
             "order_filter_label": null
+        },
+        {
+            "id": 8,
+            "category": "order",
+            "name": "Tender Accepted",
+            "order_filter_label": "Tender Accepted"
+        },
+        {
+            "id": 9,
+            "category": "order",
+            "name": "Tender Declined",
+            "order_filter_label": "Tender Declined"
         }
     ]
 }
