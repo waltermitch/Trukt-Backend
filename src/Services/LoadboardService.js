@@ -228,7 +228,7 @@ class LoadboardService
 
             await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job.bills[0].guid);
             
-            const lines = await BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
+            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
             for(const line of lines)
             {
                 line.transacting(trx);

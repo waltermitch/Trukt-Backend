@@ -45,7 +45,7 @@ class BillService
      * @param {Guid || Object} currentUser
      * @returns a list of promises to update all the invoice lines with new amounts
      */
-    static async splitCarrierPay(bill, commodities, carrierPay, currentUser)
+    static splitCarrierPay(bill, commodities, carrierPay, currentUser)
     {
         const lines = [];
         const distribution = currency(carrierPay).distribute(commodities.length);
