@@ -45,7 +45,7 @@ describe('Tests the added functions in the mixin', () =>
             }
         ];
 
-        for(const order of orders)
+        for (const order of orders)
         {
             const res = IncomeCalcs.calculateNetProfitMargin(order.actualRevenue, order.actualExpense);
             expect(res).toBe(order.expectedNetProfitMargin);
