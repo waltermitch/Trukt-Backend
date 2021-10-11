@@ -15,65 +15,75 @@ const myMessageHandler = async (message) =>
 {
     const responses = message.body;
     let jobGuid;
-    for (const res of responses)
+    try
     {
-        // for some reason, service bus is sending over empty objects and is completely throwing
-        // this handler off, so until we find why service bus is sending over empty objects,
-        // we will have to check if the object is empty
-        if(!R.isEmpty(res))
+        for (const res of responses)
         {
-            const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
-    
-            try
+            // for some reason, service bus is sending over empty objects and is completely throwing
+            // this handler off, so until we find why service bus is sending over empty objects,
+            // we will have to check if the object is empty
+            if (!R.isEmpty(res))
             {
-                // make the first letter of the action uppercase so that we can call the the loadboards action
-                // handler based off this string i.e post -> Post to be handled by method handlePost
-                const action = res.payloadMetadata.action.charAt(0).toUpperCase() + res.payloadMetadata.action.slice(1);
-                jobGuid = await lbClass[`handle${action}`](res.payloadMetadata, res[`${res.payloadMetadata.action}`]);
+                const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
+
+                try
+                {
+                    // make the first letter of the action uppercase so that we can call the the loadboards action
+                    // handler based off this string i.e post -> Post to be handled by method handlePost
+                    const action = res.payloadMetadata.action.charAt(0).toUpperCase() + res.payloadMetadata.action.slice(1);
+                    jobGuid = await lbClass[`handle${action}`](res.payloadMetadata, res[`${res.payloadMetadata.action}`]);
+                }
+                catch (e)
+                {
+                    throw new Error(e.toString());
+                }
             }
-            catch (e)
+        }
+
+        if (jobGuid)
+        {
+
+            const pubsubAction = responses[0].payloadMetadata.action;
+
+            // publish to a group that is named after the the jobGuid which
+            // should be listening on messages posted to the group
+            if (
+                pubsubAction == 'dispatch' ||
+                pubsubAction == 'undispatch' ||
+                pubsubAction == 'carrierAcceptDispatch' ||
+                pubsubAction == 'carrierDeclineDispatch')
             {
-                throw new Error(e.toString());
+                const job = await OrderJob.query().leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
+                    .findOne({ 'rcgTms.orderJobs.guid': jobGuid })
+                    .select(
+                        'rcgTms.OrderJobs.status as jobStatus',
+                        'vendor.name as vendorName',
+                        'vendor.dotNumber',
+                        'vendor.email as vendorEmail',
+                        'vendor.phoneNumber as vendorPhone',
+                        'vendorAgent.name as agentName',
+                        'vendorAgent.email as agentEmail',
+                        'vendorAgent.phoneNumber as agentPhone');
+
+                await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
             }
+            else
+            {
+                const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
+
+                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
+            }
+
         }
     }
-
-    if (jobGuid)
+    catch (e)
     {
-        const pubsubAction = responses[0].payloadMetadata.action;
-
-        // publish to a group that is named after the the jobGuid which
-        // should be listening on messages posted to the group
-        if (
-            pubsubAction == 'dispatch' ||
-            pubsubAction == 'undispatch' ||
-            pubsubAction == 'carrierAcceptDispatch' ||
-            pubsubAction == 'carrierDeclineDispatch')
-        {
-            const job = await OrderJob.query().leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
-                .findOne({ 'rcgTms.orderJobs.guid': jobGuid })
-                .select(
-                    'rcgTms.OrderJobs.status as jobStatus',
-                    'vendor.name as vendorName',
-                    'vendor.dotNumber',
-                    'vendor.email as vendorEmail',
-                    'vendor.phoneNumber as vendorPhone',
-                    'vendorAgent.name as agentName',
-                    'vendorAgent.email as agentEmail',
-                    'vendorAgent.phoneNumber as agentPhone');
-
-            await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
-        }
-        else
-        {
-            const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
-
-            await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
-        }
+        await receiver.completeMessage(message);
     }
 };
 const myErrorHandler = async (args) =>
 {
+
     console.log(
         `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
@@ -84,33 +94,30 @@ const myErrorHandler = async (args) =>
     {
         switch (args.error.code)
         {
-          case 'MessagingEntityDisabled':
-          case 'MessagingEntityNotFound':
-          case 'UnauthorizedAccess':
-            // It's possible you have a temporary infrastructure change (for instance, the entity being
-            // temporarily disabled). The handler will continue to retry if `close()` is not called on the subscription - it is completely up to you
-            // what is considered fatal for your program.
-            console.log(
-              `An unrecoverable error occurred. Stopping processing. ${args.error.code}`,
-              args.error
-            );
-            await subscription.close();
-            break;
-          case 'MessageLockLost':
-            console.log('Message lock lost for message', args.error);
-            break;
-          case 'ServiceBusy':
-            // choosing an arbitrary amount of time to wait.
-            await delay(1000);
-            break;
+            case 'MessagingEntityDisabled':
+            case 'MessagingEntityNotFound':
+            case 'UnauthorizedAccess':
+                // It's possible you have a temporary infrastructure change (for instance, the entity being
+                // temporarily disabled). The handler will continue to retry if `close()` is not called on the subscription - it is completely up to you
+                // what is considered fatal for your program.
+                console.log(
+                    `An unrecoverable error occurred. Stopping processing. ${args.error.code}`,
+                    args.error
+                );
+                await subscription.close();
+                break;
+            case 'MessageLockLost':
+                console.log('Message lock lost for message', args.error);
+                break;
+            case 'ServiceBusy':
+                // choosing an arbitrary amount of time to wait.
+                await delay(1000);
+                break;
         }
     }
     else
     {
-        console.log('Not a service bus error, removing messages from the topic that are also stuck');
-        const messages = await receiver.receiveMessages(10, {
-            maxWaitTimeInMs: 10 * 1000
-        });
+        const messages = await receiver.receiveMessages(1);
         for (const message of messages)
         {
             console.log(` Message: '${message.body}'`);
@@ -119,7 +126,6 @@ const myErrorHandler = async (args) =>
             await receiver.completeMessage(message);
         }
     }
-
 };
 
 const subscription = receiver.subscribe({
