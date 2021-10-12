@@ -1,5 +1,5 @@
+const QuickBooksService = require('./QuickBooksService');
 const Invoice = require('../Models/InvoiceBill');
-const QBO = require('../QuickBooks/API');
 const Order = require('../Models/Order');
 const Coupa = require('../Coupa/API');
 
@@ -9,22 +9,22 @@ class InvoiceService
     {
         const search = guid.replace(/%/g, '');
 
-        const res = await Invoice.query().where('guid', '=', search);
+        const res = await Invoice.query().findOne({ 'guid': search, 'isDeleted': false });
 
-        return res?.[0];
+        return res;
     }
 
     static async createInvoices(arr)
     {
-        const qb = Order.query().withGraphFetched('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item]], client]');
+        // query to get all the orders with related objects
+        const qb = Order.query().withGraphFetched('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item.qbAccount]], client]');
 
+        // append all the order guids
         for (const guid of arr)
             qb.orWhere('guid', '=', guid);
 
         // get all the orders
         const orders = await qb;
-
-        console.log('Orders:', orders);
 
         // decide which system they will be invoiced in
         const QBInvoices = [];
@@ -37,13 +37,23 @@ class InvoiceService
             else
                 QBInvoices.push(order);
 
-            const res = await QBO.createInvoices(QBInvoices);
+            const res = await QuickBooksService.createInvoices(QBInvoices);
 
             // submit coupa PO's don't await
-            Coupa.sendInvoices(CoupaInvoices);
+            // temporary commenting out
+            // Coupa.sendInvoices(CoupaInvoices);
 
             return res;
         }
+    }
+
+    static async searchInvoices(orderGuid)
+    {
+        const search = orderGuid.replace(/%/g, '');
+
+        const res = await Invoice.query().where('order_guid', '=', search).withGraphJoined('lines');
+
+        return res;
     }
 }
 

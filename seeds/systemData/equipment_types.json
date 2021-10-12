@@ -1,0 +1,117 @@
+{
+    "schema": "rcg_tms",
+    "table": "equipment_types",
+    "unique": "id",
+    "data": [
+        {
+            "id": 1,
+            "name": "Open",
+            "is_deprecated": false
+        },
+        {
+            "id": 2,
+            "name": "Enclosed",
+            "is_deprecated": false
+        },
+        {
+            "id": 3,
+            "name": "Van",
+            "is_deprecated": false
+        },
+        {
+            "id": 4,
+            "name": "Flatbed",
+            "is_deprecated": false
+        },
+        {
+            "id": 5,
+            "name": "Step Deck",
+            "is_deprecated": false
+        },
+        {
+            "id": 6,
+            "name": "Lowboy / RGN",
+            "is_deprecated": false
+        },
+        {
+            "id": 7,
+            "name": "Reefer",
+            "is_deprecated": false
+        },
+        {
+            "id": 8,
+            "name": "Flatbed/Van/Reefer",
+            "is_deprecated": false
+        },
+        {
+            "id": 9,
+            "name": "Power Only",
+            "is_deprecated": false
+        },
+        {
+            "id": 10,
+            "name": "Driveaway",
+            "is_deprecated": false
+        },
+        {
+            "id": 11,
+            "name": "Box Truck",
+            "is_deprecated": false
+        },
+        {
+            "id": 12,
+            "name": "Lowboy",
+            "is_deprecated": false
+        },
+        {
+            "id": 13,
+            "name": "RGN",
+            "is_deprecated": false
+        },
+        {
+            "id": 14,
+            "name": "Hot Shot",
+            "is_deprecated": false
+        },
+        {
+            "id": 15,
+            "name": "Sprinter Van",
+            "is_deprecated": false
+        },
+        {
+            "id": 16,
+            "name": "Van/Reefer",
+            "is_deprecated": false
+        },
+        {
+            "id": 17,
+            "name": "Van/Flatbed/Step Deck",
+            "is_deprecated": false
+        },
+        {
+            "id": 18,
+            "name": "Flatbed/Step Deck",
+            "is_deprecated": false
+        },
+        {
+            "id": 19,
+            "name": "Van w/Team",
+            "is_deprecated": false
+        },
+        {
+            "id": 20,
+            "name": "Van / Sprinter Van / Box Truck",
+            "is_deprecated": false
+        },
+        {
+            "id": 21,
+            "name": "Flatbed / Step Deck / Hotshot",
+            "is_deprecated": false
+        },
+        {
+            "id": 22,
+            "name": "Flatbed / Step Deck / Hotshot / Lowboy / RGN",
+            "is_deprecated": false
+        }
+    ]
+}

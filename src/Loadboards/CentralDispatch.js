@@ -1,7 +1,6 @@
 const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
-
-const anonUser = '00000000-0000-0000-0000-000000000000';
+const DateTime = require('luxon').DateTime;
 
 class CentralDispatch extends Loadboard
 {
@@ -15,11 +14,16 @@ class CentralDispatch extends Loadboard
 
     toJSON()
     {
+        // We have to adjust the dates here in this payload constructor because this payload is a string
+        // and we will not (easily) be able to adjust the dates in some later process.
+        const now = DateTime.now().toUTC();
+        const pickupStartDate = this.data.pickup.dateRequestedStart < now ? now : this.data.pickup.dateRequestedStart;
+
         let string = `${this.data.number},
-        ${this.data.pickup.terminal.city},${this.getStateCode(this.data.pickup.terminal.state)},${this.data.pickup.terminal.zipCode},
-        ${this.data.delivery.terminal.city},${this.getStateCode(this.data.delivery.terminal.state)},${this.data.delivery.terminal.zipCode},
+        ${this.data.pickup.terminal.city},${this.data.pickup.terminal.state},${this.data.pickup.terminal.zipCode},
+        ${this.data.delivery.terminal.city},${this.data.delivery.terminal.state},${this.data.delivery.terminal.zipCode},
         ${this.data.actualExpense},0.00,check,delivery,none,${this.setEquipmentType()},${this.getINOP()},
-        ${this.toDate(this.data.pickup.dateRequestedStart)},${this.toDate(this.dateAdd(this.data.pickup.dateRequestedStart, 30, 'days'))},
+        ${pickupStartDate.toISODate()},${pickupStartDate.plus({ days: 30 }).toISODate()},
         ${this.postObject.instructions},${this.setVehicles()}*`;
 
         // one more check to remove \n
@@ -137,7 +141,7 @@ class CentralDispatch extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
@@ -171,7 +175,7 @@ class CentralDispatch extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();

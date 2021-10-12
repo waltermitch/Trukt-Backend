@@ -1,6 +1,7 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const IncomeCalcs = require('./Mixins/IncomeCalcs');
+const OrderJobType = require('./OrderJobType');
 
 const jobTypeFields = ['category', 'type'];
 
@@ -234,6 +235,32 @@ class OrderJob extends BaseModel
     {
         this.isTransport = (type.category === 'transport');
     }
+
+    static filterIsTender(query, isTender)
+    {
+        const Order = require('./Order');
+        return isTender !== undefined ?
+            query.whereIn('orderGuid', Order.query().select('guid').where('isTender', isTender))
+            : query;
+    }
+
+    static filterJobCategories(query, jobCategories = [])
+    {
+        if (jobCategories.length > 0)
+            return query.whereIn('typeId', OrderJobType.getJobTypesByCategories(jobCategories));
+        return query;
+    }
+
+    static sorted(query, sortField = {})
+    {
+        return query.orderBy(sortField.field || 'number', sortField.order || 'ASC');
+    }
+
+    static modifiers = {
+        filterIsTender: this.filterIsTender,
+        filterJobCategories: this.filterJobCategories,
+        sorted: this.sorted
+    };
 }
 
 Object.assign(OrderJob.prototype, IncomeCalcs);

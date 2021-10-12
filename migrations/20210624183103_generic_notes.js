@@ -1,12 +1,13 @@
 const migration_tools = require('../tools/migration');
 
-const table_name = 'generic_notes';
-const order_notes_table = 'order_notes';
-const order_job_notes_table = 'order_job_notes';
+const TABLE_NAME = 'generic_notes';
+const ORDER_NOTES_TABLE = 'order_notes';
+const ORDER_JOB_NOTES_TABLE = 'order_job_notes';
+
 exports.up = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .createTable(table_name, (table) =>
+        .createTable(TABLE_NAME, (table) =>
         {
             table.uuid('guid').notNullable().unique();
             table.primary('guid');
@@ -20,26 +21,26 @@ exports.up = function (knex)
             migration_tools.authors(table);
 
         })
-        .raw(migration_tools.guid_function(table_name))
-        .raw(migration_tools.timestamps_trigger(table_name))
-        .raw(migration_tools.authors_trigger(table_name))
-        .createTable(order_notes_table, (table) =>
+        .raw(migration_tools.guid_function(TABLE_NAME))
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME))
+        .raw(migration_tools.authors_trigger(TABLE_NAME))
+        .createTable(ORDER_NOTES_TABLE, (table) =>
         {
             const primaryKey = ['order_guid', 'note_guid'];
             table.uuid('order_guid').notNullable();
             table.foreign('order_guid').references('guid').inTable('rcg_tms.orders');
             table.uuid('note_guid').notNullable().unique();
-            table.foreign('note_guid').references('guid').inTable(table_name).onDelete('CASCADE');
+            table.foreign('note_guid').references('guid').inTable(TABLE_NAME).onDelete('CASCADE');
             table.primary(primaryKey);
             table.unique(primaryKey);
         })
-        .createTable(order_job_notes_table, (table) =>
+        .createTable(ORDER_JOB_NOTES_TABLE, (table) =>
         {
             const primaryKey = ['job_guid', 'note_guid'];
             table.uuid('job_guid').notNullable();
             table.foreign('job_guid').references('guid').inTable('rcg_tms.order_jobs');
             table.uuid('note_guid').notNullable().unique();
-            table.foreign('note_guid').references('guid').inTable(table_name).onDelete('CASCADE');
+            table.foreign('note_guid').references('guid').inTable(TABLE_NAME).onDelete('CASCADE');
             table.primary(primaryKey);
             table.unique(primaryKey);
         });
@@ -48,8 +49,8 @@ exports.up = function (knex)
 exports.down = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
-        .dropTableIfExists(order_job_notes_table)
-        .dropTableIfExists(order_notes_table)
-        .dropTableIfExists(table_name)
+        .dropTableIfExists(ORDER_JOB_NOTES_TABLE)
+        .dropTableIfExists(ORDER_NOTES_TABLE)
+        .dropTableIfExists(TABLE_NAME)
         .raw('DROP TYPE IF EXISTS rcg_tms.note_types;');
 };

@@ -33,12 +33,12 @@ class HTTPController
         return await DB.updateSecret(key, data);
     }
 
-    connect()
+    connect(keepAlive = true)
     {
         this.instance = axios.create(
             {
                 baseURL: this.baseURL,
-                httpsAgent: new https.Agent({ keepAlive: true }),
+                httpsAgent: new https.Agent({ keepAlive }),
                 headers: (this?.headers || jHeaders),
                 params: this?.params
             });

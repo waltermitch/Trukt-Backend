@@ -1,8 +1,6 @@
 const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 
-const anonUser = '00000000-0000-0000-0000-000000000000';
-
 class CarDeliveryNetwork extends Loadboard
 {
     constructor(data)
@@ -37,12 +35,12 @@ class CarDeliveryNetwork extends Loadboard
                 Destination: {
                     AddressLines: this.data.pickup.terminal.street1,
                     City: this.data.pickup.terminal.city,
-                    Contact: this.data.pickup?.primaryContact?.name,
-                    Phone: this.data.pickup?.primaryContact?.phoneNumber,
-                    MobilePhone: this.data.pickup?.primaryContact?.mobilePhone,
+                    Contact: this.data.pickup?.primaryContact?.name || null,
+                    Phone: this.data.pickup?.primaryContact?.phoneNumber || null,
+                    MobilePhone: this.data.pickup?.primaryContact?.mobilePhone || null,
                     OrganisationName: this.data.pickup.terminal.name,
                     QuickCode: this.data.pickup.terminal.guid,
-                    StateRegion: this.getStateCode(this.data.pickup.terminal.state),
+                    StateRegion: this.data.pickup.terminal.state,
                     ZipPostCode: this.data.pickup.terminal.zipCode
                 },
                 RequestedDate: this.data.pickup.dateRequestedStart
@@ -51,12 +49,12 @@ class CarDeliveryNetwork extends Loadboard
                 Destination: {
                     AddressLines: this.data.delivery.terminal.street1,
                     City: this.data.delivery.terminal.city,
-                    Contact: this.data.delivery?.primaryContact?.name,
-                    Phone: this.data.delivery?.primaryContact?.phoneNumber,
-                    MobilePhone: this.data.delivery?.primaryContact?.mobilePhone,
+                    Contact: this.data.delivery?.primaryContact?.name || null,
+                    Phone: this.data.delivery?.primaryContact?.phoneNumber || null,
+                    MobilePhone: this.data.delivery?.primaryContact?.mobilePhone || null,
                     OrganisationName: this.data.delivery.terminal.name,
                     QuickCode: this.data.delivery.terminal.guid,
-                    StateRegion: this.getStateCode(this.data.delivery.terminal.state),
+                    StateRegion: this.data.delivery.terminal.state,
                     ZipPostCode: this.data.delivery.terminal.zipCode
                 },
                 RequestedDate: this.data.delivery.dateRequestedStart,
@@ -108,18 +106,18 @@ class CarDeliveryNetwork extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
             trx.commit();
+
+            return objectionPost.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 
     static async handlePost(payloadMetadata, response)
@@ -144,7 +142,7 @@ class CarDeliveryNetwork extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
 
@@ -179,7 +177,7 @@ class CarDeliveryNetwork extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(anonUser);
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
@@ -190,8 +188,6 @@ class CarDeliveryNetwork extends Loadboard
         {
             await trx.rollback();
         }
-
-        return objectionPost;
     }
 }
 

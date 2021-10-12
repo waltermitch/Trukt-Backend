@@ -1,24 +1,62 @@
 extraExternalData:
-   type: object
-   description: extra data that varries depending incoming posting
-   properties:
-     type:
-       type: string 
-       description: Simple explantation of what object contains (useless) 
-     guid: 
-       type: string
-       description: ID or GUID of the carrier   
-     name: 
-       type: string
-       description: Name of the carrier  
-     externalOrderID:   
-       type: string
-       description: order GUID of external post
-   required:
-     - type
-     - guid
-     - name
-     - externalOrderID
+    type: object
+    description: extra data that varries depending incoming posting
+    properties:
+      carrierInfo:
+        type: object
+        description: carrierInfo object that holds carrier contact information .
+        properties:
+          guid: 
+            type: string
+            description: ID or GUID of the carrier.   
+          name: 
+            type: string
+            description: Full name of the carrier.  
+            example: RCG Logistics LLC.
+          phone:
+            type: string
+            description: First contact number of the carrier.
+            example: (916) 123-4566
+          email:
+            type: string
+            description: Contact email address of the carrier.
+            example: dimitar.derentsev+rcg@ship.cars
+          contactName:
+            type: string
+            description: Name of the person who to contact.
+            nullable: true
+            example: First Last
+          address:
+            type: string
+            description: Street name and number from the carrier address.
+            example: 1900 Tech Center Dr.
+          city:
+            type: string
+            description: City name from the carrier address.
+            example: Chicago
+          state:
+            type: string
+            description: Abbreviation of the state from the company address.
+            example: IL
+          zip:
+            type: string
+            description: Zip code from the carrier address.
+            example: 19505
+        required:
+          - guid
+          - name
+          - phone
+          - email
+          - address
+          - city
+          - state
+          - zip    
+      externalOrderID:   
+        type: string
+        description: order GUID of external post.
+    required:
+      - carrierInfo
+      - externalOrderID
 postRequestPayload:
   type: object
   properties:
@@ -116,26 +154,7 @@ mainResponsePayload:
       type: string
       example: 'Becasuse you are cheap.'
     extraExternalData:
-      type: object
-      properties: 
-        type:
-          type: string
-          example: "carrierMisc"
-        guid:
-          type: string
-          example: "oqg3"
-        name:
-          type: string
-          example: "RCG Logistics Carrier"
-        offerUrl:
-          type: string
-          example: "/api/offers/yyqd/"
-        carrierUrl:
-          type: string
-          example: "/api/companies/oqg3/"
-        externalOrderID:
-          type: string
-          example: "3xkq4"
+      $ref: '#/extraExternalData'
     isActive: 
       type: boolean
       example: true

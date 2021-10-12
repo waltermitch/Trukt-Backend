@@ -1,14 +1,17 @@
 const SystemManagementService = require('../Services/SystemManagementService');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
-const EventHandler = require('../EventManager/Handler');
+const AccountUpdateManager = require('../EventManager/AccountUpdateManager');
+const CoupaManager = require('../EventManager/CoupaManager');
 const Triumph = require('../Triumph/API');
 const QBO = require('../QuickBooks/API');
 const Super = require('../Super/API');
 const Cron = require('node-cron');
+const TerminalsHandler = require('../EventManager/TerminalsHandler');
 
 const expressions =
 {
     second: '*/1 * * * * *',
+    tenSeconds: '*/10 * * * * *',
     minute: '0 */1 * * * *',
     fiveMinutes: '0 */5 * * * *',
     thirtyMinutes: '0 */30 * * * *',
@@ -20,7 +23,13 @@ const expressions =
 // every second
 Cron.schedule(expressions.second, async () =>
 {
-    await EventHandler.checkAccountUpdatedQueue();
+    await AccountUpdateManager.checkAccountUpdatedQueue();
+});
+
+// every 5 minutes
+Cron.schedule(expressions.fiveMinutes, async () =>
+{
+    await CoupaManager.checkCoupaQueue();
 });
 
 // every 30 minutes
@@ -28,7 +37,6 @@ Cron.schedule(expressions.thirtyMinutes, async () =>
 {
     await QBO.refreshToken();
 
-    // TODO generate tms user access token
     await SystemManagementService.generateTmsUserToken();
 });
 
@@ -55,4 +63,9 @@ Cron.schedule(expressions.daily, async () =>
 Cron.schedule(expressions.second, async () =>
 {
     await StatusManagerHandler.checkStatus();
+});
+
+Cron.schedule(expressions.tenSeconds, async () =>
+{
+    await TerminalsHandler.verifyPendingTerminals();
 });

@@ -1,5 +1,5 @@
-const Order = require('./Order');
 const OrderJob = require('./OrderJob');
+const Order = require('./Order');
 
 class Expense
 {

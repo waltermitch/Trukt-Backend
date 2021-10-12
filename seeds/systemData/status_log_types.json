@@ -1,0 +1,97 @@
+{
+    "schema": "rcg_tms",
+    "table": "status_log_types",
+    "unique": "id",
+    "data": [
+        {
+            "id": 1,
+            "category": "order",
+            "name": "Created",
+            "order_filter_label": "Created On"
+        },
+        {
+            "id": 2,
+            "category": "order",
+            "name": "Posted to",
+            "order_filter_label": "Posted On"
+        },
+        {
+            "id": 3,
+            "category": "order",
+            "name": "Un-Posted from",
+            "order_filter_label": "Un-Posted On"
+        },
+        {
+            "id": 4,
+            "category": "loadRequest",
+            "name": "Created",
+            "order_filter_label": null
+        },
+        {
+            "id": 5,
+            "category": "loadRequest",
+            "name": "Canceled",
+            "order_filter_label": null
+        },
+        {
+            "id": 6,
+            "category": "loadRequest",
+            "name": "Accpeted",
+            "order_filter_label": null
+        },
+        {
+            "id": 7,
+            "category": "loadRequest",
+            "name": "Declined",
+            "order_filter_label": null
+        },
+        {
+            "id": 8,
+            "category": "order",
+            "name": "Tender Accepted",
+            "order_filter_label": "Tender Accepted"
+        },
+        {
+            "id": 9,
+            "category": "order",
+            "name": "Tender Declined",
+            "order_filter_label": "Tender Declined"
+        },
+        {
+            "id": 10,
+            "category": "jobDispatch",
+            "name": "Offer Sent",
+            "order_filter_label": "Offer Sent On"
+        },
+        {
+            "id": 11,
+            "category": "jobDispatch",
+            "name": "Manually Accepted",
+            "order_filter_label": "Manually Accepted On"
+        },
+        {
+            "id": 12,
+            "category": "jobDispatch",
+            "name": "Offer Canceled",
+            "order_filter_label": "Offer Canceled On"
+        },
+        {
+            "id": 13,
+            "category": "jobDispatch",
+            "name": "Accepted",
+            "order_filter_label": "Accepted On"
+        },
+        {
+            "id": 14,
+            "category": "jobDispatch",
+            "name": "Declined",
+            "order_filter_label": "Dispatch Declined On"
+        },
+        {
+            "id": 15,
+            "category": "jobDispatch",
+            "name": "Self Assigned",
+            "order_filter_label": "Self Assigned On"
+        }
+    ]
+}

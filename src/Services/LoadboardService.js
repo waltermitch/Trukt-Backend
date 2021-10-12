@@ -3,7 +3,6 @@ const LoadboardPost = require('../Models/LoadboardPost');
 const LoadboardContact = require('../Models/LoadboardContact');
 const Job = require('../Models/OrderJob');
 const SFAccount = require('../Models/SFAccount');
-const InvoiceLine = require('../Models/InvoiceLine');
 const currency = require('currency.js');
 const DateTime = require('luxon').DateTime;
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
@@ -15,13 +14,13 @@ const InvoiceBill = require('../Models/InvoiceBill');
 const OrderStop = require('../Models/OrderStop');
 const OrderStopLink = require('../Models/OrderStopLink');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const BillService = require('./BIllService');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
 
-let currentUserGuid = '00000000-0000-0000-0000-000000000000';
 const dispatchableLoadboards = ['SUPERDISPATCH', 'SHIPCARS'];
 let dbLoadboardNames;
 
@@ -35,13 +34,17 @@ class LoadboardService
 
     static async getAllLoadboardPosts(jobId)
     {
-        return (await LoadboardPost.query().where({ jobGuid: jobId })).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        const posts = (await LoadboardPost.query().where({ jobGuid: jobId })).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        if(!posts)
+        {
+            throw new Error('Job not found');
+        }
+        return posts;
     }
 
     static async createPostings(jobId, posts, currentUser)
     {
-        currentUserGuid = currentUser;
-        const job = await LoadboardService.getAllPostingData(jobId, posts);
+        const job = await LoadboardService.getAllPostingData(jobId, posts, currentUser);
         const payloads = [];
         let lbPayload;
 
@@ -71,7 +74,6 @@ class LoadboardService
 
     static async postPostings(jobId, posts, currentUser)
     {
-        currentUserGuid = currentUser;
         const dispatches = await OrderJobDispatch.query()
                 .where({ 'rcgTms.orderJobDispatches.jobGuid': jobId }).andWhere(builder =>
                 {
@@ -81,7 +83,7 @@ class LoadboardService
         {
             throw new Error('Cannot post load with active dispatch offers');
         }
-        const job = await LoadboardService.getAllPostingData(jobId, posts);
+        const job = await LoadboardService.getAllPostingData(jobId, posts, currentUser);
         const payloads = [];
         let lbPayload;
         try
@@ -98,6 +100,7 @@ class LoadboardService
             if (payloads.length != 0)
             {
                 await sender.sendMessages({ body: payloads });
+                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
             }
         }
         catch (e)
@@ -105,13 +108,11 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
-        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
     }
 
     static async unpostPostings(jobId, posts, currentUser)
     {
         const job = await LoadboardService.getPostRecords(jobId, posts);
-        currentUserGuid = currentUser;
         const payloads = [];
         let lbPayload;
 
@@ -129,6 +130,7 @@ class LoadboardService
             if (payloads.length != 0)
             {
                 await sender.sendMessages({ body: payloads });
+                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3, jobId);
             }
         }
         catch (e)
@@ -136,7 +138,6 @@ class LoadboardService
             throw new Error(e.toString());
         }
 
-        LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3, jobId);
     }
 
     static async updatePostings(jobId)
@@ -158,6 +159,7 @@ class LoadboardService
     static async dispatchJob(jobId, body, currentUser)
     {
         const trx = await OrderJobDispatch.startTransaction();
+        const allPromises = [];
         try
         {
             if (body.loadboard != null && !dispatchableLoadboards.includes(body.loadboard))
@@ -170,14 +172,14 @@ class LoadboardService
             // another loadboard, otherwise first create a posting record and dispatch
             if (!body.loadboard)
             {
-                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills.lines(isNotDeleted, transportOnly).item, dispatches(activeDispatch)]');
+                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch)]');
                 const stops = await this.getFirstAndLastStops(job.stops);
                 Object.assign(job, stops);
             }
             else
             {
-                job = await this.getAllPostingData(jobId, [{ loadboard: body.loadboard }]);
-                job.dispatches = await OrderJobDispatch.query(trx).where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
+                job = await this.getAllPostingData(jobId, [{ loadboard: body.loadboard }], currentUser);
+                job.dispatches = await OrderJobDispatch.query(trx).where({ jobGuid: jobId }).where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
             }
 
             if (job.isDummy)
@@ -196,21 +198,25 @@ class LoadboardService
             {
                 throw new Error('carrier not found, please pass in a valid guid, salesforce id, or dot number');
             }
-            else if (carrier.status == 'Inactive' || carrier.status == 'Blacklist')
+            else if (carrier.status == 'Inactive' || carrier.status == 'Blacklist' || carrier.blaclist == true)
             {
                 throw new Error(`Carrier has a status of ${carrier.status} and cannot be dispatched to without manager approval`);
             }
 
-            let carrierContact = driver.guid == null ? driver : (await SFContact.query().modify('byId', driver.guid))[0];
+            let carrierContact = driver.guid == null ? driver : await SFContact.query().modify('byId', driver.guid).first();
 
             // first check if the contact exists based off guid that was passed in
-            if (carrierContact.guid == null)
+            if (!carrierContact?.guid)
             {
                 if (driver.name == null || driver.email == null || driver.phoneNumber == null)
                 {
                     throw new Error('Please pass in valid driver object that includes a proper name, email, and phone');
                 }
-                carrierContact = SFContact.fromJson(carrierContact);
+                carrierContact = SFContact.fromJson({
+                    name: driver.name,
+                    email: driver.email,
+                    phoneNumber: driver.phoneNumber
+                });
                 carrierContact.accountId = carrier.sfId;
                 carrierContact = await SFContact.query(trx).insertAndFetch(carrierContact);
             }
@@ -225,48 +231,34 @@ class LoadboardService
             job.vendorGuid = carrier.guid;
             job.vendorAgentGuid = carrierContact.guid;
 
-            const jobTotalPrice = job.bills[0].lines.reduce((a, expenseLine) =>
+            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job.bills[0].guid);
+            
+            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
+            for(const line of lines)
             {
-                return a.add(currency(expenseLine.amount));
-            }, currency(0));
-
-            const bill = job.bills[0];
-            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUserGuid }).findById(bill.guid);
-            if (body.price !== jobTotalPrice.value)
-            {
-                const lines = bill.lines;
-                const distribution = currency(body.price).distribute(job.bills[0].lines.length);
-                for (let i = 0; i < lines.length; i++)
-                {
-                    const billLine = lines[i];
-                    const amount = distribution[i].value;
-                    await InvoiceLine.query(trx).patch({ amount: amount, updatedByGuid: currentUserGuid }).findById(billLine.guid);
-                }
+                line.transacting(trx);
             }
+            allPromises.push(...lines);
 
-            job.pickup.dateScheduledType = body.pickup.dateType;
-            job.pickup.dateScheduledStart = body.pickup.startDate;
-            job.pickup.dateScheduledEnd = body.pickup.dateType == 'estimated' ? body.pickup.endDate : null;
-            job.pickup.updatedByGuid = currentUserGuid;
-            await OrderStop.query(trx).patch(job.pickup).findById(job.pickup.guid);
+            job.pickup.setScheduledDates(body.pickup.dateType, body.pickup.startDate, body.pickup.endDate);
+            job.pickup.setUpdatedBy(currentUser);
+            allPromises.push(OrderStop.query(trx).patch(job.pickup).findById(job.pickup.guid));
 
-            job.delivery.dateScheduledType = body.delivery.dateType;
-            job.delivery.dateScheduledStart = body.delivery.startDate;
-            job.delivery.dateScheduledEnd = body.delivery.dateType == 'estimated' ? body.delivery.endDate : null;
-            job.delivery.updatedByGuid = currentUserGuid;
-            await OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid);
+            job.delivery.setScheduledDates(body.delivery.dateType, body.delivery.startDate, body.delivery.endDate);
+            job.delivery.setUpdatedBy(currentUser);
+            allPromises.push(OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid));
 
-            await Job.query(trx).patch({
+            const jobForUpdate = Job.fromJson({
                 vendorGuid: carrier.guid,
                 vendorAgentGuid: carrierContact.guid,
                 dateStarted: DateTime.utc(),
-                updatedByGuid: currentUserGuid,
-                status: 'pending',
-                actualExpense: currency(body.price).value
-            }).findById(job.guid);
-            job.actualExpense = currency(body.price).value;
+                status: 'pending'
+            });
+            jobForUpdate.setUpdatedBy(currentUser);
             job.vendor = carrier;
             job.vendorAgent = driver;
+
+            allPromises.push(Job.query(trx).patch(jobForUpdate).findById(job.guid));
 
             let lbPost;
             try
@@ -288,9 +280,9 @@ class LoadboardService
                 isCanceled: false,
                 paymentTermId: body.paymentTerm,
                 paymentMethodId: body.paymentMethod,
-                price: body.price,
-                createdByGuid: currentUserGuid
+                price: body.price
             });
+            dispatch.setCreatedBy(currentUser);
 
             job.dispatch = await OrderJobDispatch.query(trx).insertAndFetch(dispatch);
 
@@ -316,16 +308,23 @@ class LoadboardService
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
-                // keeping this commented out until we figure out status log types
-                // StatusManagerHandler.registerStatus({
-                //     orderGuid: job.orderGuid,
-                //     userGuid: currentUserGuid,
-                //     statusId: 4,
-                //     jobGuid: jobId,
-                //     extraAnnotations: { dispatchedTo: 'internal', code: 'dispatched' }
-                // });
+                StatusManagerHandler.registerStatus({
+                    orderGuid: job.orderGuid,
+                    userGuid: currentUser,
+                    statusId: 8,
+                    jobGuid: jobId,
+                    extraAnnotations: {
+                        dispatchedTo: 'internal',
+                        code: 'pending',
+                        vendorGuid: dispatch.vendor.guid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: dispatch.vendor.name,
+                        vendorAgentName: dispatch.vendorAgent.name
+                }
+                });
             }
 
+            await Promise.all(allPromises);
             await trx.commit();
 
             return dispatch;
@@ -343,7 +342,7 @@ class LoadboardService
         try
         {
 
-            const dispatch = await OrderJobDispatch.query(trx).withGraphJoined('[loadboardPost, job(justIds)]')
+            const dispatch = await OrderJobDispatch.query(trx).withGraphJoined('[loadboardPost, job(justIds), vendor, vendorAgent]')
                 .where({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid }).andWhere(builder =>
                 {
                     builder.where({ isAccepted: true }).orWhere({ isPending: true });
@@ -354,13 +353,14 @@ class LoadboardService
                         builder.select('guid', 'orderGuid');
                     }
                 }).first();
+            dispatch.setUpdatedBy(currentUser);
             if (!dispatch)
             {
                 throw new Error('No active offers to undispatch');
             }
             if (dispatch.loadboardPostGuid != null)
             {
-                const job = await this.getAllPostingData(jobGuid, [{ loadboard: dispatch.loadboardPost.loadboard }]);
+                const job = await this.getAllPostingData(jobGuid, [{ loadboard: dispatch.loadboardPost.loadboard }], currentUser);
                 job.dispatch = dispatch;
                 const lbPayload = new loadboardClasses[`${dispatch.loadboardPost.loadboard}`](job);
                 const message = [lbPayload['undispatch']()];
@@ -372,7 +372,6 @@ class LoadboardService
                 dispatch.isPending = false;
                 dispatch.isAccepted = false;
                 dispatch.isCanceled = true;
-                dispatch.setUpdatedBy(currentUser);
 
                 await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
                 await OrderStop.query(trx)
@@ -397,17 +396,20 @@ class LoadboardService
 
             if (!dispatch.loadboardPostGuid)
             {
-                // keeping this commented out until we figure out status log types
-                // StatusManagerHandler.registerStatus({
-                //     orderGuid: dispatch.job.orderGuid,
-                //     userGuid: currentUser,
-                //     statusId: 6,
-                //     jobGuid,
-                //     extraAnnotations: {
-                //         undispatchedFrom: 'internal',
-                //         code: 'ready'
-                //     }
-                // });
+                StatusManagerHandler.registerStatus({
+                    orderGuid: dispatch.job.orderGuid,
+                    userGuid: currentUser,
+                    statusId: 10,
+                    jobGuid,
+                    extraAnnotations: {
+                        undispatchedFrom: 'internal',
+                        code: 'ready',
+                        vendorGuid: dispatch.vendor.guid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: dispatch.vendor.name,
+                        vendorAgentName: dispatch.vendorAgent.name
+                    }
+                });
             }
 
             return dispatch;
@@ -421,7 +423,7 @@ class LoadboardService
 
     // This method gets all the job information and creates new post records based on the posts
     // list that is sent in if needed
-    static async getAllPostingData(jobId, posts)
+    static async getAllPostingData(jobId, posts, currentUser)
     {
         const loadboardNames = posts.map((post) => { return post.loadboard; });
         const job = await Job.query().findById(jobId).withGraphFetched(`[
@@ -435,12 +437,22 @@ class LoadboardService
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
+        if(!job)
+        {
+            throw new Error('Job not found');
+        }
 
-        await this.createPostRecords(job, posts);
-        this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
+        await this.createPostRecords(job, posts, currentUser);
+        if(job.order.invoices.length != 0)
+        {
+            this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
+        }
 
         // delete job.order.invoices;
-        this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
+        if(job.bills.length != 0)
+        {
+            this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
+        }
 
         // delete job.bills;
         const stops = await this.getFirstAndLastStops(job.stops);
@@ -465,6 +477,10 @@ class LoadboardService
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
+        if(!job)
+        {
+            throw new Error('Job not found');
+        }
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
@@ -490,7 +506,7 @@ class LoadboardService
         return job;
     }
 
-    static async createPostRecords(job, posts)
+    static async createPostRecords(job, posts, currentUser)
     {
         const newPosts = [];
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
@@ -521,7 +537,7 @@ class LoadboardService
                         loadboard: post.loadboard,
                         instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
                         values: post.values,
-                        createdByGuid: currentUserGuid
+                        createdByGuid: currentUser
                     });
                     newPosts.push(objectionPost);
                 }
@@ -533,7 +549,7 @@ class LoadboardService
                         instructions: post.loadboardInstructions || job.postObjects[`${post.loadboard}`].loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
                         isSynced: false,
                         values: post.values,
-                        updatedByGuid: currentUserGuid
+                        updatedByGuid: currentUser
                     });
                 }
             }

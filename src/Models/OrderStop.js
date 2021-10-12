@@ -105,6 +105,32 @@ class OrderStop extends BaseModel
 
         return [stops[0], stops[stops.length - 1]];
     }
+
+    static removeContact(stop)
+    {
+        return stop.primaryContact === null || stop.alternativeContact === null;
+    }
+
+    // type = requested, estimated, scheduled
+    setDates(type, dateType, startDate, endDate)
+    {
+        this[`date${type}Type`] = dateType;
+        this[`date${type}Start`] = startDate;
+        this[`date${type}End`] = endDate;
+    }
+
+    setRequestedDates(dateType, startDate, endDate)
+    {
+        this.setDates('Requested', dateType, startDate, endDate);
+    }
+    setEstimatedDates(dateType, startDate, endDate)
+    {
+        this.setDates('Estimated', dateType, startDate, endDate);
+    }
+    setScheduledDates(dateType, startDate, endDate)
+    {
+        this.setDates('Scheduled', dateType, startDate, endDate);
+    }
 }
 
 Object.assign(OrderStop.prototype, RecordAuthorMixin);

@@ -1,10 +1,10 @@
 const migration_tools = require('../tools/migration');
 
-const table_name = 'orders';
+const TABLE_NAME = 'orders';
 
 exports.up = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').createTable(table_name, table =>
+    return knex.schema.withSchema('rcg_tms').createTable(TABLE_NAME, table =>
     {
         table.comment('The information about the client order');
         table.uuid('guid').primary().notNullable().unique();
@@ -50,22 +50,22 @@ exports.up = function (knex)
         migration_tools.authors(table);
 
     })
-        .raw(migration_tools.guid_function(table_name))
-        .raw(migration_tools.timestamps_trigger(table_name))
-        .raw(migration_tools.authors_trigger(table_name))
+        .raw(migration_tools.guid_function(TABLE_NAME))
+        .raw(migration_tools.timestamps_trigger(TABLE_NAME))
+        .raw(migration_tools.authors_trigger(TABLE_NAME))
         .raw(`
                 CREATE TRIGGER rcg_order_number_assignment
                     BEFORE INSERT OR UPDATE
-                    ON rcg_tms.${table_name}
+                    ON rcg_tms.${TABLE_NAME}
                     FOR EACH ROW
                     EXECUTE FUNCTION rcg_tms.rcg_order_number_assign();
                 
-                COMMENT ON TRIGGER rcg_order_number_assignment ON rcg_tms.${table_name}
+                COMMENT ON TRIGGER rcg_order_number_assignment ON rcg_tms.${TABLE_NAME}
                     IS 'Assigns the order number and prevents users from changing it willy nilly';
             `);
 };
 
 exports.down = function (knex)
 {
-    return knex.schema.withSchema('rcg_tms').dropTableIfExists(`${table_name}`);
+    return knex.schema.withSchema('rcg_tms').dropTableIfExists(`${TABLE_NAME}`);
 };

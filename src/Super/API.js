@@ -19,7 +19,7 @@ class Super
             // compose options
             const options = {
                 url: process.env['super.apiUrl'],
-                tokenName: process.env['super.tokenName']
+                tokenName: 'super_access_token'
             };
 
             // get token

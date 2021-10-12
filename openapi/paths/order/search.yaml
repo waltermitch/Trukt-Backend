@@ -17,79 +17,79 @@ requestBody:
             description: Request filters to apply
             type: object
             properties:
-              pickup: 
+              pickup:
                 description: Coordinates on which to search for order pickups
                 type: array
-                items: 
+                items:
                   type: object
-                  properties: 
-                    longitude: 
+                  properties:
+                    longitude:
                       $ref: ..\..\components\schemas\Common.yaml#/longitude
-                    latitude: 
+                    latitude:
                       $ref: ..\..\components\schemas\Common.yaml#/latitude
-                    radius: 
+                    radius:
                       description: Search maximun radius for coordinates
                       type: integer
                       default: 1
                   required:
                     - longitude
                     - latitude
-              delivery: 
+              delivery:
                 description: Coordinates on which to search for delivery pickups
                 type: array
-                items: 
+                items:
                   type: object
-                  properties: 
-                    longitude: 
+                  properties:
+                    longitude:
                       $ref: ..\..\components\schemas\Common.yaml#/longitude
-                    latitude: 
+                    latitude:
                       $ref: ..\..\components\schemas\Common.yaml#/latitude
-                    radius: 
+                    radius:
                       description: Search maximun radius for coordinates
                       type: integer
                       default: 1
                   required:
                     - longitude
                     - latitude
-              status: 
+              status:
                 description: Filter for order status
                 type: array
-                items: 
+                items:
                   type: string
                   example: new
-              customer: 
+              customer:
                 description: Filter for order customer guid
                 type: array
-                items: 
+                items:
                   $ref: '..\..\components\schemas\common.yaml#/guid'
-              carrier: 
+              carrier:
                 description: Filter for order carrier guid
                 type: array
-                items: 
+                items:
                   $ref: '..\..\components\schemas\common.yaml#/guid'
-              dispatcher: 
+              dispatcher:
                 description: Filter for order dispatcher guid
                 type: array
-                items: 
+                items:
                   $ref: '..\..\components\schemas\common.yaml#/guid'
-              salesperson: 
+              salesperson:
                 description: Filter for order salesperson guid
                 type: array
-                items: 
+                items:
                   $ref: '..\..\components\schemas\common.yaml#/guid'
               dates:
                 description: Filter for status in a specific date
                 type: array
-                items: 
+                items:
                   type: object
-                  properties: 
-                    status: 
+                  properties:
+                    status:
                       description: Order status
                       type: number
                       example: 1
-                    date: 
+                    date:
                       $ref: ..\..\components\schemas\Common.yaml#/date
-                    comparison: 
+                    comparison:
                       description: Type of restriction in the date search
                       type: string
                       default: equal
@@ -105,8 +105,37 @@ requestBody:
                 items:
                   type: string
                 minItems: 1
-
-
+          sort:
+            description: Sort results by field provided
+            type: object
+            properties:
+              field:
+                type: string
+                enum:
+                  - status
+                  - number
+                  - dateCreated
+                  - actualRevenue
+                  - actualExpense
+                  - estimatedExpense
+                  - estimatedRevenue
+              order:
+                description: Sorting order
+                type: string
+                enum:
+                  - asc
+                  - desc
+                default: asc
+            required:
+              - field
+          globalSearch:
+            description: Search for orders that match the provided text
+            type: object
+            properties:
+              query:
+                type: string
+            required:
+              - query
 
 responses:
   200:
