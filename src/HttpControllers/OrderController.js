@@ -43,6 +43,7 @@ class OrderController extends HttpRouteController
             let order = await OrderService.create(req.body, req.session.userGuid);
             order = await OrderService.getOrderByGuid(order.guid);
 
+            // registering order to status manager
             OrderService.registerCreateOrderStatusManager(order, req.session.userGuid);
             res.status(201);
             res.json(order);
@@ -57,11 +58,11 @@ class OrderController extends HttpRouteController
     {
         try
         {
-            const { filters = {}, page: pageByUser, rowCount, sort } = req.body;
+            const { filters = {}, page: pageByUser, rowCount, sort, globalSearch } = req.body;
 
             // Backend uses pagination starting on 0 but client starts on 1
             const page = pageByUser - 1;
-            const orders = await OrderService.getOrders(filters, page, rowCount, sort);
+            const orders = await OrderService.getOrders(filters, page, rowCount, sort, globalSearch);
 
             res.status(200);
             res.json(orders);
@@ -74,6 +75,40 @@ class OrderController extends HttpRouteController
             });
         }
 
+    }
+
+    static async handleTenders(req, res, next)
+    {
+        try
+        {
+            if (req.params.action == 'accept')
+            {
+                await OrderService.acceptLoadTender(req.params.orderGuid, req.session.userGuid);
+            }
+            else if (req.params.action == 'reject')
+            {
+                await OrderService.rejectLoadTender(req.params.orderGuid, req.body.reason, req.session.userGuid);
+            }
+            res.status(200);
+            res.send();
+        }
+        catch (err)
+        {
+            if (err.message == 'Order doesn\'t exist')
+            {
+                res.status(404);
+                res.json(err.message);
+            }
+
+            // customizing their error into response for front end
+            if (err.message == 'Logic App Response')
+            {
+                res.status(400);
+                res.json({ Error: '400 error', ErrorMsg: 'PartnerId not found' });
+            }
+            res.status(400);
+            res.json(err.message);
+        }
     }
 
     static async patchOrder(req, res, next)
@@ -93,8 +128,28 @@ class OrderController extends HttpRouteController
                 data: { message: error?.message || 'Internal server error' }
             });
         }
-
     }
+
+    // find order by vin
+    static async findOrdersByVin(req, res, next)
+    {
+        try
+        {
+            const { vin } = req.params;
+            const orders = await OrderService.findByVin(vin);
+
+            res.status(200);
+            res.json(orders);
+        }
+        catch (error)
+        {
+            next({
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
 }
 
 const controller = new OrderController();

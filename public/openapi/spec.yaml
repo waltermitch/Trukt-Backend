@@ -4,11 +4,11 @@ info:
   title: Trukt
   description: Transportation management system
 servers:
-  - url: 'https://truktbackend-dev.rcgauto.p.azurewebsites.net'
+  - url: 'https://truktapi-dev.rcgauto.net'
     description: Development server
-  - url: 'https://truktbackend-staging.rcgauto.p.azurewebsites.net'
+  - url: 'https://truktapi-staging.rcgauto.net'
     description: Staging server
-  - url: 'https://truktbackend.rcgauto.p.azurewebsites.net'
+  - url: 'https://truktapi.rcgauto.net'
     description: Production server
 paths:
   /attachments:
@@ -1657,6 +1657,14 @@ paths:
                       default: asc
                   required:
                     - field
+                globalSearch:
+                  description: Search for orders that match the provided text
+                  type: object
+                  properties:
+                    query:
+                      type: string
+                  required:
+                    - query
       responses:
         '200':
           description: Orders
@@ -1680,6 +1688,99 @@ paths:
           description: order
           content:
             application/json: {}
+  '/order/find_by_vin/{vin}':
+    get:
+      summary: Find By VIN
+      operationId: findByVin
+      description: Find All Orders By VIN
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: vin
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: order
+          content:
+            application/json: {}
+  '/order/{orderGuid}/tender/accept':
+    put:
+      summary: Accept load Tenders
+      operationId: acceptOrderbyGuid
+      description: Accept Tender by order GUID
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: Tender
+          content:
+            application/json: {}
+        '400':
+          description: Tender
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Order Already Rejected
+        '404':
+          description: Tender
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Order doesn't exist
+  '/order/{orderGuid}/tender/reject':
+    put:
+      summary: Reject load Tenders
+      operationId: rejectOrderbyGuid
+      description: Reject Tender by order GUID
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Reason for declining Tender
+              required:
+                - reason
+      responses:
+        '200':
+          description: Tender
+          content:
+            application/json: {}
+        '400':
+          description: Tender
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Order Already Rejected
+        '404':
+          description: Tender
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Order doesn't exist
   /picklist/options:
     get:
       summary: Get picklist options

@@ -22,7 +22,7 @@ class CentralDispatch extends Loadboard
         let string = `${this.data.number},
         ${this.data.pickup.terminal.city},${this.data.pickup.terminal.state},${this.data.pickup.terminal.zipCode},
         ${this.data.delivery.terminal.city},${this.data.delivery.terminal.state},${this.data.delivery.terminal.zipCode},
-        ${this.data.actualExpense},0.00,check,delivery,none,${this.setEquipmentType()},${this.getINOP()},
+        ${this.data.actualExpense || 5.00},0.00,check,delivery,none,${this.setEquipmentType()},${this.getINOP()},
         ${pickupStartDate.toISODate()},${pickupStartDate.plus({ days: 30 }).toISODate()},
         ${this.postObject.instructions},${this.setVehicles()}*`;
 
