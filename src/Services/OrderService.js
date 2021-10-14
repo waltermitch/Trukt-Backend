@@ -985,16 +985,28 @@ class OrderService
 
                     const comparisonDateAndStatus = function ()
                     {
+                        // Get only the GTM zone
+                        const timezoneRegex = /((\+|-)[0-1][0-9]:[0-1][0-9])/g;
+
                         if (comparisonValue === 'between')
                         {
                             const { date1, date2 } = dateElement;
-                            this.whereRaw('date_created::date > ? and date_created::date < ?', [date1, date2]).
+                            const userTimeZoneDate1 = date1.match(timezoneRegex) || '00:00';
+                            const userTimeZoneDate2 = date2.match(timezoneRegex) || '00:00';
+
+                            const sqlDate1 = `(date_created::timestamp AT TIME ZONE '${userTimeZoneDate1}')::date`;
+                            const sqlDate2 = `(date_created::timestamp AT TIME ZONE '${userTimeZoneDate2}')::date`;
+
+                            this.whereRaw(`${sqlDate1} > ? and ${sqlDate2} < ?`, [date1, date2]).
                                 andWhere('statusId', status);
                         }
                         else
                         {
                             const { date } = dateElement;
-                            this.whereRaw(`date_created::date ${comparisonValue} ?`, [date]).
+                            const userTimeZone = date.match(timezoneRegex) || '00:00';
+                            const sqlDate = `(date_created::timestamp AT TIME ZONE '${userTimeZone}')::date`;
+
+                            this.whereRaw(`${sqlDate} ${comparisonValue} ?`, [date]).
                                 andWhere('statusId', status);
                         }
                     };

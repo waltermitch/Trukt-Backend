@@ -89,7 +89,7 @@ requestBody:
                         type: number
                         example: 1
                       date:
-                        $ref: ..\..\components\schemas\Common.yaml#/date
+                        $ref: ..\..\components\schemas\Common.yaml#/dateTime
                       comparison:
                         description: Type of restriction in the date search
                         type: string
@@ -111,9 +111,9 @@ requestBody:
                         type: number
                         example: 1
                       date1:
-                        $ref: ..\..\components\schemas\Common.yaml#/date
+                        $ref: ..\..\components\schemas\Common.yaml#/dateTime
                       date2:
-                        $ref: ..\..\components\schemas\Common.yaml#/date
+                        $ref: ..\..\components\schemas\Common.yaml#/dateTime
                       comparison:
                         description: Type of restriction in the date search
                         type: string
