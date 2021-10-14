@@ -16,7 +16,7 @@ class ArcgisClient
             });
         this.apikey = API_KEY;
         this.findAddressPath = '/findAddressCandidates';
-        this.score = 90;
+        this.score = 95;
     }
 
     /**
@@ -26,7 +26,7 @@ class ArcgisClient
      * there are multiple candidates. If limit is 1 then a single object is returned, otherwise an array
      * of objects is returned. Default to 1
      * @param {*} options.score Filter the possible candidantes by a confidence percentage and returns
-     * the ones that has higher score. Default to 90
+     * the ones that has higher score. Default to 95
      * @returns
      */
     async findGeocode(address, { limit = 1, score = this.score } = {})
