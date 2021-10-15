@@ -1186,6 +1186,7 @@ class OrderService
                 invoices: orderInvoices,
                 ...orderData
             });
+            orderGraph.setClientNote(orderData.clientNotes.note, currentUser);
 
             const orderToUpdate = Order.query(trx).skipUndefined().upsertGraphAndFetch(orderGraph, {
                 relate: true,
