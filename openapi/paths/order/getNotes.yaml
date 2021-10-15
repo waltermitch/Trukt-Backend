@@ -1,0 +1,32 @@
+summary: Get Order Notes by Order guid
+operationId: getAllNotes
+description: Get Order Notes By Order guid
+tags:
+  - Order
+  - Notes
+parameters:
+  - in: path
+    name: orderGuid
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: Notes
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            $ref: '..\..\components\schemas\Note.yaml'
+  404:
+    description: Order Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: Order Not Found

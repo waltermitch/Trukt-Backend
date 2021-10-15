@@ -100,6 +100,50 @@ class NotesService
         // return full note
         return createdNote;
     }
+
+    static async getOrderNotes(orderGuid)
+    {
+        // find all notes for order, (using extra join to know if order exists)
+        const order = await Order.query().findById(orderGuid).withGraphJoined('notes(notDeleted)');
+
+        if (!order)
+            return null;
+
+        // return notes
+        return order.notes;
+    }
+
+    static async getJobNotes(jobGuid)
+    {
+        // find all notes for job, (using extra join to know if job exists)
+        const job = await OrderJob.query().findById(jobGuid).withGraphJoined('notes(notDeleted)');
+
+        if (!job)
+            return null;
+
+        // return notes
+        return job?.notes;
+    }
+
+    // get all notes for an order
+    static async getAllNotes(orderGuid)
+    {
+        // find all notes for order and jobs, (using extra join to know if order exists)
+        const order = await Order.query().findById(orderGuid).withGraphJoined('[notes(notDeleted), jobs.[notes(notDeleted)]]');
+
+        if (!order)
+            return null;
+
+        const jobNotes = {};
+        for (const job of order.jobs)
+            jobNotes[job.guid] = job.notes;
+
+        // return notes
+        return {
+            'order': order.notes,
+            'jobs': jobNotes
+        };
+    }
 }
 
 module.exports = NotesService;

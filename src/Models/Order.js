@@ -154,6 +154,19 @@ class Order extends BaseModel
                     from: 'rcgTms.orders.guid',
                     to: 'rcgTms.ediData.orderGuid'
                 }
+            },
+            notes:
+            {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./Notes'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    through: {
+                        from: 'rcgTms.orderNotes.orderGuid',
+                        to: 'rcgTms.orderNotes.noteGuid'
+                    },
+                    to: 'rcgTms.genericNotes.guid'
+                }
             }
         };
         Object.assign(relations, AuthorRelationMappings('rcgTms.orders'));
@@ -258,15 +271,18 @@ class Order extends BaseModel
 
     setClientNote(note, user)
     {
-        if(note && note.length > 3000)
+        if(note)
         {
-            throw new Error('Client notes cannot exceed 3000 characters');
+            if(note.length > 3000)
+            {
+                throw new Error('Client notes cannot exceed 3000 characters');
+            }
+            this.clientNotes = {
+                note,
+                updatedByGuid: user,
+                dateUpdated: DateTime.utc().toString()
+            };
         }
-        this.clientNotes = {
-            note,
-            updatedByGuid: user,
-            dateUpdated: DateTime.utc().toString()
-        };
     }
 
     static filterIsTender(query, isTender)
