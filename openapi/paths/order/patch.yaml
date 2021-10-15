@@ -26,6 +26,14 @@ requestBody:
           instructions:
             type: string
             description: The instructions for the order provided by the client.
+          clientNotes:
+            type: object
+            properties:
+              note:
+                description: Notes that are shared with the client
+                type: string
+                maxLength: 3000
+                example: Your order has been shipped and is on its way
           estimatedRevenue:
             type: string
             format: currency

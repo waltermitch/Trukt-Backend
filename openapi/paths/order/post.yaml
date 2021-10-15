@@ -26,7 +26,7 @@ requestBody:
               note:
                 description: Notes that are shared with the client
                 type: string
-                maxLength: 30000
+                maxLength: 3000
                 example: Your order has been shipped and is on its way
           estimatedRevenue:
             type: string
