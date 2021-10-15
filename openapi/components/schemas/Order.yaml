@@ -149,7 +149,7 @@ Order:
       type: array
       items:
         allOf:
-          - $ref: './OrderJob.yaml#/Job With All Data'
+          - $ref: './OrderJob.yaml#/Job With All Related Data'
     expenses:
       type: array
       items:
