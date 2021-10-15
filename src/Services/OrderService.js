@@ -19,6 +19,7 @@ const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Expense = require('../Models/Expense');
 const ComparisonType = require('../Models/ComparisonType');
+const User = require('../Models/User');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusLog = require('../Models/StatusLog');
 const GeneralFuncApi = require('../Azure/GeneralFuncApi');
@@ -228,6 +229,20 @@ class OrderService
 
                 // assign unique terminals to the top level
                 order.terminals = Object.values(terminalCache);
+
+                // check to see if there are client notes assigned so we don't bother querying
+                // on something that may not exist
+                if(order.clientNotes)
+                {
+                    // getting the user details so we can show the note users details
+                    const user = await User.query().findById(order.clientNotes.updatedByGuid);
+                    Object.assign(order?.clientNotes, {
+                        updatedBy: {
+                            userName: user.name,
+                            email: user.email
+                        }
+                    });
+                }
 
             }
             catch (err)
