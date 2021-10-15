@@ -28,7 +28,7 @@ exports.up = function (knex)
                 WHERE link.line1_guid = NEW.line2_guid AND link.line2_guid = NEW.line1_guid;
                 -- if none exist allow insertion
                 IF(exist_inverse > 0) THEN
-                    RAISE EXCEPTION 'Inverse exists, (guid2, guid1), cannot create link.';
+                    RAISE EXCEPTION 'Inverse exists: (%, %), cannot create link', NEW.line1_guid, NEW.line2_guid;
                 END IF;
             ELSEIF(TG_OP = 'UPDATE') THEN
                 RAISE EXCEPTION 'Updating records on this table is forbidden.';
