@@ -1,0 +1,179 @@
+Order:
+  type: object
+  properties:
+    guid:
+      $ref: ./Common.yaml#/guid
+    number:
+      type: string
+      pattern: /[A-Z]{2}\d{5}/
+      example: RC10000
+    instructions:
+      type: string
+      description: The instructions for the order provided by the client.
+    status:
+      $ref: ./Common.yaml#/Enums/orderStatus
+    distance:
+      type: number
+      description: The calculated distance required to travel to complete the full order in miles.
+      nullable: true
+      minimum: 0
+      maximum: 9999999.9
+    isDummy:
+      type: boolean
+      default: false
+      example: false
+    clientNotes:
+      type: object
+      properties:
+        note:
+          description: Notes that are shared with the client
+          type: string
+          maxLength: 3000
+          example: Your order has been shipped and is on its way
+    isCompleted:
+      type: boolean
+      default: false
+      example: false
+    estimatedRevenue:
+      type: string
+      format: currency
+      description: The amount owed by the client.
+    estimatedExpense:
+      type: string
+      format: currency
+      description: The amount owed to the vendors.
+      example: '99.00'
+    quotedRevenue:
+      type: string
+      format: currency
+      description: The amount quoted to the client for this order.
+      example: '99.00'
+    estimatedIncome:
+      allOf:
+        - $ref: ./Common.yaml#/currency
+        - description: The calculated total estimated income for this order.
+          readOnly: true
+          example: '99.00'
+    actualRevenue:
+      allOf:
+        - $ref: ./Common.yaml#/currency
+        - description: The calculated revenue for this order.
+          readOnly: true
+          example: '99.00'
+    actualExpense:
+      allOf:
+        - $ref: ./Common.yaml#/currency
+        - description: The calculated expense for this order.
+          readOnly: true
+          example: '99.00'
+    actualIncome:
+      allOf:
+        - $ref: ./Common.yaml#/currency
+        - description: The calculated total income for this order.
+          readOnly: true
+          example: '99.00'
+    dateExpectedCompleteBy:
+      type: string
+      format: date-time
+      description: The date that this order is expected to be completed by.
+    dateCompleted:
+      description: The date that this order was completed
+      type: string
+      format: date-time
+      readOnly: true
+      nullable: true
+    dateCreated:
+      $ref: ./Common.yaml#/dateCreated
+    dateUpdated:
+      $ref: ./Common.yaml#/dateUpdated
+    createdByGuid:
+      $ref: ./Common.yaml#/createdByGuid
+    updatedByGuid:
+      $ref: ./Common.yaml#/updatedByGuid
+    referenceNumber:
+      type: string
+      maxLength: 64
+      description: The external identification number the client uses for this order.
+    inspectionType:
+      allOf:
+        - $ref: './Common.yaml#/Enums/inspectionType'
+        - description: This field currently has no use.
+    isTender:
+      type: boolean
+      description: Signals if the order is a tender and is pending approval or confirmation.
+      example: false
+    isStarted:
+      description: Signals if the order has been started by the vendor(s).
+      type: boolean
+      default: false
+      example: false
+    estimatedDistance:
+      type: number
+      description: The distance required to travel to complete the full order in miles.
+      nullable: true
+      minimum: 0
+      maximum: 9999999.9
+    bol:
+      type: string
+      maxLength: 64
+      description: The Bill of Lading reference number for this order.
+    bolUrl:
+      type: string
+      maxLength: 1024
+      description: The URL to the Bill of Lading for this order.
+    client:
+      allOf:
+        - $ref: './Account.yaml#/account'
+        - description: The client that placed the order
+    clientContact:
+      allOf:
+        - $ref: './Contact.yaml'
+        - description: The contact that works for the client.
+    consignee:
+      allOf:
+        - $ref: './Account.yaml#/account'
+        - description: The party that is responsible for paying for the order
+    dispatcher:
+      allOf:
+        - $ref: './Common.yaml#/guidObject'
+        - description: The dispatcher responsible for this order.
+    referrer:
+      allOf:
+        - $ref: './Common.yaml#/guidObject'
+        - description: The account that referred this order to us.
+    salesperson:
+      allOf:
+        - $ref: './Common.yaml#/guidObject'
+        - description: The salesperson responsible for managing this order.
+    jobs:
+      type: array
+      items:
+        allOf:
+          - $ref: './OrderJob.yaml#/Job With All Data'
+    expenses:
+      type: array
+      items:
+        allOf:
+          - $ref: './Expense.yaml#/orderExpense'
+          - $ref: './Common.yaml#/guidObject'
+    stops:
+      type: array
+      items:
+        allOf:
+          - $ref: ./Stop.yaml
+          - type: object
+            properties:
+              terminal:
+                allOf:
+                  - $ref: './Common.yaml#/guidObject'
+                  - $ref: ./Terminal.yaml
+              commodities:
+                $ref: ./Commodity.yaml#/CommodityOutbound
+    terminals:
+      type: array
+      items:
+        allOf:
+          - $ref: './Common.yaml#/guidObject'
+          - $ref: ./Terminal.yaml
+
+
