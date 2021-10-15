@@ -1804,6 +1804,16 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Note'
+        '404':
+          description: Order Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Order Not Found
   '/order/{orderGuid}/notes/all':
     get:
       summary: Get All Notes by Order guid
@@ -1837,6 +1847,16 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/Note'
+        '404':
+          description: Order Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Order Not Found
   '/job/{jobGuid}/notes':
     get:
       summary: Get Job Notes by Job guid
@@ -1860,6 +1880,16 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Note'
+        '404':
+          description: Job Not Found Or Job Has No Notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Job Not Found
   /picklist/options:
     get:
       summary: Get picklist options
@@ -4046,6 +4076,12 @@ components:
           $ref: '#/components/schemas/dateCreated'
         createdByGuid:
           $ref: '#/components/schemas/createdByGuid'
+        type:
+          type: string
+          enum:
+            - lead
+            - flag
+            - update
     expense:
       type: object
       properties:

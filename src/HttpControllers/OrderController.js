@@ -157,7 +157,10 @@ class OrderController
         {
             const result = await NotesService.getOrderNotes(req.params.orderGuid);
 
-            res.status(200).json(result);
+            if (!result)
+                res.status(404).json({ 'error': 'Order Not Found' });
+            else
+                res.status(200).json(result);
         }
         catch (error)
         {
@@ -175,7 +178,10 @@ class OrderController
         {
             const result = await NotesService.getAllNotes(req.params.orderGuid);
 
-            res.status(200).json(result);
+            if (!result)
+                res.status(404).json({ 'error': 'Order Not Found' });
+            else
+                res.status(200).json(result);
         }
         catch (error)
         {

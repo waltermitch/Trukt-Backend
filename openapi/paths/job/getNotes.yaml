@@ -20,3 +20,13 @@ responses:
           type: array
           items:
             $ref: '..\..\components\schemas\Note.yaml'
+  404:
+    description: Job Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: Job Not Found

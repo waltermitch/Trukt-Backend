@@ -13,3 +13,9 @@ properties:
     $ref: .\Common.yaml#/dateCreated
   createdByGuid:
     $ref: .\Common.yaml#/createdByGuid
+  type:
+    type: string
+    enum:
+      - lead
+      - flag
+      - update

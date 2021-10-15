@@ -6,7 +6,10 @@ class OrderJobController
     {
         const result = await NotesService.getJobNotes(req.params.jobGuid);
 
-        res.status(200).json(result);
+        if (!result)
+            res.status(404).json({ 'error': 'Job Not Found' });
+        else
+            res.status(200).json(result);
     }
 }
 
