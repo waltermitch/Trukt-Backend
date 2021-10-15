@@ -10,81 +10,41 @@ requestBody:
         type: object
         properties:
           referenceNumber:
-            type: string
-            maxLength: 64
-            description: The external identification number the client uses for this order.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/referenceNumber'
           inspectionType:
-            allOf:
-              - $ref: '..\..\components\schemas\Common.yaml#/Enums/inspectionType'
-              - description: This field currently has no use.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/inspectionType'
           instructions:
-            type: string
-            description: The instructions for the order provided by the client.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/instructions'
           clientNotes:
-            type: object
-            properties:
-              note:
-                description: Notes that are shared with the client
-                type: string
-                maxLength: 3000
-                example: Your order has been shipped and is on its way
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/clientNotes'
           estimatedRevenue:
-            type: string
-            format: currency
-            description: The amount owed by the client.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedRevenue'
           estimatedExpense:
-            type: string
-            format: currency
-            description: The amount owed to the vendors.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedExpense'
           quotedRevenue:
-            type: string
-            format: currency
-            description: The amount quoted to the client for this order.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/quotedRevenue'
           estimatedDistance:
-            type: number
-            description: The distance required to travel to complete the full order in miles.
-            nullable: true
-            minimum: 0
-            maximum: 9999999.9
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedDistance'
           isDummy:
-            type: boolean
-            description: If the order is a dummy and should not be dispatched.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/isDummy'
           dateExpectedCompleteBy:
-            type: string
-            format: date-time
-            description: The date that this order is expected to be completed by.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/dateExpectedCompleteBy'
           bol:
-            type: string
-            maxLength: 64
-            description: The Bill of Lading reference number for this order.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/bol'
           bolUrl:
-            type: string
-            maxLength: 1024
-            description: The URL to the Bill of Lading for this order.
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/bolUrl'
           client:
-            allOf:
-              - $ref: ..\..\components\schemas\Account.yaml#/account
-              - description: The client that placed the order
-          consignee:
-            allOf:
-              - description: The party that is responsible for paying for the order
-              - $ref: ..\..\components\schemas\Account.yaml#/account
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/client'
           clientContact:
-            allOf:
-              - description: The contact that works for the client.
-              - $ref: '..\..\components\schemas\Contact.yaml'
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/clientContact'
+          consignee:
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/consignee'
           dispatcher:
-            allOf:
-              - description: The dispatcher responsible for this order.
-              - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/dispatcher'
           referrer:
-            allOf:
-              - description: The account that referred this order to us.
-              - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/referrer'
           salesperson:
-            allOf:
-              - description: The salesperson responsible for managing this order.
-              - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/salesperson'
           jobs:
             type: array
             description: All of the jobs that will be worked by vendors for this order.
