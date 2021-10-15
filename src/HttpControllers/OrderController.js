@@ -1,7 +1,7 @@
 const OrderService = require('../Services/OrderService');
-const HttpRouteController = require('./HttpRouteController');
+const NotesService = require('../Services/NotesService');
 
-class OrderController extends HttpRouteController
+class OrderController
 {
 
     static async getOrder(req, res, next)
@@ -140,6 +140,42 @@ class OrderController extends HttpRouteController
 
             res.status(200);
             res.json(orders);
+        }
+        catch (error)
+        {
+            next({
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
+    // find notes only related to order
+    static async getOrderNotes(req, res, next)
+    {
+        try
+        {
+            const result = await NotesService.getOrderNotes(req.params.orderGuid);
+
+            res.status(200).json(result);
+        }
+        catch (error)
+        {
+            next({
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
+    // find all notes related to order
+    static async getAllNotes(req, res, next)
+    {
+        try
+        {
+            const result = await NotesService.getAllNotes(req.params.orderGuid);
+
+            res.status(200).json(result);
         }
         catch (error)
         {

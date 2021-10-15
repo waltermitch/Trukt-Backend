@@ -338,5 +338,18 @@
                 "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
             }
         }
+    },
+    "Notes": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid",
+                    "updatedByGuid",
+                    "dateUpdated"
+                ]
+            }
+        }
     }
 }

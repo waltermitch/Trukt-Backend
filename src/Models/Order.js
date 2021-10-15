@@ -153,6 +153,19 @@ class Order extends BaseModel
                     from: 'rcgTms.orders.guid',
                     to: 'rcgTms.ediData.orderGuid'
                 }
+            },
+            notes:
+            {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./Notes'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    through: {
+                        from: 'rcgTms.orderNotes.orderGuid',
+                        to: 'rcgTms.orderNotes.noteGuid'
+                    },
+                    to: 'rcgTms.genericNotes.guid'
+                }
             }
         };
         Object.assign(relations, AuthorRelationMappings('rcgTms.orders'));
