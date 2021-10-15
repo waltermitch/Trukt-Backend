@@ -258,15 +258,18 @@ class Order extends BaseModel
 
     setClientNote(note, user)
     {
-        if(note && note.length > 3000)
+        if(note)
         {
-            throw new Error('Client notes cannot exceed 3000 characters');
+            if(note.length > 3000)
+            {
+                throw new Error('Client notes cannot exceed 3000 characters');
+            }
+            this.clientNotes = {
+                note,
+                updatedByGuid: user,
+                dateUpdated: DateTime.utc().toString()
+            };
         }
-        this.clientNotes = {
-            note,
-            updatedByGuid: user,
-            dateUpdated: DateTime.utc().toString()
-        };
     }
 
     static filterIsTender(query, isTender)
