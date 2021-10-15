@@ -2,3 +2,4 @@ type: string
 pattern: '^(:?[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$'
 maxLength: 18
 minLength: 15
+example: '00Q1U00000VEwcHUAT'
