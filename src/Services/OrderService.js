@@ -547,6 +547,7 @@ class OrderService
                 dateCompleted: null,
                 invoices: []
             });
+            order.setClientNote(orderObj.clientNotes.note, currentUser);
 
             // this part creates all the financial records for this order
             if (orderObj.expenses.length > 0)
