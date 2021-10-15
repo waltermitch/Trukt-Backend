@@ -3,6 +3,7 @@ const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAu
 const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJob = require('./OrderJob');
 const OrderJobType = require('./OrderJobType');
+const { DateTime } = require('luxon');
 
 class Order extends BaseModel
 {
@@ -253,6 +254,19 @@ class Order extends BaseModel
     {
         await super.$beforeUpdate(opt, context);
         this.calculateEstimatedIncome();
+    }
+
+    setClientNote(note, user)
+    {
+        if(note && note.length > 3000)
+        {
+            throw new Error('Client notes cannot exceed 3000 characters');
+        }
+        this.clientNotes = {
+            note,
+            updatedByGuid: user,
+            dateUpdated: DateTime.utc().toString()
+        };
     }
 
     static filterIsTender(query, isTender)
