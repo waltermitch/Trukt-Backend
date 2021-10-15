@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  version: 0.0.1
+  version: 0.0.2
   title: Trukt
   description: Transportation management system
 servers:
@@ -1781,6 +1781,115 @@ paths:
               schema:
                 type: string
                 example: Order doesn't exist
+  '/order/{orderGuid}/notes':
+    get:
+      summary: Get Order Notes by Order guid
+      operationId: getAllNotes
+      description: Get Order Notes By Order guid
+      tags:
+        - Order
+        - Notes
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: Notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Note'
+        '404':
+          description: Order Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Order Not Found
+  '/order/{orderGuid}/notes/all':
+    get:
+      summary: Get All Notes by Order guid
+      operationId: getOrderNotes
+      description: Get All Notes By Order guid
+      tags:
+        - Order
+        - Notes
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: Notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Note'
+                  jobs:
+                    type: object
+                    properties:
+                      jobGuid:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Note'
+        '404':
+          description: Order Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Order Not Found
+  '/job/{jobGuid}/notes':
+    get:
+      summary: Get Job Notes by Job guid
+      operationId: getJobNotes
+      description: Get Job Notes By Job guid
+      tags:
+        - Job
+        - Notes
+      parameters:
+        - in: path
+          name: jobGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: Notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Note'
+        '404':
+          description: Job Not Found Or Job Has No Notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Job Not Found
   /picklist/options:
     get:
       summary: Get picklist options
@@ -3951,6 +4060,28 @@ components:
       type: string
       format: date
       example: '2021-12-31'
+    Note:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        title:
+          type: string
+          minLength: 1
+        body:
+          type: string
+        isBroadcast:
+          type: boolean
+        dateCreated:
+          $ref: '#/components/schemas/dateCreated'
+        createdByGuid:
+          $ref: '#/components/schemas/createdByGuid'
+        type:
+          type: string
+          enum:
+            - lead
+            - flag
+            - update
     expense:
       type: object
       properties:
