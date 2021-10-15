@@ -547,6 +547,7 @@ class OrderService
                 dateCompleted: null,
                 invoices: []
             });
+            order.setClientNote(orderObj.clientNotes.note, currentUser);
 
             // this part creates all the financial records for this order
             if (orderObj.expenses.length > 0)
@@ -1185,6 +1186,7 @@ class OrderService
                 invoices: orderInvoices,
                 ...orderData
             });
+            orderGraph.setClientNote(orderData.clientNotes.note, currentUser);
 
             const orderToUpdate = Order.query(trx).skipUndefined().upsertGraphAndFetch(orderGraph, {
                 relate: true,
