@@ -689,6 +689,14 @@ paths:
                 instructions:
                   type: string
                   description: The instructions for the order provided by the client.
+                clientNotes:
+                  type: object
+                  properties:
+                    note:
+                      description: Notes that are shared with the client
+                      type: string
+                      maxLength: 3000
+                      example: Your order has been shipped and is on its way
                 estimatedRevenue:
                   type: string
                   format: currency
@@ -1020,6 +1028,14 @@ paths:
                 instructions:
                   type: string
                   description: The instructions for the order provided by the client.
+                clientNotes:
+                  type: object
+                  properties:
+                    note:
+                      description: Notes that are shared with the client
+                      type: string
+                      maxLength: 3000
+                      example: Your order has been shipped and is on its way
                 estimatedRevenue:
                   type: string
                   format: currency
@@ -1857,6 +1873,51 @@ paths:
                   error:
                     type: string
                     description: Order Not Found
+  '/order/{orderGuid}/clientNote':
+    put:
+      summary: Update Client Note
+      operationId: updateClientNote
+      description: Updates the note on the order that is shared with the Client
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                note:
+                  type: string
+                  maxLength: 3000
+                  description: >-
+                    The note text that is to be stored on the order and shared
+                    with the client
+                  example: Your order has been shipped and is on its way
+      responses:
+        '202':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientNotes:
+                    type: object
+                    properties:
+                      note:
+                        type: string
+                        example: Your order has been shipped and is on its way
+                      updatedByGuid:
+                        $ref: '#/components/schemas/guid'
+                      dateUpdated:
+                        $ref: '#/components/schemas/dateUpdated'
   '/job/{jobGuid}/notes':
     get:
       summary: Get Job Notes by Job guid
@@ -1881,7 +1942,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Note'
         '404':
-          description: Job Not Found Or Job Has No Notes
+          description: Job Not Found
           content:
             application/json:
               schema:
