@@ -192,6 +192,27 @@ class OrderController
         }
     }
 
+    static async updateClientNote(req, res, next)
+    {
+        try
+        {
+            const order = await OrderService.updateClientNote(req.params.orderGuid, req.body, req.session.userGuid);
+            res.status(202).json(order);
+        }
+        catch (error)
+        {
+            let status;
+            if(error?.message == 'No order found')
+            {
+                status = 404;
+            }
+            next({
+                status,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
 }
 
 const controller = new OrderController();
