@@ -1,9 +1,12 @@
+const { eqProps } = require('ramda');
+
 const BaseModel = require('./BaseModel');
 const Contact = require('./TerminalContact');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 
 const geoCoordFields = ['latitude', 'longitude'];
+const zipCodeNoDashRegex = /^[^-]*[^ -]\w+/;
 
 class Terminal extends BaseModel
 {
@@ -96,6 +99,44 @@ class Terminal extends BaseModel
             return `{ "geometry" :{"x": ${this.longitude}, "y": ${this.latitude}}}`;
         }
         return `${this.street1}, ${this.city}, ${this.state} ${this.zipCode}`;
+    }
+
+    static hasTerminalsSameBaseInformation(terminal1, terminal2)
+    {
+        const hasSameBaseInfo = [
+            eqProps('street1', terminal1, terminal2),
+            eqProps('city', terminal1, terminal2),
+            eqProps('state', terminal1, terminal2),
+            eqProps('zipCode', terminal1, terminal2),
+            eqProps('country', terminal1, terminal2)
+        ].includes(false);
+
+        return !hasSameBaseInfo;
+    }
+
+    static hasTerminalsSameExtraInformation(terminal1, terminal2)
+    {
+        const hasExtraBaseInfo = [eqProps('name', terminal1, terminal2), eqProps('street2', terminal1, terminal2), eqProps('locationType', terminal1, terminal2)]
+            .includes(false);
+
+        return !hasExtraBaseInfo;
+    }
+
+    /**
+     * If zipCode contains a dash, use the zipCode until the dash
+     * @param {*} terminal
+     * @returns
+     */
+    static createStringAddress(terminal)
+    {
+        const { street1, city, state, zipCode, country } = terminal;
+
+        const cityStr = city && `, ${city}` || '';
+        const stateStr = state && `, ${state}` || '';
+        const zipCodeStr = zipCode && `, ${zipCode.match(zipCodeNoDashRegex)}` || '';
+        const countryStr = country && `, ${country}` || '';
+
+        return `${street1}${cityStr}${stateStr}${zipCodeStr}${countryStr}`;
     }
 }
 

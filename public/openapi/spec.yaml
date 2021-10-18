@@ -1342,41 +1342,22 @@ paths:
                   type: array
                   items:
                     allOf:
-                      - type: object
-                        properties:
-                          name:
-                            description: >-
-                              A non-unique name for this terminal that will be
-                              displayed to the users.
-                            type: string
-                            maxLength: 255
-                          street1:
-                            type: string
-                            maxLength: 64
-                          street2:
-                            type: string
-                            maxLength: 64
-                            nullable: true
-                          state:
-                            type: string
-                            maxLength: 100
-                          city:
-                            type: string
-                            maxLength: 64
-                          country:
-                            type: string
-                            maxLength: 64
-                          zipCode:
-                            $ref: '#/components/schemas/zipCode'
-                          latitude:
-                            $ref: '#/components/schemas/latitude'
-                          longitude:
-                            $ref: '#/components/schemas/longitude'
+                      - $ref: '#/components/schemas/Terminal'
                       - $ref: '#/components/schemas/indexObject'
                       - type: object
                         properties:
                           guid:
                             $ref: '#/components/schemas/guid'
+                      - type: object
+                        properties:
+                          locationType:
+                            $ref: '#/components/schemas/terminalLocationType'
+                        required:
+                          - street1
+                          - city
+                          - state
+                          - zipCode
+                          - country
                 commodities:
                   type: array
                   items:
@@ -3826,6 +3807,15 @@ components:
       properties:
         guid:
           $ref: '#/components/schemas/guid'
+    terminalLocationType:
+      type: string
+      enum:
+        - dealer
+        - private
+        - auction
+        - repo yard
+        - port
+        - business
     CommodityUpdate:
       allOf:
         - type: object
