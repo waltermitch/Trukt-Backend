@@ -60,6 +60,9 @@ paths:
   /order/{orderGuid}/notes/all:
     get:
       $ref: paths\order\getAllNotes.yaml
+  /order/{orderGuid}/clientNote:
+    put:
+      $ref: paths\order\putClientNote.yaml
   /job/{jobGuid}/notes:
     get:
       $ref: paths\job\getNotes.yaml

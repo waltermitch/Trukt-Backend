@@ -985,13 +985,7 @@ paths:
                   type: string
                   description: The instructions for the order provided by the client.
                 clientNotes:
-                  type: object
-                  properties:
-                    note:
-                      description: Notes that are shared with the client
-                      type: string
-                      maxLength: 3000
-                      example: Your order has been shipped and is on its way
+                  $ref: '#/components/schemas/clientNotes'
                 estimatedRevenue:
                   type: string
                   format: currency
@@ -1831,6 +1825,62 @@ paths:
                   error:
                     type: string
                     description: Order Not Found
+  '/order/{orderGuid}/clientNote':
+    put:
+      summary: Update Client Note
+      operationId: updateClientNote
+      description: Updates the note on the order that is shared with the Client
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                note:
+                  type: string
+                  maxLength: 3000
+                  nullable: true
+                  description: >-
+                    The note text that is to be stored on the order and shared
+                    with the client
+                  example: Your order has been shipped and is on its way
+      responses:
+        '202':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientNotes:
+                    type: object
+                    properties:
+                      note:
+                        type: string
+                        example: Your order has been shipped and is on its way
+                      updatedByGuid:
+                        $ref: '#/components/schemas/guid'
+                      dateUpdated:
+                        $ref: '#/components/schemas/dateUpdated'
+        '404':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Order not found
   '/job/{jobGuid}/notes':
     get:
       summary: Get Job Notes by Job guid
@@ -3639,6 +3689,7 @@ components:
           description: Notes that are shared with the client
           type: string
           maxLength: 3000
+          nullable: true
           example: Your order has been shipped and is on its way
     estimatedRevenue:
       type: string
@@ -4239,6 +4290,7 @@ components:
               description: Notes that are shared with the client
               type: string
               maxLength: 3000
+              nullable: true
               example: Your order has been shipped and is on its way
         isCompleted:
           type: boolean

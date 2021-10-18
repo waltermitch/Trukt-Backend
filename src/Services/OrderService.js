@@ -785,6 +785,21 @@ class OrderService
         });
     }
 
+    static async updateClientNote(orderGuid, body, currentUser)
+    {
+        const order = Order.fromJson({});
+        order.setClientNote(body.note, currentUser);
+        order.setUpdatedBy(currentUser);
+        const numOfUpdatedOrders = await Order.query().patch(order).findById(orderGuid);
+        if(numOfUpdatedOrders == 0)
+        {
+            throw new Error('No order found');
+        }
+
+        return order;
+        
+    }
+
     /**
      * Connects all of the stops, terminals and commodities
      * update the terminals and commodities objects
