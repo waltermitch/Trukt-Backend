@@ -26,6 +26,8 @@ requestBody:
           instructions:
             type: string
             description: The instructions for the order provided by the client.
+          clientNotes:
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/clientNotes'
           estimatedRevenue:
             type: string
             format: currency

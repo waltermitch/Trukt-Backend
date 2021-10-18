@@ -1,0 +1,32 @@
+summary: Get Job Notes by Job guid
+operationId: getJobNotes
+description: Get Job Notes By Job guid
+tags:
+  - Job
+  - Notes
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: Notes
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            $ref: '..\..\components\schemas\Note.yaml'
+  404:
+    description: Job Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: Job Not Found

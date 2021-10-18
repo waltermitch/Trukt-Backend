@@ -152,8 +152,10 @@ class TerminalService
         }
         catch (error)
         {
+            const message = `Error, terminal ${terminal?.guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
+            console.error(message);
             await trx.rollback();
-            throw { message: error?.nativeError?.detail || error?.message || error };
+            throw { message };
         }
     }
 

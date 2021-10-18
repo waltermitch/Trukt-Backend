@@ -19,6 +19,7 @@ const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Expense = require('../Models/Expense');
 const ComparisonType = require('../Models/ComparisonType');
+const User = require('../Models/User');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusLog = require('../Models/StatusLog');
 const GeneralFuncApi = require('../Azure/GeneralFuncApi');
@@ -228,6 +229,20 @@ class OrderService
 
                 // assign unique terminals to the top level
                 order.terminals = Object.values(terminalCache);
+
+                // check to see if there are client notes assigned so we don't bother querying
+                // on something that may not exist
+                if(order.clientNotes)
+                {
+                    // getting the user details so we can show the note users details
+                    const user = await User.query().findById(order.clientNotes.updatedByGuid);
+                    Object.assign(order?.clientNotes, {
+                        updatedBy: {
+                            userName: user.name,
+                            email: user.email
+                        }
+                    });
+                }
 
             }
             catch (err)
@@ -547,6 +562,7 @@ class OrderService
                 dateCompleted: null,
                 invoices: []
             });
+            order.setClientNote(orderObj.clientNotes?.note, currentUser);
 
             // this part creates all the financial records for this order
             if (orderObj.expenses.length > 0)
@@ -767,6 +783,21 @@ class OrderService
             userGuid: currentUser,
             statusId: 9
         });
+    }
+
+    static async updateClientNote(orderGuid, body, currentUser)
+    {
+        const order = Order.fromJson({});
+        order.setClientNote(body.note, currentUser);
+        order.setUpdatedBy(currentUser);
+        const numOfUpdatedOrders = await Order.query().patch(order).findById(orderGuid);
+        if(numOfUpdatedOrders == 0)
+        {
+            throw new Error('No order found');
+        }
+
+        return order;
+        
     }
 
     /**
@@ -1185,6 +1216,7 @@ class OrderService
                 invoices: orderInvoices,
                 ...orderData
             });
+            orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
 
             const orderToUpdate = Order.query(trx).skipUndefined().upsertGraphAndFetch(orderGraph, {
                 relate: true,

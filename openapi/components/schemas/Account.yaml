@@ -5,8 +5,8 @@ account:
   properties:
     guid:
       oneOf:
-        - $ref: .\SFID.yaml
         - $ref: .\Common.yaml#/guid
+        - $ref: .\SFID.yaml
     name:
       type: string
 client:

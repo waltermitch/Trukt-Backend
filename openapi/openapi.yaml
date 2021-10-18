@@ -1,14 +1,14 @@
 openapi: 3.0.0
 info:
-  version: 0.0.1
+  version: 0.0.2
   title: Trukt
   description: Transportation management system
 servers:
-  - url: 'https://truktapi-dev.rcgauto.net'
+  - url: "https://truktapi-dev.rcgauto.net"
     description: Development server
-  - url: 'https://truktapi-staging.rcgauto.net'
+  - url: "https://truktapi-staging.rcgauto.net"
     description: Staging server
-  - url: 'https://truktapi.rcgauto.net'
+  - url: "https://truktapi.rcgauto.net"
     description: Production server
 paths:
   /attachments:
@@ -54,6 +54,18 @@ paths:
   /order/{orderGuid}/tender/reject:
     put:
       $ref: paths\order\putTenderReject.yaml
+  /order/{orderGuid}/notes:
+    get:
+      $ref: paths\order\getNotes.yaml
+  /order/{orderGuid}/notes/all:
+    get:
+      $ref: paths\order\getAllNotes.yaml
+  /order/{orderGuid}/clientNote:
+    put:
+      $ref: paths\order\putClientNote.yaml
+  /job/{jobGuid}/notes:
+    get:
+      $ref: paths\job\getNotes.yaml
   /picklist/options:
     get:
       $ref: paths\picklist\get.yaml
