@@ -41,3 +41,13 @@ responses:
                   $ref: ..\..\components\schemas\Common.yaml#/guid
                 dateUpdated:
                   $ref: ..\..\components\schemas\Common.yaml#/dateUpdated
+  404:
+    description: Orders
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Order not found

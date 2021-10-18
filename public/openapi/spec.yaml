@@ -1871,6 +1871,16 @@ paths:
                         $ref: '#/components/schemas/guid'
                       dateUpdated:
                         $ref: '#/components/schemas/dateUpdated'
+        '404':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Order not found
   '/job/{jobGuid}/notes':
     get:
       summary: Get Job Notes by Job guid
