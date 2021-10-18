@@ -19,6 +19,7 @@ requestBody:
           note:
             type: string
             maxLength: 3000
+            nullable: true
             description: The note text that is to be stored on the order and shared with the client
             example: Your order has been shipped and is on its way
 
