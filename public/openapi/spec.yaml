@@ -4126,6 +4126,355 @@ components:
       description: 'For pagination purposes, number of entries per page.'
       type: integer
       default: 25
+    Job With All Data:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        number:
+          type: string
+          pattern: '/[A-Z]{2}\d{5}/'
+          example: RC10000
+        status:
+          $ref: '#/components/schemas/orderStatus'
+        distance:
+          type: number
+          description: >-
+            The calculated distance required to travel to complete the full
+            order in miles.
+          nullable: true
+          minimum: 0
+          maximum: 9999999.9
+        isDummy:
+          type: boolean
+          default: false
+          example: false
+        isCompleted:
+          type: boolean
+          default: false
+          example: false
+        estimatedRevenue:
+          type: string
+          format: currency
+          description: The amount owed by the client.
+        estimatedExpense:
+          type: string
+          format: currency
+          description: The amount owed to the vendors.
+          example: '99.00'
+        quotedRevenue:
+          type: string
+          format: currency
+          description: The amount quoted to the client for this order.
+          example: '99.00'
+        estimatedIncome:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The calculated total estimated income for this order.
+              readOnly: true
+              example: '99.00'
+        actualRevenue:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The calculated revenue for this order.
+              readOnly: true
+              example: '99.00'
+        actualExpense:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The calculated expense for this order.
+              readOnly: true
+              example: '99.00'
+        actualIncome:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The calculated total income for this order.
+              readOnly: true
+              example: '99.00'
+        dateStarted:
+          type: string
+          format: date-time
+          description: The date that this job was dispatched and assigned to a vendor.
+        dateCompleted:
+          type: string
+          format: date-time
+          description: The date that this job was completed by a vendor.
+        dateCreated:
+          $ref: '#/components/schemas/dateCreated'
+        dateUpdated:
+          $ref: '#/components/schemas/dateUpdated'
+        createdByGuid:
+          $ref: '#/components/schemas/createdByGuid'
+        updatedByGuid:
+          $ref: '#/components/schemas/updatedByGuid'
+        loadType:
+          type: string
+          enum:
+            - full truck load
+            - partial truck load
+        isStarted:
+          type: boolean
+        instructions:
+          type: string
+        inspectionType:
+          allOf:
+            - $ref: '#/components/schemas/inspectionType'
+            - description: This field currently has no use.
+        bol:
+          type: string
+          maxLength: 64
+          description: The Bill of Lading reference number for this job.
+        bolUrl:
+          type: string
+          maxLength: 1024
+          description: The URL to the Bill of Lading for this job.
+        equipmentTypeId:
+          type: integer
+          description: An RCG equipment type
+        grossProfitmargin:
+          type: string
+          description: The gross profit made on this job
+          example: '28.17'
+        netProfitmargin:
+          type: string
+          description: The gross margin made on this job
+          example: '17.28'
+        vendor:
+          allOf:
+            - $ref: '#/components/schemas/account'
+            - description: The vendor fulfilling the job
+        vendorAgent:
+          allOf:
+            - $ref: '#/components/schemas/Contact'
+            - description: The contact that works for the vendor.
+        vendorContact:
+          allOf:
+            - $ref: '#/components/schemas/Contact'
+            - description: >-
+                The contact that works for the vendor that is fulfilling the
+                job.
+    Job With All Related Data:
+      properties:
+        stops:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Stop'
+              - type: object
+                properties:
+                  terminal:
+                    allOf:
+                      - $ref: '#/components/schemas/guidObject'
+                      - $ref: '#/components/schemas/Terminal'
+                  commodities:
+                    $ref: '#/components/schemas/Commodity'
+      allOf:
+        - $ref: '#/components/schemas/Job With All Data'
+        - type: object
+    Order:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        number:
+          type: string
+          pattern: '/[A-Z]{2}\d{5}/'
+          example: RC10000
+        instructions:
+          type: string
+          description: The instructions for the order provided by the client.
+        status:
+          $ref: '#/components/schemas/orderStatus'
+        distance:
+          type: number
+          description: >-
+            The calculated distance required to travel to complete the full
+            order in miles.
+          nullable: true
+          minimum: 0
+          maximum: 9999999.9
+        isDummy:
+          type: boolean
+          default: false
+          example: false
+        clientNotes:
+          type: object
+          properties:
+            note:
+              description: Notes that are shared with the client
+              type: string
+              maxLength: 3000
+              nullable: true
+              example: Your order has been shipped and is on its way
+        isCompleted:
+          type: boolean
+          default: false
+          example: false
+        estimatedRevenue:
+          type: string
+          format: currency
+          description: The amount owed by the client.
+        estimatedExpense:
+          type: string
+          format: currency
+          description: The amount owed to the vendors.
+          example: '99.00'
+        quotedRevenue:
+          type: string
+          format: currency
+          description: The amount quoted to the client for this order.
+          example: '99.00'
+        estimatedIncome:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The calculated total estimated income for this order.
+              readOnly: true
+              example: '99.00'
+        actualRevenue:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The calculated revenue for this order.
+              readOnly: true
+              example: '99.00'
+        actualExpense:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The calculated expense for this order.
+              readOnly: true
+              example: '99.00'
+        actualIncome:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The calculated total income for this order.
+              readOnly: true
+              example: '99.00'
+        dateExpectedCompleteBy:
+          type: string
+          format: date-time
+          description: The date that this order is expected to be completed by.
+        dateCompleted:
+          description: The date that this order was completed
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        dateCreated:
+          $ref: '#/components/schemas/dateCreated'
+        dateUpdated:
+          $ref: '#/components/schemas/dateUpdated'
+        createdByGuid:
+          $ref: '#/components/schemas/createdByGuid'
+        updatedByGuid:
+          $ref: '#/components/schemas/updatedByGuid'
+        referenceNumber:
+          type: string
+          maxLength: 64
+          description: The external identification number the client uses for this order.
+        inspectionType:
+          allOf:
+            - $ref: '#/components/schemas/inspectionType'
+            - description: This field currently has no use.
+        isTender:
+          type: boolean
+          description: >-
+            Signals if the order is a tender and is pending approval or
+            confirmation.
+          example: false
+        isStarted:
+          description: Signals if the order has been started by the vendor(s).
+          type: boolean
+          default: false
+          example: false
+        estimatedDistance:
+          type: number
+          description: The distance required to travel to complete the full order in miles.
+          nullable: true
+          minimum: 0
+          maximum: 9999999.9
+        bol:
+          type: string
+          maxLength: 64
+          description: The Bill of Lading reference number for this order.
+        bolUrl:
+          type: string
+          maxLength: 1024
+          description: The URL to the Bill of Lading for this order.
+        client:
+          allOf:
+            - $ref: '#/components/schemas/account'
+            - description: The client that placed the order
+        clientContact:
+          allOf:
+            - $ref: '#/components/schemas/Contact'
+            - description: The contact that works for the client.
+        consignee:
+          allOf:
+            - $ref: '#/components/schemas/account'
+            - description: The party that is responsible for paying for the order
+        dispatcher:
+          allOf:
+            - $ref: '#/components/schemas/guidObject'
+            - description: The dispatcher responsible for this order.
+        referrer:
+          allOf:
+            - $ref: '#/components/schemas/guidObject'
+            - description: The account that referred this order to us.
+        salesperson:
+          allOf:
+            - $ref: '#/components/schemas/guidObject'
+            - description: The salesperson responsible for managing this order.
+        jobs:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Job With All Related Data'
+        expenses:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/orderExpense'
+              - $ref: '#/components/schemas/guidObject'
+        stops:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Stop'
+              - type: object
+                properties:
+                  terminal:
+                    allOf:
+                      - $ref: '#/components/schemas/guidObject'
+                      - $ref: '#/components/schemas/Terminal'
+                  commodities:
+                    $ref: '#/components/schemas/CommodityOutbound'
+        terminals:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/guidObject'
+              - $ref: '#/components/schemas/Terminal'
+    Note:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        title:
+          type: string
+          minLength: 1
+        body:
+          type: string
+        isBroadcast:
+          type: boolean
+        dateCreated:
+          $ref: '#/components/schemas/dateCreated'
+        createdByGuid:
+          $ref: '#/components/schemas/createdByGuid'
+        type:
+          type: string
+          enum:
+            - lead
+            - flag
+            - update
     expense:
       type: object
       properties:
