@@ -101,7 +101,7 @@ class OrderController
         }
         else if (req.params.action == 'reject')
         {
-            await OrderService.rejectLoadTender(req.params.orderGuid, req.body.reason, req.session.userGuid);
+            await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
         }
 
         responses = responses.map((response, index)=>
@@ -114,9 +114,8 @@ class OrderController
             };
         });
 
-        res.json(responses);
         res.status(200);
-        res.send();
+        res.json(responses);
     }
 
     static async patchOrder(req, res, next)

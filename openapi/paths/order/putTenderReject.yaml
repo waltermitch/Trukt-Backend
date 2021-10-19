@@ -3,12 +3,7 @@ operationId: rejectOrderbyGuid
 description: Reject Tender by order GUID
 tags:
   - Order
-parameters:
-  - in: path
-    name: orderGuid
-    schema:
-      $ref: '..\..\components\schemas\common.yaml#/guid'
-    required: true
+
 requestBody:
   content:
     application/json:
@@ -18,8 +13,12 @@ requestBody:
           reason:
             type: string
             example: Reason for declining Tender  
+          orderGuids:
+            type: array
+            example: ['cb527935-22fc-42ee-a93c-334b27ea2139']
         required:
           - reason
+          - orderGuids
 
 responses:
   200:
