@@ -4,8 +4,7 @@ class InvoiceController
 {
     static async getInvoice(req, res)
     {
-        const result = await InvoiceService.getInvoice(req.params.invoiceId);
-
+        const result = await InvoiceService.getInvoice(req.params.invoiceGuid);
         if (!result)
         {
             res.status(404);
@@ -13,9 +12,44 @@ class InvoiceController
         }
         else
         {
+            res.status(200);
+            res.json(result);
+        }
+    }
+
+    static async getJobInvoices(req, res)
+    {
+        try
+        {
+            const result = await InvoiceService.getJobInvoice(req.params.jobGuid);
 
             res.status(200);
             res.json(result);
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.send(error);
+        }
+    }
+
+    static async getOrderInvoices(req, res, next)
+    {
+        try
+        {
+            const result = await InvoiceService.getOrderInvoice(req.params.orderGuid);
+
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            if (error.message == 'No Invoices')
+            {
+                res.status(404);
+                res.send(`Invoices for ${req.params.orderGuid} guid not found.`);
+            }
+            next(error);
         }
     }
 

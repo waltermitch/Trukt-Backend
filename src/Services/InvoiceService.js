@@ -1,17 +1,50 @@
 const QuickBooksService = require('./QuickBooksService');
 const Invoice = require('../Models/InvoiceBill');
 const Order = require('../Models/Order');
-const Coupa = require('../Coupa/API');
 
 class InvoiceService
 {
     static async getInvoice(guid)
     {
-        const search = guid.replace(/%/g, '');
-
-        const res = await Invoice.query().findOne({ 'guid': search, 'isDeleted': false });
+        const res = await Invoice.query().findOne({ 'guid': guid, 'isDeleted': false }).withGraphFetched('[lines.item, consignee]');
 
         return res;
+    }
+
+    static async getJobInvoice(guid)
+    {
+        const res = await Invoice.query().leftJoinRelated('job').where('job.guid', guid);
+
+        return res;
+    }
+
+    static async getOrderInvoice(guid)
+    {
+        // Using order model to get all invoices
+        const res = await Order
+            .query()
+            .findById(guid)
+            .withGraphJoined('[invoices, jobs.bills]');
+
+        // to throw proper error
+        if (res == undefined)
+        {
+            throw new Error('No Invoices');
+        }
+
+        // object to return invoices only
+        const invoiceObject = {
+            invoices: res.invoices,
+            bills: []
+        };
+
+        // mapping through multiple jobs and pushing into bills array
+        res.jobs.map((job) =>
+        {
+            invoiceObject.bills.push(...job.bills);
+        });
+
+        return invoiceObject;
     }
 
     static async createInvoices(arr)
