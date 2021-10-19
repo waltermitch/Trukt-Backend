@@ -15,7 +15,7 @@ requestBody:
             example: Reason for declining Tender  
           orderGuids:
             type: array
-            example: ['cb527935-22fc-42ee-a93c-334b27ea2139']
+            example: ['string']
         required:
           - reason
           - orderGuids
