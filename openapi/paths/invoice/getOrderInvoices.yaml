@@ -1,0 +1,32 @@
+summary: Get invoices by orderGuid
+operationId: getOrderInvoices
+description: Get invoices by orderGuid
+tags:
+  - Invoice
+parameters:
+  - in: path
+    name: orderGuid
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: Invoice
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            invoices:
+              type: array
+              items:
+                $ref:  ..\..\components\schemas\Finances.yaml#/invoicePayload 
+            bills:
+              type: array
+              items:
+                $ref:  ..\..\components\schemas\Finances.yaml#/invoicePayload                   
+
+  404:
+    description: Invoices not found
+    content:
+      application/json: {}
