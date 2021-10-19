@@ -19,10 +19,12 @@ const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Expense = require('../Models/Expense');
 const ComparisonType = require('../Models/ComparisonType');
+const User = require('../Models/User');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusLog = require('../Models/StatusLog');
 const GeneralFuncApi = require('../Azure/GeneralFuncApi');
 
+const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const { DateTime } = require('luxon');
 const axios = require('axios');
@@ -228,6 +230,20 @@ class OrderService
 
                 // assign unique terminals to the top level
                 order.terminals = Object.values(terminalCache);
+
+                // check to see if there are client notes assigned so we don't bother querying
+                // on something that may not exist
+                if(order.clientNotes)
+                {
+                    // getting the user details so we can show the note users details
+                    const user = await User.query().findById(order.clientNotes.updatedByGuid);
+                    Object.assign(order?.clientNotes, {
+                        updatedBy: {
+                            userName: user.name,
+                            email: user.email
+                        }
+                    });
+                }
 
             }
             catch (err)
@@ -547,7 +563,7 @@ class OrderService
                 dateCompleted: null,
                 invoices: []
             });
-            order.setClientNote(orderObj.clientNotes.note, currentUser);
+            order.setClientNote(orderObj.clientNotes?.note, currentUser);
 
             // this part creates all the financial records for this order
             if (orderObj.expenses.length > 0)
@@ -768,6 +784,21 @@ class OrderService
             userGuid: currentUser,
             statusId: 9
         });
+    }
+
+    static async updateClientNote(orderGuid, body, currentUser)
+    {
+        const order = Order.fromJson({});
+        order.setClientNote(body.note, currentUser);
+        order.setUpdatedBy(currentUser);
+        const numOfUpdatedOrders = await Order.query().patch(order).findById(orderGuid);
+        if(numOfUpdatedOrders == 0)
+        {
+            throw new Error('No order found');
+        }
+
+        return order;
+        
     }
 
     /**
@@ -1186,7 +1217,7 @@ class OrderService
                 invoices: orderInvoices,
                 ...orderData
             });
-            orderGraph.setClientNote(orderData.clientNotes.note, currentUser);
+            orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
 
             const orderToUpdate = Order.query(trx).skipUndefined().upsertGraphAndFetch(orderGraph, {
                 relate: true,
@@ -1225,7 +1256,7 @@ class OrderService
         // Return new terminals with info checkd if needs to be updated or created
         const terminalsToChecked = [];
         for (const terminal of terminals)
-            terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal, orderGuid));
+            terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal));
 
         const [orderChecked, terminalsChecked, stopsChecked] = await Promise.all([orderContacToCheck, Promise.all(terminalsToChecked), Promise.all(stopsToChecked)]);
 
@@ -1258,25 +1289,40 @@ class OrderService
         return stopChecked;
     }
 
-    static async getTerminalWithInfoChecked(terminal, orderGuid)
+    /**
+     * Base information: Fileds use to create the address; Street1, city, state, zipCode and Country
+     * Extra information: Fields that are not use to create the address; Street2 and Name
+     * Checks the action to performed for a terminal.
+     * Rules:
+     * 0) If terminal GUID is provided, we check if the information is the same as the DB, this is to avoid
+     *    calling Arcgis if the terminal has the same information.
+     * 1) updateExtraFields: The B.I. is the same and only the E.I. changed, so we only update those fields
+     *    of that existing Terminal
+     * 2) findOrCreate: The B.I. changed, so we have to call Arcgis and then check in the DB if that record
+     *    exists or we create a new one.
+     * 3) nothingToDo: The terminal is the same and there is no need to do anything
+     * @param {*} terminalInput
+     * @returns
+     */
+    static async getTerminalWithInfoChecked(terminalInput)
     {
-        let terminalPromise = 'createNewTerminal';
+        let terminalAction = 'findOrCreate';
 
-        if (terminal.guid)
-            terminalPromise = OrderService.checkTerminalReference(terminal.guid, orderGuid);
-
-        const terminalResolve = await terminalPromise;
-
-        let terminalChecked = terminal;
-
-        // Remove guid if needs to be created
-        if (terminalResolve === 'createNewTerminal')
+        if (terminalInput.guid)
         {
-            const { guid: terminalGuid, ...newTerminalData } = terminal;
-            terminalChecked = newTerminalData;
+            const terminalDB = await Terminal.query().findById(terminalInput.guid) || {};
+            const hasSameBaseInfo = Terminal.hasTerminalsSameBaseInformation(terminalDB, terminalInput);
+            const hasSameExtraInfo = Terminal.hasTerminalsSameExtraInformation(terminalDB, terminalInput);
+
+            if (!hasSameBaseInfo)
+                terminalAction = 'findOrCreate';
+            else if (!hasSameExtraInfo)
+                terminalAction = 'updateExtraFields';
+            else
+                terminalAction = 'nothingToDo';
         }
 
-        return terminalChecked;
+        return { terminalAction, ...terminalInput };
     }
 
     static async checkContactReference(contact, orderGuid)
@@ -1341,18 +1387,6 @@ class OrderService
                 return 'findOrCreate';
             return 'findAndUpdate';
         }
-    }
-
-    // If Terminal is being reference elseWhere, a new terminal will be created
-    static async checkTerminalReference(terminalGuid, orderGuid)
-    {
-        const [{ count }] = await OrderStopLink.query().count('orderGuid').whereIn(
-            'stopGuid', OrderStop.query().select('guid').where('terminalGuid', terminalGuid)
-        ).andWhereNot('orderGuid', orderGuid);
-
-        if (count > 0)
-            return 'createNewTerminal';
-        return 'updateTerminal';
     }
 
     static async findSFClient(clientGuid, trx)
@@ -1425,31 +1459,93 @@ class OrderService
         }
         return commodity;
     }
+
+    /**
+     * Base information (B.I.): Fileds use to create the address; Street1, city, state, zipCode and Country
+     * Extra information (E.I.): Fields that are not use to create the address; Street2 and Name
+     * findOrCreate: We call Arcgis to get Lat and Long -> We look in DB for that key, if it exists
+     *      we pull that record and update the E.I., if not, we create a new record.
+     *      In case Arcgis does not return a Lat and Long, we save the terminal without Lat and Long as
+     *      an Unresolved Terminal.
+     * @param {*} terminalInput
+     * @param {*} currentUser
+     * @param {*} trx
+     * @returns
+     */
     static async updateCreateTerminal(terminalInput, currentUser, trx)
     {
         const { index,
+            terminalAction,
             ...terminalData
         } = terminalInput;
 
-        /**
-         * If only has 1 property for GUID, it is not necessary to update it because that means
-         * the terminal is only being use to reference other elements in the update
-         */
-        if (Object.keys(terminalData).length === 1)
-            return { terminal: terminalData, index };
+        switch (terminalAction)
+        {
+            case 'updateExtraFields':
+                const terminalToUpdate = Terminal.fromJson(terminalData);
+                terminalToUpdate.setUpdatedBy(currentUser);
 
-        const terminal = Terminal.fromJson(terminalData);
-        if (!terminalInput.guid)
-            terminal.setCreatedBy(currentUser);
-        else
-            terminal.setUpdatedBy(currentUser);
+                const terminalUpdated = await Terminal.query(trx)
+                    .patchAndFetchById(terminalToUpdate.guid, terminalToUpdate);
 
-        const terminalUpserted = await Terminal.query(trx).skipUndefined().upsertGraphAndFetch(terminal, {
-            relate: true,
-            noDelete: true
-        });
+                return { terminal: terminalUpdated, index };
+            case 'findOrCreate':
+                let terminalCreated = {};
+                const addressStr = Terminal.createStringAddress(terminalData);
 
-        return { terminal: terminalUpserted, index };
+                const arcgisTerminal = ArcgisClient.isSetuped() &&
+                    await ArcgisClient.findGeocode(addressStr);
+
+                if (arcgisTerminal && ArcgisClient.isAddressFound(arcgisTerminal))
+                {
+                    const { latitude, longitude } = ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
+                    const terminalToUpdate = await Terminal.query().findOne({
+                        latitude,
+                        longitude
+                    });
+
+                    // Terminal exists, now we have to add non essential information
+                    if (terminalToUpdate)
+                    {
+                        terminalToUpdate.setUpdatedBy(currentUser);
+                        terminalToUpdate.street2 = terminalData.street2;
+                        terminalToUpdate.name = terminalData.name;
+                        terminalToUpdate.locationType = terminalData.locationType;
+
+                        terminalCreated = await Terminal.query(trx)
+                            .patchAndFetchById(terminalToUpdate.guid, terminalToUpdate);
+                    }
+
+                    // Create new resolved terminal
+                    else
+                    {
+                        const terminalToCreate = Terminal.fromJson({
+                            latitude,
+                            longitude,
+                            isResolved: true,
+                            ...terminalData
+                        });
+                        terminalToCreate.setCreatedBy(currentUser);
+
+                        terminalCreated = await Terminal.query(trx).insertAndFetch(terminalToCreate);
+                    }
+                }
+
+                // Create new unresolved terminal
+                else
+                {
+                    // No use terminal guid if provided
+                    const { guid, ...terminalDataNoGuid } = terminalData;
+                    const terminalToCreate = Terminal.fromJson(terminalDataNoGuid);
+                    terminalToCreate.setCreatedBy(currentUser);
+
+                    terminalCreated = await Terminal.query(trx).insertAndFetch(terminalToCreate);
+                }
+
+                return { terminal: terminalCreated, index };
+            default:
+                return { terminal: terminalData, index };
+        }
     }
 
     static createTerminalContactGraph(terminalContactInput, terminal, currentUser)

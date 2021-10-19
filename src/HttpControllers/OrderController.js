@@ -1,7 +1,7 @@
 const OrderService = require('../Services/OrderService');
-const HttpRouteController = require('./HttpRouteController');
+const NotesService = require('../Services/NotesService');
 
-class OrderController extends HttpRouteController
+class OrderController
 {
 
     static async getOrder(req, res, next)
@@ -145,6 +145,69 @@ class OrderController extends HttpRouteController
         {
             next({
                 status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
+    // find notes only related to order
+    static async getOrderNotes(req, res, next)
+    {
+        try
+        {
+            const result = await NotesService.getOrderNotes(req.params.orderGuid);
+
+            if (!result)
+                res.status(404).json({ 'error': 'Order Not Found' });
+            else
+                res.status(200).json(result);
+        }
+        catch (error)
+        {
+            next({
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
+    // find all notes related to order
+    static async getAllNotes(req, res, next)
+    {
+        try
+        {
+            const result = await NotesService.getAllNotes(req.params.orderGuid);
+
+            if (!result)
+                res.status(404).json({ 'error': 'Order Not Found' });
+            else
+                res.status(200).json(result);
+        }
+        catch (error)
+        {
+            next({
+                status: 500,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
+    static async updateClientNote(req, res, next)
+    {
+        try
+        {
+            const order = await OrderService.updateClientNote(req.params.orderGuid, req.body, req.session.userGuid);
+            res.status(202).json(order);
+        }
+        catch (error)
+        {
+            let status;
+            if(error?.message == 'No order found')
+            {
+                status = 404;
+            }
+            next({
+                status,
                 data: { message: error?.message || 'Internal server error' }
             });
         }

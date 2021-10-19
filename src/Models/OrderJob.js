@@ -150,6 +150,19 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.guid',
                     to: 'rcgTms.orderJobDispatches.jobGuid'
                 }
+            },
+            notes:
+            {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./Notes'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    through: {
+                        from: 'rcgTms.orderJobNotes.jobGuid',
+                        to: 'rcgTms.orderJobNotes.noteGuid'
+                    },
+                    to: 'rcgTms.genericNotes.guid'
+                }
             }
         };
     }

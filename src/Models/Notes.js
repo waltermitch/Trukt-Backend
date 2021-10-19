@@ -43,6 +43,14 @@ class Notes extends BaseModel
         };
         return relations;
     }
+
+    static modifiers =
+        {
+            notDeleted(query)
+            {
+                query.where({ 'is_deleted': false });
+            }
+        }
 }
 
 Object.assign(Notes.prototype, RecordAuthorMixin);

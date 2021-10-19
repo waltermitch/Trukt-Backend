@@ -1,0 +1,21 @@
+type: object
+properties:
+  guid:
+    $ref: .\Common.yaml#/guid
+  title:
+    type: string
+    minLength: 1
+  body:
+    type: string
+  isBroadcast:
+    type: boolean
+  dateCreated:
+    $ref: .\Common.yaml#/dateCreated
+  createdByGuid:
+    $ref: .\Common.yaml#/createdByGuid
+  type:
+    type: string
+    enum:
+      - lead
+      - flag
+      - update
