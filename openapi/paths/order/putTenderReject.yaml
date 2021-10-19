@@ -15,7 +15,10 @@ requestBody:
             example: Reason for declining Tender  
           orderGuids:
             type: array
-            example: ['string']
+            items: 
+              $ref: '..\..\components\schemas\common.yaml#/guid'
+            minItems: 1
+            maxItems: 100
         required:
           - reason
           - orderGuids
