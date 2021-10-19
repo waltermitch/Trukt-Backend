@@ -743,6 +743,17 @@ class OrderService
         }
     }
 
+    /**
+     * @param {string []} orderGuids
+     * @param {string} currentUser
+     */
+    static async acceptLoadTenders(orderGuids, currentUser)
+    {
+        if(!orderGuids.length) throw new Error('No order ids were provided.');
+    
+        return Promise.allSettled(orderGuids.map((guid)=> this.acceptLoadTender(guid, currentUser)));
+    }
+
     static async acceptLoadTender(orderGuid, currentUser)
     {
         // exucuting accept options
