@@ -51,7 +51,7 @@ paths:
   /order/tender/accept:
     put:
       $ref: paths\order\putTenderAccept.yaml
-  /order/{orderGuid}/tender/reject:
+  /order/tender/reject:
     put:
       $ref: paths\order\putTenderReject.yaml
   /order/{orderGuid}/notes:

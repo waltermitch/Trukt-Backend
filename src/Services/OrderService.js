@@ -726,8 +726,6 @@ class OrderService
             Object.assign(logicAppPayload, { reason: reason });
         }
 
-        console.log('Payload', logicAppPayload);
-
         try
         {
             // sending request to logic app with correct payload
