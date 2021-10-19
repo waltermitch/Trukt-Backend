@@ -1,19 +1,22 @@
-summary: Get invoice by invoiceId
+summary: Get invoice by invoiceGuid
 operationId: getInvoice
-description: Get invoice by invoiceId
+description: Get invoice by invoiceGuid
 tags:
   - Invoice
 parameters:
   - in: path
-    name: invoiceId
+    name: invoiceGuid
     schema:
       $ref: '..\..\components\schemas\Common.yaml#/guid'
     required: true
 responses:
   200:
-    description: invoice
+    description: Invoice
     content:
-      application/json: {}
+      application/json:
+        schema:
+          $ref:  ..\..\components\schemas\Finances.yaml#/invoiceResponse 
+
   404:
     description: Invoice not found
     content:

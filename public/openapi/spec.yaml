@@ -689,6 +689,14 @@ paths:
                 instructions:
                   type: string
                   description: The instructions for the order provided by the client.
+                clientNotes:
+                  type: object
+                  properties:
+                    note:
+                      description: Notes that are shared with the client
+                      type: string
+                      maxLength: 3000
+                      example: Your order has been shipped and is on its way
                 estimatedRevenue:
                   type: string
                   format: currency
@@ -1020,6 +1028,14 @@ paths:
                 instructions:
                   type: string
                   description: The instructions for the order provided by the client.
+                clientNotes:
+                  type: object
+                  properties:
+                    note:
+                      description: Notes that are shared with the client
+                      type: string
+                      maxLength: 3000
+                      example: Your order has been shipped and is on its way
                 estimatedRevenue:
                   type: string
                   format: currency
@@ -2343,24 +2359,26 @@ paths:
           description: loadboards
           content:
             application/json: {}
-  '/invoice/{invoiceId}':
+  '/invoice/{invoiceGuid}':
     get:
-      summary: Get invoice by invoiceId
+      summary: Get invoice by invoiceGuid
       operationId: getInvoice
-      description: Get invoice by invoiceId
+      description: Get invoice by invoiceGuid
       tags:
         - Invoice
       parameters:
         - in: path
-          name: invoiceId
+          name: invoiceGuid
           schema:
             $ref: '#/components/schemas/guid'
           required: true
       responses:
         '200':
-          description: invoice
+          description: Invoice
           content:
-            application/json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/invoiceResponse'
         '404':
           description: Invoice not found
           content:
@@ -2390,6 +2408,65 @@ paths:
       responses:
         '200':
           description: invoices
+          content:
+            application/json: {}
+  '/invoice/order/{orderGuid}':
+    get:
+      summary: Get invoices by orderGuid
+      operationId: getOrderInvoices
+      description: Get invoices by orderGuid
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: Invoice
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/invoicePayload'
+                  bills:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/invoicePayload'
+        '404':
+          description: Invoices not found
+          content:
+            application/json: {}
+  '/invoice/job/{jobGuid}':
+    get:
+      summary: Get invoices by jobGuid
+      operationId: getJobInvoices
+      description: Get invoices by jobGuid
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: jobGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: Invoice
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/invoicePayload'
+        '404':
+          description: Invoices not found
           content:
             application/json: {}
   /index/order/number:
@@ -2536,22 +2613,28 @@ paths:
           description: expense
           content:
             application/json: {}
-  '/bill/{billId}':
+  '/bill/{billGuid}':
     get:
-      summary: Get bill by guid
+      summary: Get bill by Guid
       operationId: getBill
       description: Get bill by guid
       tags:
         - Bill
       parameters:
         - in: path
-          name: billId
+          name: billGuid
           schema:
             $ref: '#/components/schemas/guid'
           required: true
       responses:
         '200':
           description: Bill
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/invoiceResponse'
+        '404':
+          description: Bill not found
           content:
             application/json: {}
   /bill:
@@ -3951,6 +4034,347 @@ components:
       type: string
       format: date
       example: '2021-12-31'
+    deletedByGuid:
+      allOf:
+        - $ref: '#/components/schemas/guid'
+        - type: string
+          description: The TMS User account that last deleted this record.
+          readOnly: true
+          nullable: false
+    invoiceResponse:
+      type: object
+      description: Object with bill and all of its line items
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        referenceNumber:
+          type: string
+          example: volu04276
+        consigneeGuid:
+          $ref: '#/components/schemas/guid'
+        externalSource:
+          type: string
+          nullable: true
+          example: null
+        externalSourceGuid:
+          type: string
+          nullable: true
+          example: null
+        externalSourceData:
+          type: string
+          nullable: true
+          example: null
+        isSyncedExternalSource:
+          type: boolean
+          example: false
+        dateSyncedExternalSource:
+          type: string
+          format: date-time
+          example: null
+        dateFiled:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        dateDue:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        datePaid:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        dateInvoiced:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        dateClosed:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        total:
+          type: string
+          format: currency
+          nullable: true
+          example: 125
+        isValid:
+          type: boolean
+          example: false
+        isGenerated:
+          type: boolean
+          example: false
+        isPaid:
+          type: boolean
+          example: false
+        isInvoice:
+          type: boolean
+          example: false
+        dateCreated:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-01T11:09:02.245-07:00'
+        dateUpdated:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-14T14:00:00.000Z'
+        dateDeleted:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-14T14:00:00.000Z'
+        isDeleted:
+          type: boolean
+          example: false
+        createdByGuid:
+          $ref: '#/components/schemas/createdByGuid'
+        updatedByGuid:
+          $ref: '#/components/schemas/updatedByGuid'
+        deletedByGuid:
+          $ref: '#/components/schemas/deletedByGuid'
+        paymentMethodId:
+          type: string
+          example: null
+        paymentTermId:
+          type: string
+          example: null
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              guid:
+                $ref: '#/components/schemas/guid'
+              notes:
+                type: string
+                nullable: true
+                example: null
+              invoiceGuid:
+                $ref: '#/components/schemas/guid'
+              amount:
+                type: string
+                format: currency
+                example: 270
+              itemId:
+                type: number
+                example: 21
+              commodityGuid:
+                $ref: '#/components/schemas/guid'
+              dateCreated:
+                type: string
+                format: date-time
+                nullable: true
+                example: '2021-09-14T14:00:00.000Z'
+              dateUpdated:
+                type: string
+                format: date-time
+                nullable: true
+                example: '2021-09-14T14:00:00.000Z'
+              createdByGuid:
+                $ref: '#/components/schemas/createdByGuid'
+              updatedByGuid:
+                $ref: '#/components/schemas/updatedByGuid'
+              name:
+                type: string
+                example: Services
+              type:
+                type: string
+                example: expense
+              isAccessorial:
+                type: boolean
+                example: false
+        consignee:
+          type: object
+          properties:
+            billingCity:
+              type: string
+              example: HAYWARD
+            billingCountry:
+              type: string
+              example: United States
+            billingLatitude:
+              type: number
+              example: 37.648897
+            billingLongitude:
+              type: number
+              example: -122.098357
+            billingPostalCode:
+              type: string
+              example: 94545
+            billingState:
+              type: string
+              example: CA
+            billingStreet:
+              type: string
+              example: 809 QUANTAS LN
+            blacklist:
+              type: string
+              example: false
+            dotNumber:
+              type: number
+              example: 2543255
+            email:
+              type: string
+              example: arztransportation@yahoo.com
+            guid:
+              $ref: '#/components/schemas/guid'
+            loadboardInstructions:
+              type: string
+              example: null
+            mcNumber:
+              type: string
+              example: null
+            name:
+              type: string
+              example: ARZ TRANSPORTATION
+            orderInstructions:
+              type: string
+              example: These are my order notes.
+            phoneNumber:
+              type: string
+              example: (510) 246-9211
+            preferred:
+              type: boolean
+              example: false
+            qbId:
+              nullable: true
+              example: null
+            sdGuid:
+              nullable: true
+              example: null
+            sfId:
+              type: string
+              example: 0011U00000qQLr7QAG
+            shippingCity:
+              type: string
+              example: HAYWARD
+            shippingCountry:
+              type: string
+              example: United States
+            shippingLatitude:
+              type: number
+              example: 37.648897
+            shippingLongitude:
+              type: number
+              example: -122.098357
+            shippingPostalCode:
+              type: string
+              example: '94545'
+            shippingState:
+              type: string
+              example: CA
+            shippingStreet:
+              type: string
+              example: 809 QUANTAS LN
+            syncInSuper:
+              type: boolean
+              example: null
+    invoicePayload:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        referenceNumber:
+          type: string
+          example: volu04276
+        consigneeGuid:
+          $ref: '#/components/schemas/guid'
+        externalSource:
+          type: string
+          nullable: true
+          example: null
+        externalSourceGuid:
+          type: string
+          nullable: true
+          example: null
+        externalSourceData:
+          type: string
+          nullable: true
+          example: null
+        isSyncedExternalSource:
+          type: boolean
+          example: false
+        dateSyncedExternalSource:
+          type: string
+          format: date-time
+          example: null
+        dateFiled:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        dateDue:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        datePaid:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        dateInvoiced:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        dateClosed:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        total:
+          type: string
+          format: currency
+          nullable: true
+          example: 125
+        isValid:
+          type: boolean
+          example: false
+        isGenerated:
+          type: boolean
+          example: false
+        isPaid:
+          type: boolean
+          example: false
+        isInvoice:
+          type: boolean
+          example: false
+        dateCreated:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-01T11:09:02.245-07:00'
+        dateUpdated:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-14T14:00:00.000Z'
+        dateDeleted:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2021-09-14T14:00:00.000Z'
+        isDeleted:
+          type: boolean
+          example: false
+        createdByGuid:
+          $ref: '#/components/schemas/createdByGuid'
+        updatedByGuid:
+          $ref: '#/components/schemas/updatedByGuid'
+        deletedByGuid:
+          $ref: '#/components/schemas/deletedByGuid'
+        paymentMethodId:
+          type: string
+          example: null
+        paymentTermId:
+          type: string
+          example: null
     expense:
       type: object
       properties:
@@ -4065,13 +4489,6 @@ components:
       required:
         - carrierInfo
         - externalOrderID
-    deletedByGuid:
-      allOf:
-        - $ref: '#/components/schemas/guid'
-        - type: string
-          description: The TMS User account that last deleted this record.
-          readOnly: true
-          nullable: false
     mainResponsePayload:
       type: object
       properties:

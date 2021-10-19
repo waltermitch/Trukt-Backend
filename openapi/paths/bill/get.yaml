@@ -1,16 +1,22 @@
-summary: Get bill by guid
+summary: Get bill by Guid
 operationId: getBill
 description: Get bill by guid
 tags:
   - Bill
 parameters:
   - in: path
-    name: billId
+    name: billGuid
     schema:
       $ref: '..\..\components\schemas\common.yaml#/guid'
     required: true
 responses:
   200:
     description: Bill
+    content:
+      application/json:
+        schema:
+          $ref:  ..\..\components\schemas\Finances.yaml#/invoiceResponse 
+  404:
+    description: Bill not found
     content:
       application/json: {}

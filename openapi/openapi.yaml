@@ -92,12 +92,18 @@ paths:
       $ref: paths\loadboard\dispatch\post.yaml
     put:
       $ref: paths\loadboard\dispatch\put.yaml
-  /invoice/{invoiceId}:
+  /invoice/{invoiceGuid}:
     get:
       $ref: paths\invoice\get.yaml
   /invoice:
     post:
       $ref: paths\invoice\post.yaml
+  /invoice/order/{orderGuid}:
+    get:
+      $ref: paths\invoice\getOrderInvoices.yaml
+  /invoice/job/{jobGuid}:
+    get:
+      $ref: paths\invoice\getJobInvoices.yaml
   /index/order/number:
     get:
       $ref: paths\index\order\get.yaml
@@ -119,7 +125,7 @@ paths:
   /expense/search:
     get:
       $ref: paths\expense\search.yaml
-  /bill/{billId}:
+  /bill/{billGuid}:
     get:
       $ref: paths\bill\get.yaml
   /bill:
