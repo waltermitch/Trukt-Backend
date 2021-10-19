@@ -1,13 +1,22 @@
+const e = require('express');
 const BillService = require('../Services/BillService');
 
 class BillController
 {
     static async getBill(req, res)
     {
-        const result = await BillService.getBill(req.params.billId);
 
-        res.status(200);
-        res.json(result);
+        const result = await BillService.getBill(req.params.billGuid);
+        if (result)
+        {
+            res.status(200);
+            res.json(result);
+        }
+        else
+        {
+            res.status(404);
+            res.send();
+        }
     }
 
     static async createBills(req, res)
