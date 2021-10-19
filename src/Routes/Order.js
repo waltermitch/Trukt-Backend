@@ -9,7 +9,7 @@ router
     .get(`${prefix}/find_by_vin/:vin`, controller.constructor.findOrdersByVin)
     .post(`${prefix}/getorders`, controller.constructor.getOrders)
     .post(`${prefix}`, controller.constructor.createOrder)
-    .put(`${prefix}/:orderGuid(${uuidRegexStr})/tender/:action(accept|reject)`, controller.constructor.handleTenders)
+    .put(`${prefix}/tender/:action(accept|reject)`, controller.constructor.handleTenders)
     .patch(`${prefix}`, controller.constructor.patchOrder)
     .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes`, controller.constructor.getOrderNotes)
     .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes/all`, controller.constructor.getAllNotes)
