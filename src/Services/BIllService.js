@@ -17,11 +17,9 @@ class BillService
 {
     static async getBill(guid)
     {
-        const search = guid.replace(/%/g, '');
+        const res = await Bill.query().findOne({ 'guid': guid, 'isDeleted': false }).withGraphFetched('[lines.item, consignee]');
 
-        const res = await Bill.query().findOne({ 'guid': search });
-
-        return res?.[0];
+        return res;
     }
 
     static async createBills(arr)
