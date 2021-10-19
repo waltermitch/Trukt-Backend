@@ -83,7 +83,7 @@ class OrderController
         {
             if (req.params.action == 'accept')
             {
-                await OrderService.acceptLoadTender(req.params.orderGuid, req.session.userGuid);
+                await OrderService.acceptLoadTenders(req.body.orderGuids, req.session.userGuid);
             }
             else if (req.params.action == 'reject')
             {
