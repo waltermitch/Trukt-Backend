@@ -94,6 +94,22 @@ class InvoiceBill extends BaseModel
             }
         };
     }
+
+    // TODO: Which fields to use in account
+    // $formatJson(json)
+    // {
+    //     json = super.$formatJson(json);
+    //     if ('consignee' in json)
+    //     {
+    //         for (const field of ['name', 'type', 'isAccessorial'])
+    //         {
+    //             json[field] = json.item[field];
+    //         }
+    //         json.itemId = json.item.id;
+    //         delete json.item;
+    //     }
+    //     return json;
+    // }
 }
 
 Object.assign(InvoiceBill.prototype, RecordAuthorMixin);
