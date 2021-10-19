@@ -3,13 +3,32 @@ operationId: acceptOrderbyGuid
 description: Accept Tender by order GUID
 tags:
   - Order
+
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          reason:
+            type: string
+            example: Reason for declining Tender  
+          orderGuids:
+            type: array
+            items: 
+              $ref: '..\..\components\schemas\common.yaml#/guid'
+            minItems: 1
+            maxItems: 100
+        required:
+          - orderGuids
+
 responses:
   200:
     description: Tender
     content:
       application/json: 
         schema:
-          type: array
+          type:  array
           example: [
             {
               guid: string,

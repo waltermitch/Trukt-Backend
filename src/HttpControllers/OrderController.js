@@ -92,8 +92,6 @@ class OrderController
     
         const orderGuids = req.body.orderGuids;
 
-        if(!orderGuids?.length) throw new Error('No order ids were provided.');
-
         let responses = [];
         if (req.params.action == 'accept')
         {

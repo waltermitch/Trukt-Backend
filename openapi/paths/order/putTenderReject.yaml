@@ -24,7 +24,16 @@ responses:
   200:
     description: Tender
     content:
-      application/json: {}
+      application/json: 
+        schema:
+          type:  array
+          example: [
+            {
+              guid: string,
+              status: number,
+              message: string
+            }
+          ]
   400:
     description: Tender
     content: 
