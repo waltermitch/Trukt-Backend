@@ -79,36 +79,44 @@ class OrderController
 
     static async handleTenders(req, res, next)
     {
-        try
+        const getErrorStatusCode = (errorMessage) =>
         {
-            if (req.params.action == 'accept')
+            switch(errorMessage)
             {
-                await OrderService.acceptLoadTenders(req.body.orderGuids, req.session.userGuid);
+                case 'Order doesn\'t exist':
+                    return 404;
+                default:
+                    return 400;
             }
-            else if (req.params.action == 'reject')
-            {
-                await OrderService.rejectLoadTender(req.params.orderGuid, req.body.reason, req.session.userGuid);
-            }
-            res.status(200);
-            res.send();
-        }
-        catch (err)
-        {
-            if (err.message == 'Order doesn\'t exist')
-            {
-                res.status(404);
-                res.json(err.message);
-            }
+        };
+    
+        const orderGuids = req.body.orderGuids;
 
-            // customizing their error into response for front end
-            if (err.message == 'Logic App Response')
-            {
-                res.status(400);
-                res.json({ Error: '400 error', ErrorMsg: 'PartnerId not found' });
-            }
-            res.status(400);
-            res.json(err.message);
+        if(!orderGuids?.length) throw new Error('No order ids were provided.');
+
+        let responses = [];
+        if (req.params.action == 'accept')
+        {
+            responses = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
         }
+        else if (req.params.action == 'reject')
+        {
+            await OrderService.rejectLoadTender(req.params.orderGuid, req.body.reason, req.session.userGuid);
+        }
+
+        responses = responses.map((response, index)=>
+        {
+            const errorMessage = response?.reason?.message;
+            return {
+                guid: orderGuids[index],
+                status: errorMessage ? getErrorStatusCode(response.reason.message) : 200,
+                message: errorMessage || null
+            };
+        });
+
+        res.json(responses);
+        res.status(200);
+        res.send();
     }
 
     static async patchOrder(req, res, next)

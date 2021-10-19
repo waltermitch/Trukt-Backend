@@ -1655,19 +1655,13 @@ paths:
           description: order
           content:
             application/json: {}
-  '/order/{orderGuid}/tender/accept':
+  '/order/tender/accept':
     put:
       summary: Accept load Tenders
       operationId: acceptOrderbyGuid
       description: Accept Tender by order GUID
       tags:
         - Order
-      parameters:
-        - in: path
-          name: orderGuid
-          schema:
-            $ref: '#/components/schemas/guid'
-          required: true
       responses:
         '200':
           description: Tender

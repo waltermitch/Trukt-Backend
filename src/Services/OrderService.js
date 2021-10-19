@@ -751,26 +751,29 @@ class OrderService
     {
         if(!orderGuids.length) throw new Error('No order ids were provided.');
     
-        return Promise.allSettled(orderGuids.map((guid)=> this.acceptLoadTender(guid, currentUser)));
+        const data = await Promise.allSettled(orderGuids.map((guid)=> this.acceptLoadTender(guid, currentUser)));
+    
+        return data;
     }
 
     static async acceptLoadTender(orderGuid, currentUser)
     {
-        // exucuting accept options
-        await OrderService.loadTenders('accept', orderGuid);
 
-        // if executing is successfull, will update table
-        await Order.query().skipUndefined().findById(orderGuid).patch({
-            isTender: false,
-            status: 'New'
-        });
-
-        // update status
-        await StatusManagerHandler.registerStatus({
-            orderGuid: orderGuid,
-            userGuid: currentUser,
-            statusId: 8
-        });
+            // exucuting accept options
+            await OrderService.loadTenders('accept', orderGuid);
+    
+            // if executing is successfull, will update table
+            await Order.query().skipUndefined().findById(orderGuid).patch({
+                isTender: false,
+                status: 'New'
+            });
+    
+            // update status
+            await StatusManagerHandler.registerStatus({
+                orderGuid: orderGuid,
+                userGuid: currentUser,
+                statusId: 8
+            });
     }
 
     static async rejectLoadTender(orderGuid, reason, currentUser)

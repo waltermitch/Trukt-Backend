@@ -3,18 +3,20 @@ operationId: acceptOrderbyGuid
 description: Accept Tender by order GUID
 tags:
   - Order
-parameters:
-  - in: path
-    name: orderGuid
-    schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
-    required: true
-
 responses:
   200:
     description: Tender
     content:
-      application/json: {}
+      application/json: 
+        schema:
+          type:  array
+          example: [
+            {
+              guid: string,
+              status: number,
+              message: string
+            }
+          ]
   400:
     description: Tender
     content: 
@@ -22,7 +24,6 @@ responses:
         schema:
           type: string
           example:  Order Already Rejected
-
   404:
     description: Tender
     content: 
