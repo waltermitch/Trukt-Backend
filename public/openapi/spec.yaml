@@ -1555,21 +1555,49 @@ paths:
                       description: Filter for status in a specific date
                       type: array
                       items:
-                        type: object
-                        properties:
-                          status:
-                            description: Order status
-                            type: number
-                            example: 1
-                          date:
-                            $ref: '#/components/schemas/date'
-                          comparison:
-                            description: Type of restriction in the date search
-                            type: string
-                            default: equal
-                        required:
-                          - status
-                          - date
+                        anyOf:
+                          - type: object
+                            properties:
+                              status:
+                                description: Order status
+                                type: number
+                                example: 1
+                              date:
+                                $ref: '#/components/schemas/dateTime'
+                              comparison:
+                                description: Type of restriction in the date search
+                                type: string
+                                enum:
+                                  - equal
+                                  - less
+                                  - greater
+                                  - less or equal
+                                  - greater or equal
+                                  - different
+                                default: equal
+                            required:
+                              - status
+                              - date
+                          - type: object
+                            properties:
+                              status:
+                                description: Order status
+                                type: number
+                                example: 1
+                              date1:
+                                $ref: '#/components/schemas/dateTime'
+                              date2:
+                                $ref: '#/components/schemas/dateTime'
+                              comparison:
+                                description: Type of restriction in the date search
+                                type: string
+                                enum:
+                                  - between
+                            required:
+                              - status
+                              - date1
+                              - date2
+                              - comparison
                     isTender:
                       description: Filter to select only orders that are marked as tender
                       type: boolean
@@ -4098,10 +4126,6 @@ components:
       description: 'For pagination purposes, number of entries per page.'
       type: integer
       default: 25
-    date:
-      type: string
-      format: date
-      example: '2021-12-31'
     Job With All Data:
       type: object
       properties:

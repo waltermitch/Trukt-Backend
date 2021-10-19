@@ -233,7 +233,7 @@ class OrderService
 
                 // check to see if there are client notes assigned so we don't bother querying
                 // on something that may not exist
-                if(order.clientNotes)
+                if (order.clientNotes)
                 {
                     // getting the user details so we can show the note users details
                     const user = await User.query().findById(order.clientNotes.updatedByGuid);
@@ -792,13 +792,13 @@ class OrderService
         order.setClientNote(body.note, currentUser);
         order.setUpdatedBy(currentUser);
         const numOfUpdatedOrders = await Order.query().patch(order).findById(orderGuid);
-        if(numOfUpdatedOrders == 0)
+        if (numOfUpdatedOrders == 0)
         {
             throw new Error('No order found');
         }
 
         return order;
-        
+
     }
 
     /**
@@ -963,18 +963,88 @@ class OrderService
         if (isDateListEmpty)
             return baseQuery;
 
-        const datesQuery = dateList.reduce((query, { date, status, comparison }, index) =>
+        const datesGroupByStatus = dateList.reduce((datesGrouped, date) =>
         {
-            const comparisonValue = dateFilterComparisonTypes[comparison] || dateFilterComparisonTypes.equal;
-            const comparisonDateAndStatus = function ()
+            const datesKey = date.status;
+            if (!datesGrouped[datesKey])
+                datesGrouped[datesKey] = [];
+
+            datesGrouped[datesKey].push(date);
+            return datesGrouped;
+        }, {});
+
+        const datesQuery = Object.keys(datesGroupByStatus).reduce((query, statusKey) =>
+        {
+            const datesByStatus = datesGroupByStatus[statusKey];
+            const comparisonDatesByStatus = function ()
             {
-                this.whereRaw(`date_created::date ${comparisonValue} ?`, [date]).
-                    andWhere('statusId', status);
+                return datesByStatus.reduce((query, dateElement) =>
+                {
+                    const comparisonDateAndStatus = function ()
+                    {
+                        const sqlQuery = OrderService.createDateComparisonSqlQuery(dateElement);
+
+                        this.whereRaw(sqlQuery)
+                            .andWhere('statusId', dateElement.status);
+                    };
+
+                    return query.orWhere(comparisonDateAndStatus);
+                }, this);
             };
-            return index === 0 ? query.where(comparisonDateAndStatus) : query.orWhere(comparisonDateAndStatus);
+
+            return query.andWhere(comparisonDatesByStatus);
         }, StatusLog.query().select('jobGuid'));
 
         return baseQuery.whereIn('guid', datesQuery);
+    }
+
+    static createDateComparisonSqlQuery(dateElement)
+    {
+        const { comparison = 'equal' } = dateElement;
+        const comparisonValue = dateFilterComparisonTypes[comparison] || dateFilterComparisonTypes.equal;
+
+        if (comparison === 'between')
+        {
+            const userDateStart = DateTime.fromISO(dateElement.date1, { setZone: true });
+            const userDateEnd = DateTime.fromISO(dateElement.date2, { setZone: true });
+
+            const userTimeZone = userDateStart.zoneName;
+
+            const epochStart = userDateStart.startOf('day').toSeconds();
+            const epochEnd = userDateEnd.endOf('day').toSeconds();
+
+            const dbDateSQL = `(date_created AT TIME ZONE '${userTimeZone}')`;
+            const userStartDateSQL = `(to_timestamp(${epochStart}) AT TIME ZONE '${userTimeZone}')`;
+            const userEndDateSQL = `(to_timestamp(${epochEnd}) AT TIME ZONE '${userTimeZone}')`;
+
+            return `${dbDateSQL} > ${userStartDateSQL} and ${dbDateSQL} < ${userEndDateSQL}`;
+        }
+        else if (comparison === 'equal')
+        {
+            const userDate = DateTime.fromISO(dateElement.date, { setZone: true });
+            const userTimeZone = userDate.zoneName;
+
+            const epochStart = userDate.startOf('day').toSeconds();
+            const epochEnd = userDate.endOf('day').toSeconds();
+
+            const dbDateSQL = `(date_created AT TIME ZONE '${userTimeZone}')`;
+            const userStartDateSQL = `(to_timestamp(${epochStart}) AT TIME ZONE '${userTimeZone}')`;
+            const userEndDateSQL = `(to_timestamp(${epochEnd}) AT TIME ZONE '${userTimeZone}')`;
+
+            return `${dbDateSQL} > ${userStartDateSQL} and ${dbDateSQL} < ${userEndDateSQL}`;
+        }
+        else
+        {
+            const userDate = DateTime.fromISO(dateElement.date, { setZone: true });
+            const userTimeZone = userDate.zoneName;
+
+            const epoch = userDate.startOf('day').toSeconds();
+
+            const dbDateSQL = `(date_created AT TIME ZONE '${userTimeZone}')`;
+            const userDateSQL = `(to_timestamp(${epoch}) AT TIME ZONE '${userTimeZone}')`;
+
+            return `${dbDateSQL} ${comparisonValue} ${userDateSQL}`;
+        }
     }
 
     static addFilterCarrier(baseQuery, carrierList)
