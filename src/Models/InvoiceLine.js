@@ -62,30 +62,46 @@ class InvoiceLine extends BaseModel
     {
         json = super.$parseJson(json);
 
-        if ('item' in json)
+        if (!(json?.item))
         {
-            switch (typeof json.item)
+            const item = {};
+            for (const field of ['name', 'type', 'isAccessorial'])
             {
-                case 'object':
-                    // do nothing because object is what we want
-                    break;
-                case 'string':
-                    // convert to the object the string value should be the name of the item
-                    json.item = { name: json.item };
-                    break;
-                case 'number':
-                    // convert to the object the number value should be the id of the item
-                    json.item = { id: json.item };
-                    break;
+                if (field in json)
+                {
+                    item[field] = json[field];
+                    delete json[field];
+                }
             }
-            if (json.itemId)
+
+            if ('itemId' in json)
             {
-                json.item.id = json.itemId;
+                item.id = json.itemId;
             }
-            delete json.itemId;
+
+            if (Object.keys(item) > 0)
+            {
+                json.item = item;
+            }
         }
         return json;
     }
+
+    $formatJson(json)
+    {
+        json = super.$formatJson(json);
+        if ('item' in json)
+        {
+            for (const field of ['name', 'type', 'isAccessorial'])
+            {
+                json[field] = json.item[field];
+            }
+            json.itemId = json.item.id;
+            delete json.item;
+        }
+        return json;
+    }
+
 }
 
 Object.assign(InvoiceLine.prototype, RecordAuthorMixin);
