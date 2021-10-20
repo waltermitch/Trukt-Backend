@@ -690,7 +690,7 @@ class OrderService
      */
     static async handleLoadTenders(action, orderGuids, reason)
     {
-         
+
         const responses = [];
         
         const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData]');
