@@ -800,28 +800,28 @@ class OrderService
      */
        static async rejectLoadTenders(orderGuids, reason, currentUser)
        {
-           return Promise.allSettled(orderGuids.map((guid)=> this.rejectLoadTender(guid, reason, currentUser)));
+            const responses = await this.loadTenders('reject', orderGuids);
+
+            const successfulResponses = responses.filter((item)=> item.status === 200);
+
+            const successfulResponseGuids = successfulResponses.map((item)=> item.guid);
+
+            if(successfulResponseGuids.length)
+            {
+                await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
+                    isDelete: true,
+                    status: 'New'
+                });
+
+                await Promise.allSettled(successfulResponseGuids.map((guid)=> StatusManagerHandler.registerStatus({
+                    orderGuid: guid,
+                    userGuid: currentUser,
+                    statusId: 9
+                })));
+            }
+
+            return responses;
        }
-
-    static async rejectLoadTender(orderGuid, reason, currentUser)
-    {
-
-        // executing reject options with reason
-        await OrderService.loadTenders('reject', orderGuid, reason);
-
-        // updating tender to deleted option
-        await Order.query().skipUndefined().findById(orderGuid).patch({
-            isDeleted: true,
-            status: 'Deleted'
-        });
-
-        // status update
-        await StatusManagerHandler.registerStatus({
-            orderGuid: orderGuid,
-            userGuid: currentUser,
-            statusId: 9
-        });
-    }
 
     static async updateClientNote(orderGuid, body, currentUser)
     {
