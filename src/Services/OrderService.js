@@ -683,9 +683,14 @@ class OrderService
         return await GeneralFuncApi.calculateDistances(terminalStrings);
     }
 
+    /**
+     * @param {('accept' | 'reject')} action
+     * @param {string []} orderGuids
+     * @param {string | null} reason
+     */
     static async handleLoadTenders(action, orderGuids, reason)
     {
-       
+         
         const responses = [];
         
         const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData]');
@@ -763,10 +768,17 @@ class OrderService
         return [...responses, ...formattedResponses];
     }
 
+    /**
+     * @param {{guid: string, status: Number, message: string | null} []} responses
+     * @param {boolean} isTender
+     * @param {boolean} isDeleted
+     * @param {number} statusId
+     * @param {string} currentUser
+     */
     static async loadTendersHelper(responses, isTender, isDeleted, statusId, currentUser)
     {
         const successfulResponses = responses.filter((item)=> item.status === 200);
-    
+
         const successfulResponseGuids = successfulResponses.map((item)=> item.guid);
 
         if(successfulResponseGuids.length)
@@ -801,7 +813,7 @@ class OrderService
 
     /**
      * @param {string []} orderGuids
-     * @param {string} reason
+     * @param {string | null} reason
      * @param {string} currentUser
      */
        static async rejectLoadTenders(orderGuids, reason, currentUser)
@@ -809,7 +821,9 @@ class OrderService
             const responses = await this.handleLoadTenders('reject', orderGuids, reason);
 
             await this.loadTendersHelper(responses, true, true, 9, currentUser);
-       }
+      
+            return responses;
+        }
 
     static async updateClientNote(orderGuid, body, currentUser)
     {

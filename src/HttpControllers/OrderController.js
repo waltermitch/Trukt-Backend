@@ -79,44 +79,21 @@ class OrderController
 
     static async handleTenders(req, res, next)
     {
-        const getErrorStatusCode = (errorMessage) =>
-        {
-            switch(errorMessage)
-            {
-                case 'Order doesn\'t exist':
-                    return 404;
-                default:
-                    return 400;
-            }
-        };
-    
+
         const orderGuids = req.body.orderGuids;
 
         let responses = [];
         if (req.params.action == 'accept')
         {
             responses = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
-            res.json(responses);
-            res.status(200);
-       
         }
         else if (req.params.action == 'reject')
         {
-            responses = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+            responses = await OrderService.rejectLoadTenders(orderGuids, req.body.reason || null, req.session.userGuid);
         }
 
-        responses = responses.map((response, index)=>
-        {
-            const errorMessage = response?.reason?.message;
-            return {
-                guid: orderGuids[index],
-                status: errorMessage ? getErrorStatusCode(response.reason.message) : 200,
-                message: errorMessage || null
-            };
-        });
-
-        // res.status(200);
-        // res.json(responses);
+        res.status(200);
+        res.json(responses);
     }
 
     static async patchOrder(req, res, next)
