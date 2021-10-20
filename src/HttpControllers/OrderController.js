@@ -96,6 +96,9 @@ class OrderController
         if (req.params.action == 'accept')
         {
             responses = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+            res.json(responses);
+            res.status(200);
+       
         }
         else if (req.params.action == 'reject')
         {
@@ -112,8 +115,8 @@ class OrderController
             };
         });
 
-        res.status(200);
-        res.json(responses);
+        // res.status(200);
+        // res.json(responses);
     }
 
     static async patchOrder(req, res, next)
