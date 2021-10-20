@@ -52,6 +52,10 @@ class InvoiceLine extends BaseModel
                 {
                     builder.where({ 'rcgTms.invoiceBillLineItems.name': 'transport', 'rcgTms.invoiceBillLineItems.type': 'revenue' });
                 });
+            },
+            isValid(builder)
+            {
+                builder.where('isValid', true);
             }
         };
         Object.assign(modifiers, isNotDeleted(InvoiceLine.tableName));
