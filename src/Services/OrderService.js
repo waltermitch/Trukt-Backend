@@ -685,54 +685,53 @@ class OrderService
 
     static async loadTenders(action, orderGuids, reason)
     {
-        // getting order with client and ediData to create payload for logic app
+       
+        const responses = [];
+        
         const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData]');
 
-        let responses = [];
-
-        if(!orders.length)
+        /**
+         * if the lengths do not match, that means one of the orders does not exist.
+         * find the guid that does not exist and add it to responses
+         */
+        if(orders.length !== orderGuids.length)
         {
-            responses = responses.map((item, index)=>({
-                guid: filteredOrders[index].guid,
-                status: 404,
-                message: 'Order not found.'
-            }));
+            orderGuids.forEach((guid, index)=>
+            {
+                if(orders.findIndex((order)=> order.guid === guid) === -1)
+                {
+                    responses.push({
+                        guid: orderGuids[index],
+                        status: 404,
+                        message: 'Order not found.'
+                    });
+                }
+            });
+         
         }
 
         orders.forEach((item, index)=>
         {
-            const tenderErrorMessage = 'Order is not a tender.';
-            const deletedErrorMessage = 'Order has been deleted.';
-            let message = '';
-
             if(item.isTender === false)
-            {
-                message = tenderErrorMessage;
-            }
-
-            if(!!item.isDeleted === false)
-            {
-                message = deletedErrorMessage;
-            }
-
-
-            if(item.isTender === false && !!item.isDeleted === false)
-            {
-                message = [tenderErrorMessage, deletedErrorMessage].join(' ');
-            }
-
-            if(message)
             {
                 responses.push({
                     guid: orderGuids[index],
                     status: 400,
-                    message
+                    message: 'Order is not a tender.'
                 });
             }
 
+            if(item.isDeleted === true)
+            {
+                responses.push({
+                    guid: orderGuids[index],
+                    status: 400,
+                    message: 'Order is deleted.'
+                });
+            }
         });
 
-        // double bang on isDeleted because if the value is false, isDeleted is undefined, this converts it to false
+        // double bang on isDeleted because the field is sometimes undefined, this converts it to false
         const filteredOrders = orders.filter((item)=> item.isTender === true && !!item.isDeleted === false);
 
         const logicAppPayloads = filteredOrders.map((item)=> ({
@@ -771,22 +770,25 @@ class OrderService
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
-        const responses = await OrderService.loadTenders('accept', orderGuids);
+        const responses = await this.loadTenders('accept', orderGuids);
 
         const successfulResponses = responses.filter((item)=> item.status === 200);
     
         const successfulResponseGuids = successfulResponses.map((item)=> item.guid);
 
-        await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
-             isTender: true,
-             status: 'New'
-         });
- 
-        await Promise.allSettled(successfulResponseGuids.map((guid)=> StatusManagerHandler.registerStatus({
-            orderGuid: guid,
-            userGuid: currentUser,
-            statusId: 8
-        })));
+        if(successfulResponseGuids.length)
+        {
+            await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
+                isTender: false,
+                status: 'New'
+            });
+    
+           await Promise.allSettled(successfulResponseGuids.map((guid)=> StatusManagerHandler.registerStatus({
+               orderGuid: guid,
+               userGuid: currentUser,
+               statusId: 8
+           })));
+        }
 
         return responses;
     }
