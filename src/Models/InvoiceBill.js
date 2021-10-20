@@ -1,5 +1,5 @@
 const BaseModel = require('./BaseModel');
-const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin, isNotDeleted } = require('./Mixins/RecordAuthors');
 
 /**
  * This class represents an invoice or a bill
@@ -83,7 +83,7 @@ class InvoiceBill extends BaseModel
 
     static get modifiers()
     {
-        return {
+        const modifiers = {
             bill(builder)
             {
                 builder.where('isInvoice', false);
@@ -93,23 +93,11 @@ class InvoiceBill extends BaseModel
                 builder.where('isInvoice', true);
             }
         };
-    }
 
-    // TODO: Which fields to use in account
-    // $formatJson(json)
-    // {
-    //     json = super.$formatJson(json);
-    //     if ('consignee' in json)
-    //     {
-    //         for (const field of ['name', 'type', 'isAccessorial'])
-    //         {
-    //             json[field] = json.item[field];
-    //         }
-    //         json.itemId = json.item.id;
-    //         delete json.item;
-    //     }
-    //     return json;
-    // }
+        Object.assign(modifiers, isNotDeleted(InvoiceBill.tableName));
+
+        return modifiers;
+    }
 }
 
 Object.assign(InvoiceBill.prototype, RecordAuthorMixin);
