@@ -37,17 +37,3 @@ responses:
               message: string
             }
           ]
-  400:
-    description: Tender
-    content: 
-      application/json: 
-        schema:
-          type: string
-          example:  Order Already Rejected
-  404:
-    description: Tender
-    content: 
-      application/json: 
-        schema:
-          type: string
-          example: Order doesn't exist

@@ -1681,19 +1681,14 @@ paths:
               schema:
                 type: string
                 example: Order doesn't exist
-  '/order/{orderGuid}/tender/reject':
+  '/order/tender/reject':
     put:
       summary: Reject load Tenders
       operationId: rejectOrderbyGuid
       description: Reject Tender by order GUID
       tags:
         - Order
-      parameters:
-        - in: path
-          name: orderGuid
-          schema:
-            $ref: '#/components/schemas/guid'
-          required: true
+
       requestBody:
         content:
           application/json:
@@ -1703,8 +1698,15 @@ paths:
                 reason:
                   type: string
                   example: Reason for declining Tender
+                orderGuids:
+                  type: array
+                  items: 
+                    $ref: '..\..\openapi\components\schemas\common.yaml#/guid'
+                  minItems: 1
+                  maxItems: 100
               required:
                 - reason
+                - orderGuids
       responses:
         '200':
           description: Tender
