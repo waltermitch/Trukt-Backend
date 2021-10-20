@@ -21,13 +21,6 @@ invoiceResponse:
       type: string
       nullable: true      
       example: null
-    isSyncedExternalSource:
-      type: boolean
-      example: false
-    dateSyncedExternalSource:
-      type: string
-      format: date-time
-      example: null
     dateFiled:
       type: string
       format: date-time
@@ -58,16 +51,7 @@ invoiceResponse:
       format: currency
       nullable: true     
       example: 125.00
-    isValid:
-      type: boolean
-      example: false
-    isGenerated:
-      type: boolean
-      example: false
     isPaid:
-      type: boolean
-      example: false
-    isInvoice:
       type: boolean
       example: false
     dateCreated:
@@ -80,71 +64,14 @@ invoiceResponse:
       format: date-time
       nullable: true
       example: '2021-09-14T14:00:00.000Z'
-    dateDeleted:
-      type: string
-      format: date-time
-      nullable: true
-      example: '2021-09-14T14:00:00.000Z'
-    isDeleted:
-      type: boolean
-      example: false
-    createdByGuid: 
-      $ref: Common.yaml#/createdByGuid
     updatedByGuid: 
       $ref: Common.yaml#/updatedByGuid
-    deletedByGuid: 
-      $ref: Common.yaml#/deletedByGuid
     paymentMethodId:
       type: string
       example: null
     paymentTermId:
       type: string
       example: null 
-    lines:
-      type: array
-      items:
-        type: object
-        properties:
-          guid:  
-            $ref: Common.yaml#/guid
-          notes:
-            type: string
-            nullable: true
-            example: null
-          invoiceGuid:
-            $ref: Common.yaml#/guid 
-          amount:
-            type: string
-            format: currency
-            example: 270.00
-          itemId:
-            type: number
-            example: 21
-          commodityGuid:
-            $ref: Common.yaml#/guid 
-          dateCreated:
-            type: string
-            format: date-time
-            nullable: true
-            example: '2021-09-14T14:00:00.000Z'
-          dateUpdated:
-            type: string
-            format: date-time
-            nullable: true
-            example: '2021-09-14T14:00:00.000Z'
-          createdByGuid:
-            $ref: Common.yaml#/createdByGuid
-          updatedByGuid:
-            $ref: Common.yaml#/updatedByGuid
-          name:
-            type: string
-            example: Services
-          type:
-            type: string
-            example: expense
-          isAccessorial:
-            type: boolean
-            example: false   
     consignee:
       type: object
       properties:
@@ -230,105 +157,106 @@ invoiceResponse:
           example: "809 QUANTAS LN"
         syncInSuper:
           type: boolean
-          example: null 
-invoicePayload:  
+          example: null     
+    lines:
+      type: array
+      items:
+        type: object
+        properties:
+          guid:  
+            $ref: Common.yaml#/guid
+          notes:
+            type: string
+            nullable: true
+            example: null
+          invoiceGuid:
+            $ref: Common.yaml#/guid 
+          amount:
+            type: string
+            format: currency
+            example: 270.00
+          itemId:
+            type: number
+            example: 21
+          commodityGuid:
+            $ref: Common.yaml#/guid 
+          dateCreated:
+            type: string
+            format: date-time
+            nullable: true
+            example: '2021-09-14T14:00:00.000Z'
+          dateUpdated:
+            type: string
+            format: date-time
+            nullable: true
+            example: '2021-09-14T14:00:00.000Z'
+          createdByGuid:
+            $ref: Common.yaml#/createdByGuid
+          updatedByGuid:
+            $ref: Common.yaml#/updatedByGuid
+          name:
+            type: string
+            example: Services
+          type:
+            type: string
+            example: expense
+          isAccessorial:
+            type: boolean
+            example: false
+          commodity: 
+            type: object
+            properties:
+              guid: 
+                $ref: Common.yaml#/guid 
+              capacity: 
+                type: string
+                example: full truck load
+              damaged: 
+                type: string
+                example: yes
+              inoperable: 
+                type: string
+                example: unknown
+              deliveryStatus:
+                type: string 
+                example: none"
+              length:
+                type: number
+                example: 13
+              weight: 
+                type: number
+                example: 2685
+              quantity: 
+                type: number
+                example: 1
+              description: 
+                type: string
+                example: 2001 Chevrolet Model S
+              identifier: 
+                type: string
+                example: 5K5K5PPJGNL367942
+              extraExternalData:
+                type: string 
+                example: null
+JobObject:
   type: object
   properties:
-    guid:
-      $ref: Common.yaml#/guid
-    referenceNumber:
-      type: string
-      example: volu04276
-    consigneeGuid:
-      $ref: Common.yaml#/guid
-    externalSource:
-      type: string
-      nullable: true      
-      example: null
-    externalSourceGuid:
-      type: string
-      nullable: true      
-      example: null
-    externalSourceData:
-      type: string
-      nullable: true      
-      example: null
-    isSyncedExternalSource:
-      type: boolean
-      example: false
-    dateSyncedExternalSource:
-      type: string
-      format: date-time
-      example: null
-    dateFiled:
-      type: string
-      format: date-time
-      nullable: true
-      example: null
-    dateDue:
-      type: string
-      format: date-time
-      nullable: true
-      example: null
-    datePaid:
-      type: string
-      format: date-time
-      nullable: true
-      example: null
-    dateInvoiced:
-      type: string
-      format: date-time
-      nullable: true
-      example: null
-    dateClosed:
-      type: string
-      format: date-time
-      nullable: true
-      example: null
-    total:
-      type: string
-      format: currency
-      nullable: true     
-      example: 125.00
-    isValid:
-      type: boolean
-      example: false
-    isGenerated:
-      type: boolean
-      example: false
-    isPaid:
-      type: boolean
-      example: false
-    isInvoice:
-      type: boolean
-      example: false
-    dateCreated:
-      type: string
-      format: date-time
-      nullable: true
-      example: "2021-09-01T11:09:02.245-07:00"
-    dateUpdated:
-      type: string
-      format: date-time
-      nullable: true
-      example: '2021-09-14T14:00:00.000Z'
-    dateDeleted:
-      type: string
-      format: date-time
-      nullable: true
-      example: '2021-09-14T14:00:00.000Z'
-    isDeleted:
-      type: boolean
-      example: false
-    createdByGuid: 
-      $ref: Common.yaml#/createdByGuid
-    updatedByGuid: 
-      $ref: Common.yaml#/updatedByGuid
-    deletedByGuid: 
-      $ref: Common.yaml#/deletedByGuid
-    paymentMethodId:
-      type: string
-      example: null
-    paymentTermId:
-      type: string
-      example: null      
+    job: 
+      type: object
+      properties:
+        guid:
+          $ref: Common.yaml#/guid 
+        number:
+          type: string
+          example: RC10000A    
+OrderObject:
+  type: object
+  properties:
+    order: 
+      type: object
+      properties:
+        guid:
+          $ref: Common.yaml#/guid 
+        number:
+          type: string
+          example: RC10000

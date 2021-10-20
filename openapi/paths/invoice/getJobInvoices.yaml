@@ -1,6 +1,6 @@
-summary: Get invoices by jobGuid
+summary: Get Bills by Job
 operationId: getJobInvoices
-description: Get invoices by jobGuid
+description: Get Bills by Job
 tags:
   - Invoice
 parameters:
@@ -15,11 +15,22 @@ responses:
     content:
       application/json:
         schema:
-          type: array
-          items:
-            $ref:  ..\..\components\schemas\Finances.yaml#/invoicePayload
+          type: object
+          properties:
+            invoices:
+              type: array
+              items:
+                allOf:
+                  - $ref:  ..\..\components\schemas\Finances.yaml#/invoiceResponse
+                  - $ref:  ..\..\components\schemas\Finances.yaml#/OrderObject
+            bills:
+              type: array
+              items:
+                allOf:
+                  - $ref:  ..\..\components\schemas\Finances.yaml#/invoiceResponse
+                  - $ref:  ..\..\components\schemas\Finances.yaml#/JobObject 
 
   404:
-    description: Invoices not found
+    description: Job not found
     content:
       application/json: {}

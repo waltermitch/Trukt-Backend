@@ -1,6 +1,6 @@
-summary: Get invoices by orderGuid
+summary: Get Invoices by Order
 operationId: getOrderInvoices
-description: Get invoices by orderGuid
+description: Get Invoices by Order
 tags:
   - Invoice
 parameters:
@@ -11,7 +11,7 @@ parameters:
     required: true
 responses:
   200:
-    description: Invoice
+    description: Invoices
     content:
       application/json:
         schema:
@@ -20,13 +20,17 @@ responses:
             invoices:
               type: array
               items:
-                $ref:  ..\..\components\schemas\Finances.yaml#/invoicePayload 
+                allOf:
+                  - $ref:  ..\..\components\schemas\Finances.yaml#/invoiceResponse
+                  - $ref:  ..\..\components\schemas\Finances.yaml#/OrderObject
             bills:
               type: array
               items:
-                $ref:  ..\..\components\schemas\Finances.yaml#/invoicePayload                   
+                allOf:
+                  - $ref:  ..\..\components\schemas\Finances.yaml#/invoiceResponse
+                  - $ref:  ..\..\components\schemas\Finances.yaml#/JobObject                                  
 
   404:
-    description: Invoices not found
+    description: Order not found
     content:
       application/json: {}

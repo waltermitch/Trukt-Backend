@@ -1,6 +1,6 @@
-summary: Get bill by Guid
+summary: Get Bill
 operationId: getBill
-description: Get bill by guid
+description: Get Bill
 tags:
   - Bill
 parameters:

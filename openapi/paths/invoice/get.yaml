@@ -1,6 +1,6 @@
-summary: Get invoice by invoiceGuid
+summary: Get Invoice
 operationId: getInvoice
-description: Get invoice by invoiceGuid
+description: Get Invoice
 tags:
   - Invoice
 parameters:
