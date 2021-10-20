@@ -6,14 +6,7 @@ class InvoiceService
 {
     static async getInvoice(guid)
     {
-        const res = await Invoice.query().findOne({ 'guid': guid, 'isDeleted': false }).withGraphFetched('[lines.item, consignee]');
-
-        return res;
-    }
-
-    static async getJobInvoice(guid)
-    {
-        const res = await Invoice.query().leftJoinRelated('job').where('job.guid', guid);
+        const res = await Invoice.query().findOne({ 'guid': guid, 'isDeleted': false }).withGraphFetched('[lines(isNotDeleted).[commodity,item], consignee]');
 
         return res;
     }
@@ -24,25 +17,39 @@ class InvoiceService
         const res = await Order
             .query()
             .findById(guid)
-            .withGraphJoined('[invoices, jobs.bills]');
+            .withGraphJoined('[invoices(isNotDeleted).[consignee, lines(isNotDeleted).[commodity]], jobs.bills(isNotDeleted).[consignee, lines(isNotDeleted).[commodity]]]');
 
         // to throw proper error
         if (res == undefined)
         {
-            throw new Error('No Invoices');
+            return undefined;
         }
 
-        // object to return invoices only
+        // assigning orderId and Number to order invoice
+        Object.assign(res.invoices[0], {
+            order: {
+                guid: res.guid,
+                number: res.number
+            }
+        });
+
+        // object to return array of bills and invoices
         const invoiceObject = {
             invoices: res.invoices,
-            bills: []
+            bills: res.jobs.reduce((bills, job) =>
+            {
+                const jobObject = {
+                    guid: job.guid,
+                    number: job.number
+                };
+                bills.push(...job.bills.map((bill) =>
+                {
+                    bill.job = jobObject;
+                    return bill;
+                }));
+                return bills;
+            }, [])
         };
-
-        // mapping through multiple jobs and pushing into bills array
-        res.jobs.map((job) =>
-        {
-            invoiceObject.bills.push(...job.bills);
-        });
 
         return invoiceObject;
     }
