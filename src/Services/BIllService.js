@@ -17,7 +17,7 @@ class BillService
 {
     static async getBill(guid)
     {
-        const res = await Bill.query().findOne({ 'guid': guid, 'isDeleted': false }).withGraphFetched('[lines.item, consignee]');
+        const res = await Bill.query().findOne({ 'guid': guid, 'isDeleted': false }).withGraphFetched('[lines(isNotDeleted).[commodity,item], consignee]');
 
         return res;
     }
