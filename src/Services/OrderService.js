@@ -763,6 +763,28 @@ class OrderService
         return [...responses, ...formattedResponses];
     }
 
+    static async loadTendersHelper(responses, isTender, isDeleted, statusId, currentUser)
+    {
+        const successfulResponses = responses.filter((item)=> item.status === 200);
+    
+        const successfulResponseGuids = successfulResponses.map((item)=> item.guid);
+
+        if(successfulResponseGuids.length)
+        {
+            await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
+                isTender,
+                isDeleted,
+                status: 'New'
+            });
+    
+           await Promise.allSettled(successfulResponseGuids.map((guid)=> StatusManagerHandler.registerStatus({
+               orderGuid: guid,
+               userGuid: currentUser,
+               statusId
+           })));
+        }
+    }
+
     /**
      * @param {string []} orderGuids
      * @param {string} currentUser
@@ -772,23 +794,7 @@ class OrderService
     {
         const responses = await this.loadTenders('accept', orderGuids);
 
-        const successfulResponses = responses.filter((item)=> item.status === 200);
-    
-        const successfulResponseGuids = successfulResponses.map((item)=> item.guid);
-
-        if(successfulResponseGuids.length)
-        {
-            await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
-                isTender: false,
-                status: 'New'
-            });
-    
-           await Promise.allSettled(successfulResponseGuids.map((guid)=> StatusManagerHandler.registerStatus({
-               orderGuid: guid,
-               userGuid: currentUser,
-               statusId: 8
-           })));
-        }
+        await this.loadTendersHelper(responses, false, false, 8, currentUser);
 
         return responses;
     }
@@ -802,25 +808,7 @@ class OrderService
        {
             const responses = await this.loadTenders('reject', orderGuids);
 
-            const successfulResponses = responses.filter((item)=> item.status === 200);
-
-            const successfulResponseGuids = successfulResponses.map((item)=> item.guid);
-
-            if(successfulResponseGuids.length)
-            {
-                await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
-                    isDelete: true,
-                    status: 'New'
-                });
-
-                await Promise.allSettled(successfulResponseGuids.map((guid)=> StatusManagerHandler.registerStatus({
-                    orderGuid: guid,
-                    userGuid: currentUser,
-                    statusId: 9
-                })));
-            }
-
-            return responses;
+            await this.loadTendersHelper(responses, true, true, 9, currentUser);
        }
 
     static async updateClientNote(orderGuid, body, currentUser)
