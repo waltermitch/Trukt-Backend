@@ -683,7 +683,7 @@ class OrderService
         return await GeneralFuncApi.calculateDistances(terminalStrings);
     }
 
-    static async loadTenders(action, orderGuids, reason)
+    static async handleLoadTenders(action, orderGuids, reason)
     {
        
         const responses = [];
@@ -792,7 +792,7 @@ class OrderService
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
-        const responses = await this.loadTenders('accept', orderGuids);
+        const responses = await this.handleLoadTenders('accept', orderGuids, null);
 
         await this.loadTendersHelper(responses, false, false, 8, currentUser);
 
@@ -806,7 +806,7 @@ class OrderService
      */
        static async rejectLoadTenders(orderGuids, reason, currentUser)
        {
-            const responses = await this.loadTenders('reject', orderGuids);
+            const responses = await this.handleLoadTenders('reject', orderGuids, reason);
 
             await this.loadTendersHelper(responses, true, true, 9, currentUser);
        }
