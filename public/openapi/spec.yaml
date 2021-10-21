@@ -2837,6 +2837,44 @@ paths:
           description: Account
           content:
             application/json: {}
+  '/user/{userRole}/search':
+    get:
+      summary: Search for User by Role
+      operationId: searchUsers
+      description: Searches for TMS User by name with specified Role.
+      tags:
+        - User
+      parameters:
+        - in: path
+          name: userRole
+          schema:
+            $ref: '#/components/schemas/UserRoles'
+          required: true
+        - in: query
+          name: pg
+          schema:
+            $ref: '#/components/schemas/page'
+        - in: query
+          name: rc
+          schema:
+            $ref: '#/components/schemas/rowCount'
+        - in: query
+          name: search
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of Users that match the search criteria and role.
+                items:
+                  $ref: '#/components/schemas/TMSUser'
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
   '/loadboard/requests/job/{jobGuid}':
     get:
       summary: Get requests by jobGuid
@@ -4178,6 +4216,9 @@ components:
       description: 'For pagination purposes, number of entries per page.'
       type: integer
       default: 25
+      example: 25
+      minimum: 1
+      maximum: 100
     dateTime:
       type: string
       format: date-time
@@ -4761,6 +4802,26 @@ components:
         - referrer
         - employee
         - dispatcher
+    UserRoles:
+      type: string
+      enum:
+        - dispatcher
+        - salesperson
+    ValidationError:
+      type: object
+      properties:
+        path:
+          type: string
+          description: Path to the field/parameter where the validation failed
+          example: .query.search
+        message:
+          type: string
+          description: The message to correct the validation error.
+          example: should have required property 'search'
+        errorCode:
+          type: string
+          description: The openapi validation rule that was broken.
+          example: required.openapi.validation
     LoadBoard Request Status:
       type: string
       enum:
@@ -5004,3 +5065,13 @@ components:
         - update
       description: types of notes that internal notes store
       example: lead
+  responses:
+    ValidationErrorResponse:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                $ref: '#/components/schemas/ValidationError'
