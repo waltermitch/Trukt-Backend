@@ -8,12 +8,28 @@
             "value": "="
         },
         {
-            "label": "before",
+            "label": "less",
             "value": "<"
         },
         {
-            "label": "after",
+            "label": "greater",
             "value": ">"
+        },
+        {
+            "label": "less or equal",
+            "value": "<="
+        },
+        {
+            "label": "greater or equal",
+            "value": ">="
+        },
+        {
+            "label": "different",
+            "value": "!="
+        },
+        {
+            "label": "between",
+            "value": "between"
         }
     ]
 }
