@@ -5,6 +5,7 @@ const currency = require('currency.js');
 const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Bill = require('../Models/InvoiceBill');
+const InvoiceBill = require('../Models/InvoiceBill');
 
 let transportItem;
 
@@ -17,7 +18,9 @@ class BillService
 {
     static async getBill(guid)
     {
-        const res = await Bill.query().findOne({ 'guid': guid, 'isDeleted': false }).withGraphFetched('[lines(isNotDeleted).[commodity,item], consignee]');
+        const res = await Bill.query()
+            .findOne({ 'guid': guid, 'isDeleted': false })
+            .withGraphFetched(InvoiceBill.fetch.details);
 
         return res;
     }
