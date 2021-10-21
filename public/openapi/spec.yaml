@@ -2489,7 +2489,7 @@ paths:
     get:
       summary: Get Invoice
       operationId: getInvoice
-      description: Get Invoice
+      description: Get all details of an Invoice.
       tags:
         - Invoice
       parameters:
@@ -2500,13 +2500,89 @@ paths:
           required: true
       responses:
         '200':
-          description: Invoice
+          description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/invoiceResponse'
+                $ref: '#/components/schemas/Invoice'
         '404':
           description: Invoice not found
+          content:
+            application/json: {}
+  '/bill/{billGuid}':
+    get:
+      summary: Get Bill
+      operationId: getBill
+      description: Get all details of a Bill.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: billGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bill'
+        '404':
+          description: Bill not found
+          content:
+            application/json: {}
+  '/invoice/order/{orderGuid}':
+    get:
+      summary: Get Invoices and Bills by Order
+      operationId: getOrderInvoicesAndBills
+      description: >-
+        Get all details of all the Invoices and Bills that are related to the
+        Order.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceAndBillsOutbound'
+        '404':
+          description: Order not found
+          content:
+            application/json: {}
+  '/invoice/job/{jobGuid}':
+    get:
+      summary: Get Invoices and Bills by Job
+      operationId: getJobInvoicesAndBills
+      description: >-
+        Get all details of all the Invoices and Bills that are related to the
+        Job.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: jobGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceAndBillsOutbound'
+        '404':
+          description: Job not found
           content:
             application/json: {}
   /invoice:
@@ -2536,78 +2612,31 @@ paths:
           description: invoices
           content:
             application/json: {}
-  '/invoice/order/{orderGuid}':
-    get:
-      summary: Get Invoices by Order
-      operationId: getOrderInvoices
-      description: Get Invoices by Order
+  /bill:
+    post:
+      summary: Bill Jobs
+      operationId: billJobs
+      description: Bills Jobs
       tags:
         - Invoice
-      parameters:
-        - in: path
-          name: orderGuid
-          schema:
-            $ref: '#/components/schemas/guid'
-          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: List of Job guids
+              properties:
+                orders:
+                  type: array
+                  items:
+                    description: Job guid
+                    $ref: '#/components/schemas/guid'
+                  minItems: 1
+              required:
+                - jobs
       responses:
         '200':
-          description: Invoices
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  invoices:
-                    type: array
-                    items:
-                      allOf:
-                        - $ref: '#/components/schemas/invoiceResponse'
-                        - $ref: '#/components/schemas/OrderObject'
-                  bills:
-                    type: array
-                    items:
-                      allOf:
-                        - $ref: '#/components/schemas/invoiceResponse'
-                        - $ref: '#/components/schemas/JobObject'
-        '404':
-          description: Order not found
-          content:
-            application/json: {}
-  '/invoice/job/{jobGuid}':
-    get:
-      summary: Get Bills by Job
-      operationId: getJobInvoices
-      description: Get Bills by Job
-      tags:
-        - Invoice
-      parameters:
-        - in: path
-          name: jobGuid
-          schema:
-            $ref: '#/components/schemas/guid'
-          required: true
-      responses:
-        '200':
-          description: Invoice
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  invoices:
-                    type: array
-                    items:
-                      allOf:
-                        - $ref: '#/components/schemas/invoiceResponse'
-                        - $ref: '#/components/schemas/OrderObject'
-                  bills:
-                    type: array
-                    items:
-                      allOf:
-                        - $ref: '#/components/schemas/invoiceResponse'
-                        - $ref: '#/components/schemas/JobObject'
-        '404':
-          description: Job not found
+          description: bills
           content:
             application/json: {}
   /index/order/number:
@@ -2752,57 +2781,6 @@ paths:
       responses:
         '200':
           description: expense
-          content:
-            application/json: {}
-  '/bill/{billGuid}':
-    get:
-      summary: Get Bill
-      operationId: getBill
-      description: Get Bill
-      tags:
-        - Bill
-      parameters:
-        - in: path
-          name: billGuid
-          schema:
-            $ref: '#/components/schemas/guid'
-          required: true
-      responses:
-        '200':
-          description: Bill
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/invoiceResponse'
-        '404':
-          description: Bill not found
-          content:
-            application/json: {}
-  /bill:
-    post:
-      summary: Bill Jobs
-      operationId: billJobs
-      description: Bills Jobs
-      tags:
-        - Invoice
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              description: List of Job guids
-              properties:
-                orders:
-                  type: array
-                  items:
-                    description: Job guid
-                    $ref: '#/components/schemas/guid'
-                  minItems: 1
-              required:
-                - jobs
-      responses:
-        '200':
-          description: bills
           content:
             application/json: {}
   '/account/{accountType}':
@@ -3971,26 +3949,18 @@ components:
         - Delivered
         - Canceled
         - Deleted
-    dateTime:
+    dateCreated:
       type: string
       format: date-time
-      example: '2021-08-10T07:59:59.000Z'
-    dateCreated:
-      allOf:
-        - $ref: '#/components/schemas/dateTime'
-        - type: string
-          description: The date this record was created.
-          readOnly: true
-          nullable: false
-          example: '2021-09-23T12:14:45.000Z'
+      description: The date this record was created.
+      readOnly: true
+      nullable: false
     dateUpdated:
-      allOf:
-        - $ref: '#/components/schemas/dateTime'
-        - type: string
-          format: date-time
-          description: The date this record was last updated.
-          readOnly: true
-          nullable: false
+      type: string
+      format: date-time
+      description: The date this record was last updated.
+      readOnly: true
+      nullable: false
     createdByGuid:
       allOf:
         - $ref: '#/components/schemas/guid'
@@ -4208,6 +4178,10 @@ components:
       description: 'For pagination purposes, number of entries per page.'
       type: integer
       default: 25
+    dateTime:
+      type: string
+      format: date-time
+      example: '2021-08-10T07:59:59.000Z'
     Job With All Data:
       type: object
       properties:
@@ -4557,268 +4531,195 @@ components:
             - lead
             - flag
             - update
-    invoiceResponse:
+    PaymentTerms:
+      type: string
+      enum:
+        - Due on receipt
+        - Net 15
+        - Net 30
+        - Net 60
+    PaymentMethod:
+      type: string
+      enum:
+        - Cash
+        - Check
+        - Credit Card
+    Consignee:
       type: object
-      description: Object with bill and all of its line items
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          example: ABC Company
+        email:
+          $ref: '#/components/schemas/email'
+        phoneNumber:
+          $ref: '#/components/schemas/phoneNumber'
+        billingCity:
+          type: string
+        billingCountry:
+          type: string
+        billingLatitude:
+          $ref: '#/components/schemas/latitude'
+        billingLongitude:
+          $ref: '#/components/schemas/longitude'
+        billingPostalCode:
+          $ref: '#/components/schemas/zipCode'
+        billingState:
+          type: string
+        billingStreet:
+          type: string
+        shippingCity:
+          type: string
+        shippingCountry:
+          type: string
+        shippingLatitude:
+          $ref: '#/components/schemas/latitude'
+        shippingLongitude:
+          $ref: '#/components/schemas/longitude'
+        shippingPostalCode:
+          $ref: '#/components/schemas/zipCode'
+        shippingState:
+          type: string
+        shippingStreet:
+          type: string
+    TMSUser:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          description: The name of the TMS User.
+          example: John Doe
+        email:
+          $ref: '#/components/schemas/email'
+    CreatedBy:
+      allOf:
+        - $ref: '#/components/schemas/TMSUser'
+        - description: The TMS User that created the parent record.
+    InvoiceLine:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          description: The name of the item or service of the invoice/bill line.
+          example: transport
+        itemId:
+          type: integer
+          description: The id of the item or service of the invoice/bill line.
+        notes:
+          type: string
+          description: User notes for the current invoice/bill line.
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The amount that is charged for this line.
+        dateCreated:
+          $ref: '#/components/schemas/dateCreated'
+        isPaid:
+          type: boolean
+          description: Indicates if this invoice/bill line was paid.
+        createdBy:
+          $ref: '#/components/schemas/CreatedBy'
+        commodity:
+          $ref: '#/components/schemas/CommodityOutbound'
+        isAccessorial:
+          type: boolean
+          description: >-
+            Indicates that this invoice/bill line item or service is an
+            accessorial charge.
+    InvoiceBill:
+      type: object
       properties:
         guid:
           $ref: '#/components/schemas/guid'
         referenceNumber:
           type: string
-          example: volu04276
-        consigneeGuid:
-          $ref: '#/components/schemas/guid'
-        externalSource:
-          type: string
-          nullable: true
-          example: null
-        externalSourceGuid:
-          type: string
-          nullable: true
-          example: null
-        externalSourceData:
-          type: string
-          nullable: true
-          example: null
+          description: The reference number for this record.
         dateFiled:
           type: string
           format: date-time
-          nullable: true
-          example: null
+          description: The date this invoice/bill was exported from the TMS.
         dateDue:
           type: string
           format: date-time
-          nullable: true
-          example: null
+          description: The date this invoice/bill was supposed to be paid.
         datePaid:
           type: string
           format: date-time
-          nullable: true
-          example: null
+          description: The date this invoice/bill was paid by the consignee.
         dateInvoiced:
           type: string
           format: date-time
-          nullable: true
-          example: null
+          description: The date this invoice/bill was invoiced/billed.
         dateClosed:
           type: string
           format: date-time
-          nullable: true
-          example: null
+          description: The date this invoice/bill was closed out.
         total:
-          type: string
-          format: currency
-          nullable: true
-          example: 125
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The total sum of all the invoice/bill lines.
         isPaid:
           type: boolean
-          example: false
+          description: Indicates whether the invoice/bill was paid.
         dateCreated:
-          type: string
-          format: date-time
-          nullable: true
-          example: '2021-09-01T11:09:02.245-07:00'
-        dateUpdated:
-          type: string
-          format: date-time
-          nullable: true
-          example: '2021-09-14T14:00:00.000Z'
-        updatedByGuid:
-          $ref: '#/components/schemas/updatedByGuid'
-        paymentMethodId:
-          type: string
-          example: null
-        paymentTermId:
-          type: string
-          example: null
+          $ref: '#/components/schemas/dateCreated'
+        paymentTerms:
+          $ref: '#/components/schemas/PaymentTerms'
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
         consignee:
-          type: object
-          properties:
-            billingCity:
-              type: string
-              example: HAYWARD
-            billingCountry:
-              type: string
-              example: United States
-            billingLatitude:
-              type: number
-              example: 37.648897
-            billingLongitude:
-              type: number
-              example: -122.098357
-            billingPostalCode:
-              type: string
-              example: 94545
-            billingState:
-              type: string
-              example: CA
-            billingStreet:
-              type: string
-              example: 809 QUANTAS LN
-            blacklist:
-              type: string
-              example: false
-            dotNumber:
-              type: number
-              example: 2543255
-            email:
-              type: string
-              example: arztransportation@yahoo.com
-            guid:
-              $ref: '#/components/schemas/guid'
-            loadboardInstructions:
-              type: string
-              example: null
-            mcNumber:
-              type: string
-              example: null
-            name:
-              type: string
-              example: ARZ TRANSPORTATION
-            orderInstructions:
-              type: string
-              example: These are my order notes.
-            phoneNumber:
-              type: string
-              example: (510) 246-9211
-            preferred:
-              type: boolean
-              example: false
-            qbId:
-              nullable: true
-              example: null
-            sdGuid:
-              nullable: true
-              example: null
-            sfId:
-              type: string
-              example: 0011U00000qQLr7QAG
-            shippingCity:
-              type: string
-              example: HAYWARD
-            shippingCountry:
-              type: string
-              example: United States
-            shippingLatitude:
-              type: number
-              example: 37.648897
-            shippingLongitude:
-              type: number
-              example: -122.098357
-            shippingPostalCode:
-              type: string
-              example: '94545'
-            shippingState:
-              type: string
-              example: CA
-            shippingStreet:
-              type: string
-              example: 809 QUANTAS LN
-            syncInSuper:
-              type: boolean
-              example: null
+          $ref: '#/components/schemas/Consignee'
         lines:
+          $ref: '#/components/schemas/InvoiceLine'
+    Invoice:
+      allOf:
+        - $ref: '#/components/schemas/InvoiceBill'
+        - type: object
+          description: An invoice for a client that requested an order.
+          properties:
+            order:
+              type: object
+              properties:
+                guid:
+                  $ref: '#/components/schemas/guid'
+                number:
+                  type: string
+                  description: The TMS number of the order.
+                  example: RC10000
+    Bill:
+      allOf:
+        - $ref: '#/components/schemas/InvoiceBill'
+        - type: object
+          description: A bill for a vendor that serviced a job.
+          properties:
+            job:
+              type: object
+              properties:
+                guid:
+                  $ref: '#/components/schemas/guid'
+                number:
+                  type: string
+                  description: The TMS number of the job.
+                  example: RC10000A
+    InvoiceAndBillsOutbound:
+      type: object
+      properties:
+        invoices:
           type: array
+          description: All of the invoices that belong to the order.
           items:
-            type: object
-            properties:
-              guid:
-                $ref: '#/components/schemas/guid'
-              notes:
-                type: string
-                nullable: true
-                example: null
-              invoiceGuid:
-                $ref: '#/components/schemas/guid'
-              amount:
-                type: string
-                format: currency
-                example: 270
-              itemId:
-                type: number
-                example: 21
-              commodityGuid:
-                $ref: '#/components/schemas/guid'
-              dateCreated:
-                type: string
-                format: date-time
-                nullable: true
-                example: '2021-09-14T14:00:00.000Z'
-              dateUpdated:
-                type: string
-                format: date-time
-                nullable: true
-                example: '2021-09-14T14:00:00.000Z'
-              createdByGuid:
-                $ref: '#/components/schemas/createdByGuid'
-              updatedByGuid:
-                $ref: '#/components/schemas/updatedByGuid'
-              name:
-                type: string
-                example: Services
-              type:
-                type: string
-                example: expense
-              isAccessorial:
-                type: boolean
-                example: false
-              commodity:
-                type: object
-                properties:
-                  guid:
-                    $ref: '#/components/schemas/guid'
-                  capacity:
-                    type: string
-                    example: full truck load
-                  damaged:
-                    type: string
-                    example: 'yes'
-                  inoperable:
-                    type: string
-                    example: unknown
-                  deliveryStatus:
-                    type: string
-                    example: none"
-                  length:
-                    type: number
-                    example: 13
-                  weight:
-                    type: number
-                    example: 2685
-                  quantity:
-                    type: number
-                    example: 1
-                  description:
-                    type: string
-                    example: 2001 Chevrolet Model S
-                  identifier:
-                    type: string
-                    example: 5K5K5PPJGNL367942
-                  extraExternalData:
-                    type: string
-                    example: null
-    OrderObject:
-      type: object
-      properties:
-        order:
-          type: object
-          properties:
-            guid:
-              $ref: '#/components/schemas/guid'
-            number:
-              type: string
-              example: RC10000
-    JobObject:
-      type: object
-      properties:
-        job:
-          type: object
-          properties:
-            guid:
-              $ref: '#/components/schemas/guid'
-            number:
-              type: string
-              example: RC10000A
+            $ref: '#/components/schemas/Invoice'
+        bills:
+          type: array
+          description: All of the bills that belong to all of the jobs for the order.
+          items:
+            $ref: '#/components/schemas/Bill'
     expense:
       type: object
       properties:
