@@ -614,108 +614,169 @@ class OrderService
         return await GeneralFuncApi.calculateDistances(terminalStrings);
     }
 
-    static async loadTenders(action, orderGuid, reason)
+    /**
+     * @param {('accept' | 'reject')} action
+     * @param {string []} orderGuids
+     * @param {string} reason
+     * @returns {{orderGuid: string, jobGuid: string, status: number, message: string | null}} reason
+     */
+    static async handleLoadTenders(action, orderGuids, reason)
     {
-        // getting order with client and ediData to create payload for logic app
-        const order = await Order.query().skipUndefined().findById(orderGuid).withGraphJoined('[client, ediData]');
+        const responses = [];
+        
+        const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
 
-        // if order doesn't exist
-        if (order == undefined)
+        /**
+         * if the lengths do not match, that means one of the orders does not exist.
+         * find the guid that does not exist and add it to responses
+         */
+    
+        const hashedOrders = orders.reduce((map, obj)=>
         {
-            throw new Error('Order doesn\'t exist');
+            map[obj.guid] = obj;
+            return map;
+        }, {});
+
+        const filteredOrders = [];
+        for(const guid of orderGuids)
+        {
+            if(hashedOrders[guid] === undefined)
+            {
+                responses.push({
+                    orderGuid: guid,
+                    jobGuid: null,
+                    status: 404,
+                    message: 'Order not found.'
+                });
+            }
+            else
+            {
+                let message = null;
+
+                if(hashedOrders[guid].jobs[0].isTransport === false)
+                {
+                    message = 'Order does not have a transport job.';
+                }
+    
+                if(hashedOrders[guid].isTender === false)
+                {
+                    message = 'Order is not a tender.';
+                }
+    
+                if(hashedOrders[guid].isDeleted === true)
+                {
+                    message = 'Order is deleted.';
+                }
+    
+                if(message)
+                {
+                    responses.push({
+                        orderGuid: guid,
+                        jobGuid: null,
+                        status: 400,
+                        message
+                    });
+                }
+    
+                if(hashedOrders[guid].isTender && !hashedOrders[guid].isDeleted)
+                {
+                    filteredOrders.push(hashedOrders[guid]);
+                }
+            }
         }
 
-        // if tender is an order
-        if (order.isTender == false)
-        {
-            throw new Error('Order is not a load Tender');
-        }
-
-        // if tender is deleted
-        if (order.isDeleted == true)
-        {
-            throw new Error('Order Already Rejected');
-        }
-
-        // composing payload for logic app
-        const logicAppPayload = {
+        const logicAppPayloads = filteredOrders.map((item)=> ({
             order: {
-                guid: order.guid,
-                number: order.number
+                guid: item.guid,
+                number: item.number
             },
-            partner: order.client.sfId,
-            refrence: order.referenceNumber,
+            partner: item.client.sfId,
+            refrence: item.referenceNumber,
             action: action,
             date: DateTime.utc().toString(),
             scac: 'RCGQ',
-            edi: order.ediData?.[0].data
-        };
+            edi: item.ediData?.[0].data,
+            reason
+        }));
 
-        // if reason append to logic payload
-        if (reason)
+        let apiResponses = [];
+        if(filteredOrders.length)
         {
-            Object.assign(logicAppPayload, { reason: reason });
+            apiResponses = await Promise.allSettled(logicAppPayloads.map((item)=> logicAppInstance.post(process.env['azure.logicApp.params'], item)));
         }
 
-        console.log('Payload', logicAppPayload);
+        const formattedResponses = apiResponses.map((item, index)=>({
+            orderGuid: filteredOrders[index].guid,
+            jobGuid: filteredOrders[index].jobs[0].guid,
+            status: item.status === 'fulfilled' ? 200 : 400,
+            message: item?.reason?.message || null
+        }));
 
-        try
-        {
-            // sending request to logic app with correct payload
-            const response = await logicAppInstance.post(process.env['azure.logicApp.params'], logicAppPayload);
-            if (response.status == 200)
-            {
-                return;
-            }
-        }
-        catch (error)
-        {
-            throw new Error('Logic App Response');
-        }
+        return [...responses, ...formattedResponses];
     }
 
-    static async acceptLoadTender(orderGuid, currentUser)
+    /**
+     * @param {{orderGuid: string, jobGuid: string, status: Number, message: string | null} []} responses
+     * @param {boolean} isTender
+     * @param {boolean} isDeleted
+     * @param {number} statusId
+     * @param {string} currentUser
+     * @returns {Promise<undefined>}
+     */
+    static async loadTendersHelper(responses, isTender, isDeleted, statusId, currentUser)
     {
-        // exucuting accept options
-        await OrderService.loadTenders('accept', orderGuid);
+        const successfulResponses = responses.filter((item)=> item.status === 200);
 
-        // if executing is successfull, will update table
-        await Order.query().skipUndefined().findById(orderGuid).patch({
-            isTender: false,
-            status: 'New'
-        });
+        const successfulResponseGuids = successfulResponses.map((item)=> item.orderGuid);
 
-        // update status
-        await StatusManagerHandler.registerStatus({
-            orderGuid: orderGuid,
-            userGuid: currentUser,
-            statusId: 8
-        });
-    }
-
-    static async rejectLoadTender(orderGuid, reason, currentUser)
-    {
-        if (!reason)
+        if(successfulResponseGuids.length)
         {
-            throw new Error('Missing reason');
+           await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
+                isTender,
+                isDeleted,
+                status: 'New'
+            });
+
+           await Promise.allSettled(successfulResponses.map((item)=>
+             StatusManagerHandler.registerStatus({
+               orderGuid: item.orderGuid,
+               jobGuid: item.jobGuid,
+               userGuid: currentUser,
+               statusId
+           })));
+
         }
-
-        // executing reject options with reason
-        await OrderService.loadTenders('reject', orderGuid, reason);
-
-        // updating tender to deleted option
-        await Order.query().skipUndefined().findById(orderGuid).patch({
-            isDeleted: true,
-            status: 'Deleted'
-        });
-
-        // status update
-        await StatusManagerHandler.registerStatus({
-            orderGuid: orderGuid,
-            userGuid: currentUser,
-            statusId: 9
-        });
     }
+
+    /**
+     * @param {string []} orderGuids
+     * @param {string} currentUser
+     * @returns {Promise<{guid: string, status: number, message: string} []>} currentUser
+     */
+    static async acceptLoadTenders(orderGuids, currentUser)
+    {
+        
+        const responses = await this.handleLoadTenders('accept', orderGuids, null);
+
+        await this.loadTendersHelper(responses, false, false, 8, currentUser);
+
+        return responses;
+    }
+
+    /**
+     * @param {string []} orderGuids
+     * @param {string} reason
+     * @param {string} currentUser
+     */
+       static async rejectLoadTenders(orderGuids, reason, currentUser)
+       {
+
+            const responses = await this.handleLoadTenders('reject', orderGuids, reason);
+
+            await this.loadTendersHelper(responses, true, true, 9, currentUser);
+      
+            return responses;
+        }
 
     static async updateClientNote(orderGuid, body, currentUser)
     {

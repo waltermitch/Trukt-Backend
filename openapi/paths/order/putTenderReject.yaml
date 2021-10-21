@@ -1,14 +1,8 @@
-summary: Reject load Tenders
+summary: Reject Load Tenders
 operationId: rejectOrderbyGuid
-description: Reject Tender by order GUID
+description: Reject Load Tenders in bulk.
 tags:
   - Order
-parameters:
-  - in: path
-    name: orderGuid
-    schema:
-      $ref: '..\..\components\schemas\common.yaml#/guid'
-    required: true
 requestBody:
   content:
     application/json:
@@ -17,26 +11,22 @@ requestBody:
         properties:
           reason:
             type: string
-            example: Reason for declining Tender  
+            description: Reason for declining the load tenders.
+            example: Can't find driver for load.
+          orderGuids:
+            type: array
+            items:
+              $ref: '..\..\components\schemas\Common.yaml#/guid'
+            description: Array of load tender guids to reject.
+            minItems: 1
+            maxItems: 100
         required:
           - reason
-
+          - orderGuids
 responses:
   200:
     description: Tender
     content:
-      application/json: {}
-  400:
-    description: Tender
-    content: 
-      application/json: 
+      application/json:
         schema:
-          type: string
-          example:  Order Already Rejected
-  404:
-    description: Tender
-    content: 
-      application/json: 
-        schema:
-          type: string
-          example: Order doesn't exist
+          $ref: ..\..\components\schemas\EDI.yaml#/LoadTenderResponses
