@@ -119,6 +119,50 @@ class InvoiceBill extends BaseModel
 
         return modifiers;
     }
+
+    $formatJson(json)
+    {
+        json = super.$formatJson(json);
+
+        if (json.consignee)
+        {
+            const consignee = json.consignee;
+            for (const field of [
+                'blacklist',
+                'dotNumber',
+                'loadboardInstructions',
+                'mcNumber',
+                'orderInstructions',
+                'preferred',
+                'qbId',
+                'scId',
+                'sdGuid',
+                'sfId',
+                'status',
+                'syncInSuper'
+            ])
+            {
+                delete consignee[field];
+            }
+        }
+
+        for (const field of ['paymentMethodId', 'paymentTermId'])
+        {
+            delete json[field];
+        }
+
+        if ('paymentTerms' in json)
+        {
+            json.paymentTerms = json.paymentTerms.name;
+        }
+
+        if ('paymentMethod' in json)
+        {
+            json.paymentMethod = json.paymentMethod.name;
+        }
+
+        return json;
+    }
 }
 
 Object.assign(InvoiceBill.prototype, RecordAuthorMixin);
