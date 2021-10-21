@@ -632,19 +632,24 @@ class OrderService
          */
         if(orders.length !== orderGuids.length)
         {
-            orderGuids.forEach((guid, index)=>
+            const hashedOrders = orders.reduce((map, obj)=>
             {
-                if(orders.findIndex((order)=> order.guid === guid) === -1)
+                map[obj.guid] = obj;
+                return map;
+            }, {});
+
+            for(const guid of orderGuids)
+            {
+                if(hashedOrders[guid] === undefined)
                 {
                     responses.push({
-                        orderGuid: orderGuids[index],
+                        orderGuid: guid,
                         jobGuid: null,
                         status: 404,
                         message: 'Order not found.'
                     });
                 }
-            });
-         
+            }
         }
 
         orders.forEach((item, index)=>
