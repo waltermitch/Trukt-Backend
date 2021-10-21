@@ -71,6 +71,9 @@ rowCount:
   description: For pagination purposes, number of entries per page.
   type: integer
   default: 25
+  example: 25
+  minimum: 1
+  maximum: 100
 longitude:
   description: Number describing the longitude coordinate.
   example: 45.6208283
