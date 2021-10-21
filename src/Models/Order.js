@@ -184,9 +184,7 @@ class Order extends BaseModel
                     $modify: ['byType']
                 },
                 clientContact: true,
-                dispatcher: {
-                    $modify: ['byType']
-                },
+                dispatcher: true,
                 referrer: {
                     $modify: ['byType']
                 },
@@ -217,9 +215,7 @@ class Order extends BaseModel
                     },
                     vendorAgent: true,
                     vendorContact: true,
-                    dispatcher: {
-                        $modify: ['byType']
-                    },
+                    dispatcher: true,
                     jobType: true,
                     stopLinks: {
                         commodity: {
