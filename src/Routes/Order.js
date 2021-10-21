@@ -12,6 +12,7 @@ router
     .put(`${prefix}/:orderGuid(${uuidRegexStr})/tender/:action(accept|reject)`, controller.constructor.handleTenders)
     .patch(`${prefix}`, controller.constructor.patchOrder)
     .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes`, controller.constructor.getOrderNotes)
-    .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes/all`, controller.constructor.getAllNotes);
+    .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes/all`, controller.constructor.getAllNotes)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/clientNote`, controller.constructor.updateClientNote);
 
 module.exports = router;

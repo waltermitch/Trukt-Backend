@@ -985,13 +985,7 @@ paths:
                   type: string
                   description: The instructions for the order provided by the client.
                 clientNotes:
-                  type: object
-                  properties:
-                    note:
-                      description: Notes that are shared with the client
-                      type: string
-                      maxLength: 3000
-                      example: Your order has been shipped and is on its way
+                  $ref: '#/components/schemas/clientNotes'
                 estimatedRevenue:
                   type: string
                   format: currency
@@ -1314,41 +1308,22 @@ paths:
                   type: array
                   items:
                     allOf:
-                      - type: object
-                        properties:
-                          name:
-                            description: >-
-                              A non-unique name for this terminal that will be
-                              displayed to the users.
-                            type: string
-                            maxLength: 255
-                          street1:
-                            type: string
-                            maxLength: 64
-                          street2:
-                            type: string
-                            maxLength: 64
-                            nullable: true
-                          state:
-                            type: string
-                            maxLength: 100
-                          city:
-                            type: string
-                            maxLength: 64
-                          country:
-                            type: string
-                            maxLength: 64
-                          zipCode:
-                            $ref: '#/components/schemas/zipCode'
-                          latitude:
-                            $ref: '#/components/schemas/latitude'
-                          longitude:
-                            $ref: '#/components/schemas/longitude'
+                      - $ref: '#/components/schemas/Terminal'
                       - $ref: '#/components/schemas/indexObject'
                       - type: object
                         properties:
                           guid:
                             $ref: '#/components/schemas/guid'
+                      - type: object
+                        properties:
+                          locationType:
+                            $ref: '#/components/schemas/terminalLocationType'
+                        required:
+                          - street1
+                          - city
+                          - state
+                          - zipCode
+                          - country
                 commodities:
                   type: array
                   items:
@@ -1580,21 +1555,49 @@ paths:
                       description: Filter for status in a specific date
                       type: array
                       items:
-                        type: object
-                        properties:
-                          status:
-                            description: Order status
-                            type: number
-                            example: 1
-                          date:
-                            $ref: '#/components/schemas/date'
-                          comparison:
-                            description: Type of restriction in the date search
-                            type: string
-                            default: equal
-                        required:
-                          - status
-                          - date
+                        anyOf:
+                          - type: object
+                            properties:
+                              status:
+                                description: Order status
+                                type: number
+                                example: 1
+                              date:
+                                $ref: '#/components/schemas/dateTime'
+                              comparison:
+                                description: Type of restriction in the date search
+                                type: string
+                                enum:
+                                  - equal
+                                  - less
+                                  - greater
+                                  - less or equal
+                                  - greater or equal
+                                  - different
+                                default: equal
+                            required:
+                              - status
+                              - date
+                          - type: object
+                            properties:
+                              status:
+                                description: Order status
+                                type: number
+                                example: 1
+                              date1:
+                                $ref: '#/components/schemas/dateTime'
+                              date2:
+                                $ref: '#/components/schemas/dateTime'
+                              comparison:
+                                description: Type of restriction in the date search
+                                type: string
+                                enum:
+                                  - between
+                            required:
+                              - status
+                              - date1
+                              - date2
+                              - comparison
                     isTender:
                       description: Filter to select only orders that are marked as tender
                       type: boolean
@@ -1831,6 +1834,62 @@ paths:
                   error:
                     type: string
                     description: Order Not Found
+  '/order/{orderGuid}/clientNote':
+    put:
+      summary: Update Client Note
+      operationId: updateClientNote
+      description: Updates the note on the order that is shared with the Client
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                note:
+                  type: string
+                  maxLength: 3000
+                  nullable: true
+                  description: >-
+                    The note text that is to be stored on the order and shared
+                    with the client
+                  example: Your order has been shipped and is on its way
+      responses:
+        '202':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientNotes:
+                    type: object
+                    properties:
+                      note:
+                        type: string
+                        example: Your order has been shipped and is on its way
+                      updatedByGuid:
+                        $ref: '#/components/schemas/guid'
+                      dateUpdated:
+                        $ref: '#/components/schemas/dateUpdated'
+        '404':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Order not found
   '/job/{jobGuid}/notes':
     get:
       summary: Get Job Notes by Job guid
@@ -3639,6 +3698,7 @@ components:
           description: Notes that are shared with the client
           type: string
           maxLength: 3000
+          nullable: true
           example: Your order has been shipped and is on its way
     estimatedRevenue:
       type: string
@@ -3924,6 +3984,15 @@ components:
       properties:
         guid:
           $ref: '#/components/schemas/guid'
+    terminalLocationType:
+      type: string
+      enum:
+        - dealer
+        - private
+        - auction
+        - repo yard
+        - port
+        - business
     CommodityUpdate:
       allOf:
         - type: object
@@ -4057,10 +4126,6 @@ components:
       description: 'For pagination purposes, number of entries per page.'
       type: integer
       default: 25
-    date:
-      type: string
-      format: date
-      example: '2021-12-31'
     Job With All Data:
       type: object
       properties:
@@ -4239,6 +4304,7 @@ components:
               description: Notes that are shared with the client
               type: string
               maxLength: 3000
+              nullable: true
               example: Your order has been shipped and is on its way
         isCompleted:
           type: boolean
