@@ -13,6 +13,8 @@ properties:
     $ref: .\Common.yaml#/dateCreated
   createdByGuid:
     $ref: .\Common.yaml#/createdByGuid
+  createdBy:
+    $ref: .\Common.yaml#/createdBy
   type:
     type: string
     enum:
