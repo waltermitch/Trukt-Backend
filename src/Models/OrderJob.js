@@ -1,7 +1,7 @@
-const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJobType = require('./OrderJobType');
+const BaseModel = require('./BaseModel');
 
 const jobTypeFields = ['category', 'type'];
 
@@ -20,9 +20,11 @@ class OrderJob extends BaseModel
     static get relationMappings()
     {
         const OrderStopLink = require('./OrderStopLink');
-        const Order = require('./Order');
         const SFAccount = require('./SFAccount');
         const SFContact = require('./SFContact');
+        const Order = require('./Order');
+        const User = require('./User');
+
         return {
             vendor: {
                 relation: BaseModel.BelongsToOneRelation,
@@ -117,10 +119,10 @@ class OrderJob extends BaseModel
             },
             dispatcher: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
+                modelClass: User,
                 join: {
                     from: 'rcgTms.orderJobs.dispatcherGuid',
-                    to: 'salesforce.accounts.guid'
+                    to: 'rcgTms.tmsUsers.guid'
                 }
             },
             equipmentType: {
@@ -269,10 +271,56 @@ class OrderJob extends BaseModel
         return query.orderBy(sortField.field || 'number', sortField.order || 'ASC');
     }
 
+    static globalSearch(query, keyword)
+    {
+        // requiring in here to avoid circular dependency
+        const OrderStopLink = require('./OrderStopLink');
+        const OrderStop = require('./OrderStop');
+        const SFAccount = require('./SFAccount');
+        const SFContact = require('./SFContact');
+        const Commodity = require('./Commodity');
+        const Terminal = require('./Terminal');
+        const Vehicle = require('./Vehicle');
+        const Order = require('./Order');
+
+        query
+
+            // search by job number
+            .orWhere('number', 'ilike', `%${keyword}%`)
+
+            // search stoplink
+            .orWhereIn('guid', OrderStopLink.query().select('jobGuid')
+                .where('lotNumber', 'ilike', `%${keyword}%`)
+
+                // search stop
+                .orWhereIn('stopGuid', OrderStop.query().select('guid')
+
+                    // search terminal
+                    .whereIn('terminalGuid', Terminal.query().select('guid')
+                        .where('city', 'ilike', `%${keyword}%`)
+                        .orWhere('state', 'ilike', `%${keyword}%`)
+                        .orWhere('zipCode', 'ilike', `%${keyword}%`)))
+
+                // search commodity and vehicle
+                .orWhereIn('commodityGuid', Commodity.query().select('guid')
+                    .where('identifier', 'ilike', `%${keyword}%`)
+                    .orWhereIn('vehicleId', Vehicle.query().select('id')
+                        .where('name', 'ilike', `%${keyword}%`))))
+
+            // search vendor attributes
+            .orWhereIn('vendorGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
+
+            // search client and client contact attributes
+            .orWhereIn('orderGuid', Order.query().select('guid')
+                .whereIn('clientContactGuid', SFContact.query().select('guid').where('email', 'ilike', `%${keyword}%`))
+                .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`)));
+    }
+
     static modifiers = {
         filterIsTender: this.filterIsTender,
         filterJobCategories: this.filterJobCategories,
-        sorted: this.sorted
+        sorted: this.sorted,
+        globalSearch: this.globalSearch
     };
 }
 

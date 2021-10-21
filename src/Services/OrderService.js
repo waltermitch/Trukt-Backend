@@ -76,21 +76,19 @@ class OrderService
         // if global search is enabled
         // global search includes job#, customerName, customerContactName, customerContactEmail, Vin, lot, carrierName
         if (globalSearch?.query)
-        {
-            OrderService.addGlobalSearch(baseOrderQuery, globalSearch);
-        }
+            baseOrderQuery.modify('globalSearch', globalSearch.query);
 
-        const queryFilterPickup = OrderService.addFilterPickups(baseOrderQuery, pickup);
-        const queryFilterDelivery = OrderService.addFilterDeliveries(queryFilterPickup, delivery);
-        const queryFilterStatus = OrderService.addFilterStatus(queryFilterDelivery, status);
-        const queryFilterCustomer = OrderService.addFilterCustomer(queryFilterStatus, customer);
-        const queryFilterDispatcher = OrderService.addFilterDispatcher(queryFilterCustomer, dispatcher);
-        const queryFilterSalesperson = OrderService.addFilterSalesperson(queryFilterDispatcher, salesperson);
-        const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
-        const queryFilterDates = OrderService.addFilterDates(queryFilterCarrier, dates);
-        const queryAllFilters = OrderService.addFilterModifiers(queryFilterDates, { isTender, jobCategory, sort });
+        OrderService.addFilterPickups(baseOrderQuery, pickup);
+        OrderService.addFilterDeliveries(baseOrderQuery, delivery);
+        OrderService.addFilterStatus(baseOrderQuery, status);
+        OrderService.addFilterCustomer(baseOrderQuery, customer);
+        OrderService.addFilterDispatcher(baseOrderQuery, dispatcher);
+        OrderService.addFilterSalesperson(baseOrderQuery, salesperson);
+        OrderService.addFilterCarrier(baseOrderQuery, carrier);
+        OrderService.addFilterDates(baseOrderQuery, dates);
+        OrderService.addFilterModifiers(baseOrderQuery, { isTender, jobCategory, sort });
 
-        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters, jobCategory);
+        const queryWithGraphModifiers = OrderService.addGraphModifiers(baseOrderQuery, jobCategory);
 
         const { total, results } = await queryWithGraphModifiers;
         const ordersWithDeliveryAddress = {
@@ -101,73 +99,6 @@ class OrderService
         };
 
         return ordersWithDeliveryAddress;
-    }
-
-    // global search method
-    static addGlobalSearch(baseQuery, { query: q })
-    {
-        OrderService.searchJobAttributes(baseQuery, q);
-        OrderService.searchCommodityAttributes(baseQuery, q);
-        OrderService.searchCustomerAttributes(baseQuery, q);
-        OrderService.searchVendorAttributes(baseQuery, q);
-        OrderService.searchTerminalAttributes(baseQuery, q);
-        OrderService.searchOrderStopLinks(baseQuery, q);
-    }
-
-    // or where orderStopLink attributes
-    static searchOrderStopLinks(baseQuery, q)
-    {
-        baseQuery
-            .orWhereExists(
-                OrderJob.relatedQuery('stopLinks').where('lotNumber', 'ilike', `%${q}%`));
-    }
-
-    // or where pickup/delivery attributes
-    static searchTerminalAttributes(baseQuery, q)
-    {
-        baseQuery
-            .orWhereExists(
-                OrderJob.relatedQuery('stops').whereExists(OrderStop.relatedQuery('terminal')
-                    .where('city', 'ilike', `%${q}%`)
-                    .orWhere('state', 'ilike', `%${q}%`)
-                    .orWhere('zipCode', 'ilike', `%${q}%`)));
-    }
-
-    // or where vendor attributes
-    static searchVendorAttributes(baseQuery, q)
-    {
-        baseQuery.orWhereExists(
-            OrderJob.relatedQuery('vendor').where('name', 'ilike', `%${q}%`));
-    }
-
-    // or where customer attributes
-    static searchCustomerAttributes(baseQuery, q)
-    {
-        baseQuery
-            .orWhereExists(
-                OrderJob.relatedQuery('order').whereExists(Order.relatedQuery('client')
-                    .where('name', 'ilike', `%${q}%`)))
-            .orWhereExists(
-                OrderJob.relatedQuery('order').whereExists(Order.relatedQuery('clientContact')
-                    .where('name', 'ilike', `%${q}%`).orWhere('email', 'ilike', `%${q}%`)));
-    }
-
-    // or where commodity attributes
-    static searchCommodityAttributes(baseQuery, q)
-    {
-        baseQuery
-            .orWhereExists(
-                OrderJob.relatedQuery('commodities').where('identifier', 'ilike', `%${q}%`))
-            .orWhereExists(
-                OrderJob.relatedQuery('commodities').whereExists(Commodity.relatedQuery('vehicle')
-                    .where('name', 'ilike', `%${q}%`)));
-    }
-
-    // or where job attributes
-    static searchJobAttributes(baseQuery, q)
-    {
-        // search job number
-        baseQuery.orWhere('number', 'ilike', `%${q}%`);
     }
 
     static async getOrderByGuid(orderGuid)
