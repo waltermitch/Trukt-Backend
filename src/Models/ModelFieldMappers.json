@@ -340,17 +340,6 @@
             }
         }
     },
-    "InvoiceLine": {
-        "hide": {
-            "external": {
-                "into": [
-                    "isDeleted",
-                    "dateDeleted",
-                    "deletedByGuid"
-                ]
-            }
-        }
-    },
     "Notes": {
         "hide": {
             "external": {
@@ -376,7 +365,50 @@
                     "isValid",
                     "isSyncedExternalSource",
                     "dateSyncedExternalSource",
-                    "createdByGuid"
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "consigneeGuid",
+                    "externalSource",
+                    "externalSourceGuid",
+                    "externalSourceData",
+                    "paymentMethodId",
+                    "paymentTermId"
+                ]
+            }
+        }
+    },
+    "InvoiceLine": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "dateUpdated",
+                    "commodityGuid",
+                    "invoiceGuid"
+                ]
+            }
+        }
+    },
+    "InvoicePaymentMethod": {
+        "hide": {
+            "external": {
+                "into": [
+                    "externalId",
+                    "externalSource"
+                ]
+            }
+        }
+    },
+    "InvoicePaymentTerm": {
+        "hide": {
+            "external": {
+                "into": [
+                    "externalId",
+                    "externalSource"
                 ]
             }
         }
