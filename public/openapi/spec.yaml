@@ -1555,21 +1555,49 @@ paths:
                       description: Filter for status in a specific date
                       type: array
                       items:
-                        type: object
-                        properties:
-                          status:
-                            description: Order status
-                            type: number
-                            example: 1
-                          date:
-                            $ref: '#/components/schemas/date'
-                          comparison:
-                            description: Type of restriction in the date search
-                            type: string
-                            default: equal
-                        required:
-                          - status
-                          - date
+                        anyOf:
+                          - type: object
+                            properties:
+                              status:
+                                description: Order status
+                                type: number
+                                example: 1
+                              date:
+                                $ref: '#/components/schemas/dateTime'
+                              comparison:
+                                description: Type of restriction in the date search
+                                type: string
+                                enum:
+                                  - equal
+                                  - less
+                                  - greater
+                                  - less or equal
+                                  - greater or equal
+                                  - different
+                                default: equal
+                            required:
+                              - status
+                              - date
+                          - type: object
+                            properties:
+                              status:
+                                description: Order status
+                                type: number
+                                example: 1
+                              date1:
+                                $ref: '#/components/schemas/dateTime'
+                              date2:
+                                $ref: '#/components/schemas/dateTime'
+                              comparison:
+                                description: Type of restriction in the date search
+                                type: string
+                                enum:
+                                  - between
+                            required:
+                              - status
+                              - date1
+                              - date2
+                              - comparison
                     isTender:
                       description: Filter to select only orders that are marked as tender
                       type: boolean
@@ -2453,26 +2481,104 @@ paths:
           description: loadboards
           content:
             application/json: {}
-  '/invoice/{invoiceId}':
+  '/invoice/{invoiceGuid}':
     get:
-      summary: Get invoice by invoiceId
+      summary: Get Invoice
       operationId: getInvoice
-      description: Get invoice by invoiceId
+      description: Get all details of an Invoice.
       tags:
         - Invoice
       parameters:
         - in: path
-          name: invoiceId
+          name: invoiceGuid
           schema:
             $ref: '#/components/schemas/guid'
           required: true
       responses:
         '200':
-          description: invoice
+          description: OK
           content:
-            application/json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
         '404':
           description: Invoice not found
+          content:
+            application/json: {}
+  '/bill/{billGuid}':
+    get:
+      summary: Get Bill
+      operationId: getBill
+      description: Get all details of a Bill.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: billGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bill'
+        '404':
+          description: Bill not found
+          content:
+            application/json: {}
+  '/invoice/order/{orderGuid}':
+    get:
+      summary: Get Invoices and Bills by Order
+      operationId: getOrderInvoicesAndBills
+      description: >-
+        Get all details of all the Invoices and Bills that are related to the
+        Order.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceAndBillsOutbound'
+        '404':
+          description: Order not found
+          content:
+            application/json: {}
+  '/invoice/job/{jobGuid}':
+    get:
+      summary: Get Invoices and Bills by Job
+      operationId: getJobInvoicesAndBills
+      description: >-
+        Get all details of all the Invoices and Bills that are related to the
+        Job.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: jobGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceAndBillsOutbound'
+        '404':
+          description: Job not found
           content:
             application/json: {}
   /invoice:
@@ -2500,6 +2606,33 @@ paths:
       responses:
         '200':
           description: invoices
+          content:
+            application/json: {}
+  /bill:
+    post:
+      summary: Bill Jobs
+      operationId: billJobs
+      description: Bills Jobs
+      tags:
+        - Invoice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: List of Job guids
+              properties:
+                orders:
+                  type: array
+                  items:
+                    description: Job guid
+                    $ref: '#/components/schemas/guid'
+                  minItems: 1
+              required:
+                - jobs
+      responses:
+        '200':
+          description: bills
           content:
             application/json: {}
   /index/order/number:
@@ -2644,51 +2777,6 @@ paths:
       responses:
         '200':
           description: expense
-          content:
-            application/json: {}
-  '/bill/{billId}':
-    get:
-      summary: Get bill by guid
-      operationId: getBill
-      description: Get bill by guid
-      tags:
-        - Bill
-      parameters:
-        - in: path
-          name: billId
-          schema:
-            $ref: '#/components/schemas/guid'
-          required: true
-      responses:
-        '200':
-          description: Bill
-          content:
-            application/json: {}
-  /bill:
-    post:
-      summary: Bill Jobs
-      operationId: billJobs
-      description: Bills Jobs
-      tags:
-        - Invoice
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              description: List of Job guids
-              properties:
-                orders:
-                  type: array
-                  items:
-                    description: Job guid
-                    $ref: '#/components/schemas/guid'
-                  minItems: 1
-              required:
-                - jobs
-      responses:
-        '200':
-          description: bills
           content:
             application/json: {}
   '/account/{accountType}':
@@ -3857,26 +3945,18 @@ components:
         - Delivered
         - Canceled
         - Deleted
-    dateTime:
+    dateCreated:
       type: string
       format: date-time
-      example: '2021-08-10T07:59:59.000Z'
-    dateCreated:
-      allOf:
-        - $ref: '#/components/schemas/dateTime'
-        - type: string
-          description: The date this record was created.
-          readOnly: true
-          nullable: false
-          example: '2021-09-23T12:14:45.000Z'
+      description: The date this record was created.
+      readOnly: true
+      nullable: false
     dateUpdated:
-      allOf:
-        - $ref: '#/components/schemas/dateTime'
-        - type: string
-          format: date-time
-          description: The date this record was last updated.
-          readOnly: true
-          nullable: false
+      type: string
+      format: date-time
+      description: The date this record was last updated.
+      readOnly: true
+      nullable: false
     createdByGuid:
       allOf:
         - $ref: '#/components/schemas/guid'
@@ -4094,10 +4174,10 @@ components:
       description: 'For pagination purposes, number of entries per page.'
       type: integer
       default: 25
-    date:
+    dateTime:
       type: string
-      format: date
-      example: '2021-12-31'
+      format: date-time
+      example: '2021-08-10T07:59:59.000Z'
     Job With All Data:
       type: object
       properties:
@@ -4447,6 +4527,195 @@ components:
             - lead
             - flag
             - update
+    PaymentTerms:
+      type: string
+      enum:
+        - Due on receipt
+        - Net 15
+        - Net 30
+        - Net 60
+    PaymentMethod:
+      type: string
+      enum:
+        - Cash
+        - Check
+        - Credit Card
+    Consignee:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          example: ABC Company
+        email:
+          $ref: '#/components/schemas/email'
+        phoneNumber:
+          $ref: '#/components/schemas/phoneNumber'
+        billingCity:
+          type: string
+        billingCountry:
+          type: string
+        billingLatitude:
+          $ref: '#/components/schemas/latitude'
+        billingLongitude:
+          $ref: '#/components/schemas/longitude'
+        billingPostalCode:
+          $ref: '#/components/schemas/zipCode'
+        billingState:
+          type: string
+        billingStreet:
+          type: string
+        shippingCity:
+          type: string
+        shippingCountry:
+          type: string
+        shippingLatitude:
+          $ref: '#/components/schemas/latitude'
+        shippingLongitude:
+          $ref: '#/components/schemas/longitude'
+        shippingPostalCode:
+          $ref: '#/components/schemas/zipCode'
+        shippingState:
+          type: string
+        shippingStreet:
+          type: string
+    TMSUser:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          description: The name of the TMS User.
+          example: John Doe
+        email:
+          $ref: '#/components/schemas/email'
+    CreatedBy:
+      allOf:
+        - $ref: '#/components/schemas/TMSUser'
+        - description: The TMS User that created the parent record.
+    InvoiceLine:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          description: The name of the item or service of the invoice/bill line.
+          example: transport
+        itemId:
+          type: integer
+          description: The id of the item or service of the invoice/bill line.
+        notes:
+          type: string
+          description: User notes for the current invoice/bill line.
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The amount that is charged for this line.
+        dateCreated:
+          $ref: '#/components/schemas/dateCreated'
+        isPaid:
+          type: boolean
+          description: Indicates if this invoice/bill line was paid.
+        createdBy:
+          $ref: '#/components/schemas/CreatedBy'
+        commodity:
+          $ref: '#/components/schemas/CommodityOutbound'
+        isAccessorial:
+          type: boolean
+          description: >-
+            Indicates that this invoice/bill line item or service is an
+            accessorial charge.
+    InvoiceBill:
+      type: object
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        referenceNumber:
+          type: string
+          description: The reference number for this record.
+        dateFiled:
+          type: string
+          format: date-time
+          description: The date this invoice/bill was exported from the TMS.
+        dateDue:
+          type: string
+          format: date-time
+          description: The date this invoice/bill was supposed to be paid.
+        datePaid:
+          type: string
+          format: date-time
+          description: The date this invoice/bill was paid by the consignee.
+        dateInvoiced:
+          type: string
+          format: date-time
+          description: The date this invoice/bill was invoiced/billed.
+        dateClosed:
+          type: string
+          format: date-time
+          description: The date this invoice/bill was closed out.
+        total:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The total sum of all the invoice/bill lines.
+        isPaid:
+          type: boolean
+          description: Indicates whether the invoice/bill was paid.
+        dateCreated:
+          $ref: '#/components/schemas/dateCreated'
+        paymentTerms:
+          $ref: '#/components/schemas/PaymentTerms'
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        consignee:
+          $ref: '#/components/schemas/Consignee'
+        lines:
+          $ref: '#/components/schemas/InvoiceLine'
+    Invoice:
+      allOf:
+        - $ref: '#/components/schemas/InvoiceBill'
+        - type: object
+          description: An invoice for a client that requested an order.
+          properties:
+            order:
+              type: object
+              properties:
+                guid:
+                  $ref: '#/components/schemas/guid'
+                number:
+                  type: string
+                  description: The TMS number of the order.
+                  example: RC10000
+    Bill:
+      allOf:
+        - $ref: '#/components/schemas/InvoiceBill'
+        - type: object
+          description: A bill for a vendor that serviced a job.
+          properties:
+            job:
+              type: object
+              properties:
+                guid:
+                  $ref: '#/components/schemas/guid'
+                number:
+                  type: string
+                  description: The TMS number of the job.
+                  example: RC10000A
+    InvoiceAndBillsOutbound:
+      type: object
+      properties:
+        invoices:
+          type: array
+          description: All of the invoices that belong to the order.
+          items:
+            $ref: '#/components/schemas/Invoice'
+        bills:
+          type: array
+          description: All of the bills that belong to all of the jobs for the order.
+          items:
+            $ref: '#/components/schemas/Bill'
     expense:
       type: object
       properties:

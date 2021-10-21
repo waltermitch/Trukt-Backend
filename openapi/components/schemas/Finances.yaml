@@ -1,0 +1,137 @@
+InvoiceAndBillsOutbound:
+  type: object
+  properties:
+    invoices:
+      type: array
+      description: All of the invoices that belong to the order.
+      items:
+        $ref: '#/Invoice'
+    bills:
+      type: array
+      description: All of the bills that belong to all of the jobs for the order.
+      items:
+        $ref: '#/Bill'
+
+Invoice:
+  allOf:
+    - $ref: '#/InvoiceBill'
+    - type: object
+      description: An invoice for a client that requested an order.
+      properties:
+        order:
+          type: object
+          properties:
+            guid:
+              $ref: Common.yaml#/guid
+            number:
+              type: string
+              description: The TMS number of the order.
+              example: RC10000
+Bill:
+  allOf:
+    - $ref: '#/InvoiceBill'
+    - type: object
+      description: A bill for a vendor that serviced a job.
+      properties:
+        job:
+          type: object
+          properties:
+            guid:
+              $ref: Common.yaml#/guid
+            number:
+              type: string
+              description: The TMS number of the job.
+              example: RC10000A
+
+InvoiceBill:
+  type: object
+  properties:
+    guid:
+      $ref: .\Common.yaml#/guid
+    referenceNumber:
+      type: string
+      description: The reference number for this record.
+    dateFiled:
+      type: string
+      format: date-time
+      description: The date this invoice/bill was exported from the TMS.
+    dateDue:
+      type: string
+      format: date-time
+      description: The date this invoice/bill was supposed to be paid.
+    datePaid:
+      type: string
+      format: date-time
+      description: The date this invoice/bill was paid by the consignee.
+    dateInvoiced:
+      type: string
+      format: date-time
+      description: The date this invoice/bill was invoiced/billed.
+    dateClosed:
+      type: string
+      format: date-time
+      description: The date this invoice/bill was closed out.
+    total:
+      allOf:
+        - $ref: .\Common.yaml#/currency
+        - description: The total sum of all the invoice/bill lines.
+    isPaid:
+      type: boolean
+      description: Indicates whether the invoice/bill was paid.
+    dateCreated:
+      $ref: .\Common.yaml#/dateCreated
+    paymentTerms:
+      $ref: '#/PaymentTerms'
+    paymentMethod:
+      $ref: '#/PaymentMethod'
+    consignee:
+      $ref: .\Account.yaml#/Consignee
+    lines:
+      $ref: '#/InvoiceLine'
+
+InvoiceLine:
+  type: object
+  properties:
+    guid:
+      $ref: .\Common.yaml#/guid
+    name:
+      type: string
+      description: The name of the item or service of the invoice/bill line.
+      example: transport
+    itemId:
+      type: integer
+      description: The id of the item or service of the invoice/bill line.
+    notes:
+      type: string
+      description: User notes for the current invoice/bill line.
+    amount:
+      allOf:
+        - $ref: .\Common.yaml#/currency
+        - description: The amount that is charged for this line.
+    dateCreated:
+      $ref: .\Common.yaml#/dateCreated
+    isPaid:
+      type: boolean
+      description: Indicates if this invoice/bill line was paid.
+    createdBy:
+      $ref: .\User.yaml#/CreatedBy
+    commodity:
+      $ref: .\Commodity.yaml#/CommodityOutbound
+    isAccessorial:
+      type: boolean
+      description: Indicates that this invoice/bill line item or service is an accessorial charge.
+
+PaymentTerms:
+  type: string
+  enum:
+    - 'Due on receipt'
+    - 'Net 15'
+    - 'Net 30'
+    - 'Net 60'
+
+PaymentMethod:
+  type: string
+  enum:
+    - 'Cash'
+    - 'Check'
+    - 'Credit Card'
