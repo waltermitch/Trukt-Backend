@@ -81,6 +81,27 @@ class InvoiceBill extends BaseModel
         };
     }
 
+    static get fetch()
+    {
+        return {
+            'details': {
+                $modify: ['isNotDeleted'],
+                paymentTerms: true,
+                paymentMethod: true,
+                consignee: true,
+                lines: {
+                    $modify: ['isNotDeleted'],
+                    createdBy: true,
+                    commodity: {
+                        commType: true,
+                        vehicle: true
+                    },
+                    item: true
+                }
+            }
+        };
+    }
+
     static get modifiers()
     {
         const modifiers = {
