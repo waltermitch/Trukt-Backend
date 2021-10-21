@@ -1,4 +1,4 @@
-const { RecordAuthorMixin, isNotDeleted } = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin, isNotDeleted, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
 
 class InvoiceLine extends BaseModel
@@ -15,7 +15,8 @@ class InvoiceLine extends BaseModel
 
     static get relationMappings()
     {
-        return {
+        const relations =
+        {
             commodity: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: require('./Commodity'),
@@ -41,6 +42,9 @@ class InvoiceLine extends BaseModel
                 }
             }
         };
+
+        Object.assign(relations, AuthorRelationMappings(this.tableName));
+        return relations;
     }
 
     static get modifiers()
