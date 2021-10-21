@@ -1,11 +1,11 @@
+const OrderJob = require('../Models/OrderJob');
 const InvoiceService = require('../Services/InvoiceService');
 
 class InvoiceController
 {
     static async getInvoice(req, res)
     {
-        const result = await InvoiceService.getInvoice(req.params.invoiceId);
-
+        const result = await InvoiceService.getInvoice(req.params.invoiceGuid);
         if (!result)
         {
             res.status(404);
@@ -13,9 +13,44 @@ class InvoiceController
         }
         else
         {
-
             res.status(200);
             res.json(result);
+        }
+    }
+
+    static async getOrderFinances(req, res, next, type)
+    {
+        let orderGuid = req.params.orderGuid;
+
+        try
+        {
+            // get request is job
+            if (type == 'job')
+            {
+                // get Order Guid
+                const result = await OrderJob.query().findById(req.params.jobGuid);
+                if (!result)
+                {
+                    res.status(404).send(`Job with Guid ${req.params.jobGuid} not found.`);
+                    return;
+                }
+                orderGuid = result.orderGuid;
+            }
+            const result = await InvoiceService.getOrderInvoice(orderGuid);
+            if (!result)
+            {
+                res.status(404);
+                res.send(`Order with Guid ${orderGuid} not found.`);
+            }
+            else
+            {
+                res.status(200);
+                res.json(result);
+            }
+        }
+        catch (error)
+        {
+            next(error);
         }
     }
 

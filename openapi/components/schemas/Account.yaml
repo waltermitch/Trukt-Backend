@@ -57,3 +57,43 @@ client:
       type: string
     shippingStreet:
       type: string
+Consignee:
+  type: object
+  properties:
+    guid:
+      $ref: .\Common.yaml#/guid
+    name:
+      type: string
+      example: ABC Company
+    email:
+      $ref: .\Common.yaml#/email
+    phoneNumber:
+      $ref: .\Common.yaml#/phoneNumber
+    billingCity:
+      type: string
+    billingCountry:
+      type: string
+    billingLatitude:
+      $ref: .\Common.yaml#/latitude
+    billingLongitude:
+      $ref: .\Common.yaml#/longitude
+    billingPostalCode:
+      $ref: .\Common.yaml#/zipCode
+    billingState:
+      type: string
+    billingStreet:
+      type: string
+    shippingCity:
+      type: string
+    shippingCountry:
+      type: string
+    shippingLatitude:
+      $ref: .\Common.yaml#/latitude
+    shippingLongitude:
+      $ref: .\Common.yaml#/longitude
+    shippingPostalCode:
+      $ref: .\Common.yaml#/zipCode
+    shippingState:
+      type: string
+    shippingStreet:
+      type: string

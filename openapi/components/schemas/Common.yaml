@@ -1,27 +1,21 @@
 dateCreated:
-  allOf:
-    - $ref: '#/dateTime'
-    - type: string
-      description: The date this record was created.
-      readOnly: true
-      nullable: false
-      example: '2021-09-23T12:14:45.000Z'
+  type: string
+  format: date-time
+  description: The date this record was created.
+  readOnly: true
+  nullable: false
 dateUpdated:
-  allOf:
-    - $ref: '#/dateTime'
-    - type: string
-      format: date-time
-      description: The date this record was last updated.
-      readOnly: true
-      nullable: false
+  type: string
+  format: date-time
+  description: The date this record was last updated.
+  readOnly: true
+  nullable: false
 dateDeleted:
-  allOf:
-    - $ref: '#/dateTime'
-    - type: string
-      format: date-time
-      description: The date this record was deleted.
-      readOnly: true
-      nullable: false
+  type: string
+  format: date-time
+  description: The date this record was deleted.
+  readOnly: true
+  nullable: false
 createdByGuid:
   allOf:
     - $ref: '#/guid'
@@ -380,14 +374,14 @@ Enums:
       - Deleted
   Loadboard Name:
     type: string
-    enum: 
+    enum:
       - SUPERDISPATCH
       - CENTRALDISPATCH
       - SHIPCARS
       - CARDELIVERYNETWORK
   LoadBoard Request Status:
     type: string
-    enum: 
+    enum:
       - Accepted
       - Canceled
       - New
@@ -399,6 +393,6 @@ Enums:
       - reject
   noteObject:
     type: string
-    enum: 
+    enum:
       - job
       - order
