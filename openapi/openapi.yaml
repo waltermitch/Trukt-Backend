@@ -4,11 +4,11 @@ info:
   title: Trukt
   description: Transportation management system
 servers:
-  - url: "https://truktapi-dev.rcgauto.net"
+  - url: 'https://truktapi-dev.rcgauto.net'
     description: Development server
-  - url: "https://truktapi-staging.rcgauto.net"
+  - url: 'https://truktapi-staging.rcgauto.net'
     description: Staging server
-  - url: "https://truktapi.rcgauto.net"
+  - url: 'https://truktapi.rcgauto.net'
     description: Production server
 paths:
   /attachments:
@@ -107,15 +107,21 @@ paths:
   /invoice/{invoiceGuid}:
     get:
       $ref: paths\invoice\get.yaml
-  /invoice:
-    post:
-      $ref: paths\invoice\post.yaml
+  /bill/{billGuid}:
+    get:
+      $ref: paths\bill\get.yaml
   /invoice/order/{orderGuid}:
     get:
       $ref: paths\invoice\getOrderInvoices.yaml
   /invoice/job/{jobGuid}:
     get:
       $ref: paths\invoice\getJobInvoices.yaml
+  /invoice:
+    post:
+      $ref: paths\invoice\post.yaml
+  /bill:
+    post:
+      $ref: paths\bill\post.yaml
   /index/order/number:
     get:
       $ref: paths\index\order\get.yaml
@@ -137,12 +143,6 @@ paths:
   /expense/search:
     get:
       $ref: paths\expense\search.yaml
-  /bill/{billGuid}:
-    get:
-      $ref: paths\bill\get.yaml
-  /bill:
-    post:
-      $ref: paths\bill\post.yaml
   /account/{accountType}:
     get:
       $ref: paths\account\search.yaml
