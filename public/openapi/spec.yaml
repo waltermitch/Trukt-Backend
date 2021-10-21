@@ -1683,40 +1683,13 @@ paths:
           description: order
           content:
             application/json: {}
-  '/order/tender/accept':
+  /order/tender/accept:
     put:
       summary: Accept load Tenders
       operationId: acceptOrderbyGuid
       description: Accept Tender by order GUID
       tags:
         - Order
-      responses:
-        '200':
-          description: Tender
-          content:
-            application/json: {}
-        '400':
-          description: Tender
-          content:
-            application/json:
-              schema:
-                type: string
-                example: Order Already Rejected
-        '404':
-          description: Tender
-          content:
-            application/json:
-              schema:
-                type: string
-                example: Order doesn't exist
-  '/order/tender/reject':
-    put:
-      summary: Reject load Tenders
-      operationId: rejectOrderbyGuid
-      description: Reject Tender by order GUID
-      tags:
-        - Order
-
       requestBody:
         content:
           application/json:
@@ -1728,8 +1701,43 @@ paths:
                   example: Reason for declining Tender
                 orderGuids:
                   type: array
-                  items: 
-                    $ref: '..\..\openapi\components\schemas\common.yaml#/guid'
+                  items:
+                    $ref: '#/components/schemas/guid'
+                  minItems: 1
+                  maxItems: 100
+              required:
+                - orderGuids
+      responses:
+        '200':
+          description: Tender
+          content:
+            application/json:
+              schema:
+                type: array
+                example:
+                  - guid: string
+                    status: number
+                    message: string
+  /order/tender/reject:
+    put:
+      summary: Reject load Tenders
+      operationId: rejectOrderbyGuid
+      description: Reject Tender by order GUID
+      tags:
+        - Order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Reason for declining Tender
+                orderGuids:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/guid'
                   minItems: 1
                   maxItems: 100
               required:
@@ -1739,21 +1747,13 @@ paths:
         '200':
           description: Tender
           content:
-            application/json: {}
-        '400':
-          description: Tender
-          content:
             application/json:
               schema:
-                type: string
-                example: Order Already Rejected
-        '404':
-          description: Tender
-          content:
-            application/json:
-              schema:
-                type: string
-                example: Order doesn't exist
+                type: array
+                example:
+                  - guid: string
+                    status: number
+                    message: string
   '/order/{orderGuid}/notes':
     get:
       summary: Get Order Notes by Order guid
