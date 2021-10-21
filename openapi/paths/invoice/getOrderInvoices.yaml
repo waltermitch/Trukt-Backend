@@ -1,6 +1,6 @@
-summary: Get Invoices by Order
-operationId: getOrderInvoices
-description: Get Invoices by Order
+summary: Get Invoices and Bills by Order
+operationId: getOrderInvoicesAndBills
+description: Get all details of all the Invoices and Bills that are related to the Order.
 tags:
   - Invoice
 parameters:
@@ -11,25 +11,11 @@ parameters:
     required: true
 responses:
   200:
-    description: Invoices
+    description: OK
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            invoices:
-              type: array
-              items:
-                allOf:
-                  - $ref:  ..\..\components\schemas\Finances.yaml#/invoiceResponse
-                  - $ref:  ..\..\components\schemas\Finances.yaml#/OrderObject
-            bills:
-              type: array
-              items:
-                allOf:
-                  - $ref:  ..\..\components\schemas\Finances.yaml#/invoiceResponse
-                  - $ref:  ..\..\components\schemas\Finances.yaml#/JobObject                                  
-
+          $ref: ..\..\components\schemas\Finances.yaml#/InvoiceAndBillsOutbound
   404:
     description: Order not found
     content:

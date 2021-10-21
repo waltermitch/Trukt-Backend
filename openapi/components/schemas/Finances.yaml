@@ -1,262 +1,137 @@
-invoiceResponse:
+InvoiceAndBillsOutbound:
   type: object
-  description: Object with bill and all of its line items
+  properties:
+    invoices:
+      type: array
+      description: All of the invoices that belong to the order.
+      items:
+        $ref: '#/Invoice'
+    bills:
+      type: array
+      description: All of the bills that belong to all of the jobs for the order.
+      items:
+        $ref: '#/Bill'
+
+Invoice:
+  allOf:
+    - $ref: '#/InvoiceBill'
+    - type: object
+      description: An invoice for a client that requested an order.
+      properties:
+        order:
+          type: object
+          properties:
+            guid:
+              $ref: Common.yaml#/guid
+            number:
+              type: string
+              description: The TMS number of the order.
+              example: RC10000
+Bill:
+  allOf:
+    - $ref: '#/InvoiceBill'
+    - type: object
+      description: A bill for a vendor that serviced a job.
+      properties:
+        job:
+          type: object
+          properties:
+            guid:
+              $ref: Common.yaml#/guid
+            number:
+              type: string
+              description: The TMS number of the job.
+              example: RC10000A
+
+InvoiceBill:
+  type: object
   properties:
     guid:
-      $ref: Common.yaml#/guid
+      $ref: .\Common.yaml#/guid
     referenceNumber:
       type: string
-      example: volu04276
-    consigneeGuid:
-      $ref: Common.yaml#/guid
-    externalSource:
-      type: string
-      nullable: true      
-      example: null
-    externalSourceGuid:
-      type: string
-      nullable: true      
-      example: null
-    externalSourceData:
-      type: string
-      nullable: true      
-      example: null
+      description: The reference number for this record.
     dateFiled:
       type: string
       format: date-time
-      nullable: true
-      example: null
+      description: The date this invoice/bill was exported from the TMS.
     dateDue:
       type: string
       format: date-time
-      nullable: true
-      example: null
+      description: The date this invoice/bill was supposed to be paid.
     datePaid:
       type: string
       format: date-time
-      nullable: true
-      example: null
+      description: The date this invoice/bill was paid by the consignee.
     dateInvoiced:
       type: string
       format: date-time
-      nullable: true
-      example: null
+      description: The date this invoice/bill was invoiced/billed.
     dateClosed:
       type: string
       format: date-time
-      nullable: true
-      example: null
+      description: The date this invoice/bill was closed out.
     total:
-      type: string
-      format: currency
-      nullable: true     
-      example: 125.00
+      allOf:
+        - $ref: .\Common.yaml#/currency
+        - description: The total sum of all the invoice/bill lines.
     isPaid:
       type: boolean
-      example: false
+      description: Indicates whether the invoice/bill was paid.
     dateCreated:
-      type: string
-      format: date-time
-      nullable: true
-      example: "2021-09-01T11:09:02.245-07:00"
-    dateUpdated:
-      type: string
-      format: date-time
-      nullable: true
-      example: '2021-09-14T14:00:00.000Z'
-    updatedByGuid: 
-      $ref: Common.yaml#/updatedByGuid
-    paymentMethodId:
-      type: string
-      example: null
-    paymentTermId:
-      type: string
-      example: null 
+      $ref: .\Common.yaml#/dateCreated
+    paymentTerms:
+      $ref: '#/PaymentTerms'
+    paymentMethod:
+      $ref: '#/PaymentMethod'
     consignee:
-      type: object
-      properties:
-        billingCity:
-          type: string
-          example: HAYWARD
-        billingCountry:
-          type: string
-          example: United States
-        billingLatitude:
-          type: number
-          example: 37.648897
-        billingLongitude:
-          type: number
-          example: -122.098357
-        billingPostalCode:
-          type: string
-          example: 94545
-        billingState:
-          type: string
-          example: CA
-        billingStreet:
-          type: string
-          example: 809 QUANTAS LN
-        blacklist:
-          type: string
-          example: false
-        dotNumber:
-          type: number
-          example: 2543255
-        email:
-          type: string
-          example: arztransportation@yahoo.com
-        guid:
-          $ref: Common.yaml#/guid
-        loadboardInstructions:
-          type: string
-          example: null
-        mcNumber:
-          type: string
-          example: null
-        name:
-          type: string
-          example: "ARZ TRANSPORTATION"
-        orderInstructions:
-          type: string
-          example: These are my order notes.
-        phoneNumber:
-          type: string
-          example: (510) 246-9211
-        preferred:
-          type: boolean
-          example: false
-        qbId:
-          nullable: true    
-          example: null
-        sdGuid:
-          nullable: true    
-          example: null
-        sfId:
-          type: string
-          example: 0011U00000qQLr7QAG
-        shippingCity:
-          type: string
-          example: HAYWARD
-        shippingCountry:
-          type: string
-          example: United States
-        shippingLatitude:
-          type: number
-          example: 37.648897
-        shippingLongitude:
-          type: number
-          example: -122.098357
-        shippingPostalCode:
-          type: string
-          example: "94545"
-        shippingState:
-          type: string
-          example: CA
-        shippingStreet:
-          type: string
-          example: "809 QUANTAS LN"
-        syncInSuper:
-          type: boolean
-          example: null     
+      $ref: .\Account.yaml#/Consignee
     lines:
-      type: array
-      items:
-        type: object
-        properties:
-          guid:  
-            $ref: Common.yaml#/guid
-          notes:
-            type: string
-            nullable: true
-            example: null
-          invoiceGuid:
-            $ref: Common.yaml#/guid 
-          amount:
-            type: string
-            format: currency
-            example: 270.00
-          itemId:
-            type: number
-            example: 21
-          commodityGuid:
-            $ref: Common.yaml#/guid 
-          dateCreated:
-            type: string
-            format: date-time
-            nullable: true
-            example: '2021-09-14T14:00:00.000Z'
-          dateUpdated:
-            type: string
-            format: date-time
-            nullable: true
-            example: '2021-09-14T14:00:00.000Z'
-          createdByGuid:
-            $ref: Common.yaml#/createdByGuid
-          updatedByGuid:
-            $ref: Common.yaml#/updatedByGuid
-          name:
-            type: string
-            example: Services
-          type:
-            type: string
-            example: expense
-          isAccessorial:
-            type: boolean
-            example: false
-          commodity: 
-            type: object
-            properties:
-              guid: 
-                $ref: Common.yaml#/guid 
-              capacity: 
-                type: string
-                example: full truck load
-              damaged: 
-                type: string
-                example: yes
-              inoperable: 
-                type: string
-                example: unknown
-              deliveryStatus:
-                type: string 
-                example: none"
-              length:
-                type: number
-                example: 13
-              weight: 
-                type: number
-                example: 2685
-              quantity: 
-                type: number
-                example: 1
-              description: 
-                type: string
-                example: 2001 Chevrolet Model S
-              identifier: 
-                type: string
-                example: 5K5K5PPJGNL367942
-              extraExternalData:
-                type: string 
-                example: null
-JobObject:
+      $ref: '#/InvoiceLine'
+
+InvoiceLine:
   type: object
   properties:
-    job: 
-      type: object
-      properties:
-        guid:
-          $ref: Common.yaml#/guid 
-        number:
-          type: string
-          example: RC10000A    
-OrderObject:
-  type: object
-  properties:
-    order: 
-      type: object
-      properties:
-        guid:
-          $ref: Common.yaml#/guid 
-        number:
-          type: string
-          example: RC10000
+    guid:
+      $ref: .\Common.yaml#/guid
+    name:
+      type: string
+      description: The name of the item or service of the invoice/bill line.
+      example: transport
+    itemId:
+      type: integer
+      description: The id of the item or service of the invoice/bill line.
+    notes:
+      type: string
+      description: User notes for the current invoice/bill line.
+    amount:
+      allOf:
+        - $ref: .\Common.yaml#/currency
+        - description: The amount that is charged for this line.
+    dateCreated:
+      $ref: .\Common.yaml#/dateCreated
+    isPaid:
+      type: boolean
+      description: Indicates if this invoice/bill line was paid.
+    createdBy:
+      $ref: .\User.yaml#/CreatedBy
+    commodity:
+      $ref: .\Commodity.yaml#/CommodityOutbound
+    isAccessorial:
+      type: boolean
+      description: Indicates that this invoice/bill line item or service is an accessorial charge.
+
+PaymentTerms:
+  type: string
+  enum:
+    - 'Due on receipt'
+    - 'Net 15'
+    - 'Net 30'
+    - 'Net 60'
+
+PaymentMethod:
+  type: string
+  enum:
+    - 'Cash'
+    - 'Check'
+    - 'Credit Card'

@@ -1,6 +1,6 @@
 summary: Get Invoice
 operationId: getInvoice
-description: Get Invoice
+description: Get all details of an Invoice.
 tags:
   - Invoice
 parameters:
@@ -11,12 +11,11 @@ parameters:
     required: true
 responses:
   200:
-    description: Invoice
+    description: OK
     content:
       application/json:
         schema:
-          $ref:  ..\..\components\schemas\Finances.yaml#/invoiceResponse 
-
+          $ref: ..\..\components\schemas\Finances.yaml#/Invoice
   404:
     description: Invoice not found
     content:
