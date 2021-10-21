@@ -2,13 +2,17 @@ LoadTenderResponseObject:
   type: object
   properties:
     guid:
-      $ref: '.\Common.yaml#/guid'
+      allOf:
+        - description: The load tender guid.
+        - $ref: '.\Common.yaml#/guid'
     status:
       type: number
+      description: HTTP status code for the load tender action.
       format: integer
       example: 200
     message:
       type: string
+      description: HTTP status message for the load tender action.
       example: OK
 
 LoadTenderResponses:
