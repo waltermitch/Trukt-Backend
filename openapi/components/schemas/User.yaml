@@ -1,3 +1,9 @@
+UserRoles:
+  type: string
+  enum:
+    - dispatcher
+    - salesperson
+
 TMSUser:
   type: object
   properties:
