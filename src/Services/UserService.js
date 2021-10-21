@@ -28,7 +28,8 @@ class UserService
             .where('name', 'ilike', `${search}%`)
 
             // prevent users from finding the TMS  System user
-            .andWhereNot('name', 'TMS System')
+            .modify('noSystemUser')
+            .modify('isNotDeleted')
             .orderBy('name', 'asc')
             .page(pg, rc);
 
