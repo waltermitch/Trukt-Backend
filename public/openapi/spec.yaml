@@ -4,11 +4,11 @@ info:
   title: Trukt
   description: Transportation management system
 servers:
-  - url: "https://truktapi-dev.rcgauto.net"
+  - url: 'https://truktapi-dev.rcgauto.net'
     description: Development server
-  - url: "https://truktapi-staging.rcgauto.net"
+  - url: 'https://truktapi-staging.rcgauto.net'
     description: Staging server
-  - url: "https://truktapi.rcgauto.net"
+  - url: 'https://truktapi.rcgauto.net'
     description: Production server
 paths:
   /attachments:
@@ -24,13 +24,13 @@ paths:
           required: true
           allowEmptyValue: false
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           description: The guid of the parent object
         - in: query
           name: parentType
           required: true
           allowEmptyValue: false
-          description: "The type of the parent object (i.e job, order)"
+          description: 'The type of the parent object (i.e job, order)'
           schema:
             enum:
               - jobs
@@ -38,7 +38,7 @@ paths:
           name: attachmentType
           required: false
           allowEmptyValue: true
-          description: "The type of attachment (i.e. photo, billOfLading, etc)"
+          description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           schema:
             enum:
               - vendorInvoice
@@ -79,7 +79,7 @@ paths:
           required: false
           explode: false
           allowEmptyValue: true
-          description: "The visibility of the attachment (i.e. carrier, internal)"
+          description: 'The visibility of the attachment (i.e. carrier, internal)'
       requestBody:
         content:
           multipart/*:
@@ -87,7 +87,7 @@ paths:
               type: string
               format: binary
       responses:
-        "201":
+        '201':
           description: Created Attachment
           content:
             application/json: {}
@@ -104,13 +104,13 @@ paths:
           required: true
           allowEmptyValue: false
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           description: The guid of the parent object
         - in: query
           name: parentType
           required: true
           allowEmptyValue: false
-          description: "The type of the parent object (i.e job, order)"
+          description: 'The type of the parent object (i.e job, order)'
           schema:
             enum:
               - jobs
@@ -118,7 +118,7 @@ paths:
           name: attachmentType
           required: false
           allowEmptyValue: true
-          description: "The type of attachment (i.e. photo, billOfLading, etc)"
+          description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           schema:
             enum:
               - vendorInvoice
@@ -159,13 +159,13 @@ paths:
           required: false
           explode: false
           allowEmptyValue: true
-          description: "The visibility of the attachment (i.e. carrier, internal)"
+          description: 'The visibility of the attachment (i.e. carrier, internal)'
       responses:
-        "201":
+        '201':
           description: Found Attachments
           content:
             application/json: {}
-  "/attachments/{guid}":
+  '/attachments/{guid}':
     get:
       summary: Get Attachment
       operationId: getAttachment
@@ -176,10 +176,10 @@ paths:
         - in: path
           name: guid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: Attachment
           content:
             application/json: {}
@@ -193,10 +193,10 @@ paths:
         - in: path
           name: guid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "204":
+        '204':
           description: Deleted Attachment
     patch:
       summary: Update Attachment
@@ -208,16 +208,16 @@ paths:
         - in: path
           name: guid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Attachment"
+              $ref: '#/components/schemas/Attachment'
       responses:
-        "204":
+        '204':
           description: updated Attachment
   /edi/204/inbound:
     post:
@@ -272,31 +272,31 @@ paths:
                   format: currency
                 client:
                   allOf:
-                    - $ref: "#/components/schemas/account"
+                    - $ref: '#/components/schemas/account'
                     - description: The client/customer that is placing the order.
                 consignee:
                   allOf:
-                    - $ref: "#/components/schemas/account"
+                    - $ref: '#/components/schemas/account'
                     - description: The party that is responsible for paying for the order.
                 clientContact:
                   allOf:
-                    - $ref: "#/components/schemas/Contact"
+                    - $ref: '#/components/schemas/Contact'
                     - description: The contact information of the client.
                 stops:
                   type: array
                   items:
-                    $ref: "#/components/schemas/Stop"
+                    $ref: '#/components/schemas/Stop'
                   minLength: 1
                 terminals:
                   type: array
                   items:
-                    $ref: "#/components/schemas/Terminal"
+                    $ref: '#/components/schemas/Terminal'
                   minLength: 1
                 commodities:
                   type: array
                   items:
                     allOf:
-                      - $ref: "#/components/schemas/Commodity"
+                      - $ref: '#/components/schemas/Commodity'
                       - type: object
                         properties:
                           extraExternalData:
@@ -308,7 +308,7 @@ paths:
                             nullable: true
                           cost:
                             description: The price to ship this commodity in USD.
-                            example: "100.00"
+                            example: '100.00'
                             type: string
                             format: currency
                             minLength: 1
@@ -318,7 +318,7 @@ paths:
                     String.
                   type: object
       responses:
-        "201":
+        '201':
           description: Created load tender.
           content:
             application/json: {}
@@ -346,7 +346,7 @@ paths:
                 partner:
                   description: The partner that wishes to update a load tender
                   oneOf:
-                    - $ref: "#/components/schemas/SFID"
+                    - $ref: '#/components/schemas/SFID'
                     - type: string
                       format: uuid
                 reference:
@@ -375,13 +375,13 @@ paths:
                       type: string
                       maxLength: 64
                     latitude:
-                      $ref: "#/components/schemas/latitude"
+                      $ref: '#/components/schemas/latitude'
                     longitude:
-                      $ref: "#/components/schemas/longitude"
+                      $ref: '#/components/schemas/longitude'
                 status:
                   oneOf:
-                    - $ref: "#/components/schemas/EDI214StopStatus"
-                    - $ref: "#/components/schemas/EDI214Appointment"
+                    - $ref: '#/components/schemas/EDI214StopStatus'
+                    - $ref: '#/components/schemas/EDI214Appointment'
                   description: >-
                     Represents the status/appointment update for the load
                     tender.
@@ -389,13 +389,13 @@ paths:
                   discriminator:
                     propertyName: type
                     mapping:
-                      status: "#/components/schemas/EDI214StopStatus"
-                      appointment: "#/components/schemas/EDI214Appointment"
+                      status: '#/components/schemas/EDI214StopStatus'
+                      appointment: '#/components/schemas/EDI214Appointment'
                 datetime:
                   type: string
                   format: date-time
       responses:
-        "200":
+        '200':
           description: Updated Load Tender status.
           content:
             application/json: {}
@@ -418,7 +418,7 @@ paths:
           description: The reference number of a load tender
           in: query
       responses:
-        "200":
+        '200':
           description: Outbound Load Tender Update
           content:
             application/json:
@@ -443,14 +443,14 @@ paths:
                       number:
                         description: The RCG internal load number
                         type: string
-                        pattern: "[A-Z]{2}[0-9]{5}"
+                        pattern: '[A-Z]{2}[0-9]{5}'
                         minLength: 7
                         maxLength: 7
                   partner:
                     allOf:
                       - description: The partner that wishes to update a load tender.
                       - oneOf:
-                          - $ref: "#/components/schemas/SFID"
+                          - $ref: '#/components/schemas/SFID'
                           - type: string
                             format: uuid
                   reference:
@@ -492,13 +492,13 @@ paths:
                         type: string
                         maxLength: 64
                       latitude:
-                        $ref: "#/components/schemas/latitude"
+                        $ref: '#/components/schemas/latitude'
                       longitude:
-                        $ref: "#/components/schemas/longitude"
+                        $ref: '#/components/schemas/longitude'
                   status:
                     oneOf:
-                      - $ref: "#/components/schemas/EDI214StopStatus"
-                      - $ref: "#/components/schemas/EDI214Appointment"
+                      - $ref: '#/components/schemas/EDI214StopStatus'
+                      - $ref: '#/components/schemas/EDI214Appointment'
                     description: >-
                       Represents the status/appointment update for the load
                       tender
@@ -506,8 +506,8 @@ paths:
                     discriminator:
                       propertyName: type
                       mapping:
-                        status: "#/components/schemas/EDI214StopStatus"
-                        appointment: "#/components/schemas/EDI214Appointment"
+                        status: '#/components/schemas/EDI214StopStatus'
+                        appointment: '#/components/schemas/EDI214Appointment'
                   datetime:
                     type: string
                     format: date-time
@@ -516,7 +516,7 @@ paths:
                     type: string
                     example: 8 days
                   edi:
-                    $ref: "#/components/schemas/edi"
+                    $ref: '#/components/schemas/edi'
   /edi/990/outbound/accept:
     get:
       summary: Accept Load Tender
@@ -537,13 +537,13 @@ paths:
           in: query
         - name: partner
           schema:
-            $ref: "#/components/schemas/SFID"
+            $ref: '#/components/schemas/SFID'
           required: true
           allowEmptyValue: false
           description: The partner ID provided when creating a load tender.
           in: query
       responses:
-        "200":
+        '200':
           description: Sample outbound 990 accept payload.
           content:
             application/json:
@@ -556,11 +556,11 @@ paths:
                       guid:
                         allOf:
                           - description: The EDI load tender guid inside of RCG database
-                          - $ref: "#/components/schemas/guid"
+                          - $ref: '#/components/schemas/guid'
                       number:
                         description: The RCG internal load number
                         type: string
-                        pattern: "[A-Z]{2}[0-9]{5}"
+                        pattern: '[A-Z]{2}[0-9]{5}'
                         minLength: 7
                         maxLength: 7
                   partner:
@@ -568,7 +568,7 @@ paths:
                       - description: >
                           The EDI load tender client guid that was used when
                           creating a load tender in our system.
-                      - $ref: "#/components/schemas/SFID"
+                      - $ref: '#/components/schemas/SFID'
                   reference:
                     description: >
                       The EDI load tender reference number used when creating a
@@ -577,7 +577,7 @@ paths:
                   action:
                     allOf:
                       - description: The action to take with the EDI load tender.
-                      - $ref: "#/components/schemas/ediActionType"
+                      - $ref: '#/components/schemas/ediActionType'
                   date:
                     type: string
                     format: date-time
@@ -587,7 +587,7 @@ paths:
                     type: string
                     format: scac
                   edi:
-                    $ref: "#/components/schemas/edi"
+                    $ref: '#/components/schemas/edi'
   /edi/990/outbound/reject:
     get:
       summary: Reject Load Tender
@@ -608,13 +608,13 @@ paths:
           in: query
         - name: partner
           schema:
-            $ref: "#/components/schemas/SFID"
+            $ref: '#/components/schemas/SFID'
           required: true
           allowEmptyValue: false
           description: The partner ID provided when creating a load tender
           in: query
       responses:
-        "200":
+        '200':
           description: Sample outbound 990 reject payload.
           content:
             application/json:
@@ -627,11 +627,11 @@ paths:
                       guid:
                         allOf:
                           - description: The EDI load tender guid inside of RCG database
-                          - $ref: "#/components/schemas/guid"
+                          - $ref: '#/components/schemas/guid'
                       number:
                         description: The RCG internal load number
                         type: string
-                        pattern: "[A-Z]{2}[0-9]{5}"
+                        pattern: '[A-Z]{2}[0-9]{5}'
                         minLength: 7
                         maxLength: 7
                   partner:
@@ -639,7 +639,7 @@ paths:
                       - description: >
                           The EDI load tender client guid that was used when
                           creating a load tender in our system.
-                      - $ref: "#/components/schemas/SFID"
+                      - $ref: '#/components/schemas/SFID'
                   reference:
                     description: >
                       The EDI load tender reference number used when creating a
@@ -648,7 +648,7 @@ paths:
                   action:
                     allOf:
                       - description: The action to take with the EDI load tender.
-                      - $ref: "#/components/schemas/ediActionType"
+                      - $ref: '#/components/schemas/ediActionType'
                   reason:
                     description: The reason for rejecting the EDI load tender.
                     type: string
@@ -662,7 +662,7 @@ paths:
                     type: string
                     format: scac
                   edi:
-                    $ref: "#/components/schemas/edi"
+                    $ref: '#/components/schemas/edi'
   /order:
     post:
       summary: Create order
@@ -677,41 +677,41 @@ paths:
               type: object
               properties:
                 referenceNumber:
-                  $ref: "#/components/schemas/referenceNumber"
+                  $ref: '#/components/schemas/referenceNumber'
                 inspectionType:
-                  $ref: "#/components/schemas/properties-inspectionType"
+                  $ref: '#/components/schemas/properties-inspectionType'
                 instructions:
-                  $ref: "#/components/schemas/instructions"
+                  $ref: '#/components/schemas/instructions'
                 clientNotes:
-                  $ref: "#/components/schemas/clientNotes"
+                  $ref: '#/components/schemas/clientNotes'
                 estimatedRevenue:
-                  $ref: "#/components/schemas/estimatedRevenue"
+                  $ref: '#/components/schemas/estimatedRevenue'
                 estimatedExpense:
-                  $ref: "#/components/schemas/estimatedExpense"
+                  $ref: '#/components/schemas/estimatedExpense'
                 quotedRevenue:
-                  $ref: "#/components/schemas/quotedRevenue"
+                  $ref: '#/components/schemas/quotedRevenue'
                 estimatedDistance:
-                  $ref: "#/components/schemas/estimatedDistance"
+                  $ref: '#/components/schemas/estimatedDistance'
                 isDummy:
-                  $ref: "#/components/schemas/isDummy"
+                  $ref: '#/components/schemas/isDummy'
                 dateExpectedCompleteBy:
-                  $ref: "#/components/schemas/dateExpectedCompleteBy"
+                  $ref: '#/components/schemas/dateExpectedCompleteBy'
                 bol:
-                  $ref: "#/components/schemas/bol"
+                  $ref: '#/components/schemas/bol'
                 bolUrl:
-                  $ref: "#/components/schemas/bolUrl"
+                  $ref: '#/components/schemas/bolUrl'
                 client:
-                  $ref: "#/components/schemas/client"
+                  $ref: '#/components/schemas/client'
                 clientContact:
-                  $ref: "#/components/schemas/clientContact"
+                  $ref: '#/components/schemas/clientContact'
                 consignee:
-                  $ref: "#/components/schemas/consignee"
+                  $ref: '#/components/schemas/consignee'
                 dispatcher:
-                  $ref: "#/components/schemas/dispatcher"
+                  $ref: '#/components/schemas/dispatcher'
                 referrer:
-                  $ref: "#/components/schemas/referrer"
+                  $ref: '#/components/schemas/referrer'
                 salesperson:
-                  $ref: "#/components/schemas/salesperson"
+                  $ref: '#/components/schemas/salesperson'
                 jobs:
                   type: array
                   description: >-
@@ -719,7 +719,7 @@ paths:
                     order.
                   items:
                     allOf:
-                      - $ref: "#/components/schemas/Job"
+                      - $ref: '#/components/schemas/Job'
                       - type: object
                         properties:
                           index:
@@ -734,30 +734,30 @@ paths:
                               - partial truck load
                           inspectionType:
                             allOf:
-                              - $ref: "#/components/schemas/inspectionType"
+                              - $ref: '#/components/schemas/inspectionType'
                               - description: This field currently has not use.
                           vendor:
                             allOf:
-                              - $ref: "#/components/schemas/guidObject"
+                              - $ref: '#/components/schemas/guidObject'
                               - description: >-
                                   The vendor or carrier responsible for
                                   completing this job.
                           vendorContact:
                             allOf:
-                              - $ref: "#/components/schemas/Contact"
+                              - $ref: '#/components/schemas/Contact'
                               - description: >-
                                   The vendor or carrier contact that can be
                                   contacted if any questions arise.
                           vendorAgent:
                             allOf:
-                              - $ref: "#/components/schemas/Contact"
+                              - $ref: '#/components/schemas/Contact'
                               - description: >-
                                   The vendor or carrier employee that will be
                                   completing the job. Usually for carriers this
                                   is the driver.
                           dispatcher:
                             allOf:
-                              - $ref: "#/components/schemas/guidObject"
+                              - $ref: '#/components/schemas/guidObject'
                               - description: >-
                                   The dispatcher who is responsible for managing
                                   this job.
@@ -776,7 +776,7 @@ paths:
                                       type: array
                                       items:
                                         allOf:
-                                          - $ref: "#/components/schemas/indexObject"
+                                          - $ref: '#/components/schemas/indexObject'
                                           - type: object
                                             properties:
                                               lotNumber:
@@ -786,37 +786,37 @@ paths:
                                                 type: string
                                   required:
                                     - index
-                                - $ref: "#/components/schemas/Stop"
+                                - $ref: '#/components/schemas/Stop'
                         required:
                           - index
                           - stops
                 expenses:
                   type: array
                   items:
-                    $ref: "#/components/schemas/orderExpense"
+                    $ref: '#/components/schemas/orderExpense'
                 stops:
                   type: array
                   items:
                     allOf:
-                      - $ref: "#/components/schemas/indexObject"
-                      - $ref: "#/components/schemas/Stop"
+                      - $ref: '#/components/schemas/indexObject'
+                      - $ref: '#/components/schemas/Stop'
                 terminals:
                   type: array
                   items:
                     allOf:
-                      - $ref: "#/components/schemas/Terminal"
-                      - $ref: "#/components/schemas/indexObject"
+                      - $ref: '#/components/schemas/Terminal'
+                      - $ref: '#/components/schemas/indexObject'
                 commodities:
                   type: array
                   items:
-                    $ref: "#/components/schemas/CommodityInbound"
+                    $ref: '#/components/schemas/CommodityInbound'
               required:
                 - client
                 - stops
                 - terminals
                 - commodities
       responses:
-        "200":
+        '200':
           description: Orders
           content:
             application/json:
@@ -824,15 +824,15 @@ paths:
                 type: object
                 properties:
                   guid:
-                    $ref: "#/components/schemas/guid"
+                    $ref: '#/components/schemas/guid'
                   number:
                     type: string
                     pattern: '/[A-Z]{2}\d{5}/'
                     example: RC10000
                   instructions:
-                    $ref: "#/components/schemas/instructions"
+                    $ref: '#/components/schemas/instructions'
                   status:
-                    $ref: "#/components/schemas/orderStatus"
+                    $ref: '#/components/schemas/orderStatus'
                   distance:
                     type: number
                     description: >-
@@ -850,33 +850,33 @@ paths:
                     default: false
                     example: false
                   estimatedExpense:
-                    $ref: "#/components/schemas/estimatedExpense"
+                    $ref: '#/components/schemas/estimatedExpense'
                   estimatedRevenue:
-                    $ref: "#/components/schemas/estimatedRevenue"
+                    $ref: '#/components/schemas/estimatedRevenue'
                   quotedRevenue:
-                    $ref: "#/components/schemas/quotedRevenue"
+                    $ref: '#/components/schemas/quotedRevenue'
                   estimatedIncome:
                     allOf:
-                      - $ref: "#/components/schemas/currency"
+                      - $ref: '#/components/schemas/currency'
                       - description: The calculated total estimated income for this order.
                         readOnly: true
                   actualRevenue:
                     allOf:
-                      - $ref: "#/components/schemas/currency"
+                      - $ref: '#/components/schemas/currency'
                       - description: The calculated revenue for this order.
                         readOnly: true
                   actualExpense:
                     allOf:
-                      - $ref: "#/components/schemas/currency"
+                      - $ref: '#/components/schemas/currency'
                       - description: The calculated expense for this order.
                         readOnly: true
                   actualIncome:
                     allOf:
-                      - $ref: "#/components/schemas/currency"
+                      - $ref: '#/components/schemas/currency'
                       - description: The calculated total income for this order.
                         readOnly: true
                   dateExpectedCompleteBy:
-                    $ref: "#/components/schemas/dateExpectedCompleteBy"
+                    $ref: '#/components/schemas/dateExpectedCompleteBy'
                   dateCompleted:
                     description: The date that this order was completed
                     type: string
@@ -884,17 +884,17 @@ paths:
                     readOnly: true
                     nullable: true
                   dateCreated:
-                    $ref: "#/components/schemas/dateCreated"
+                    $ref: '#/components/schemas/dateCreated'
                   dateUpdated:
-                    $ref: "#/components/schemas/dateUpdated"
+                    $ref: '#/components/schemas/dateUpdated'
                   createdByGuid:
-                    $ref: "#/components/schemas/createdByGuid"
+                    $ref: '#/components/schemas/createdByGuid'
                   updatedByGuid:
-                    $ref: "#/components/schemas/updatedByGuid"
+                    $ref: '#/components/schemas/updatedByGuid'
                   referenceNumber:
-                    $ref: "#/components/schemas/referenceNumber"
+                    $ref: '#/components/schemas/referenceNumber'
                   inspectionType:
-                    $ref: "#/components/schemas/properties-inspectionType"
+                    $ref: '#/components/schemas/properties-inspectionType'
                   isTender:
                     description: >-
                       Signals if the order is a tender and is pending approval
@@ -905,25 +905,25 @@ paths:
                     default: false
                     example: false
                   estimatedDistance:
-                    $ref: "#/components/schemas/estimatedDistance"
+                    $ref: '#/components/schemas/estimatedDistance'
                   bol:
-                    $ref: "#/components/schemas/bol"
+                    $ref: '#/components/schemas/bol'
                   bolUrl:
-                    $ref: "#/components/schemas/bolUrl"
+                    $ref: '#/components/schemas/bolUrl'
                   clientContact:
-                    $ref: "#/components/schemas/clientContact"
+                    $ref: '#/components/schemas/clientContact'
                   dispatcher:
-                    $ref: "#/components/schemas/dispatcher"
+                    $ref: '#/components/schemas/dispatcher'
                   referrer:
-                    $ref: "#/components/schemas/referrer"
+                    $ref: '#/components/schemas/referrer'
                   salesperson:
-                    $ref: "#/components/schemas/salesperson"
+                    $ref: '#/components/schemas/salesperson'
                   client:
                     allOf:
-                      - $ref: "#/components/schemas/client"
-                      - $ref: "#/components/schemas/Account_client"
+                      - $ref: '#/components/schemas/client'
+                      - $ref: '#/components/schemas/Account_client'
                   consignee:
-                    $ref: "#/components/schemas/consignee"
+                    $ref: '#/components/schemas/consignee'
                   jobs:
                     type: array
                     items:
@@ -932,27 +932,27 @@ paths:
                     type: array
                     items:
                       allOf:
-                        - $ref: "#/components/schemas/orderExpense"
-                        - $ref: "#/components/schemas/guidObject"
+                        - $ref: '#/components/schemas/orderExpense'
+                        - $ref: '#/components/schemas/guidObject'
                   stops:
                     type: array
                     items:
                       allOf:
-                        - $ref: "#/components/schemas/Stop"
+                        - $ref: '#/components/schemas/Stop'
                         - type: object
                           properties:
                             terminal:
                               allOf:
-                                - $ref: "#/components/schemas/guidObject"
-                                - $ref: "#/components/schemas/Terminal"
+                                - $ref: '#/components/schemas/guidObject'
+                                - $ref: '#/components/schemas/Terminal'
                             commodities:
-                              $ref: "#/components/schemas/CommodityOutbound"
+                              $ref: '#/components/schemas/CommodityOutbound'
                   terminals:
                     type: array
                     items:
                       allOf:
-                        - $ref: "#/components/schemas/guidObject"
-                        - $ref: "#/components/schemas/Terminal"
+                        - $ref: '#/components/schemas/guidObject'
+                        - $ref: '#/components/schemas/Terminal'
     patch:
       summary: Update order
       operationId: patchOrder
@@ -969,7 +969,7 @@ paths:
                 guid:
                   allOf:
                     - description: Order to update.
-                    - $ref: "#/components/schemas/guid"
+                    - $ref: '#/components/schemas/guid'
                 referenceNumber:
                   type: string
                   maxLength: 64
@@ -979,13 +979,13 @@ paths:
                   nullable: true
                 inspectionType:
                   allOf:
-                    - $ref: "#/components/schemas/inspectionType"
+                    - $ref: '#/components/schemas/inspectionType'
                     - description: This field currently has no use.
                 instructions:
                   type: string
                   description: The instructions for the order provided by the client.
                 clientNotes:
-                  $ref: "#/components/schemas/clientNotes"
+                  $ref: '#/components/schemas/clientNotes'
                 estimatedRevenue:
                   type: string
                   format: currency
@@ -1024,11 +1024,11 @@ paths:
                 client:
                   allOf:
                     - description: The client that placed the order
-                    - $ref: "#/components/schemas/account"
+                    - $ref: '#/components/schemas/account'
                 consignee:
                   allOf:
                     - description: The party that is responsible for paying for the order
-                    - $ref: "#/components/schemas/account"
+                    - $ref: '#/components/schemas/account'
                 clientContact:
                   description: The contact that works for the client.
                   type: object
@@ -1037,33 +1037,33 @@ paths:
                     - additionalProperties: false
                       properties:
                         guid:
-                          $ref: "#/components/schemas/guid"
+                          $ref: '#/components/schemas/guid'
                         name:
                           type: string
                           minLength: 1
                           maxLength: 121
                         email:
-                          $ref: "#/components/schemas/email"
+                          $ref: '#/components/schemas/email'
                         phoneNumber:
-                          $ref: "#/components/schemas/phoneNumber"
+                          $ref: '#/components/schemas/phoneNumber'
                         mobileNumber:
-                          $ref: "#/components/schemas/phoneNumber"
+                          $ref: '#/components/schemas/phoneNumber'
                     - additionalProperties: false
                       properties:
                         guid:
-                          $ref: "#/components/schemas/guid"
+                          $ref: '#/components/schemas/guid'
                 dispatcher:
                   allOf:
                     - description: The dispatcher responsible for this order.
-                    - $ref: "#/components/schemas/guidObjectNullable"
+                    - $ref: '#/components/schemas/guidObjectNullable'
                 referrer:
                   allOf:
                     - description: The account that referred this order to us.
-                    - $ref: "#/components/schemas/guidObjectNullable"
+                    - $ref: '#/components/schemas/guidObjectNullable'
                 salesperson:
                   allOf:
                     - description: The salesperson responsible for managing this order.
-                    - $ref: "#/components/schemas/guidObjectNullable"
+                    - $ref: '#/components/schemas/guidObjectNullable'
                 jobs:
                   type: array
                   description: >-
@@ -1071,11 +1071,11 @@ paths:
                     order.
                   items:
                     allOf:
-                      - $ref: "#/components/schemas/Job"
+                      - $ref: '#/components/schemas/Job'
                       - type: object
                         properties:
                           guid:
-                            $ref: "#/components/schemas/guid"
+                            $ref: '#/components/schemas/guid'
                           index:
                             description: >-
                               Arbitrary string used for referencing this job in
@@ -1088,11 +1088,11 @@ paths:
                               - partial truck load
                           inspectionType:
                             allOf:
-                              - $ref: "#/components/schemas/inspectionType"
+                              - $ref: '#/components/schemas/inspectionType'
                               - description: This field currently has not use.
                           vendor:
                             allOf:
-                              - $ref: "#/components/schemas/guidObjectNullable"
+                              - $ref: '#/components/schemas/guidObjectNullable'
                               - description: >-
                                   The vendor or carrier responsible for
                                   completing this job.
@@ -1101,17 +1101,17 @@ paths:
                               - description: >-
                                   The vendor or carrier contact that can be
                                   contacted if any questions arise.
-                              - $ref: "#/components/schemas/guidObjectNullable"
+                              - $ref: '#/components/schemas/guidObjectNullable'
                           vendorAgent:
                             allOf:
                               - description: >-
                                   The vendor or carrier employee that will be
                                   completing the job. Usually for carriers this
                                   is the driver.
-                              - $ref: "#/components/schemas/guidObjectNullable"
+                              - $ref: '#/components/schemas/guidObjectNullable'
                           dispatcher:
                             allOf:
-                              - $ref: "#/components/schemas/guidObjectNullable"
+                              - $ref: '#/components/schemas/guidObjectNullable'
                               - description: >-
                                   The dispatcher who is responsible for managing
                                   this job.
@@ -1129,7 +1129,7 @@ paths:
                                   type: array
                                   items:
                                     allOf:
-                                      - $ref: "#/components/schemas/indexObject"
+                                      - $ref: '#/components/schemas/indexObject'
                                       - type: object
                                         properties:
                                           lotNumber:
@@ -1157,7 +1157,7 @@ paths:
                           - dispatcher
                       amount:
                         allOf:
-                          - $ref: "#/components/schemas/currency"
+                          - $ref: '#/components/schemas/currency'
                           - description: The amount that is owed for this expense.
                             minimum: 0
                       item:
@@ -1174,23 +1174,23 @@ paths:
                   type: array
                   items:
                     allOf:
-                      - $ref: "#/components/schemas/guidObject"
-                      - $ref: "#/components/schemas/indexObject"
+                      - $ref: '#/components/schemas/guidObject'
+                      - $ref: '#/components/schemas/indexObject'
                       - anyOf:
                           - type: object
                             properties:
                               primaryContact:
                                 anyOf:
-                                  - $ref: "#/components/schemas/guidObjectNullable"
-                                  - $ref: "#/components/schemas/Contact"
+                                  - $ref: '#/components/schemas/guidObjectNullable'
+                                  - $ref: '#/components/schemas/Contact'
                               alternativeContact:
                                 anyOf:
-                                  - $ref: "#/components/schemas/guidObjectNullable"
-                                  - $ref: "#/components/schemas/Contact"
+                                  - $ref: '#/components/schemas/guidObjectNullable'
+                                  - $ref: '#/components/schemas/Contact'
                           - type: object
                             properties:
                               guid:
-                                $ref: "#/components/schemas/guid"
+                                $ref: '#/components/schemas/guid'
                               index:
                                 description: >
                                   A unique arbitrary string that will be used to
@@ -1206,7 +1206,7 @@ paths:
                                   increasing order. Magnitude is arbitrary.
                                 nullable: false
                               stopType:
-                                $ref: "#/components/schemas/stopType"
+                                $ref: '#/components/schemas/stopType'
                               notes:
                                 description: >-
                                   Used to convey any instructions about the
@@ -1219,7 +1219,7 @@ paths:
                                   earliest date this stop should be worked.
                                 type: string
                                 format: date-time
-                                example: "2021-09-09T13:45:45.000Z"
+                                example: '2021-09-09T13:45:45.000Z'
                                 nullable: true
                               dateRequestedEnd:
                                 description: >
@@ -1227,20 +1227,20 @@ paths:
                                   latest date this stop should be worked.
                                 type: string
                                 format: date-time
-                                example: "2021-09-09T13:45:45.000Z"
+                                example: '2021-09-09T13:45:45.000Z'
                                 nullable: true
                               dateRequestedType:
                                 description: >-
                                   Defines the type of requested date the
                                   customer requested.
-                                $ref: "#/components/schemas/stopDateType"
+                                $ref: '#/components/schemas/stopDateType'
                               dateEstimatedStart:
                                 description: >
                                   This date is submitted by the carrier/vendor.
                                   The earliest date this stop could be worked.
                                 type: string
                                 format: date-time
-                                example: "2021-09-09T13:45:45.000Z"
+                                example: '2021-09-09T13:45:45.000Z'
                                 nullable: true
                               dateEstimatedEnd:
                                 description: >
@@ -1248,20 +1248,20 @@ paths:
                                   The latest date this stop could be worked.
                                 type: string
                                 format: date-time
-                                example: "2021-09-09T13:45:45.000Z"
+                                example: '2021-09-09T13:45:45.000Z'
                                 nullable: true
                               dateEstimatedType:
                                 description: >-
                                   Defines the type of estimated date the
                                   carrier/vendor submitted.
-                                $ref: "#/components/schemas/stopDateType"
+                                $ref: '#/components/schemas/stopDateType'
                               dateScheduledStart:
                                 description: >
                                   This date is submitted by the dispatcher. The
                                   earliest date this stop will be worked
                                 type: string
                                 format: date-time
-                                example: "2021-09-09T13:45:45.000Z"
+                                example: '2021-09-09T13:45:45.000Z'
                                 nullable: true
                               dateScheduledEnd:
                                 description: >
@@ -1269,17 +1269,17 @@ paths:
                                   latest date this stop will be worked
                                 type: string
                                 format: date-time
-                                example: "2021-09-09T13:45:45.000Z"
+                                example: '2021-09-09T13:45:45.000Z'
                                 nullable: true
                               dateScheduledType:
                                 description: >-
                                   Defined the type of scheduled date the
                                   dispatcher submitted.
-                                $ref: "#/components/schemas/stopDateType"
+                                $ref: '#/components/schemas/stopDateType'
                               primaryContact:
-                                $ref: "#/components/schemas/Contact"
+                                $ref: '#/components/schemas/Contact'
                               alternativeContact:
-                                $ref: "#/components/schemas/Contact"
+                                $ref: '#/components/schemas/Contact'
                               terminal:
                                 type: string
                                 description: >-
@@ -1308,16 +1308,16 @@ paths:
                   type: array
                   items:
                     allOf:
-                      - $ref: "#/components/schemas/Terminal"
-                      - $ref: "#/components/schemas/indexObject"
+                      - $ref: '#/components/schemas/Terminal'
+                      - $ref: '#/components/schemas/indexObject'
                       - type: object
                         properties:
                           guid:
-                            $ref: "#/components/schemas/guid"
+                            $ref: '#/components/schemas/guid'
                       - type: object
                         properties:
                           locationType:
-                            $ref: "#/components/schemas/terminalLocationType"
+                            $ref: '#/components/schemas/terminalLocationType'
                         required:
                           - street1
                           - city
@@ -1328,12 +1328,12 @@ paths:
                   type: array
                   items:
                     allOf:
-                      - $ref: "#/components/schemas/indexObject"
-                      - $ref: "#/components/schemas/CommodityUpdate"
+                      - $ref: '#/components/schemas/indexObject'
+                      - $ref: '#/components/schemas/CommodityUpdate'
               required:
                 - guid
       responses:
-        "200":
+        '200':
           description: Orders
           content:
             application/json:
@@ -1341,15 +1341,15 @@ paths:
                 type: object
                 properties:
                   guid:
-                    $ref: "#/components/schemas/guid"
+                    $ref: '#/components/schemas/guid'
                   number:
                     type: string
                     pattern: '/[A-Z]{2}\d{5}/'
                     example: RC10000
                   instructions:
-                    $ref: "#/components/schemas/instructions"
+                    $ref: '#/components/schemas/instructions'
                   status:
-                    $ref: "#/components/schemas/orderStatus"
+                    $ref: '#/components/schemas/orderStatus'
                   distance:
                     type: number
                     description: >-
@@ -1367,33 +1367,33 @@ paths:
                     default: false
                     example: false
                   estimatedExpense:
-                    $ref: "#/components/schemas/properties-estimatedExpense"
+                    $ref: '#/components/schemas/properties-estimatedExpense'
                   estimatedRevenue:
-                    $ref: "#/components/schemas/estimatedRevenue"
+                    $ref: '#/components/schemas/estimatedRevenue'
                   quotedRevenue:
-                    $ref: "#/components/schemas/properties-quotedRevenue"
+                    $ref: '#/components/schemas/properties-quotedRevenue'
                   estimatedIncome:
                     allOf:
-                      - $ref: "#/components/schemas/currency"
+                      - $ref: '#/components/schemas/currency'
                       - description: The calculated total estimated income for this order.
                         readOnly: true
                   actualRevenue:
                     allOf:
-                      - $ref: "#/components/schemas/currency"
+                      - $ref: '#/components/schemas/currency'
                       - description: The calculated revenue for this order.
                         readOnly: true
                   actualExpense:
                     allOf:
-                      - $ref: "#/components/schemas/currency"
+                      - $ref: '#/components/schemas/currency'
                       - description: The calculated expense for this order.
                         readOnly: true
                   actualIncome:
                     allOf:
-                      - $ref: "#/components/schemas/currency"
+                      - $ref: '#/components/schemas/currency'
                       - description: The calculated total income for this order.
                         readOnly: true
                   dateExpectedCompleteBy:
-                    $ref: "#/components/schemas/dateExpectedCompleteBy"
+                    $ref: '#/components/schemas/dateExpectedCompleteBy'
                   dateCompleted:
                     description: The date that this order was completed
                     type: string
@@ -1401,17 +1401,17 @@ paths:
                     readOnly: true
                     nullable: true
                   dateCreated:
-                    $ref: "#/components/schemas/dateCreated"
+                    $ref: '#/components/schemas/dateCreated'
                   dateUpdated:
-                    $ref: "#/components/schemas/dateUpdated"
+                    $ref: '#/components/schemas/dateUpdated'
                   createdByGuid:
-                    $ref: "#/components/schemas/createdByGuid"
+                    $ref: '#/components/schemas/createdByGuid'
                   updatedByGuid:
-                    $ref: "#/components/schemas/updatedByGuid"
+                    $ref: '#/components/schemas/updatedByGuid'
                   referenceNumber:
-                    $ref: "#/components/schemas/properties-referenceNumber"
+                    $ref: '#/components/schemas/properties-referenceNumber'
                   inspectionType:
-                    $ref: "#/components/schemas/properties-inspectionType"
+                    $ref: '#/components/schemas/properties-inspectionType'
                   isTender:
                     description: >-
                       Signals if the order is a tender and is pending approval
@@ -1422,25 +1422,25 @@ paths:
                     default: false
                     example: false
                   estimatedDistance:
-                    $ref: "#/components/schemas/estimatedDistance"
+                    $ref: '#/components/schemas/estimatedDistance'
                   bol:
-                    $ref: "#/components/schemas/bol"
+                    $ref: '#/components/schemas/bol'
                   bolUrl:
-                    $ref: "#/components/schemas/bolUrl"
+                    $ref: '#/components/schemas/bolUrl'
                   clientContact:
-                    $ref: "#/components/schemas/properties-clientContact"
+                    $ref: '#/components/schemas/properties-clientContact'
                   dispatcher:
-                    $ref: "#/components/schemas/properties-dispatcher"
+                    $ref: '#/components/schemas/properties-dispatcher'
                   referrer:
-                    $ref: "#/components/schemas/properties-referrer"
+                    $ref: '#/components/schemas/properties-referrer'
                   salesperson:
-                    $ref: "#/components/schemas/properties-salesperson"
+                    $ref: '#/components/schemas/properties-salesperson'
                   client:
                     allOf:
-                      - $ref: "#/components/schemas/properties-client"
-                      - $ref: "#/components/schemas/Account_client"
+                      - $ref: '#/components/schemas/properties-client'
+                      - $ref: '#/components/schemas/Account_client'
                   consignee:
-                    $ref: "#/components/schemas/properties-consignee"
+                    $ref: '#/components/schemas/properties-consignee'
                   jobs:
                     type: array
                     items:
@@ -1449,27 +1449,27 @@ paths:
                     type: array
                     items:
                       allOf:
-                        - $ref: "#/components/schemas/orderExpense"
-                        - $ref: "#/components/schemas/guidObject"
+                        - $ref: '#/components/schemas/orderExpense'
+                        - $ref: '#/components/schemas/guidObject'
                   stops:
                     type: array
                     items:
                       allOf:
-                        - $ref: "#/components/schemas/Stop"
+                        - $ref: '#/components/schemas/Stop'
                         - type: object
                           properties:
                             terminal:
                               allOf:
-                                - $ref: "#/components/schemas/guidObject"
-                                - $ref: "#/components/schemas/Terminal"
+                                - $ref: '#/components/schemas/guidObject'
+                                - $ref: '#/components/schemas/Terminal'
                             commodities:
-                              $ref: "#/components/schemas/CommodityOutbound"
+                              $ref: '#/components/schemas/CommodityOutbound'
                   terminals:
                     type: array
                     items:
                       allOf:
-                        - $ref: "#/components/schemas/guidObject"
-                        - $ref: "#/components/schemas/Terminal"
+                        - $ref: '#/components/schemas/guidObject'
+                        - $ref: '#/components/schemas/Terminal'
   /order/getorders:
     post:
       summary: Search orders
@@ -1484,9 +1484,9 @@ paths:
               type: object
               properties:
                 page:
-                  $ref: "#/components/schemas/page"
+                  $ref: '#/components/schemas/page'
                 rowCount:
-                  $ref: "#/components/schemas/rowCount"
+                  $ref: '#/components/schemas/rowCount'
                 filters:
                   description: Request filters to apply
                   type: object
@@ -1498,9 +1498,9 @@ paths:
                         type: object
                         properties:
                           longitude:
-                            $ref: "#/components/schemas/longitude"
+                            $ref: '#/components/schemas/longitude'
                           latitude:
-                            $ref: "#/components/schemas/latitude"
+                            $ref: '#/components/schemas/latitude'
                           radius:
                             description: Search maximun radius for coordinates
                             type: integer
@@ -1515,9 +1515,9 @@ paths:
                         type: object
                         properties:
                           longitude:
-                            $ref: "#/components/schemas/longitude"
+                            $ref: '#/components/schemas/longitude'
                           latitude:
-                            $ref: "#/components/schemas/latitude"
+                            $ref: '#/components/schemas/latitude'
                           radius:
                             description: Search maximun radius for coordinates
                             type: integer
@@ -1535,22 +1535,22 @@ paths:
                       description: Filter for order customer guid
                       type: array
                       items:
-                        $ref: "#/components/schemas/guid"
+                        $ref: '#/components/schemas/guid'
                     carrier:
                       description: Filter for order carrier guid
                       type: array
                       items:
-                        $ref: "#/components/schemas/guid"
+                        $ref: '#/components/schemas/guid'
                     dispatcher:
                       description: Filter for order dispatcher guid
                       type: array
                       items:
-                        $ref: "#/components/schemas/guid"
+                        $ref: '#/components/schemas/guid'
                     salesperson:
                       description: Filter for order salesperson guid
                       type: array
                       items:
-                        $ref: "#/components/schemas/guid"
+                        $ref: '#/components/schemas/guid'
                     dates:
                       description: Filter for status in a specific date
                       type: array
@@ -1563,7 +1563,7 @@ paths:
                                 type: number
                                 example: 1
                               date:
-                                $ref: "#/components/schemas/dateTime"
+                                $ref: '#/components/schemas/dateTime'
                               comparison:
                                 description: Type of restriction in the date search
                                 type: string
@@ -1585,9 +1585,9 @@ paths:
                                 type: number
                                 example: 1
                               date1:
-                                $ref: "#/components/schemas/dateTime"
+                                $ref: '#/components/schemas/dateTime'
                               date2:
-                                $ref: "#/components/schemas/dateTime"
+                                $ref: '#/components/schemas/dateTime'
                               comparison:
                                 description: Type of restriction in the date search
                                 type: string
@@ -1641,11 +1641,11 @@ paths:
                   required:
                     - query
       responses:
-        "200":
+        '200':
           description: Orders
           content:
             application/json: {}
-  "/order/{guid}":
+  '/order/{guid}':
     get:
       summary: Get order by guid
       operationId: getOrder
@@ -1656,16 +1656,16 @@ paths:
         - in: path
           name: guid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: order
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Order"
-  "/order/find_by_vin/{vin}":
+                $ref: '#/components/schemas/Order'
+  '/order/find_by_vin/{vin}':
     get:
       summary: Find By VIN
       operationId: findByVin
@@ -1679,7 +1679,7 @@ paths:
             type: string
           required: true
       responses:
-        "200":
+        '200':
           description: order
           content:
             application/json: {}
@@ -1699,19 +1699,19 @@ paths:
                 orderGuids:
                   type: array
                   items:
-                    $ref: "#/components/schemas/guid"
+                    $ref: '#/components/schemas/guid'
                   description: Array of load tender guids to accept.
                   minItems: 1
                   maxItems: 100
               required:
                 - orderGuids
       responses:
-        "200":
+        '200':
           description: Tender
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LoadTenderResponses"
+                $ref: '#/components/schemas/LoadTenderResponses'
   /order/tender/reject:
     put:
       summary: Reject Load Tenders
@@ -1732,7 +1732,7 @@ paths:
                 orderGuids:
                   type: array
                   items:
-                    $ref: "#/components/schemas/guid"
+                    $ref: '#/components/schemas/guid'
                   description: Array of load tender guids to reject.
                   minItems: 1
                   maxItems: 100
@@ -1740,13 +1740,13 @@ paths:
                 - reason
                 - orderGuids
       responses:
-        "200":
+        '200':
           description: Tender
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LoadTenderResponses"
-  "/order/{orderGuid}/notes":
+                $ref: '#/components/schemas/LoadTenderResponses'
+  '/order/{orderGuid}/notes':
     get:
       summary: Get Order Notes by Order guid
       operationId: getAllNotes
@@ -1758,18 +1758,18 @@ paths:
         - in: path
           name: orderGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: Notes
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Note"
-        "404":
+                  $ref: '#/components/schemas/Note'
+        '404':
           description: Order Not Found
           content:
             application/json:
@@ -1779,7 +1779,7 @@ paths:
                   error:
                     type: string
                     description: Order Not Found
-  "/order/{orderGuid}/notes/all":
+  '/order/{orderGuid}/notes/all':
     get:
       summary: Get All Notes by Order guid
       operationId: getOrderNotes
@@ -1791,10 +1791,10 @@ paths:
         - in: path
           name: orderGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: Notes
           content:
             application/json:
@@ -1804,15 +1804,15 @@ paths:
                   order:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Note"
+                      $ref: '#/components/schemas/Note'
                   jobs:
                     type: object
                     properties:
                       jobGuid:
                         type: array
                         items:
-                          $ref: "#/components/schemas/Note"
-        "404":
+                          $ref: '#/components/schemas/Note'
+        '404':
           description: Order Not Found
           content:
             application/json:
@@ -1822,7 +1822,7 @@ paths:
                   error:
                     type: string
                     description: Order Not Found
-  "/order/{orderGuid}/clientNote":
+  '/order/{orderGuid}/clientNote':
     put:
       summary: Update Client Note
       operationId: updateClientNote
@@ -1833,7 +1833,7 @@ paths:
         - in: path
           name: orderGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         content:
@@ -1851,7 +1851,7 @@ paths:
                     with the client
                   example: Your order has been shipped and is on its way
       responses:
-        "202":
+        '202':
           description: Orders
           content:
             application/json:
@@ -1865,10 +1865,10 @@ paths:
                         type: string
                         example: Your order has been shipped and is on its way
                       updatedByGuid:
-                        $ref: "#/components/schemas/guid"
+                        $ref: '#/components/schemas/guid'
                       dateUpdated:
-                        $ref: "#/components/schemas/dateUpdated"
-        "404":
+                        $ref: '#/components/schemas/dateUpdated'
+        '404':
           description: Orders
           content:
             application/json:
@@ -1878,7 +1878,7 @@ paths:
                   error:
                     type: string
                     example: Order not found
-  "/job/{jobGuid}/notes":
+  '/job/{jobGuid}/notes':
     get:
       summary: Get Job Notes by Job guid
       operationId: getJobNotes
@@ -1890,18 +1890,18 @@ paths:
         - in: path
           name: jobGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: Notes
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Note"
-        "404":
+                  $ref: '#/components/schemas/Note'
+        '404':
           description: Job Not Found
           content:
             application/json:
@@ -1919,11 +1919,11 @@ paths:
       tags:
         - Picklist
       responses:
-        "200":
+        '200':
           description: picklist
           content:
             application/json: {}
-  "/statusmanager/{guid}":
+  '/statusmanager/{guid}':
     get:
       summary: Get status log by order guid
       operationId: getStatusLog
@@ -1934,22 +1934,22 @@ paths:
         - in: path
           name: guid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
         - in: query
           name: pg
           schema:
-            $ref: "#/components/schemas/page"
+            $ref: '#/components/schemas/page'
         - in: query
           name: rc
           schema:
-            $ref: "#/components/schemas/rowCount"
+            $ref: '#/components/schemas/rowCount'
       responses:
-        "200":
+        '200':
           description: status log
           content:
             application/json: {}
-  "/statusmanager/{guid}/{jobGuid}":
+  '/statusmanager/{guid}/{jobGuid}':
     get:
       summary: Get status log by order guid and job guid
       operationId: getStatusLogByJob
@@ -1960,23 +1960,23 @@ paths:
         - in: path
           name: guid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
         - in: path
           name: jobGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
         - in: query
           name: pg
           schema:
-            $ref: "#/components/schemas/page"
+            $ref: '#/components/schemas/page'
         - in: query
           name: rc
           schema:
-            $ref: "#/components/schemas/rowCount"
+            $ref: '#/components/schemas/rowCount'
       responses:
-        "200":
+        '200':
           description: status logs
           content:
             application/json: {}
@@ -2080,7 +2080,7 @@ paths:
               entire keyword string value of the Terminal. Results will be more
               constrained when paired with other search keywords.
       responses:
-        "200":
+        '200':
           description: terminals
           content:
             application/json:
@@ -2088,8 +2088,8 @@ paths:
                 type: array
                 items:
                   allOf:
-                    - $ref: "#/components/schemas/guidObject"
-                    - $ref: "#/components/schemas/Terminal"
+                    - $ref: '#/components/schemas/guidObject'
+                    - $ref: '#/components/schemas/Terminal'
                     - type: object
                       properties:
                         locationType:
@@ -2102,14 +2102,14 @@ paths:
                             - port
                             - business
                         primaryContact:
-                          $ref: "#/components/schemas/Contact"
+                          $ref: '#/components/schemas/Contact'
                         alternativeContact:
-                          $ref: "#/components/schemas/Contact"
+                          $ref: '#/components/schemas/Contact'
                         contacts:
                           type: array
                           items:
-                            $ref: "#/components/schemas/Contact"
-  "/terminal/{terminalGuid}":
+                            $ref: '#/components/schemas/Contact'
+  '/terminal/{terminalGuid}':
     get:
       summary: Get terminal by guid
       operationId: getTerminals
@@ -2120,17 +2120,17 @@ paths:
         - in: path
           name: terminalGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: terminals
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: "#/components/schemas/guidObject"
-                  - $ref: "#/components/schemas/Terminal"
+                  - $ref: '#/components/schemas/guidObject'
+                  - $ref: '#/components/schemas/Terminal'
                   - type: object
                     properties:
                       locationType:
@@ -2143,14 +2143,14 @@ paths:
                           - port
                           - business
                       primaryContact:
-                        $ref: "#/components/schemas/Contact"
+                        $ref: '#/components/schemas/Contact'
                       alternativeContact:
-                        $ref: "#/components/schemas/Contact"
+                        $ref: '#/components/schemas/Contact'
                       contacts:
                         type: array
                         items:
-                          $ref: "#/components/schemas/Contact"
-  "/variables/{name}":
+                          $ref: '#/components/schemas/Contact'
+  '/variables/{name}':
     get:
       summary: Get variable by name
       operationId: getVariable
@@ -2164,7 +2164,7 @@ paths:
             type: string
           required: true
       responses:
-        "200":
+        '200':
           description: variable
           content:
             application/json: {}
@@ -2189,7 +2189,7 @@ paths:
                 - name
                 - value
       responses:
-        "200":
+        '200':
           description: variable
           content:
             application/json: {}
@@ -2201,11 +2201,11 @@ paths:
       tags:
         - Pubsub
       responses:
-        "200":
+        '200':
           description: pubsub
           content:
             application/json: {}
-  "/loadboard/{jobId}":
+  '/loadboard/{jobId}':
     put:
       summary: Post job
       operationId: putLoadboard
@@ -2216,7 +2216,7 @@ paths:
         - in: path
           name: jobId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         content:
@@ -2247,7 +2247,7 @@ paths:
                     required:
                       - loadboard
       responses:
-        "204":
+        '204':
           description: loadboards
           content:
             application/json: {}
@@ -2261,10 +2261,10 @@ paths:
         - in: path
           name: jobId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: loadboards
           content:
             application/json: {}
@@ -2278,7 +2278,7 @@ paths:
         - in: path
           name: jobId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         content:
@@ -2305,7 +2305,7 @@ paths:
                     required:
                       - loadboard
       responses:
-        "204":
+        '204':
           description: loadboards
           content:
             application/json: {}
@@ -2319,7 +2319,7 @@ paths:
         - in: path
           name: jobId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         content:
@@ -2339,11 +2339,11 @@ paths:
                     required:
                       - loadboard
       responses:
-        "200":
+        '200':
           description: loadboards
           content:
             application/json: {}
-  "/loadboard/{jobId}/dispatch":
+  '/loadboard/{jobId}/dispatch':
     post:
       summary: Dispatch Job
       operationId: postLoadboardDispatch
@@ -2354,7 +2354,7 @@ paths:
         - in: path
           name: jobId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         content:
@@ -2405,12 +2405,12 @@ paths:
                     pickup
                   properties:
                     dateType:
-                      $ref: "#/components/schemas/stopDateType"
+                      $ref: '#/components/schemas/stopDateType'
                     startDate:
-                      $ref: "#/components/schemas/dateTime"
+                      $ref: '#/components/schemas/dateTime'
                       description: the earliest date time the load can be picked up
                     endDate:
-                      $ref: "#/components/schemas/dateTime"
+                      $ref: '#/components/schemas/dateTime'
                       description: the latest date time the load can be picked up
                   required:
                     - dateType
@@ -2422,12 +2422,12 @@ paths:
                     pickup
                   properties:
                     dateType:
-                      $ref: "#/components/schemas/stopDateType"
+                      $ref: '#/components/schemas/stopDateType'
                     startDate:
-                      $ref: "#/components/schemas/dateTime"
+                      $ref: '#/components/schemas/dateTime'
                       description: the earliest date time the load can be delivered
                     endDate:
-                      $ref: "#/components/schemas/dateTime"
+                      $ref: '#/components/schemas/dateTime'
                       description: the latest date time the load can be delivered
                   required:
                     - dateType
@@ -2452,7 +2452,7 @@ paths:
                 - paymentTerm
                 - paymentMethod
       responses:
-        "200":
+        '200':
           description: loadboards
           content:
             application/json: {}
@@ -2466,14 +2466,14 @@ paths:
         - in: path
           name: jobId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: loadboards
           content:
             application/json: {}
-  "/invoice/{invoiceGuid}":
+  '/invoice/{invoiceGuid}':
     get:
       summary: Get Invoice
       operationId: getInvoice
@@ -2484,20 +2484,20 @@ paths:
         - in: path
           name: invoiceGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Invoice"
-        "404":
+                $ref: '#/components/schemas/Invoice'
+        '404':
           description: Invoice not found
           content:
             application/json: {}
-  "/bill/{billGuid}":
+  '/bill/{billGuid}':
     get:
       summary: Get Bill
       operationId: getBill
@@ -2508,20 +2508,20 @@ paths:
         - in: path
           name: billGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Bill"
-        "404":
+                $ref: '#/components/schemas/Bill'
+        '404':
           description: Bill not found
           content:
             application/json: {}
-  "/invoice/order/{orderGuid}":
+  '/invoice/order/{orderGuid}':
     get:
       summary: Get Invoices and Bills by Order
       operationId: getOrderInvoicesAndBills
@@ -2534,20 +2534,20 @@ paths:
         - in: path
           name: orderGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/InvoiceAndBillsOutbound"
-        "404":
+                $ref: '#/components/schemas/InvoiceAndBillsOutbound'
+        '404':
           description: Order not found
           content:
             application/json: {}
-  "/invoice/job/{jobGuid}":
+  '/invoice/job/{jobGuid}':
     get:
       summary: Get Invoices and Bills by Job
       operationId: getJobInvoicesAndBills
@@ -2560,16 +2560,16 @@ paths:
         - in: path
           name: jobGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/InvoiceAndBillsOutbound"
-        "404":
+                $ref: '#/components/schemas/InvoiceAndBillsOutbound'
+        '404':
           description: Job not found
           content:
             application/json: {}
@@ -2591,12 +2591,12 @@ paths:
                   type: array
                   items:
                     description: Order guid
-                    $ref: "#/components/schemas/guid"
+                    $ref: '#/components/schemas/guid'
                   minItems: 1
               required:
                 - orders
       responses:
-        "200":
+        '200':
           description: invoices
           content:
             application/json: {}
@@ -2618,12 +2618,12 @@ paths:
                   type: array
                   items:
                     description: Job guid
-                    $ref: "#/components/schemas/guid"
+                    $ref: '#/components/schemas/guid'
                   minItems: 1
               required:
                 - jobs
       responses:
-        "200":
+        '200':
           description: bills
           content:
             application/json: {}
@@ -2636,7 +2636,7 @@ paths:
         - Index
         - Order
       responses:
-        "200":
+        '200':
           description: index
           content:
             application/json: {}
@@ -2652,14 +2652,14 @@ paths:
         - in: query
           name: order
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: job number
           content:
             application/json: {}
-  "/expense/{expenseId}":
+  '/expense/{expenseId}':
     get:
       summary: Get Expense by guid
       operationId: getExpense
@@ -2670,10 +2670,10 @@ paths:
         - in: path
           name: expenseId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: expense
           content:
             application/json: {}
@@ -2687,15 +2687,15 @@ paths:
         - in: path
           name: expenseId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/expense"
+              $ref: '#/components/schemas/expense'
       responses:
-        "200":
+        '200':
           description: Expense
           content:
             application/json: {}
@@ -2709,10 +2709,10 @@ paths:
         - in: path
           name: expenseId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "204":
+        '204':
           description: Expense deleted
   /expense:
     post:
@@ -2729,10 +2729,10 @@ paths:
               description: List Of Expenses
               items:
                 description: Expense
-                $ref: "#/components/schemas/expense"
+                $ref: '#/components/schemas/expense'
                 minItems: 1
       responses:
-        "200":
+        '200':
           description: invocies
           content:
             application/json: {}
@@ -2746,9 +2746,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/expense"
+              $ref: '#/components/schemas/expense'
       responses:
-        "200":
+        '200':
           description: expense
           content:
             application/json: {}
@@ -2767,11 +2767,11 @@ paths:
             format: uuid
           required: true
       responses:
-        "200":
+        '200':
           description: expense
           content:
             application/json: {}
-  "/account/{accountType}":
+  '/account/{accountType}':
     get:
       summary: Get account by type
       operationId: getAccountByType
@@ -2782,27 +2782,27 @@ paths:
         - in: path
           name: accountType
           schema:
-            $ref: "#/components/schemas/accountType"
+            $ref: '#/components/schemas/accountType'
           required: true
         - in: query
           name: pg
           schema:
-            $ref: "#/components/schemas/page"
+            $ref: '#/components/schemas/page'
         - in: query
           name: rc
           schema:
-            $ref: "#/components/schemas/rowCount"
+            $ref: '#/components/schemas/rowCount'
         - in: query
           name: search
           schema:
             type: string
           required: true
       responses:
-        "200":
+        '200':
           description: Account
           content:
             application/json: {}
-  "/account/{accountType}/{accountId}":
+  '/account/{accountType}/{accountId}':
     get:
       summary: Get account by id and type
       operationId: getAccountById
@@ -2813,19 +2813,19 @@ paths:
         - in: path
           name: accountType
           schema:
-            $ref: "#/components/schemas/accountType"
+            $ref: '#/components/schemas/accountType'
           required: true
         - in: path
           name: accountId
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: Account
           content:
             application/json: {}
-  "/user/{userRole}/search":
+  '/user/{userRole}/search':
     get:
       summary: Search for User by Role
       operationId: searchUsers
@@ -2836,23 +2836,23 @@ paths:
         - in: path
           name: userRole
           schema:
-            $ref: "#/components/schemas/UserRoles"
+            $ref: '#/components/schemas/UserRoles'
           required: true
         - in: query
           name: pg
           schema:
-            $ref: "#/components/schemas/page"
+            $ref: '#/components/schemas/page'
         - in: query
           name: rc
           schema:
-            $ref: "#/components/schemas/rowCount"
+            $ref: '#/components/schemas/rowCount'
         - in: query
           name: search
           schema:
             type: string
           required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
@@ -2860,10 +2860,10 @@ paths:
                 type: array
                 description: List of Users that match the search criteria and role.
                 items:
-                  $ref: "#/components/schemas/TMSUser"
-        "400":
-          $ref: "#/components/responses/ValidationErrorResponse"
-  "/loadboard/requests/job/{jobGuid}":
+                  $ref: '#/components/schemas/TMSUser'
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
+  '/loadboard/requests/job/{jobGuid}':
     get:
       summary: Get requests by jobGuid
       operationId: getLoadboardRequests
@@ -2874,10 +2874,10 @@ paths:
         - in: path
           name: jobGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: requests
           content:
             application/json:
@@ -2885,8 +2885,8 @@ paths:
                 type: array
                 description: Array of request that exist
                 items:
-                  $ref: "#/components/schemas/mainResponsePayload"
-        "404":
+                  $ref: '#/components/schemas/mainResponsePayload'
+        '404':
           description: request do not exist
   /loadboard/requests/create:
     post:
@@ -2899,15 +2899,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/postRequestPayload"
+              $ref: '#/components/schemas/postRequestPayload'
       responses:
-        "200":
+        '200':
           description: Request has been created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/mainResponsePayload"
-        "404":
+                $ref: '#/components/schemas/mainResponsePayload'
+        '404':
           description: Posting doesn't exist
           content:
             application/json:
@@ -2925,23 +2925,23 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/postRequestPayload"
+              $ref: '#/components/schemas/postRequestPayload'
       responses:
-        "200":
+        '200':
           description: Request has been canceled
           content:
             application/json:
               schema:
                 type: string
                 example: Payload Canceled
-        "404":
+        '404':
           description: Posting doesn't exist
           content:
             application/json:
               schema:
                 type: string
                 example: Posting doesn't exist
-  "/loadboard/requests/{requestGuid}/accept":
+  '/loadboard/requests/{requestGuid}/accept':
     put:
       summary: Accept Loadboard Request
       operationId: acceptLoadboardRequest
@@ -2952,16 +2952,16 @@ paths:
         - in: path
           name: requestGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: Request has been accepted
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/mainResponsePayload"
-        "404":
+                $ref: '#/components/schemas/mainResponsePayload'
+        '404':
           description: Unable to accept request or missing request GUID
           content:
             application/json:
@@ -2977,7 +2977,7 @@ paths:
                       detail:
                         type: string
                         example: Not Found
-  "/loadboard/requests/{requestGuid}/decline":
+  '/loadboard/requests/{requestGuid}/decline':
     put:
       summary: Decline Loadboard Request
       operationId: declineLoadboardRequest
@@ -2988,16 +2988,16 @@ paths:
         - in: path
           name: requestGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "200":
+        '200':
           description: Request has been decline
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/mainResponsePayload"
-        "404":
+                $ref: '#/components/schemas/mainResponsePayload'
+        '404':
           description: Unable to accpet request or missing request GUID
           content:
             application/json:
@@ -3013,7 +3013,7 @@ paths:
                       detail:
                         type: string
                         example: Not Found
-  "/note/{object}/{objectGuid}":
+  '/note/{object}/{objectGuid}':
     post:
       summary: Create Internal and external notes
       operationId: createNotes
@@ -3024,12 +3024,12 @@ paths:
         - in: path
           name: object
           schema:
-            $ref: "#/components/schemas/noteObject"
+            $ref: '#/components/schemas/noteObject'
           required: true
         - in: path
           name: objectGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         content:
@@ -3039,7 +3039,7 @@ paths:
               properties:
                 title:
                   type: string
-                  description: "This is a useless field, so fill it up as you wish."
+                  description: 'This is a useless field, so fill it up as you wish.'
                 body:
                   description: Note for internal use only.
                   type: string
@@ -3056,7 +3056,7 @@ paths:
                 - body
                 - type
       responses:
-        "200":
+        '200':
           description: Notes have been created
           content:
             application/json:
@@ -3064,28 +3064,28 @@ paths:
                 type: object
                 properties:
                   title:
-                    $ref: "#/components/schemas/title"
+                    $ref: '#/components/schemas/title'
                   body:
-                    $ref: "#/components/schemas/body"
+                    $ref: '#/components/schemas/body'
                   type:
-                    $ref: "#/components/schemas/type"
+                    $ref: '#/components/schemas/type'
                   createdByGuid:
-                    $ref: "#/components/schemas/createdByGuid"
+                    $ref: '#/components/schemas/createdByGuid'
                   job:
                     type: object
                     properties:
                       guid:
-                        $ref: "#/components/schemas/guid"
+                        $ref: '#/components/schemas/guid'
                   guid:
-                    $ref: "#/components/schemas/guid"
-        "400":
+                    $ref: '#/components/schemas/guid'
+        '400':
           description: Unable to create notes
           content:
             application/json:
               schema:
                 type: string
                 example: Some Error for DB
-  "/note/{noteGuid}":
+  '/note/{noteGuid}':
     put:
       summary: Update notes
       operationId: updateNotes
@@ -3096,7 +3096,7 @@ paths:
         - in: path
           name: noteGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       requestBody:
         content:
@@ -3106,7 +3106,7 @@ paths:
               properties:
                 title:
                   type: string
-                  description: "This is a useless field, so fill it up as you wish."
+                  description: 'This is a useless field, so fill it up as you wish.'
                 body:
                   description: Note for external use only.
                   type: string
@@ -3123,15 +3123,15 @@ paths:
                 - body
                 - type
       responses:
-        "204":
+        '204':
           description: Notes have been updated
           content:
             application/json: {}
-        "400":
+        '400':
           description: Failed to update data note with input values
           content:
             application/json: {}
-        "404":
+        '404':
           description: Note does not exist
           content:
             application/json:
@@ -3148,14 +3148,14 @@ paths:
         - in: path
           name: noteGuid
           schema:
-            $ref: "#/components/schemas/guid"
+            $ref: '#/components/schemas/guid'
           required: true
       responses:
-        "204":
+        '204':
           description: Notes have been deleted
           content:
             application/json: {}
-        "404":
+        '404':
           description: Note does not exist
           content:
             application/json:
@@ -3167,13 +3167,13 @@ components:
     guid:
       type: string
       format: uuid
-      pattern: "^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$"
+      pattern: '^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$'
       example: 00000000-0000-0000-0000-000000000000
     Attachment:
       type: object
       properties:
         type:
-          description: "The type of attachment (i.e. photo, billOfLading, etc)"
+          description: 'The type of attachment (i.e. photo, billOfLading, etc)'
           enum:
             - vendorInvoice
             - billOfLading
@@ -3208,10 +3208,10 @@ components:
               - internal
             default:
               - internal
-          description: "The visibility of the attachment (i.e. carrier, internal)"
+          description: 'The visibility of the attachment (i.e. carrier, internal)'
     SFID:
       type: string
-      pattern: "^(:?[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$"
+      pattern: '^(:?[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$'
       maxLength: 18
       minLength: 15
       example: 00Q1U00000VEwcHUAT
@@ -3222,8 +3222,8 @@ components:
       properties:
         guid:
           oneOf:
-            - $ref: "#/components/schemas/guid"
-            - $ref: "#/components/schemas/SFID"
+            - $ref: '#/components/schemas/guid'
+            - $ref: '#/components/schemas/SFID'
         name:
           type: string
     email:
@@ -3239,17 +3239,17 @@ components:
         - name
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         name:
           type: string
           minLength: 1
           maxLength: 121
         email:
-          $ref: "#/components/schemas/email"
+          $ref: '#/components/schemas/email'
         phoneNumber:
-          $ref: "#/components/schemas/phoneNumber"
+          $ref: '#/components/schemas/phoneNumber'
         mobileNumber:
-          $ref: "#/components/schemas/phoneNumber"
+          $ref: '#/components/schemas/phoneNumber'
     stopType:
       description: >-
         Describes the type of stop, use pickup to indicate that the stop is for
@@ -3274,7 +3274,7 @@ components:
         - commodities
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         index:
           description: >
             A unique arbitrary string that will be used to reference this stop
@@ -3288,7 +3288,7 @@ components:
             be assigned in increasing order. Magnitude is arbitrary.
           nullable: false
         stopType:
-          $ref: "#/components/schemas/stopType"
+          $ref: '#/components/schemas/stopType'
         notes:
           description: Used to convey any instructions about the stops.
           type: string
@@ -3299,7 +3299,7 @@ components:
             should be worked.
           type: string
           format: date-time
-          example: "2021-09-09T13:45:45.000Z"
+          example: '2021-09-09T13:45:45.000Z'
           nullable: true
         dateRequestedEnd:
           description: >
@@ -3307,18 +3307,18 @@ components:
             should be worked.
           type: string
           format: date-time
-          example: "2021-09-09T13:45:45.000Z"
+          example: '2021-09-09T13:45:45.000Z'
           nullable: true
         dateRequestedType:
           description: Defines the type of requested date the customer requested.
-          $ref: "#/components/schemas/stopDateType"
+          $ref: '#/components/schemas/stopDateType'
         dateEstimatedStart:
           description: >
             This date is submitted by the carrier/vendor. The earliest date this
             stop could be worked.
           type: string
           format: date-time
-          example: "2021-09-09T13:45:45.000Z"
+          example: '2021-09-09T13:45:45.000Z'
           nullable: true
         dateEstimatedEnd:
           description: >
@@ -3326,18 +3326,18 @@ components:
             stop could be worked.
           type: string
           format: date-time
-          example: "2021-09-09T13:45:45.000Z"
+          example: '2021-09-09T13:45:45.000Z'
           nullable: true
         dateEstimatedType:
           description: Defines the type of estimated date the carrier/vendor submitted.
-          $ref: "#/components/schemas/stopDateType"
+          $ref: '#/components/schemas/stopDateType'
         dateScheduledStart:
           description: >
             This date is submitted by the dispatcher. The earliest date this
             stop will be worked
           type: string
           format: date-time
-          example: "2021-09-09T13:45:45.000Z"
+          example: '2021-09-09T13:45:45.000Z'
           nullable: true
         dateScheduledEnd:
           description: >
@@ -3345,15 +3345,15 @@ components:
             will be worked
           type: string
           format: date-time
-          example: "2021-09-09T13:45:45.000Z"
+          example: '2021-09-09T13:45:45.000Z'
           nullable: true
         dateScheduledType:
           description: Defined the type of scheduled date the dispatcher submitted.
-          $ref: "#/components/schemas/stopDateType"
+          $ref: '#/components/schemas/stopDateType'
         primaryContact:
-          $ref: "#/components/schemas/Contact"
+          $ref: '#/components/schemas/Contact'
         alternativeContact:
-          $ref: "#/components/schemas/Contact"
+          $ref: '#/components/schemas/Contact'
         terminal:
           type: string
           description: The value of the index field from a Terminal in this payload.
@@ -3374,7 +3374,7 @@ components:
               - index
     zipCode:
       type: string
-      example: "98765"
+      example: '98765'
     latitude:
       description: Number describing the latitude coordinate.
       example: 12.5372125
@@ -3418,11 +3418,11 @@ components:
           type: string
           maxLength: 64
         zipCode:
-          $ref: "#/components/schemas/zipCode"
+          $ref: '#/components/schemas/zipCode'
         latitude:
-          $ref: "#/components/schemas/latitude"
+          $ref: '#/components/schemas/latitude'
         longitude:
-          $ref: "#/components/schemas/longitude"
+          $ref: '#/components/schemas/longitude'
     CommodityBase:
       description: >-
         The real world item(s) that need to be transported between two real
@@ -3494,7 +3494,7 @@ components:
               maximum: 23
           required:
             - typeId
-        - $ref: "#/components/schemas/CommodityBase"
+        - $ref: '#/components/schemas/CommodityBase'
     Commodity Freight:
       type: object
       properties:
@@ -3540,35 +3540,35 @@ components:
             - other
     CommodityCategoryBase:
       oneOf:
-        - $ref: "#/components/schemas/Commodity Freight"
-        - $ref: "#/components/schemas/Commodity Vehicle"
+        - $ref: '#/components/schemas/Commodity Freight'
+        - $ref: '#/components/schemas/Commodity Vehicle'
     CommodityCategory:
       allOf:
-        - $ref: "#/components/schemas/CommodityCategoryBase"
+        - $ref: '#/components/schemas/CommodityCategoryBase'
         - type: object
           required:
             - category
             - type
     Commodity with Category and Type:
       allOf:
-        - $ref: "#/components/schemas/CommodityCategory"
-        - $ref: "#/components/schemas/CommodityBase"
+        - $ref: '#/components/schemas/CommodityCategory'
+        - $ref: '#/components/schemas/CommodityBase'
     Commodity:
       oneOf:
-        - $ref: "#/components/schemas/Commodity with Type ID"
-        - $ref: "#/components/schemas/Commodity with Category and Type"
+        - $ref: '#/components/schemas/Commodity with Type ID'
+        - $ref: '#/components/schemas/Commodity with Category and Type'
     EDI214StopStatus:
       allOf:
-        - $ref: "#/components/schemas/EDI214Status"
+        - $ref: '#/components/schemas/EDI214Status'
         - type: object
           properties:
             code:
-              $ref: "#/components/schemas/edi214StopCodeType"
+              $ref: '#/components/schemas/edi214StopCodeType'
             reason:
               description: EDI 214 AT702 appointment status reason code
     EDI214Appointment:
       allOf:
-        - $ref: "#/components/schemas/EDI214Status"
+        - $ref: '#/components/schemas/EDI214Status'
         - type: object
           required:
             - code
@@ -3576,9 +3576,9 @@ components:
             - reason
           properties:
             type:
-              $ref: "#/components/schemas/edi214Type"
+              $ref: '#/components/schemas/edi214Type'
             code:
-              $ref: "#/components/schemas/edi214AppointmentCodeType"
+              $ref: '#/components/schemas/edi214AppointmentCodeType'
             reason:
               description: EDI 214 AT704 appointment status reason code
     edi214Type:
@@ -3686,13 +3686,13 @@ components:
         - reason
       properties:
         type:
-          $ref: "#/components/schemas/edi214Type"
+          $ref: '#/components/schemas/edi214Type'
         code:
           type: string
           minLength: 2
           maxLength: 2
         reason:
-          $ref: "#/components/schemas/edi214StatusReasonType"
+          $ref: '#/components/schemas/edi214StatusReasonType'
     edi214StopCodeType:
       description: EDI 214  AT701 appointment status code
       type: string
@@ -3772,7 +3772,7 @@ components:
       default: standard
     properties-inspectionType:
       allOf:
-        - $ref: "#/components/schemas/inspectionType"
+        - $ref: '#/components/schemas/inspectionType'
         - description: This field currently has no use.
     instructions:
       type: string
@@ -3794,12 +3794,12 @@ components:
       type: string
       format: currency
       description: The amount owed to the vendors.
-      example: "99.00"
+      example: '99.00'
     quotedRevenue:
       type: string
       format: currency
       description: The amount quoted to the client for this order.
-      example: "99.00"
+      example: '99.00'
     estimatedDistance:
       type: number
       description: The distance required to travel to complete the full order in miles.
@@ -3824,15 +3824,15 @@ components:
       description: The URL to the Bill of Lading for this order.
     client:
       allOf:
-        - $ref: "#/components/schemas/account"
+        - $ref: '#/components/schemas/account'
         - description: The client that placed the order
     clientContact:
       allOf:
-        - $ref: "#/components/schemas/Contact"
+        - $ref: '#/components/schemas/Contact'
         - description: The contact that works for the client.
     consignee:
       allOf:
-        - $ref: "#/components/schemas/account"
+        - $ref: '#/components/schemas/account'
         - description: The party that is responsible for paying for the order
     guidObject:
       type: object
@@ -3840,18 +3840,18 @@ components:
         - guid
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
     dispatcher:
       allOf:
-        - $ref: "#/components/schemas/guidObject"
+        - $ref: '#/components/schemas/guidObject'
         - description: The dispatcher responsible for this order.
     referrer:
       allOf:
-        - $ref: "#/components/schemas/guidObject"
+        - $ref: '#/components/schemas/guidObject'
         - description: The account that referred this order to us.
     salesperson:
       allOf:
-        - $ref: "#/components/schemas/guidObject"
+        - $ref: '#/components/schemas/guidObject'
         - description: The salesperson responsible for managing this order.
     Job with Type ID:
       type: object
@@ -3900,19 +3900,19 @@ components:
             - dry run
     JobCategoryBase:
       oneOf:
-        - $ref: "#/components/schemas/Job Transport"
-        - $ref: "#/components/schemas/Job Service"
+        - $ref: '#/components/schemas/Job Transport'
+        - $ref: '#/components/schemas/Job Service'
     Job with Category and Type:
       allOf:
-        - $ref: "#/components/schemas/JobCategoryBase"
+        - $ref: '#/components/schemas/JobCategoryBase'
         - type: object
           required:
             - category
             - type
     Job:
       oneOf:
-        - $ref: "#/components/schemas/Job with Type ID"
-        - $ref: "#/components/schemas/Job with Category and Type"
+        - $ref: '#/components/schemas/Job with Type ID'
+        - $ref: '#/components/schemas/Job with Category and Type'
     index:
       type: string
       description: >-
@@ -3923,14 +3923,14 @@ components:
       type: object
       properties:
         index:
-          $ref: "#/components/schemas/index"
+          $ref: '#/components/schemas/index'
       required:
         - index
     currency:
       type: string
       format: currency
       pattern: '^(?:[1-9][0-9]*|0)\.[0-9]{2}$'
-      example: "12345.67"
+      example: '12345.67'
     orderExpense:
       type: object
       properties:
@@ -3944,7 +3944,7 @@ components:
             - dispatcher
         amount:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The amount that is owed for this expense.
               minimum: 0
         item:
@@ -3959,8 +3959,8 @@ components:
         - item
     CommodityInbound:
       allOf:
-        - $ref: "#/components/schemas/indexObject"
-        - $ref: "#/components/schemas/Commodity"
+        - $ref: '#/components/schemas/indexObject'
+        - $ref: '#/components/schemas/Commodity'
     orderStatus:
       type: string
       enum:
@@ -3989,14 +3989,14 @@ components:
       nullable: false
     createdByGuid:
       allOf:
-        - $ref: "#/components/schemas/guid"
+        - $ref: '#/components/schemas/guid'
         - type: string
           description: The TMS User account that created this record.
           readOnly: true
           nullable: false
     updatedByGuid:
       allOf:
-        - $ref: "#/components/schemas/guid"
+        - $ref: '#/components/schemas/guid'
         - type: string
           description: The TMS User account that last updated this record.
           readOnly: true
@@ -4015,7 +4015,7 @@ components:
         billingCountry:
           type: string
         billingLatitude:
-          $ref: "#/components/schemas/latitude"
+          $ref: '#/components/schemas/latitude'
         billingLongitude:
           type: string
         billingPostalCode:
@@ -4051,9 +4051,9 @@ components:
           type: string
     CommodityOutbound:
       allOf:
-        - $ref: "#/components/schemas/guidObject"
-        - $ref: "#/components/schemas/Commodity with Type ID"
-        - $ref: "#/components/schemas/Commodity with Category and Type"
+        - $ref: '#/components/schemas/guidObject'
+        - $ref: '#/components/schemas/Commodity with Type ID'
+        - $ref: '#/components/schemas/Commodity with Category and Type'
     guidObjectNullable:
       type: object
       nullable: true
@@ -4061,7 +4061,7 @@ components:
         - guid
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
     terminalLocationType:
       type: string
       enum:
@@ -4137,7 +4137,7 @@ components:
                   type: integer
                   minimum: 1
                   maximum: 23
-            - $ref: "#/components/schemas/CommodityCategory"
+            - $ref: '#/components/schemas/CommodityCategory'
     properties-estimatedExpense:
       type: string
       format: currency
@@ -4159,49 +4159,49 @@ components:
         - additionalProperties: false
           properties:
             guid:
-              $ref: "#/components/schemas/guid"
+              $ref: '#/components/schemas/guid'
             name:
               type: string
               minLength: 1
               maxLength: 121
             email:
-              $ref: "#/components/schemas/email"
+              $ref: '#/components/schemas/email'
             phoneNumber:
-              $ref: "#/components/schemas/phoneNumber"
+              $ref: '#/components/schemas/phoneNumber'
             mobileNumber:
-              $ref: "#/components/schemas/phoneNumber"
+              $ref: '#/components/schemas/phoneNumber'
         - additionalProperties: false
           properties:
             guid:
-              $ref: "#/components/schemas/guid"
+              $ref: '#/components/schemas/guid'
     properties-dispatcher:
       allOf:
         - description: The dispatcher responsible for this order.
-        - $ref: "#/components/schemas/guidObjectNullable"
+        - $ref: '#/components/schemas/guidObjectNullable'
     properties-referrer:
       allOf:
         - description: The account that referred this order to us.
-        - $ref: "#/components/schemas/guidObjectNullable"
+        - $ref: '#/components/schemas/guidObjectNullable'
     properties-salesperson:
       allOf:
         - description: The salesperson responsible for managing this order.
-        - $ref: "#/components/schemas/guidObjectNullable"
+        - $ref: '#/components/schemas/guidObjectNullable'
     properties-client:
       allOf:
         - description: The client that placed the order
-        - $ref: "#/components/schemas/account"
+        - $ref: '#/components/schemas/account'
     properties-consignee:
       allOf:
         - description: The party that is responsible for paying for the order
-        - $ref: "#/components/schemas/account"
+        - $ref: '#/components/schemas/account'
     page:
-      description: "For pagination purposes, page to return."
+      description: 'For pagination purposes, page to return.'
       type: integer
       minimum: 1
       default: 1
       example: 1
     rowCount:
-      description: "For pagination purposes, number of entries per page."
+      description: 'For pagination purposes, number of entries per page.'
       type: integer
       default: 25
       example: 25
@@ -4210,18 +4210,18 @@ components:
     dateTime:
       type: string
       format: date-time
-      example: "2021-08-10T07:59:59.000Z"
+      example: '2021-08-10T07:59:59.000Z'
     Job With All Data:
       type: object
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         number:
           type: string
           pattern: '/[A-Z]{2}\d{5}/'
           example: RC10000
         status:
-          $ref: "#/components/schemas/orderStatus"
+          $ref: '#/components/schemas/orderStatus'
         distance:
           type: number
           description: >-
@@ -4246,36 +4246,36 @@ components:
           type: string
           format: currency
           description: The amount owed to the vendors.
-          example: "99.00"
+          example: '99.00'
         quotedRevenue:
           type: string
           format: currency
           description: The amount quoted to the client for this order.
-          example: "99.00"
+          example: '99.00'
         estimatedIncome:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The calculated total estimated income for this order.
               readOnly: true
-              example: "99.00"
+              example: '99.00'
         actualRevenue:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The calculated revenue for this order.
               readOnly: true
-              example: "99.00"
+              example: '99.00'
         actualExpense:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The calculated expense for this order.
               readOnly: true
-              example: "99.00"
+              example: '99.00'
         actualIncome:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The calculated total income for this order.
               readOnly: true
-              example: "99.00"
+              example: '99.00'
         dateStarted:
           type: string
           format: date-time
@@ -4285,13 +4285,13 @@ components:
           format: date-time
           description: The date that this job was completed by a vendor.
         dateCreated:
-          $ref: "#/components/schemas/dateCreated"
+          $ref: '#/components/schemas/dateCreated'
         dateUpdated:
-          $ref: "#/components/schemas/dateUpdated"
+          $ref: '#/components/schemas/dateUpdated'
         createdByGuid:
-          $ref: "#/components/schemas/createdByGuid"
+          $ref: '#/components/schemas/createdByGuid'
         updatedByGuid:
-          $ref: "#/components/schemas/updatedByGuid"
+          $ref: '#/components/schemas/updatedByGuid'
         loadType:
           type: string
           enum:
@@ -4303,7 +4303,7 @@ components:
           type: string
         inspectionType:
           allOf:
-            - $ref: "#/components/schemas/inspectionType"
+            - $ref: '#/components/schemas/inspectionType'
             - description: This field currently has no use.
         bol:
           type: string
@@ -4319,22 +4319,22 @@ components:
         grossProfitmargin:
           type: string
           description: The gross profit made on this job
-          example: "28.17"
+          example: '28.17'
         netProfitmargin:
           type: string
           description: The gross margin made on this job
-          example: "17.28"
+          example: '17.28'
         vendor:
           allOf:
-            - $ref: "#/components/schemas/account"
+            - $ref: '#/components/schemas/account'
             - description: The vendor fulfilling the job
         vendorAgent:
           allOf:
-            - $ref: "#/components/schemas/Contact"
+            - $ref: '#/components/schemas/Contact'
             - description: The contact that works for the vendor.
         vendorContact:
           allOf:
-            - $ref: "#/components/schemas/Contact"
+            - $ref: '#/components/schemas/Contact'
             - description: >-
                 The contact that works for the vendor that is fulfilling the
                 job.
@@ -4344,23 +4344,23 @@ components:
           type: array
           items:
             allOf:
-              - $ref: "#/components/schemas/Stop"
+              - $ref: '#/components/schemas/Stop'
               - type: object
                 properties:
                   terminal:
                     allOf:
-                      - $ref: "#/components/schemas/guidObject"
-                      - $ref: "#/components/schemas/Terminal"
+                      - $ref: '#/components/schemas/guidObject'
+                      - $ref: '#/components/schemas/Terminal'
                   commodities:
-                    $ref: "#/components/schemas/Commodity"
+                    $ref: '#/components/schemas/Commodity'
       allOf:
-        - $ref: "#/components/schemas/Job With All Data"
+        - $ref: '#/components/schemas/Job With All Data'
         - type: object
     Order:
       type: object
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         number:
           type: string
           pattern: '/[A-Z]{2}\d{5}/'
@@ -4369,7 +4369,7 @@ components:
           type: string
           description: The instructions for the order provided by the client.
         status:
-          $ref: "#/components/schemas/orderStatus"
+          $ref: '#/components/schemas/orderStatus'
         distance:
           type: number
           description: >-
@@ -4403,36 +4403,36 @@ components:
           type: string
           format: currency
           description: The amount owed to the vendors.
-          example: "99.00"
+          example: '99.00'
         quotedRevenue:
           type: string
           format: currency
           description: The amount quoted to the client for this order.
-          example: "99.00"
+          example: '99.00'
         estimatedIncome:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The calculated total estimated income for this order.
               readOnly: true
-              example: "99.00"
+              example: '99.00'
         actualRevenue:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The calculated revenue for this order.
               readOnly: true
-              example: "99.00"
+              example: '99.00'
         actualExpense:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The calculated expense for this order.
               readOnly: true
-              example: "99.00"
+              example: '99.00'
         actualIncome:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The calculated total income for this order.
               readOnly: true
-              example: "99.00"
+              example: '99.00'
         dateExpectedCompleteBy:
           type: string
           format: date-time
@@ -4444,20 +4444,20 @@ components:
           readOnly: true
           nullable: true
         dateCreated:
-          $ref: "#/components/schemas/dateCreated"
+          $ref: '#/components/schemas/dateCreated'
         dateUpdated:
-          $ref: "#/components/schemas/dateUpdated"
+          $ref: '#/components/schemas/dateUpdated'
         createdByGuid:
-          $ref: "#/components/schemas/createdByGuid"
+          $ref: '#/components/schemas/createdByGuid'
         updatedByGuid:
-          $ref: "#/components/schemas/updatedByGuid"
+          $ref: '#/components/schemas/updatedByGuid'
         referenceNumber:
           type: string
           maxLength: 64
           description: The external identification number the client uses for this order.
         inspectionType:
           allOf:
-            - $ref: "#/components/schemas/inspectionType"
+            - $ref: '#/components/schemas/inspectionType'
             - description: This field currently has no use.
         isTender:
           type: boolean
@@ -4486,65 +4486,65 @@ components:
           description: The URL to the Bill of Lading for this order.
         client:
           allOf:
-            - $ref: "#/components/schemas/account"
+            - $ref: '#/components/schemas/account'
             - description: The client that placed the order
         clientContact:
           allOf:
-            - $ref: "#/components/schemas/Contact"
+            - $ref: '#/components/schemas/Contact'
             - description: The contact that works for the client.
         consignee:
           allOf:
-            - $ref: "#/components/schemas/account"
+            - $ref: '#/components/schemas/account'
             - description: The party that is responsible for paying for the order
         dispatcher:
           allOf:
-            - $ref: "#/components/schemas/guidObject"
+            - $ref: '#/components/schemas/guidObject'
             - description: The dispatcher responsible for this order.
         referrer:
           allOf:
-            - $ref: "#/components/schemas/guidObject"
+            - $ref: '#/components/schemas/guidObject'
             - description: The account that referred this order to us.
         salesperson:
           allOf:
-            - $ref: "#/components/schemas/guidObject"
+            - $ref: '#/components/schemas/guidObject'
             - description: The salesperson responsible for managing this order.
         jobs:
           type: array
           items:
             allOf:
-              - $ref: "#/components/schemas/Job With All Related Data"
+              - $ref: '#/components/schemas/Job With All Related Data'
         expenses:
           type: array
           items:
             allOf:
-              - $ref: "#/components/schemas/orderExpense"
-              - $ref: "#/components/schemas/guidObject"
+              - $ref: '#/components/schemas/orderExpense'
+              - $ref: '#/components/schemas/guidObject'
         stops:
           type: array
           items:
             allOf:
-              - $ref: "#/components/schemas/Stop"
+              - $ref: '#/components/schemas/Stop'
               - type: object
                 properties:
                   terminal:
                     allOf:
-                      - $ref: "#/components/schemas/guidObject"
-                      - $ref: "#/components/schemas/Terminal"
+                      - $ref: '#/components/schemas/guidObject'
+                      - $ref: '#/components/schemas/Terminal'
                   commodities:
-                    $ref: "#/components/schemas/CommodityOutbound"
+                    $ref: '#/components/schemas/CommodityOutbound'
         terminals:
           type: array
           items:
             allOf:
-              - $ref: "#/components/schemas/guidObject"
-              - $ref: "#/components/schemas/Terminal"
+              - $ref: '#/components/schemas/guidObject'
+              - $ref: '#/components/schemas/Terminal'
     LoadTenderResponseObject:
       type: object
       properties:
         guid:
           allOf:
             - description: The load tender guid.
-            - $ref: "#/components/schemas/guid"
+            - $ref: '#/components/schemas/guid'
         status:
           type: number
           description: HTTP status code for the load tender action.
@@ -4558,12 +4558,28 @@ components:
       type: array
       description: List of response objects for each load tender.
       items:
-        $ref: "#/components/schemas/LoadTenderResponseObject"
+        $ref: '#/components/schemas/LoadTenderResponseObject'
+    createdBy:
+      type: object
+      description: The TMS User account that created this record.
+      readOnly: true
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          description: The name of the TMS User account that created this record.
+          readOnly: true
+          nullable: false
+        email:
+          type: string
+          description: The email address of the TMS User account that created this record.
+          readOnly: true
     Note:
       type: object
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         title:
           type: string
           minLength: 1
@@ -4572,11 +4588,11 @@ components:
         isBroadcast:
           type: boolean
         dateCreated:
-          $ref: "#/components/schemas/dateCreated"
+          $ref: '#/components/schemas/dateCreated'
         createdByGuid:
-          $ref: "#/components/schemas/createdByGuid"
+          $ref: '#/components/schemas/createdByGuid'
         createdBy:
-          $ref: "#/components/schemas/createdBy"
+          $ref: '#/components/schemas/createdBy'
         type:
           type: string
           enum:
@@ -4600,24 +4616,24 @@ components:
       type: object
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         name:
           type: string
           example: ABC Company
         email:
-          $ref: "#/components/schemas/email"
+          $ref: '#/components/schemas/email'
         phoneNumber:
-          $ref: "#/components/schemas/phoneNumber"
+          $ref: '#/components/schemas/phoneNumber'
         billingCity:
           type: string
         billingCountry:
           type: string
         billingLatitude:
-          $ref: "#/components/schemas/latitude"
+          $ref: '#/components/schemas/latitude'
         billingLongitude:
-          $ref: "#/components/schemas/longitude"
+          $ref: '#/components/schemas/longitude'
         billingPostalCode:
-          $ref: "#/components/schemas/zipCode"
+          $ref: '#/components/schemas/zipCode'
         billingState:
           type: string
         billingStreet:
@@ -4627,11 +4643,11 @@ components:
         shippingCountry:
           type: string
         shippingLatitude:
-          $ref: "#/components/schemas/latitude"
+          $ref: '#/components/schemas/latitude'
         shippingLongitude:
-          $ref: "#/components/schemas/longitude"
+          $ref: '#/components/schemas/longitude'
         shippingPostalCode:
-          $ref: "#/components/schemas/zipCode"
+          $ref: '#/components/schemas/zipCode'
         shippingState:
           type: string
         shippingStreet:
@@ -4640,22 +4656,22 @@ components:
       type: object
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         name:
           type: string
           description: The name of the TMS User.
           example: John Doe
         email:
-          $ref: "#/components/schemas/email"
+          $ref: '#/components/schemas/email'
     CreatedBy:
       allOf:
-        - $ref: "#/components/schemas/TMSUser"
+        - $ref: '#/components/schemas/TMSUser'
         - description: The TMS User that created the parent record.
     InvoiceLine:
       type: object
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         name:
           type: string
           description: The name of the item or service of the invoice/bill line.
@@ -4668,17 +4684,17 @@ components:
           description: User notes for the current invoice/bill line.
         amount:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The amount that is charged for this line.
         dateCreated:
-          $ref: "#/components/schemas/dateCreated"
+          $ref: '#/components/schemas/dateCreated'
         isPaid:
           type: boolean
           description: Indicates if this invoice/bill line was paid.
         createdBy:
-          $ref: "#/components/schemas/CreatedBy"
+          $ref: '#/components/schemas/CreatedBy'
         commodity:
-          $ref: "#/components/schemas/CommodityOutbound"
+          $ref: '#/components/schemas/CommodityOutbound'
         isAccessorial:
           type: boolean
           description: >-
@@ -4688,7 +4704,7 @@ components:
       type: object
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         referenceNumber:
           type: string
           description: The reference number for this record.
@@ -4714,24 +4730,24 @@ components:
           description: The date this invoice/bill was closed out.
         total:
           allOf:
-            - $ref: "#/components/schemas/currency"
+            - $ref: '#/components/schemas/currency'
             - description: The total sum of all the invoice/bill lines.
         isPaid:
           type: boolean
           description: Indicates whether the invoice/bill was paid.
         dateCreated:
-          $ref: "#/components/schemas/dateCreated"
+          $ref: '#/components/schemas/dateCreated'
         paymentTerms:
-          $ref: "#/components/schemas/PaymentTerms"
+          $ref: '#/components/schemas/PaymentTerms'
         paymentMethod:
-          $ref: "#/components/schemas/PaymentMethod"
+          $ref: '#/components/schemas/PaymentMethod'
         consignee:
-          $ref: "#/components/schemas/Consignee"
+          $ref: '#/components/schemas/Consignee'
         lines:
-          $ref: "#/components/schemas/InvoiceLine"
+          $ref: '#/components/schemas/InvoiceLine'
     Invoice:
       allOf:
-        - $ref: "#/components/schemas/InvoiceBill"
+        - $ref: '#/components/schemas/InvoiceBill'
         - type: object
           description: An invoice for a client that requested an order.
           properties:
@@ -4739,14 +4755,14 @@ components:
               type: object
               properties:
                 guid:
-                  $ref: "#/components/schemas/guid"
+                  $ref: '#/components/schemas/guid'
                 number:
                   type: string
                   description: The TMS number of the order.
                   example: RC10000
     Bill:
       allOf:
-        - $ref: "#/components/schemas/InvoiceBill"
+        - $ref: '#/components/schemas/InvoiceBill'
         - type: object
           description: A bill for a vendor that serviced a job.
           properties:
@@ -4754,7 +4770,7 @@ components:
               type: object
               properties:
                 guid:
-                  $ref: "#/components/schemas/guid"
+                  $ref: '#/components/schemas/guid'
                 number:
                   type: string
                   description: The TMS number of the job.
@@ -4766,12 +4782,12 @@ components:
           type: array
           description: All of the invoices that belong to the order.
           items:
-            $ref: "#/components/schemas/Invoice"
+            $ref: '#/components/schemas/Invoice'
         bills:
           type: array
           description: All of the bills that belong to all of the jobs for the order.
           items:
-            $ref: "#/components/schemas/Bill"
+            $ref: '#/components/schemas/Bill'
     expense:
       type: object
       properties:
@@ -4908,7 +4924,7 @@ components:
         - externalOrderID
     deletedByGuid:
       allOf:
-        - $ref: "#/components/schemas/guid"
+        - $ref: '#/components/schemas/guid'
         - type: string
           description: The TMS User account that last deleted this record.
           readOnly: true
@@ -4917,40 +4933,40 @@ components:
       type: object
       properties:
         guid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         status:
-          $ref: "#/components/schemas/LoadBoard Request Status"
+          $ref: '#/components/schemas/LoadBoard Request Status'
           example: Accepted
         price:
           type: string
           format: currency
           example: 125
         externalPostGuid:
-          $ref: "#/components/schemas/guid"
+          $ref: '#/components/schemas/guid'
         loadboard:
-          $ref: "#/components/schemas/Loadboard Name"
+          $ref: '#/components/schemas/Loadboard Name'
         dateOfferSent:
           type: string
           format: date-time
-          example: "2021-09-14T18:10:21.866Z"
+          example: '2021-09-14T18:10:21.866Z'
         datePickupStart:
           type: string
           format: date-time
-          example: "2021-09-14T14:00:00.000Z"
+          example: '2021-09-14T14:00:00.000Z'
         datePickupEnd:
           type: string
           format: date-time
           nullable: true
-          example: "2021-09-14T14:00:00.000Z"
+          example: '2021-09-14T14:00:00.000Z'
         dateDeliveryStart:
           type: string
           format: date-time
-          example: "2021-09-14T14:00:00.000Z"
+          example: '2021-09-14T14:00:00.000Z'
         dateDeliveryEnd":
           type: string
           format: date-time
           nullable: true
-          example: "2021-09-14T14:00:00.000Z"
+          example: '2021-09-14T14:00:00.000Z'
         carrierIdentifier:
           type: string
           nullable: true
@@ -4960,7 +4976,7 @@ components:
           type: string
           example: Becasuse you are cheap.
         extraExternalData:
-          $ref: "#/components/schemas/extraExternalData"
+          $ref: '#/components/schemas/extraExternalData'
         isActive:
           type: boolean
           example: true
@@ -4989,23 +5005,23 @@ components:
           type: string
           format: date-time
           nullable: true
-          example: "2021-09-14T14:00:00.000Z"
+          example: '2021-09-14T14:00:00.000Z'
         dateUpdated:
           type: string
           format: date-time
           nullable: true
-          example: "2021-09-14T14:00:00.000Z"
+          example: '2021-09-14T14:00:00.000Z'
         dateDeleted:
           type: string
           format: date-time
           nullable: true
-          example: "2021-09-14T14:00:00.000Z"
+          example: '2021-09-14T14:00:00.000Z'
         createdByGuid:
-          $ref: "#/components/schemas/createdByGuid"
+          $ref: '#/components/schemas/createdByGuid'
         updatedByGuid:
-          $ref: "#/components/schemas/updatedByGuid"
+          $ref: '#/components/schemas/updatedByGuid'
         deletedByGuid:
-          $ref: "#/components/schemas/deletedByGuid"
+          $ref: '#/components/schemas/deletedByGuid'
     postRequestPayload:
       type: object
       properties:
@@ -5043,11 +5059,11 @@ components:
           type: string
           nullable: true
           maxLength: 32
-          description: "Number identifying the carrier ie. MC, DOT."
+          description: 'Number identifying the carrier ie. MC, DOT.'
         loadboard:
-          $ref: "#/components/schemas/Loadboard Name"
+          $ref: '#/components/schemas/Loadboard Name'
         extraExternalData:
-          $ref: "#/components/schemas/extraExternalData"
+          $ref: '#/components/schemas/extraExternalData'
       required:
         - price
         - externalPostGuid
@@ -5063,7 +5079,7 @@ components:
         - order
     title:
       type: string
-      description: "This is a useless field, so fill it up as you wish."
+      description: 'This is a useless field, so fill it up as you wish.'
     body:
       description: Note for internal use only.
       type: string
@@ -5085,4 +5101,4 @@ components:
             type: object
             properties:
               errors:
-                $ref: "#/components/schemas/ValidationError"
+                $ref: '#/components/schemas/ValidationError'
