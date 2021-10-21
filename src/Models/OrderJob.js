@@ -20,9 +20,11 @@ class OrderJob extends BaseModel
     static get relationMappings()
     {
         const OrderStopLink = require('./OrderStopLink');
-        const Order = require('./Order');
         const SFAccount = require('./SFAccount');
         const SFContact = require('./SFContact');
+        const Order = require('./Order');
+        const User = require('./User');
+
         return {
             vendor: {
                 relation: BaseModel.BelongsToOneRelation,
@@ -117,10 +119,10 @@ class OrderJob extends BaseModel
             },
             dispatcher: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
+                modelClass: User,
                 join: {
                     from: 'rcgTms.orderJobs.dispatcherGuid',
-                    to: 'salesforce.accounts.guid'
+                    to: 'rcgTms.tmsUsers.guid'
                 }
             },
             equipmentType: {
