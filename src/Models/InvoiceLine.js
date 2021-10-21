@@ -100,12 +100,17 @@ class InvoiceLine extends BaseModel
         json = super.$formatJson(json);
         if ('item' in json)
         {
-            for (const field of ['name', 'type', 'isAccessorial'])
+            for (const field of ['name', 'isAccessorial'])
             {
                 json[field] = json.item[field];
             }
             json.itemId = json.item.id;
             delete json.item;
+        }
+
+        if (json.commodity)
+        {
+            delete json.commodity.extraExternalData;
         }
         return json;
     }
