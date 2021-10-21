@@ -630,63 +630,59 @@ class OrderService
          * if the lengths do not match, that means one of the orders does not exist.
          * find the guid that does not exist and add it to responses
          */
-        if(orders.length !== orderGuids.length)
+    
+        const hashedOrders = orders.reduce((map, obj)=>
         {
-            const hashedOrders = orders.reduce((map, obj)=>
-            {
-                map[obj.guid] = obj;
-                return map;
-            }, {});
+            map[obj.guid] = obj;
+            return map;
+        }, {});
 
-            for(const guid of orderGuids)
+        const filteredOrders = [];
+        for(const guid of orderGuids)
+        {
+            if(hashedOrders[guid] === undefined)
             {
-                if(hashedOrders[guid] === undefined)
+                responses.push({
+                    orderGuid: guid,
+                    jobGuid: null,
+                    status: 404,
+                    message: 'Order not found.'
+                });
+            }
+            else
+            {
+                let message = null;
+
+                if(hashedOrders[guid].jobs[0].isTransport === false)
+                {
+                    message = 'Order does not have a transport job.';
+                }
+    
+                if(hashedOrders[guid].isTender === false)
+                {
+                    message = 'Order is not a tender.';
+                }
+    
+                if(hashedOrders[guid].isDeleted === true)
+                {
+                    message = 'Order is deleted.';
+                }
+    
+                if(message)
                 {
                     responses.push({
                         orderGuid: guid,
                         jobGuid: null,
-                        status: 404,
-                        message: 'Order not found.'
+                        status: 400,
+                        message
                     });
                 }
+    
+                if(hashedOrders[guid].isTender && !hashedOrders[guid].isDeleted)
+                {
+                    filteredOrders.push(hashedOrders[guid]);
+                }
             }
-        }
-
-        const filteredOrders = [];
-        for(const order of orders)
-        {
-            let message = null;
-
-            if(order.jobs[0].isTransport === false)
-            {
-                message = 'Order does not have a transport job.';
-            }
-
-            if(order.isTender === false)
-            {
-                message = 'Order is not a tender.';
-            }
-
-            if(order.isDeleted === true)
-            {
-                message = 'Order is deleted.';
-            }
-
-            if(message)
-            {
-                responses.push({
-                    orderGuid: order.guid,
-                    jobGuid: null,
-                    status: 400,
-                    message
-                });
-            }
-
-            if(order.isTender && !order.isDeleted)
-            {
-                filteredOrders.push(order);
-            }
-
         }
 
         const logicAppPayloads = filteredOrders.map((item)=> ({
