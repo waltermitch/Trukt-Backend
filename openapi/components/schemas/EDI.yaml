@@ -1,9 +1,15 @@
 LoadTenderResponseObject:
   type: object
   properties:
-    guid:
+    orderGuid:
       allOf:
-        - description: The load tender guid.
+        - description: The load tender's order guid.
+        - $ref: '.\Common.yaml#/guid'
+    jobGuid:
+      allOf:
+        - type: string
+          nullable: true
+          description: The load tender's job guid.
         - $ref: '.\Common.yaml#/guid'
     status:
       type: number
