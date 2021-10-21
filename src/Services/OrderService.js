@@ -687,13 +687,13 @@ class OrderService
      * @param {('accept' | 'reject')} action
      * @param {string []} orderGuids
      * @param {string | null} reason
+     * @returns {{orderGuid: string, jobGuid: string, status: number, message: string | null}} reason
      */
     static async handleLoadTenders(action, orderGuids, reason)
     {
-
         const responses = [];
         
-        const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData]');
+        const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
 
         /**
          * if the lengths do not match, that means one of the orders does not exist.
@@ -706,7 +706,8 @@ class OrderService
                 if(orders.findIndex((order)=> order.guid === guid) === -1)
                 {
                     responses.push({
-                        guid: orderGuids[index],
+                        orderGuid: orderGuids[index],
+                        jobGuid: null,
                         status: 404,
                         message: 'Order not found.'
                     });
@@ -717,21 +718,30 @@ class OrderService
 
         orders.forEach((item, index)=>
         {
+            let message = null;
+
+            if(item.jobs[0].isTransport === false)
+            {
+                message = 'Order does not have a transport job.';
+            }
+
             if(item.isTender === false)
             {
-                responses.push({
-                    guid: orderGuids[index],
-                    status: 400,
-                    message: 'Order is not a tender.'
-                });
+                message = 'Order is not a tender.';
             }
 
             if(item.isDeleted === true)
             {
+                message = 'Order is deleted.';
+            }
+
+            if(message)
+            {
                 responses.push({
-                    guid: orderGuids[index],
+                    orderGuid: orderGuids[index],
+                    jobGuid: null,
                     status: 400,
-                    message: 'Order is deleted.'
+                    message
                 });
             }
         });
@@ -760,7 +770,8 @@ class OrderService
         }
 
         const formattedResponses = apiResponses.map((item, index)=>({
-            guid: filteredOrders[index].guid,
+            orderGuid: filteredOrders[index].guid,
+            jobGuid: filteredOrders[index].jobs[0].guid,
             status: item.status === 'fulfilled' ? 200 : 400,
             message: item?.reason?.message || null
         }));
@@ -769,31 +780,35 @@ class OrderService
     }
 
     /**
-     * @param {{guid: string, status: Number, message: string | null} []} responses
+     * @param {{orderGuid: string, jobGuid: string, status: Number, message: string | null} []} responses
      * @param {boolean} isTender
      * @param {boolean} isDeleted
      * @param {number} statusId
      * @param {string} currentUser
+     * @returns {Promise<undefined>}
      */
     static async loadTendersHelper(responses, isTender, isDeleted, statusId, currentUser)
     {
         const successfulResponses = responses.filter((item)=> item.status === 200);
 
-        const successfulResponseGuids = successfulResponses.map((item)=> item.guid);
+        const successfulResponseGuids = successfulResponses.map((item)=> item.orderGuid);
 
         if(successfulResponseGuids.length)
         {
-            await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
+           await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
                 isTender,
                 isDeleted,
                 status: 'New'
             });
-    
-           await Promise.allSettled(successfulResponseGuids.map((guid)=> StatusManagerHandler.registerStatus({
-               orderGuid: guid,
+
+           await Promise.allSettled(successfulResponses.map((item)=>
+             StatusManagerHandler.registerStatus({
+               orderGuid: item.orderGuid,
+               jobGuid: item.jobGuid,
                userGuid: currentUser,
                statusId
            })));
+
         }
     }
 
@@ -804,6 +819,7 @@ class OrderService
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
+        
         const responses = await this.handleLoadTenders('accept', orderGuids, null);
 
         await this.loadTendersHelper(responses, false, false, 8, currentUser);
@@ -818,6 +834,7 @@ class OrderService
      */
        static async rejectLoadTenders(orderGuids, reason, currentUser)
        {
+
             const responses = await this.handleLoadTenders('reject', orderGuids, reason);
 
             await this.loadTendersHelper(responses, true, true, 9, currentUser);
