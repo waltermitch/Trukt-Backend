@@ -6,7 +6,9 @@ class InvoiceService
 {
     static async getInvoice(guid)
     {
-        const res = await Invoice.query().findOne({ 'guid': guid, 'isDeleted': false }).withGraphFetched('[lines(isNotDeleted).[commodity,item], consignee]');
+        const res = await Invoice.query()
+            .findOne({ 'guid': guid, 'isDeleted': false })
+            .withGraphFetched(Invoice.fetch.details);
 
         return res;
     }
@@ -17,9 +19,12 @@ class InvoiceService
         const res = await Order
             .query()
             .findById(guid)
-            .withGraphJoined('[invoices(isNotDeleted).[consignee, lines(isNotDeleted).[commodity]], jobs.bills(isNotDeleted).[consignee, lines(isNotDeleted).[commodity]]]');
+            .withGraphJoined({
+                invoices: Invoice.fetch.details,
+                jobs: { bills: Invoice.fetch.details }
+            });
 
-        // to throw proper error
+        // order was not found, return undefined
         if (res == undefined)
         {
             return undefined;
@@ -36,6 +41,8 @@ class InvoiceService
         // object to return array of bills and invoices
         const invoiceObject = {
             invoices: res.invoices,
+
+            // flatten all the bills and assign job guid and number to each bill
             bills: res.jobs.reduce((bills, job) =>
             {
                 const jobObject = {
