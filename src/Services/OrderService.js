@@ -652,6 +652,7 @@ class OrderService
             }
         }
 
+        const filteredOrders = [];
         for(const order of orders)
         {
             let message = null;
@@ -680,10 +681,13 @@ class OrderService
                     message
                 });
             }
-        }
 
-        // double bang on isDeleted because the field is sometimes undefined, this converts it to false
-        const filteredOrders = orders.filter((item)=> item.isTender === true && !!item.isDeleted === false);
+            if(order.isTender && !order.isDeleted)
+            {
+                filteredOrders.push(order);
+            }
+
+        }
 
         const logicAppPayloads = filteredOrders.map((item)=> ({
             order: {
