@@ -240,7 +240,7 @@ class OrderService
             // dispatcher / manager responsible for the order
             if (isUseful(orderObj?.dispatcher))
             {
-                const dispatcher = await SFAccount.query(trx).findById(orderObj.dispatcher.guid);
+                const dispatcher = await User.query(trx).findById(orderObj.dispatcher.guid);
                 if (!dispatcher)
                 {
                     throw new Error('dispatcher ' + JSON.stringify(orderObj.dispatcher) + ' doesn\'t exist');
@@ -409,7 +409,7 @@ class OrderService
 
                 if (isUseful(job.dispatcher))
                 {
-                    const dispatcher = await SFAccount.query(trx).findById(job.dispatcher.guid);
+                    const dispatcher = await User.query(trx).findById(job.dispatcher.guid);
                     if (!dispatcher)
                     {
                         throw new Error('dispatcher ' + JSON.stringify(job.dispatcher) + ' doesnt exist');

@@ -149,6 +149,9 @@ paths:
   /account/{accountType}/{accountId}:
     get:
       $ref: paths\account\get.yaml
+  /user/{userRole}/search:
+    get:
+      $ref: paths\user\search.yaml
   /loadboard/requests/job/{jobGuid}:
     get:
       $ref: paths\loadboard\requests\get.yaml
