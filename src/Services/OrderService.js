@@ -617,7 +617,7 @@ class OrderService
     /**
      * @param {('accept' | 'reject')} action
      * @param {string []} orderGuids
-     * @param {string | null} reason
+     * @param {string} reason
      * @returns {{orderGuid: string, jobGuid: string, status: number, message: string | null}} reason
      */
     static async handleLoadTenders(action, orderGuids, reason)
@@ -696,7 +696,7 @@ class OrderService
             date: DateTime.utc().toString(),
             scac: 'RCGQ',
             edi: item.ediData?.[0].data,
-            reason: reason || undefined
+            reason
         }));
 
         let apiResponses = [];
@@ -765,7 +765,7 @@ class OrderService
 
     /**
      * @param {string []} orderGuids
-     * @param {string | null} reason
+     * @param {string} reason
      * @param {string} currentUser
      */
        static async rejectLoadTenders(orderGuids, reason, currentUser)

@@ -89,7 +89,7 @@ class OrderController
         }
         else if (req.params.action == 'reject')
         {
-            responses = await OrderService.rejectLoadTenders(orderGuids, req.body.reason || null, req.session.userGuid);
+            responses = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
         }
 
         res.status(200);
