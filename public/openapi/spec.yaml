@@ -4541,9 +4541,15 @@ components:
     LoadTenderResponseObject:
       type: object
       properties:
-        guid:
+        orderGuid:
           allOf:
-            - description: The load tender guid.
+            - description: The load tender's order guid.
+            - $ref: '#/components/schemas/guid'
+        jobGuid:
+          allOf:
+            - type: string
+              nullable: true
+              description: The load tender's job guid.
             - $ref: '#/components/schemas/guid'
         status:
           type: number
