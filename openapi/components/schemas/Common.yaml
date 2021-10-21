@@ -415,3 +415,25 @@ Enums:
     enum:
       - job
       - order
+  Get Orders sort fields:
+    type: string
+    enum:
+      - status
+      - number
+      - dateCreated
+      - actualRevenue
+      - actualExpense
+      - estimatedExpense
+      - estimatedRevenue
+      - dateUpdated
+      - clientName
+      - dispatcherName
+      - salespersonName
+      - pickupTerminal
+      - deliveryTerminal
+      - requestedPickupDate
+      - requestedDeliveryDate
+      - scheduledPickupDate
+      - scheduledDeliveryDate
+    default: number
+      

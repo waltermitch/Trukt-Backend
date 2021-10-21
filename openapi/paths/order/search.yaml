@@ -138,15 +138,7 @@ requestBody:
             type: object
             properties:
               field:
-                type: string
-                enum:
-                  - status
-                  - number
-                  - dateCreated
-                  - actualRevenue
-                  - actualExpense
-                  - estimatedExpense
-                  - estimatedRevenue
+                $ref: '..\..\components\schemas\Common.yaml#/Enums/Get Orders sort fields'
               order:
                 description: Sorting order
                 type: string
