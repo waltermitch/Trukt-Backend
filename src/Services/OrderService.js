@@ -652,21 +652,21 @@ class OrderService
             }
         }
 
-        orders.forEach((item, index)=>
+        for(const order of orders)
         {
             let message = null;
 
-            if(item.jobs[0].isTransport === false)
+            if(order.jobs[0].isTransport === false)
             {
                 message = 'Order does not have a transport job.';
             }
 
-            if(item.isTender === false)
+            if(order.isTender === false)
             {
                 message = 'Order is not a tender.';
             }
 
-            if(item.isDeleted === true)
+            if(order.isDeleted === true)
             {
                 message = 'Order is deleted.';
             }
@@ -674,13 +674,13 @@ class OrderService
             if(message)
             {
                 responses.push({
-                    orderGuid: orderGuids[index],
+                    orderGuid: order.guid,
                     jobGuid: null,
                     status: 400,
                     message
                 });
             }
-        });
+        }
 
         // double bang on isDeleted because the field is sometimes undefined, this converts it to false
         const filteredOrders = orders.filter((item)=> item.isTender === true && !!item.isDeleted === false);
