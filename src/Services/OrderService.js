@@ -700,7 +700,7 @@ class OrderService
         }));
 
         let apiResponses = [];
-        if(logicAppPayloads.length)
+        if(filteredOrders.length)
         {
             apiResponses = await Promise.allSettled(logicAppPayloads.map((item)=> logicAppInstance.post(process.env['azure.logicApp.params'], item)));
         }
