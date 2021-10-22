@@ -20,6 +20,7 @@ exports.up = function(knex)
             job_guid uuid;
             amount decimal;
             actual_rev decimal;
+            is_linked boolean;
         BEGIN
             -- first figure out if line is for order or for job, require different queries
             select count(*) > 0 from rcg_tms.invoices i where i.invoice_guid = COALESCE(NEW.invoice_guid, OLD.invoice_guid) into is_order_line;
@@ -98,35 +99,118 @@ exports.up = function(knex)
                     END IF;
                 END IF;
             ELSEIF (TG_OP = 'INSERT') THEN
-                raise notice 'inserting new line';
-                IF (is_revenue = is_order_line) THEN 
-                    select actual_revenue from rcg_tms.orders where guid = order_guid into actual_rev;
-                    raise notice 'actual revenue % ', actual_rev;
-                    raise notice 'new amount % ', NEW.amount;
-
-                    update rcg_tms.orders set actual_revenue = actual_revenue + NEW.amount
+                RAISE NOTICE 'is reve and is order line: % %', is_revenue, is_order_line;
+                /* IF (is_order_line = is_revenue) THEN 
+                    update rcg_tms.orders set actual_revenue = actual_revenue + NEW.amount,
+                    actual_income = actual_income + NEW.amount
                     where guid = order_guid;
-                    update rcg_tms.order_jobs set actual_revenue = actual_revenue + NEW.amount
+                    update rcg_tms.order_jobs set actual_revenue = actual_revenue + NEW.amount,
+                    actual_income = actual_revenue + NEW.amount - actual_expense
                     where guid = job_guid;
                 ELSE
-                    update rcg_tms.orders set actual_expense = actual_expense + NEW.amount
+                    update rcg_tms.orders set actual_expense = actual_expense + NEW.amount,
+                    actual_income = actual_income - NEW.amount
                     where guid = order_guid;
-                    update rcg_tms.order_jobs set actual_expense = actual_expense + NEW.amount
+                    update rcg_tms.order_jobs set actual_expense = actual_expense + NEW.amount,
+                    actual_income = actual_income - NEW.amount
                     where guid = job_guid;
+                END IF; */
+                IF (is_order_line is true) THEN
+                    IF(is_revenue is true) THEN
+                        update rcg_tms.orders set actual_revenue = actual_revenue + NEW.amount,
+                        actual_income = actual_income + NEW.amount
+                        where guid = order_guid;
+                    ELSE
+                        update rcg_tms.orders set actual_expense = actual_expense + NEW.amount,
+                        actual_income = actual_income - NEW.amount
+                        where guid = order_guid;
+                    END IF;
+                ELSE
+                    IF (is_revenue is true) THEN
+                        update rcg_tms.orders set actual_expense = actual_expense + NEW.amount,
+                        actual_income = actual_income - NEW.amount
+                        where guid = order_guid;
+
+                        update rcg_tms.order_jobs set actual_expense = actual_expense + NEW.amount,
+                        actual_income = actual_income - NEW.amount
+                        where guid = job_guid;
+                    ELSE
+                        update rcg_tms.orders set actual_revenue = actual_revenue + NEW.amount,
+                        actual_income = actual_income - NEW.amount
+                        where guid = order_guid;
+
+                        update rcg_tms.order_jobs set actual_revenue = actual_revenue + NEW.amount,
+                        actual_income = actual_income - NEW.amount
+                        where guid = job_guid;
+                    END IF;
                 END IF;
             ELSEIF (TG_OP = 'DELETE') THEN
                 IF (OLD.is_deleted is false) THEN
-                    IF (is_revenue = is_order_line) THEN 
-                        update rcg_tms.orders set actual_revenue = actual_revenue - OLD.amount
+                    /* IF (is_revenue = is_order_line) THEN 
+                        update rcg_tms.orders set actual_revenue = actual_revenue - OLD.amount,
+                        actual_income = actual_income - OLD.amount
                         where guid = order_guid;
-                        update rcg_tms.order_jobs set actual_revenue = actual_revenue - OLD.amount
+                        update rcg_tms.order_jobs set actual_revenue = actual_revenue - OLD.amount,
+                        actual_income = actual_income - OLD.amount
                         where guid = job_guid;
                     ELSE
-                        update rcg_tms.orders set actual_expense = actual_expense - OLD.amount
+                        update rcg_tms.orders set actual_expense = actual_expense - OLD.amount,
+                        actual_income = actual_income + OLD.amount
                         where guid = order_guid;
-                        update rcg_tms.order_jobs set actual_expense = actual_expense - OLD.amount
-                        where guid = job_guid;
-                    END IF;
+                        update rcg_tms.order_jobs set actual_expense = actual_expense - OLD.amount,
+                        actual_income = actual_income + OLD.amount
+                        where guid = job_guid; 
+                    END IF;*/
+
+                    IF (is_order_line is true) THEN
+                        -- Check if invoice line is linked to another line
+                        SELECT count(*) > 0 FROM rcg_tms.invoice_bill_line_links ibll WHERE ibll.line1_guid = OLD.guid OR ibll.line2_guid = OLD.guid INTO is_linked;
+                        IF(is_revenue is true) THEN
+                            -- decrease the actualRevenue on the Order ONLY by the amount.
+                            update rcg_tms.orders set actual_revenue = actual_revenue - OLD.amount,
+                            actual_income = actual_income - OLD.amount
+                            where guid = order_guid;
+
+                            -- If the InvoiceBillLine is LINKED to another one, 
+                            -- then decrease the actualRevenue on the linked OrderJob AS WELL by the amount.
+                            IF (is_linked is true) THEN
+                                UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - OLD.amount,
+                                actual_income = actual_income - OLD.amount
+                                WHERE guid = job_guid;
+                            END IF;
+                        ELSE
+                            update rcg_tms.orders set actual_expense = actual_expense - OLD.amount,
+                            actual_income = actual_income + OLD.amount
+                            where guid = order_guid;
+
+                            -- If the InvoiceBillLine is LINKED to another one, 
+                            -- then decrease the actualExpense on the linked OrderJob AS WELL by the amount.
+                            IF (is_linked is true) THEN
+                                UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - OLD.amount,
+                                actual_income = actual_income + OLD.amount
+                                WHERE guid = job_guid;
+                            END IF;
+                        END IF;
+                    ELSE
+                        IF (is_revenue is true) THEN
+                            update rcg_tms.orders set actual_expense = actual_expense - OLD.amount,
+                            actual_income = actual_income + OLD.amount
+                            where guid = order_guid;
+
+                            update rcg_tms.order_jobs set actual_expense = actual_expense - OLD.amount,
+                            actual_income = actual_income + OLD.amount
+                            where guid = job_guid;
+                        ELSE
+                            update rcg_tms.orders set actual_revenue = actual_revenue - OLD.amount,
+                            actual_income = actual_income - OLD.amount
+                            where guid = order_guid;
+
+                            update rcg_tms.order_jobs set actual_revenue = actual_revenue - OLD.amount,
+                            actual_income = actual_income - OLD.amount
+                            where guid = job_guid;
+                        END IF;
+                    END IF;    
+                    
                 END IF;
             END IF;
             RETURN NEW;
