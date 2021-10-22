@@ -4565,6 +4565,22 @@ components:
       description: List of response objects for each load tender.
       items:
         $ref: '#/components/schemas/LoadTenderResponseObject'
+    createdBy:
+      type: object
+      description: The TMS User account that created this record.
+      readOnly: true
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          description: The name of the TMS User account that created this record.
+          readOnly: true
+          nullable: false
+        email:
+          type: string
+          description: The email address of the TMS User account that created this record.
+          readOnly: true
     Note:
       type: object
       properties:
@@ -4581,6 +4597,8 @@ components:
           $ref: '#/components/schemas/dateCreated'
         createdByGuid:
           $ref: '#/components/schemas/createdByGuid'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
         type:
           type: string
           enum:

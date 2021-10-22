@@ -79,7 +79,6 @@ class OrderController
 
     static async handleTenders(req, res, next)
     {
-
         const orderGuids = req.body.orderGuids;
 
         let responses = [];
@@ -187,7 +186,7 @@ class OrderController
         catch (error)
         {
             let status;
-            if(error?.message == 'No order found')
+            if (error?.message == 'No order found')
             {
                 status = 404;
             }
