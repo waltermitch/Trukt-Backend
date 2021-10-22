@@ -9,7 +9,7 @@ const keywordFields = {
     'zip': ['zipCode'],
     'address': ['street1', 'street2']
 };
-const zipCodeNoDashRegex = /^[^-]*[^ -]\w+/;
+
 const { SYSTEM_USER } = process.env;
 
 class TerminalService
@@ -118,31 +118,14 @@ class TerminalService
             .limit(limit) || [];
     }
 
-    /**
-     * If zipCode contains a dash, use the zipCode until the dash
-     * @param {*} terminal
-     * @returns
-     */
-    static createStringAddress(terminal)
-    {
-        const { street1, city, state, zipCode, country } = terminal;
-
-        const cityStr = city && `, ${city}` || '';
-        const stateStr = state && `, ${state}` || '';
-        const zipCodeStr = zipCode && `, ${zipCode.match(zipCodeNoDashRegex)}` || '';
-        const countryStr = country && `, ${country}` || '';
-
-        return `${street1}${cityStr}${stateStr}${zipCodeStr}${countryStr}`;
-    }
-
     static async resolveTerminal(terminal)
     {
         const trx = await Terminal.startTransaction();
         try
         {
-            const terminalAddress = TerminalService.createStringAddress(terminal);
+            const terminalAddress = Terminal.createStringAddress(terminal);
             const arcgisAddress = await ArcgisClient.findGeocode(terminalAddress);
-            const terminalToUpdate = TerminalService.updateTerminalInformation(arcgisAddress, terminal);
+            const terminalToUpdate = TerminalService.updateTerminalInformation(arcgisAddress, terminal, SYSTEM_USER);
 
             await Terminal.query(trx)
                 .patch(terminalToUpdate)
@@ -159,24 +142,14 @@ class TerminalService
         }
     }
 
-    static isAddressFound(arcgisAddress)
-    {
-        const { location } = arcgisAddress;
-
-        if (location?.x && location?.y)
-            return true;
-        return false;
-    }
-
     /**
      * Latitude is arcgis.Y
      * Longitude is arcgis.X
      * https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find-address-candidates.htm#ESRI_SECTION1_CF39B0C8FC2547C3A52156F509C555FC
      */
-    static updateTerminalInformation(arcgisAddress, terminal)
+    static updateTerminalInformation(arcgisAddress, termninalToUpdate, system_user)
     {
-        const termninalToUpdate = Terminal.fromJson(terminal);
-        if (TerminalService.isAddressFound(arcgisAddress))
+        if (ArcgisClient.isAddressFound(arcgisAddress))
         {
             termninalToUpdate.latitude = arcgisAddress.location.y;
             termninalToUpdate.longitude = arcgisAddress.location.x;
@@ -186,10 +159,9 @@ class TerminalService
         else
             termninalToUpdate.resolvedTimes++;
 
-        termninalToUpdate.updatedByGuid = SYSTEM_USER;
+        termninalToUpdate.updatedByGuid = system_user;
         return termninalToUpdate;
     }
-
 }
 
 module.exports = TerminalService;

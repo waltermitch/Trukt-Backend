@@ -1,0 +1,22 @@
+summary: Get Invoices and Bills by Job
+operationId: getJobInvoicesAndBills
+description: Get all details of all the Invoices and Bills that are related to the Job.
+tags:
+  - Invoice
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          $ref: ..\..\components\schemas\Finances.yaml#/InvoiceAndBillsOutbound
+  404:
+    description: Job not found
+    content:
+      application/json: {}

@@ -31,7 +31,7 @@ class ArcgisClient
      */
     async findGeocode(address, { limit = 1, score = this.score } = {})
     {
-        const url = `${this.findAddressPath}?address=${address}&f=json&token=${this.apikey}`;
+        const url = `${this.findAddressPath}?f=json&token=${this.apikey}&address=${address}`;
         try
         {
             const response = await this.client.get(url);
@@ -63,6 +63,23 @@ class ArcgisClient
     isSetuped()
     {
         return API_KEY && BASE_URL ? true : false;
+    }
+
+    isAddressFound(arcgisAddress)
+    {
+        const { location } = arcgisAddress;
+
+        if (location?.x && location?.y)
+            return true;
+        return false;
+    }
+
+    getCoordinatesFromTerminal(arcgisTerminal)
+    {
+        return {
+            latitude: parseFloat(arcgisTerminal.location.y).toFixed(7),
+            longitude: parseFloat(arcgisTerminal.location.x).toFixed(7)
+        };
     }
 
 }

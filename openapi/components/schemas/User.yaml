@@ -1,0 +1,32 @@
+UserRoles:
+  type: string
+  enum:
+    - dispatcher
+    - salesperson
+
+TMSUser:
+  type: object
+  properties:
+    guid:
+      $ref: .\Common.yaml#/guid
+    name:
+      type: string
+      description: The name of the TMS User.
+      example: John Doe
+    email:
+      $ref: .\Common.yaml#/email
+
+CreatedBy:
+  allOf:
+    - $ref: '#/TMSUser'
+    - description: The TMS User that created the parent record.
+
+UpdatedBy:
+  allOf:
+    - $ref: '#/TMSUser'
+    - description: The TMS User that updated the parent record.
+
+DeletedBy:
+  allOf:
+    - $ref: '#/TMSUser'
+    - description: The TMS User that deleted the parent record.

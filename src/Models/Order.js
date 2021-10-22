@@ -41,10 +41,10 @@ class Order extends BaseModel
             },
             dispatcher: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
+                modelClass: User,
                 join: {
                     from: 'rcgTms.orders.dispatcherGuid',
-                    to: 'salesforce.accounts.guid'
+                    to: 'rcgTms.tmsUsers.guid'
                 }
             },
             jobs: {
@@ -184,9 +184,7 @@ class Order extends BaseModel
                     $modify: ['byType']
                 },
                 clientContact: true,
-                dispatcher: {
-                    $modify: ['byType']
-                },
+                dispatcher: true,
                 referrer: {
                     $modify: ['byType']
                 },
@@ -217,9 +215,7 @@ class Order extends BaseModel
                     },
                     vendorAgent: true,
                     vendorContact: true,
-                    dispatcher: {
-                        $modify: ['byType']
-                    },
+                    dispatcher: true,
                     jobType: true,
                     stopLinks: {
                         commodity: {
@@ -271,7 +267,7 @@ class Order extends BaseModel
 
     setClientNote(note, user)
     {
-        if(note && note.length > 3000)
+        if (note && note.length > 3000)
         {
             throw new Error('Client notes cannot exceed 3000 characters');
         }

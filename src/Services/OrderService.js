@@ -24,6 +24,7 @@ const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusLog = require('../Models/StatusLog');
 const GeneralFuncApi = require('../Azure/GeneralFuncApi');
 
+const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const { DateTime } = require('luxon');
 const axios = require('axios');
@@ -75,21 +76,19 @@ class OrderService
         // if global search is enabled
         // global search includes job#, customerName, customerContactName, customerContactEmail, Vin, lot, carrierName
         if (globalSearch?.query)
-        {
-            OrderService.addGlobalSearch(baseOrderQuery, globalSearch);
-        }
+            baseOrderQuery.modify('globalSearch', globalSearch.query);
 
-        const queryFilterPickup = OrderService.addFilterPickups(baseOrderQuery, pickup);
-        const queryFilterDelivery = OrderService.addFilterDeliveries(queryFilterPickup, delivery);
-        const queryFilterStatus = OrderService.addFilterStatus(queryFilterDelivery, status);
-        const queryFilterCustomer = OrderService.addFilterCustomer(queryFilterStatus, customer);
-        const queryFilterDispatcher = OrderService.addFilterDispatcher(queryFilterCustomer, dispatcher);
-        const queryFilterSalesperson = OrderService.addFilterSalesperson(queryFilterDispatcher, salesperson);
-        const queryFilterCarrier = OrderService.addFilterCarrier(queryFilterSalesperson, carrier);
-        const queryFilterDates = OrderService.addFilterDates(queryFilterCarrier, dates);
-        const queryAllFilters = OrderService.addFilterModifiers(queryFilterDates, { isTender, jobCategory, sort });
+        OrderService.addFilterPickups(baseOrderQuery, pickup);
+        OrderService.addFilterDeliveries(baseOrderQuery, delivery);
+        OrderService.addFilterStatus(baseOrderQuery, status);
+        OrderService.addFilterCustomer(baseOrderQuery, customer);
+        OrderService.addFilterDispatcher(baseOrderQuery, dispatcher);
+        OrderService.addFilterSalesperson(baseOrderQuery, salesperson);
+        OrderService.addFilterCarrier(baseOrderQuery, carrier);
+        OrderService.addFilterDates(baseOrderQuery, dates);
+        OrderService.addFilterModifiers(baseOrderQuery, { isTender, jobCategory, sort });
 
-        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters, jobCategory);
+        const queryWithGraphModifiers = OrderService.addGraphModifiers(baseOrderQuery, jobCategory);
 
         const { total, results } = await queryWithGraphModifiers;
         const ordersWithDeliveryAddress = {
@@ -100,73 +99,6 @@ class OrderService
         };
 
         return ordersWithDeliveryAddress;
-    }
-
-    // global search method
-    static addGlobalSearch(baseQuery, { query: q })
-    {
-        OrderService.searchJobAttributes(baseQuery, q);
-        OrderService.searchCommodityAttributes(baseQuery, q);
-        OrderService.searchCustomerAttributes(baseQuery, q);
-        OrderService.searchVendorAttributes(baseQuery, q);
-        OrderService.searchTerminalAttributes(baseQuery, q);
-        OrderService.searchOrderStopLinks(baseQuery, q);
-    }
-
-    // or where orderStopLink attributes
-    static searchOrderStopLinks(baseQuery, q)
-    {
-        baseQuery
-            .orWhereExists(
-                OrderJob.relatedQuery('stopLinks').where('lotNumber', 'ilike', `%${q}%`));
-    }
-
-    // or where pickup/delivery attributes
-    static searchTerminalAttributes(baseQuery, q)
-    {
-        baseQuery
-            .orWhereExists(
-                OrderJob.relatedQuery('stops').whereExists(OrderStop.relatedQuery('terminal')
-                    .where('city', 'ilike', `%${q}%`)
-                    .orWhere('state', 'ilike', `%${q}%`)
-                    .orWhere('zipCode', 'ilike', `%${q}%`)));
-    }
-
-    // or where vendor attributes
-    static searchVendorAttributes(baseQuery, q)
-    {
-        baseQuery.orWhereExists(
-            OrderJob.relatedQuery('vendor').where('name', 'ilike', `%${q}%`));
-    }
-
-    // or where customer attributes
-    static searchCustomerAttributes(baseQuery, q)
-    {
-        baseQuery
-            .orWhereExists(
-                OrderJob.relatedQuery('order').whereExists(Order.relatedQuery('client')
-                    .where('name', 'ilike', `%${q}%`)))
-            .orWhereExists(
-                OrderJob.relatedQuery('order').whereExists(Order.relatedQuery('clientContact')
-                    .where('name', 'ilike', `%${q}%`).orWhere('email', 'ilike', `%${q}%`)));
-    }
-
-    // or where commodity attributes
-    static searchCommodityAttributes(baseQuery, q)
-    {
-        baseQuery
-            .orWhereExists(
-                OrderJob.relatedQuery('commodities').where('identifier', 'ilike', `%${q}%`))
-            .orWhereExists(
-                OrderJob.relatedQuery('commodities').whereExists(Commodity.relatedQuery('vehicle')
-                    .where('name', 'ilike', `%${q}%`)));
-    }
-
-    // or where job attributes
-    static searchJobAttributes(baseQuery, q)
-    {
-        // search job number
-        baseQuery.orWhere('number', 'ilike', `%${q}%`);
     }
 
     static async getOrderByGuid(orderGuid)
@@ -232,7 +164,7 @@ class OrderService
 
                 // check to see if there are client notes assigned so we don't bother querying
                 // on something that may not exist
-                if(order.clientNotes)
+                if (order.clientNotes)
                 {
                     // getting the user details so we can show the note users details
                     const user = await User.query().findById(order.clientNotes.updatedByGuid);
@@ -308,7 +240,7 @@ class OrderService
             // dispatcher / manager responsible for the order
             if (isUseful(orderObj?.dispatcher))
             {
-                const dispatcher = await SFAccount.query(trx).findById(orderObj.dispatcher.guid);
+                const dispatcher = await User.query(trx).findById(orderObj.dispatcher.guid);
                 if (!dispatcher)
                 {
                     throw new Error('dispatcher ' + JSON.stringify(orderObj.dispatcher) + ' doesn\'t exist');
@@ -477,7 +409,7 @@ class OrderService
 
                 if (isUseful(job.dispatcher))
                 {
-                    const dispatcher = await SFAccount.query(trx).findById(job.dispatcher.guid);
+                    const dispatcher = await User.query(trx).findById(job.dispatcher.guid);
                     if (!dispatcher)
                     {
                         throw new Error('dispatcher ' + JSON.stringify(job.dispatcher) + ' doesnt exist');
@@ -682,108 +614,169 @@ class OrderService
         return await GeneralFuncApi.calculateDistances(terminalStrings);
     }
 
-    static async loadTenders(action, orderGuid, reason)
+    /**
+     * @param {('accept' | 'reject')} action
+     * @param {string []} orderGuids
+     * @param {string} reason
+     * @returns {{orderGuid: string, jobGuid: string, status: number, message: string | null}} reason
+     */
+    static async handleLoadTenders(action, orderGuids, reason)
     {
-        // getting order with client and ediData to create payload for logic app
-        const order = await Order.query().skipUndefined().findById(orderGuid).withGraphJoined('[client, ediData]');
+        const responses = [];
+        
+        const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
 
-        // if order doesn't exist
-        if (order == undefined)
+        /**
+         * if the lengths do not match, that means one of the orders does not exist.
+         * find the guid that does not exist and add it to responses
+         */
+    
+        const hashedOrders = orders.reduce((map, obj)=>
         {
-            throw new Error('Order doesn\'t exist');
+            map[obj.guid] = obj;
+            return map;
+        }, {});
+
+        const filteredOrders = [];
+        for(const guid of orderGuids)
+        {
+            if(hashedOrders[guid] === undefined)
+            {
+                responses.push({
+                    orderGuid: guid,
+                    jobGuid: null,
+                    status: 404,
+                    message: 'Order not found.'
+                });
+            }
+            else
+            {
+                let message = null;
+
+                if(hashedOrders[guid].jobs[0].isTransport === false)
+                {
+                    message = 'Order does not have a transport job.';
+                }
+    
+                if(hashedOrders[guid].isTender === false)
+                {
+                    message = 'Order is not a tender.';
+                }
+    
+                if(hashedOrders[guid].isDeleted === true)
+                {
+                    message = 'Order is deleted.';
+                }
+    
+                if(message)
+                {
+                    responses.push({
+                        orderGuid: guid,
+                        jobGuid: null,
+                        status: 400,
+                        message
+                    });
+                }
+    
+                if(hashedOrders[guid].isTender && !hashedOrders[guid].isDeleted)
+                {
+                    filteredOrders.push(hashedOrders[guid]);
+                }
+            }
         }
 
-        // if tender is an order
-        if (order.isTender == false)
-        {
-            throw new Error('Order is not a load Tender');
-        }
-
-        // if tender is deleted
-        if (order.isDeleted == true)
-        {
-            throw new Error('Order Already Rejected');
-        }
-
-        // composing payload for logic app
-        const logicAppPayload = {
+        const logicAppPayloads = filteredOrders.map((item)=> ({
             order: {
-                guid: order.guid,
-                number: order.number
+                guid: item.guid,
+                number: item.number
             },
-            partner: order.client.sfId,
-            refrence: order.referenceNumber,
+            partner: item.client.sfId,
+            refrence: item.referenceNumber,
             action: action,
             date: DateTime.utc().toString(),
             scac: 'RCGQ',
-            edi: order.ediData?.[0].data
-        };
+            edi: item.ediData?.[0].data,
+            reason
+        }));
 
-        // if reason append to logic payload
-        if (reason)
+        let apiResponses = [];
+        if(filteredOrders.length)
         {
-            Object.assign(logicAppPayload, { reason: reason });
+            apiResponses = await Promise.allSettled(logicAppPayloads.map((item)=> logicAppInstance.post(process.env['azure.logicApp.params'], item)));
         }
 
-        console.log('Payload', logicAppPayload);
+        const formattedResponses = apiResponses.map((item, index)=>({
+            orderGuid: filteredOrders[index].guid,
+            jobGuid: filteredOrders[index].jobs[0].guid,
+            status: item.status === 'fulfilled' ? 200 : 400,
+            message: item?.reason?.message || null
+        }));
 
-        try
-        {
-            // sending request to logic app with correct payload
-            const response = await logicAppInstance.post(process.env['azure.logicApp.params'], logicAppPayload);
-            if (response.status == 200)
-            {
-                return;
-            }
-        }
-        catch (error)
-        {
-            throw new Error('Logic App Response');
-        }
+        return [...responses, ...formattedResponses];
     }
 
-    static async acceptLoadTender(orderGuid, currentUser)
+    /**
+     * @param {{orderGuid: string, jobGuid: string, status: Number, message: string | null} []} responses
+     * @param {boolean} isTender
+     * @param {boolean} isDeleted
+     * @param {number} statusId
+     * @param {string} currentUser
+     * @returns {Promise<undefined>}
+     */
+    static async loadTendersHelper(responses, isTender, isDeleted, statusId, currentUser)
     {
-        // exucuting accept options
-        await OrderService.loadTenders('accept', orderGuid);
+        const successfulResponses = responses.filter((item)=> item.status === 200);
 
-        // if executing is successfull, will update table
-        await Order.query().skipUndefined().findById(orderGuid).patch({
-            isTender: false,
-            status: 'New'
-        });
+        const successfulResponseGuids = successfulResponses.map((item)=> item.orderGuid);
 
-        // update status
-        await StatusManagerHandler.registerStatus({
-            orderGuid: orderGuid,
-            userGuid: currentUser,
-            statusId: 8
-        });
-    }
-
-    static async rejectLoadTender(orderGuid, reason, currentUser)
-    {
-        if (!reason)
+        if(successfulResponseGuids.length)
         {
-            throw new Error('Missing reason');
+           await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
+                isTender,
+                isDeleted,
+                status: 'New'
+            });
+
+           await Promise.allSettled(successfulResponses.map((item)=>
+             StatusManagerHandler.registerStatus({
+               orderGuid: item.orderGuid,
+               jobGuid: item.jobGuid,
+               userGuid: currentUser,
+               statusId
+           })));
+
         }
-
-        // executing reject options with reason
-        await OrderService.loadTenders('reject', orderGuid, reason);
-
-        // updating tender to deleted option
-        await Order.query().skipUndefined().findById(orderGuid).patch({
-            isDeleted: true,
-            status: 'Deleted'
-        });
-
-        // status update
-        await StatusManagerHandler.registerStatus({
-            orderGuid: orderGuid,
-            userGuid: currentUser,
-            statusId: 9
-        });
     }
+
+    /**
+     * @param {string []} orderGuids
+     * @param {string} currentUser
+     * @returns {Promise<{guid: string, status: number, message: string} []>} currentUser
+     */
+    static async acceptLoadTenders(orderGuids, currentUser)
+    {
+        
+        const responses = await this.handleLoadTenders('accept', orderGuids, null);
+
+        await this.loadTendersHelper(responses, false, false, 8, currentUser);
+
+        return responses;
+    }
+
+    /**
+     * @param {string []} orderGuids
+     * @param {string} reason
+     * @param {string} currentUser
+     */
+       static async rejectLoadTenders(orderGuids, reason, currentUser)
+       {
+
+            const responses = await this.handleLoadTenders('reject', orderGuids, reason);
+
+            await this.loadTendersHelper(responses, true, true, 9, currentUser);
+      
+            return responses;
+        }
 
     static async updateClientNote(orderGuid, body, currentUser)
     {
@@ -791,13 +784,13 @@ class OrderService
         order.setClientNote(body.note, currentUser);
         order.setUpdatedBy(currentUser);
         const numOfUpdatedOrders = await Order.query().patch(order).findById(orderGuid);
-        if(numOfUpdatedOrders == 0)
+        if (numOfUpdatedOrders == 0)
         {
             throw new Error('No order found');
         }
 
         return order;
-        
+
     }
 
     /**
@@ -962,18 +955,88 @@ class OrderService
         if (isDateListEmpty)
             return baseQuery;
 
-        const datesQuery = dateList.reduce((query, { date, status, comparison }, index) =>
+        const datesGroupByStatus = dateList.reduce((datesGrouped, date) =>
         {
-            const comparisonValue = dateFilterComparisonTypes[comparison] || dateFilterComparisonTypes.equal;
-            const comparisonDateAndStatus = function ()
+            const datesKey = date.status;
+            if (!datesGrouped[datesKey])
+                datesGrouped[datesKey] = [];
+
+            datesGrouped[datesKey].push(date);
+            return datesGrouped;
+        }, {});
+
+        const datesQuery = Object.keys(datesGroupByStatus).reduce((query, statusKey) =>
+        {
+            const datesByStatus = datesGroupByStatus[statusKey];
+            const comparisonDatesByStatus = function ()
             {
-                this.whereRaw(`date_created::date ${comparisonValue} ?`, [date]).
-                    andWhere('statusId', status);
+                return datesByStatus.reduce((query, dateElement) =>
+                {
+                    const comparisonDateAndStatus = function ()
+                    {
+                        const sqlQuery = OrderService.createDateComparisonSqlQuery(dateElement);
+
+                        this.whereRaw(sqlQuery)
+                            .andWhere('statusId', dateElement.status);
+                    };
+
+                    return query.orWhere(comparisonDateAndStatus);
+                }, this);
             };
-            return index === 0 ? query.where(comparisonDateAndStatus) : query.orWhere(comparisonDateAndStatus);
+
+            return query.andWhere(comparisonDatesByStatus);
         }, StatusLog.query().select('jobGuid'));
 
         return baseQuery.whereIn('guid', datesQuery);
+    }
+
+    static createDateComparisonSqlQuery(dateElement)
+    {
+        const { comparison = 'equal' } = dateElement;
+        const comparisonValue = dateFilterComparisonTypes[comparison] || dateFilterComparisonTypes.equal;
+
+        if (comparison === 'between')
+        {
+            const userDateStart = DateTime.fromISO(dateElement.date1, { setZone: true });
+            const userDateEnd = DateTime.fromISO(dateElement.date2, { setZone: true });
+
+            const userTimeZone = userDateStart.zoneName;
+
+            const epochStart = userDateStart.startOf('day').toSeconds();
+            const epochEnd = userDateEnd.endOf('day').toSeconds();
+
+            const dbDateSQL = `(date_created AT TIME ZONE '${userTimeZone}')`;
+            const userStartDateSQL = `(to_timestamp(${epochStart}) AT TIME ZONE '${userTimeZone}')`;
+            const userEndDateSQL = `(to_timestamp(${epochEnd}) AT TIME ZONE '${userTimeZone}')`;
+
+            return `${dbDateSQL} > ${userStartDateSQL} and ${dbDateSQL} < ${userEndDateSQL}`;
+        }
+        else if (comparison === 'equal')
+        {
+            const userDate = DateTime.fromISO(dateElement.date, { setZone: true });
+            const userTimeZone = userDate.zoneName;
+
+            const epochStart = userDate.startOf('day').toSeconds();
+            const epochEnd = userDate.endOf('day').toSeconds();
+
+            const dbDateSQL = `(date_created AT TIME ZONE '${userTimeZone}')`;
+            const userStartDateSQL = `(to_timestamp(${epochStart}) AT TIME ZONE '${userTimeZone}')`;
+            const userEndDateSQL = `(to_timestamp(${epochEnd}) AT TIME ZONE '${userTimeZone}')`;
+
+            return `${dbDateSQL} > ${userStartDateSQL} and ${dbDateSQL} < ${userEndDateSQL}`;
+        }
+        else
+        {
+            const userDate = DateTime.fromISO(dateElement.date, { setZone: true });
+            const userTimeZone = userDate.zoneName;
+
+            const epoch = userDate.startOf('day').toSeconds();
+
+            const dbDateSQL = `(date_created AT TIME ZONE '${userTimeZone}')`;
+            const userDateSQL = `(to_timestamp(${epoch}) AT TIME ZONE '${userTimeZone}')`;
+
+            return `${dbDateSQL} ${comparisonValue} ${userDateSQL}`;
+        }
     }
 
     static addFilterCarrier(baseQuery, carrierList)
@@ -1255,7 +1318,7 @@ class OrderService
         // Return new terminals with info checkd if needs to be updated or created
         const terminalsToChecked = [];
         for (const terminal of terminals)
-            terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal, orderGuid));
+            terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal));
 
         const [orderChecked, terminalsChecked, stopsChecked] = await Promise.all([orderContacToCheck, Promise.all(terminalsToChecked), Promise.all(stopsToChecked)]);
 
@@ -1288,25 +1351,40 @@ class OrderService
         return stopChecked;
     }
 
-    static async getTerminalWithInfoChecked(terminal, orderGuid)
+    /**
+     * Base information: Fileds use to create the address; Street1, city, state, zipCode and Country
+     * Extra information: Fields that are not use to create the address; Street2 and Name
+     * Checks the action to performed for a terminal.
+     * Rules:
+     * 0) If terminal GUID is provided, we check if the information is the same as the DB, this is to avoid
+     *    calling Arcgis if the terminal has the same information.
+     * 1) updateExtraFields: The B.I. is the same and only the E.I. changed, so we only update those fields
+     *    of that existing Terminal
+     * 2) findOrCreate: The B.I. changed, so we have to call Arcgis and then check in the DB if that record
+     *    exists or we create a new one.
+     * 3) nothingToDo: The terminal is the same and there is no need to do anything
+     * @param {*} terminalInput
+     * @returns
+     */
+    static async getTerminalWithInfoChecked(terminalInput)
     {
-        let terminalPromise = 'createNewTerminal';
+        let terminalAction = 'findOrCreate';
 
-        if (terminal.guid)
-            terminalPromise = OrderService.checkTerminalReference(terminal.guid, orderGuid);
-
-        const terminalResolve = await terminalPromise;
-
-        let terminalChecked = terminal;
-
-        // Remove guid if needs to be created
-        if (terminalResolve === 'createNewTerminal')
+        if (terminalInput.guid)
         {
-            const { guid: terminalGuid, ...newTerminalData } = terminal;
-            terminalChecked = newTerminalData;
+            const terminalDB = await Terminal.query().findById(terminalInput.guid) || {};
+            const hasSameBaseInfo = Terminal.hasTerminalsSameBaseInformation(terminalDB, terminalInput);
+            const hasSameExtraInfo = Terminal.hasTerminalsSameExtraInformation(terminalDB, terminalInput);
+
+            if (!hasSameBaseInfo)
+                terminalAction = 'findOrCreate';
+            else if (!hasSameExtraInfo)
+                terminalAction = 'updateExtraFields';
+            else
+                terminalAction = 'nothingToDo';
         }
 
-        return terminalChecked;
+        return { terminalAction, ...terminalInput };
     }
 
     static async checkContactReference(contact, orderGuid)
@@ -1371,18 +1449,6 @@ class OrderService
                 return 'findOrCreate';
             return 'findAndUpdate';
         }
-    }
-
-    // If Terminal is being reference elseWhere, a new terminal will be created
-    static async checkTerminalReference(terminalGuid, orderGuid)
-    {
-        const [{ count }] = await OrderStopLink.query().count('orderGuid').whereIn(
-            'stopGuid', OrderStop.query().select('guid').where('terminalGuid', terminalGuid)
-        ).andWhereNot('orderGuid', orderGuid);
-
-        if (count > 0)
-            return 'createNewTerminal';
-        return 'updateTerminal';
     }
 
     static async findSFClient(clientGuid, trx)
@@ -1455,31 +1521,93 @@ class OrderService
         }
         return commodity;
     }
+
+    /**
+     * Base information (B.I.): Fileds use to create the address; Street1, city, state, zipCode and Country
+     * Extra information (E.I.): Fields that are not use to create the address; Street2 and Name
+     * findOrCreate: We call Arcgis to get Lat and Long -> We look in DB for that key, if it exists
+     *      we pull that record and update the E.I., if not, we create a new record.
+     *      In case Arcgis does not return a Lat and Long, we save the terminal without Lat and Long as
+     *      an Unresolved Terminal.
+     * @param {*} terminalInput
+     * @param {*} currentUser
+     * @param {*} trx
+     * @returns
+     */
     static async updateCreateTerminal(terminalInput, currentUser, trx)
     {
         const { index,
+            terminalAction,
             ...terminalData
         } = terminalInput;
 
-        /**
-         * If only has 1 property for GUID, it is not necessary to update it because that means
-         * the terminal is only being use to reference other elements in the update
-         */
-        if (Object.keys(terminalData).length === 1)
-            return { terminal: terminalData, index };
+        switch (terminalAction)
+        {
+            case 'updateExtraFields':
+                const terminalToUpdate = Terminal.fromJson(terminalData);
+                terminalToUpdate.setUpdatedBy(currentUser);
 
-        const terminal = Terminal.fromJson(terminalData);
-        if (!terminalInput.guid)
-            terminal.setCreatedBy(currentUser);
-        else
-            terminal.setUpdatedBy(currentUser);
+                const terminalUpdated = await Terminal.query(trx)
+                    .patchAndFetchById(terminalToUpdate.guid, terminalToUpdate);
 
-        const terminalUpserted = await Terminal.query(trx).skipUndefined().upsertGraphAndFetch(terminal, {
-            relate: true,
-            noDelete: true
-        });
+                return { terminal: terminalUpdated, index };
+            case 'findOrCreate':
+                let terminalCreated = {};
+                const addressStr = Terminal.createStringAddress(terminalData);
 
-        return { terminal: terminalUpserted, index };
+                const arcgisTerminal = ArcgisClient.isSetuped() &&
+                    await ArcgisClient.findGeocode(addressStr);
+
+                if (arcgisTerminal && ArcgisClient.isAddressFound(arcgisTerminal))
+                {
+                    const { latitude, longitude } = ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
+                    const terminalToUpdate = await Terminal.query().findOne({
+                        latitude,
+                        longitude
+                    });
+
+                    // Terminal exists, now we have to add non essential information
+                    if (terminalToUpdate)
+                    {
+                        terminalToUpdate.setUpdatedBy(currentUser);
+                        terminalToUpdate.street2 = terminalData.street2;
+                        terminalToUpdate.name = terminalData.name;
+                        terminalToUpdate.locationType = terminalData.locationType;
+
+                        terminalCreated = await Terminal.query(trx)
+                            .patchAndFetchById(terminalToUpdate.guid, terminalToUpdate);
+                    }
+
+                    // Create new resolved terminal
+                    else
+                    {
+                        const terminalToCreate = Terminal.fromJson({
+                            latitude,
+                            longitude,
+                            isResolved: true,
+                            ...terminalData
+                        });
+                        terminalToCreate.setCreatedBy(currentUser);
+
+                        terminalCreated = await Terminal.query(trx).insertAndFetch(terminalToCreate);
+                    }
+                }
+
+                // Create new unresolved terminal
+                else
+                {
+                    // No use terminal guid if provided
+                    const { guid, ...terminalDataNoGuid } = terminalData;
+                    const terminalToCreate = Terminal.fromJson(terminalDataNoGuid);
+                    terminalToCreate.setCreatedBy(currentUser);
+
+                    terminalCreated = await Terminal.query(trx).insertAndFetch(terminalToCreate);
+                }
+
+                return { terminal: terminalCreated, index };
+            default:
+                return { terminal: terminalData, index };
+        }
     }
 
     static createTerminalContactGraph(terminalContactInput, terminal, currentUser)

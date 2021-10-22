@@ -4,11 +4,11 @@ info:
   title: Trukt
   description: Transportation management system
 servers:
-  - url: "https://truktapi-dev.rcgauto.net"
+  - url: 'https://truktapi-dev.rcgauto.net'
     description: Development server
-  - url: "https://truktapi-staging.rcgauto.net"
+  - url: 'https://truktapi-staging.rcgauto.net'
     description: Staging server
-  - url: "https://truktapi.rcgauto.net"
+  - url: 'https://truktapi.rcgauto.net'
     description: Production server
 paths:
   /attachments:
@@ -48,10 +48,10 @@ paths:
   /order/find_by_vin/{vin}:
     get:
       $ref: paths\order\findByVin.yaml
-  /order/{orderGuid}/tender/accept:
+  /order/tender/accept:
     put:
       $ref: paths\order\putTenderAccept.yaml
-  /order/{orderGuid}/tender/reject:
+  /order/tender/reject:
     put:
       $ref: paths\order\putTenderReject.yaml
   /order/{orderGuid}/notes:
@@ -104,12 +104,24 @@ paths:
       $ref: paths\loadboard\dispatch\post.yaml
     put:
       $ref: paths\loadboard\dispatch\put.yaml
-  /invoice/{invoiceId}:
+  /invoice/{invoiceGuid}:
     get:
       $ref: paths\invoice\get.yaml
+  /bill/{billGuid}:
+    get:
+      $ref: paths\bill\get.yaml
+  /invoice/order/{orderGuid}:
+    get:
+      $ref: paths\invoice\getOrderInvoices.yaml
+  /invoice/job/{jobGuid}:
+    get:
+      $ref: paths\invoice\getJobInvoices.yaml
   /invoice:
     post:
       $ref: paths\invoice\post.yaml
+  /bill:
+    post:
+      $ref: paths\bill\post.yaml
   /index/order/number:
     get:
       $ref: paths\index\order\get.yaml
@@ -131,18 +143,15 @@ paths:
   /expense/search:
     get:
       $ref: paths\expense\search.yaml
-  /bill/{billId}:
-    get:
-      $ref: paths\bill\get.yaml
-  /bill:
-    post:
-      $ref: paths\bill\post.yaml
   /account/{accountType}:
     get:
       $ref: paths\account\search.yaml
   /account/{accountType}/{accountId}:
     get:
       $ref: paths\account\get.yaml
+  /user/{userRole}/search:
+    get:
+      $ref: paths\user\search.yaml
   /loadboard/requests/job/{jobGuid}:
     get:
       $ref: paths\loadboard\requests\get.yaml

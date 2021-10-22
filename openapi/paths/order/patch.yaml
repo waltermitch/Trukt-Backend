@@ -183,13 +183,21 @@ requestBody:
             type: array
             items:
               allOf:
-                - type: object
-                  properties:
-                    $ref: '..\..\components\schemas\Terminal.yaml#/properties'
+                - $ref: '..\..\components\schemas\Terminal.yaml'
                 - $ref: '..\..\components\schemas\Common.yaml#/indexObject'
                 - type: object
                   properties:
                     $ref: '..\..\components\schemas\Common.yaml#/guidObject/properties'
+                - type: object
+                  properties:
+                    locationType:
+                      $ref: '..\..\components\schemas\Common.yaml#/Enums/terminalLocationType'
+                  required:
+                    - street1
+                    - city
+                    - state
+                    - zipCode
+                    - country
           commodities:
             type: array
             items:
