@@ -1,3 +1,4 @@
+const enabledModules = process.env['accounting.modules'].split(';');
 const QuickBooksService = require('./QuickBooksService');
 const Invoice = require('../Models/InvoiceBill');
 const Order = require('../Models/Order');
@@ -17,11 +18,10 @@ class InvoiceService
     static async createInvoices(arr)
     {
         // query to get all the orders with related objects
-        const qb = Order.query().withGraphFetched('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item.qbAccount]], client]');
+        const qb = Order.query().withGraphJoined('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item.qbAccount]], client]');
 
         // append all the order guids
-        for (const guid of arr)
-            qb.orWhere('guid', '=', guid);
+        qb.whereIn('guid', arr);
 
         // get all the orders
         const orders = await qb;
@@ -29,12 +29,12 @@ class InvoiceService
         // decide which system they will be invoiced in
         const QBInvoices = [];
         const CoupaInvoices = [];
+
         for (const order of orders)
         {
-            // add logic to determine type of invoice to make
-            if (['LKQ Corporation', 'LKQ Self Service']?.includes(order?.client?.name))
+            if (enabledModules.includes('coupa') && ['LKQ Corporation', 'LKQ Self Service']?.includes(order?.client?.name))
                 CoupaInvoices.push(order);
-            else
+            else if (enabledModules.includes('quickbooks'))
                 QBInvoices.push(order);
 
             const res = await QuickBooksService.createInvoices(QBInvoices);

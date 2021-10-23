@@ -1,10 +1,16 @@
+const enabledModules = process.env['accounting.modules'].split(';');
+const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const QuickBooksService = require('./QuickBooksService');
-const OrderJob = require('../Models/OrderJob');
-const QBO = require('../QuickBooks/API');
-const currency = require('currency.js');
 const InvoiceLine = require('../Models/InvoiceLine');
+<<<<<<< Updated upstream
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const Bill = require('../Models/InvoiceBill');
+=======
+const InvoiceBill = require('../Models/InvoiceBill');
+const Bill = require('../Models/InvoiceBill');
+const Order = require('../Models/Order');
+const currency = require('currency.js');
+>>>>>>> Stashed changes
 
 let transportItem;
 
@@ -26,15 +32,21 @@ class BillService
 
     static async createBills(arr)
     {
-        const qb = OrderJob.query().withGraphFetched('[bills.[lines.[commodity.[stops.[terminal]], item.qbAccount]], vendor]');
+        // query to get all the orders with related objects
+        const qb = Order.query().withGraphJoined('[jobs.[bills.[lines.[commodity.[stops.[terminal]], item.qbAccount]], vendor]]');
 
-        for (const guid of arr)
-            qb.orWhere('guid', '=', guid);
+        // append all the order guids
+        qb.whereIn('guid', arr);
 
         // get all the orders
         const orders = await qb;
 
-        await QuickBooksService.createBills(orders);
+        if (enabledModules.includes('quickbooks'))
+        {
+            const res = await QuickBooksService.createBills(orders);
+
+            console.log(res);
+        }
     }
 
     /**
