@@ -7,6 +7,10 @@ definitions:
     postgres:
       image: postgres
   steps:
+    - step: &decrypt
+        script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
     - step: &jest-test
         name: Jest Unit Tests
         caches:
@@ -28,6 +32,7 @@ definitions:
         name: Unit Tests
         caches:
           - node
+        <<: *decrypt
         script:
           - npm run test:unit
     - step: &db-migration
