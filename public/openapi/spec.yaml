@@ -1614,15 +1614,7 @@ paths:
                   type: object
                   properties:
                     field:
-                      type: string
-                      enum:
-                        - status
-                        - number
-                        - dateCreated
-                        - actualRevenue
-                        - actualExpense
-                        - estimatedExpense
-                        - estimatedRevenue
+                      $ref: '#/components/schemas/Get Orders sort fields'
                     order:
                       description: Sorting order
                       type: string
@@ -4211,6 +4203,27 @@ components:
       type: string
       format: date-time
       example: '2021-08-10T07:59:59.000Z'
+    Get Orders sort fields:
+      type: string
+      enum:
+        - status
+        - number
+        - dateCreated
+        - actualRevenue
+        - actualExpense
+        - estimatedExpense
+        - estimatedRevenue
+        - dateUpdated
+        - clientName
+        - dispatcherName
+        - salespersonName
+        - pickupTerminal
+        - deliveryTerminal
+        - requestedPickupDate
+        - requestedDeliveryDate
+        - scheduledPickupDate
+        - scheduledDeliveryDate
+      default: number
     Job With All Data:
       type: object
       properties:
