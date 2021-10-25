@@ -51,8 +51,6 @@ pipelines:
       - step: *unit-test
 
   branches:
-    '{STS-**,admin,andrey,ilya,justin,valeriy,vlad}':
-      - step: *jest-test
     'dev':
       - step:
           <<: *db-migration
