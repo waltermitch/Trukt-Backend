@@ -68,7 +68,8 @@ class OrderService
             'status',
             'dateCreated',
             'actualRevenue',
-            'actualExpense'
+            'actualExpense',
+            'dateUpdated'
         ];
 
         const baseOrderQuery = OrderJob.query().select(jobFieldsToReturn).page(page, rowCount);
