@@ -24,6 +24,12 @@ definitions:
         script:
           - npm install -g eslint
           - eslint $BITBUCKET_CLONE_DIR
+    - step: &unit-test
+        name: Unit Tests
+        caches:
+          - node
+        script:
+          - npm run test:unit
     - step: &db-migration
         name: DB Migration
         caches:
@@ -42,6 +48,7 @@ pipelines:
   pull-requests:
     '**':
       - step: *jest-test
+      - step: *unit-test
 
   branches:
     '{STS-**,admin,andrey,ilya,justin,valeriy,vlad}':
