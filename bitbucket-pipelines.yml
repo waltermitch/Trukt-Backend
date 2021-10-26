@@ -14,14 +14,12 @@ definitions:
         artifacts:
           - '*.json'
     - step: &jest-test
-        name: Jest Unit Tests
+        name: All Tests
         caches:
           - node
         services:
           - mongo
         script:
-          - npm run decrypt -- local.settings.enc local.settings.json
-          - npm install
           - npm test
     - step: &lint-test
         name: ESLint
@@ -54,8 +52,8 @@ pipelines:
   pull-requests:
     '**':
       - step: *decrypt
-      - step: *jest-test
       - step: *unit-test
+      - step: *jest-test
 
   branches:
     '{STS-**,admin,andrey,ilya,justin,valeriy,vlad}':
