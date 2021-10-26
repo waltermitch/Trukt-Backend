@@ -21,6 +21,8 @@ definitions:
         services:
           - mongo
         script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
           - npm test
     - step: &lint-test
         name: ESLint
@@ -34,6 +36,8 @@ definitions:
         caches:
           - node
         script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
           - npm run test:unit
     - step: &db-migration
         name: DB Migration
@@ -48,12 +52,10 @@ definitions:
 
 pipelines:
   default:
-    - step: *decrypt
     - step: *jest-test
 
   pull-requests:
-    '**':
-      - step: *decrypt
+    '**':  
       - step: *unit-test
       - step: *jest-test
 
