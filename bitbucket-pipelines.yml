@@ -48,6 +48,7 @@ definitions:
 
 pipelines:
   default:
+    - step: *decrypt
     - step: *jest-test
 
   pull-requests:
