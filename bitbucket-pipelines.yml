@@ -8,6 +8,7 @@ definitions:
       image: postgres
   steps:
     - step: &decrypt
+        name: decrypt
         script:
           - npm run decrypt -- local.settings.enc local.settings.json
           - npm install
