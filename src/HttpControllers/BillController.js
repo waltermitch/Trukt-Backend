@@ -21,12 +21,16 @@ class BillController
     {
         const orders = [req.params.orderGuid];
 
-        const result = await BillService.exportBills(orders);
+        const result = (await BillService.exportBills(orders))?.[0];
 
         if (result)
         {
-            res.status(200);
-            res.json(result[0]);
+            if (result.error)
+                res.status(400);
+            else
+                res.status(200);
+
+            res.json(result);
         }
         else
         {
@@ -48,8 +52,16 @@ class BillController
         {
             const result = await BillService.exportBills(orders);
 
-            res.status(200);
-            res.json(result);
+            if (result)
+            {
+                res.status(200);
+                res.json(result);
+            }
+            else
+            {
+                res.status(404);
+                res.json({ 'error': 'Order Not Found' });
+            }
         }
     }
 }
