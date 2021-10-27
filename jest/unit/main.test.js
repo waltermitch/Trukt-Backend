@@ -1,15 +1,15 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 /* eslint-disable padding-line-between-statements */
-const context = require('./defaultContext');
+const context = require('../defaultContext');
 const _ = require('lodash');
 const axios = require('axios');
 const AxiosMocker = require('axios-mock-adapter');
 const mockDb = require('mock-knex');
 
 const moxios = new AxiosMocker(axios);
-const p = require('./payloads.json');
-const r = require('./routes.json');
+const p = require('../payloads.json');
+const r = require('../routes.json');
 
 // mutate native functionality (uncomment to mute)
 // console.log = jest.fn();
@@ -18,9 +18,9 @@ const r = require('./routes.json');
 console.warn = jest.fn();
 
 // List of Classes
-const Heroku = require('../src/HerokuPlatformAPI');
-const PG = require('../src/PostGres');
-const AccountService = require('../src/Services/AccountService');
+const Heroku = require('../../src/HerokuPlatformAPI');
+const PG = require('../../src/PostGres');
+const AccountService = require('../../src/Services/AccountService');
 
 const spyOnDelete = jest.spyOn(moxios, 'onDelete');
 const spyOnPost = jest.spyOn(moxios, 'onPost');

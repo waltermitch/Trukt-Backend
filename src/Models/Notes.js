@@ -39,6 +39,14 @@ class Notes extends BaseModel
                     },
                     to: 'rcgTms.orderJobs.guid'
                 }
+            },
+            createdBy: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./User'),
+                join: {
+                    from: 'rcgTms.genericNotes.createdByGuid',
+                    to: 'rcgTms.tmsUsers.guid'
+                }
             }
         };
         return relations;

@@ -1,60 +1,74 @@
 image: node:14.15.0
 
 definitions:
-    services:
-        mongo:
-            image: mongo
-        postgres:
-            image: postgres
-    steps:
-        - step: &jest-test
-              name: Jest Unit Tests
-              caches:
-                  - node
-              services:
-                  - mongo
-              script:
-                  - npm run decrypt -- local.settings.enc local.settings.json
-                  - npm install
-                  - npm test
-        - step: &lint-test
-              name: ESLint
-              caches:
-                  - node
-              script:
-                  - npm install -g eslint
-                  - eslint $BITBUCKET_CLONE_DIR
-        - step: &db-migration
-              name: DB Migration
-              caches:
-                  - node
-              script:
-                  - cd $BITBUCKET_CLONE_DIR && npm install
-                  - npm install -g knex
-                  - npm run decrypt -- local.settings.enc local.settings.json
-                  - node ./tools/migrator.js init
-                  - node ./tools/migrator.js up --all
+  services:
+    mongo:
+      image: mongo
+    postgres:
+      image: postgres
+  steps:
+    - step: &decrypt
+        name: decrypt
+        script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
+        artifacts:
+          - '*.json'
+    - step: &jest-test
+        name: All Tests
+        caches:
+          - node
+        services:
+          - mongo
+        script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
+          - npm test
+    - step: &lint-test
+        name: ESLint
+        caches:
+          - node
+        script:
+          - npm install -g eslint
+          - eslint $BITBUCKET_CLONE_DIR
+    - step: &unit-test
+        name: Unit Tests
+        caches:
+          - node
+        script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
+          - npm run test:unit
+    - step: &db-migration
+        name: DB Migration
+        caches:
+          - node
+        script:
+          - cd $BITBUCKET_CLONE_DIR && npm install
+          - npm install -g knex
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - node ./tools/migrator.js init
+          - node ./tools/migrator.js up --all
 
 pipelines:
-    default:
-        - step: *jest-test
+  default:
+    - step: *jest-test
 
-    pull-requests:
-        "**":
-            - step: *jest-test
+  pull-requests:
+    '**':  
+      - step: *unit-test
+      - step: *jest-test
 
-    branches:
-        "{STS-**,admin,andrey,ilya,justin,valeriy,vlad}":
-            - step: *jest-test
-        "dev":
-            - step:
-                  <<: *db-migration
-                  deployment: development
-        "staging":
-            - step:
-                  <<: *db-migration
-                  deployment: staging
-        "production":
-            - step:
-                  <<: *db-migration
-                  deployment: production
+  branches:
+    'dev':
+      - step:
+          <<: *db-migration
+          deployment: development
+    'staging':
+      - step:
+          <<: *db-migration
+          deployment: staging
+    'production':
+      - step:
+          <<: *db-migration
+          deployment: production

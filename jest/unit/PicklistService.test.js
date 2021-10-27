@@ -2,7 +2,7 @@
 /* eslint-disable no-undef */
 /* eslint-disable padding-line-between-statements */
 // const PicklistService = require('../src/HttpControllers/PicklistService');
-const PicklistService = require('../src/Services/PicklistService');
+const PicklistService = require('../../src/Services/PicklistService');
 
 describe('Test picklist controller functions', () =>
 {

@@ -1614,15 +1614,7 @@ paths:
                   type: object
                   properties:
                     field:
-                      type: string
-                      enum:
-                        - status
-                        - number
-                        - dateCreated
-                        - actualRevenue
-                        - actualExpense
-                        - estimatedExpense
-                        - estimatedRevenue
+                      $ref: '#/components/schemas/Get Orders sort fields'
                     order:
                       description: Sorting order
                       type: string
@@ -4273,6 +4265,27 @@ components:
       type: string
       format: date-time
       example: '2021-08-10T07:59:59.000Z'
+    Get Orders sort fields:
+      type: string
+      enum:
+        - status
+        - number
+        - dateCreated
+        - actualRevenue
+        - actualExpense
+        - estimatedExpense
+        - estimatedRevenue
+        - dateUpdated
+        - clientName
+        - dispatcherName
+        - salespersonName
+        - pickupTerminal
+        - deliveryTerminal
+        - requestedPickupDate
+        - requestedDeliveryDate
+        - scheduledPickupDate
+        - scheduledDeliveryDate
+      default: number
     Job With All Data:
       type: object
       properties:
@@ -4627,6 +4640,22 @@ components:
       description: List of response objects for each load tender.
       items:
         $ref: '#/components/schemas/LoadTenderResponseObject'
+    createdBy:
+      type: object
+      description: The TMS User account that created this record.
+      readOnly: true
+      properties:
+        guid:
+          $ref: '#/components/schemas/guid'
+        name:
+          type: string
+          description: The name of the TMS User account that created this record.
+          readOnly: true
+          nullable: false
+        email:
+          type: string
+          description: The email address of the TMS User account that created this record.
+          readOnly: true
     Note:
       type: object
       properties:
@@ -4643,6 +4672,8 @@ components:
           $ref: '#/components/schemas/dateCreated'
         createdByGuid:
           $ref: '#/components/schemas/createdByGuid'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
         type:
           type: string
           enum:
