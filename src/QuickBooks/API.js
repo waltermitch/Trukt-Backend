@@ -14,6 +14,7 @@ const authConfig =
         'Authorization': process.env['quickbooks.basicAuth']
     }
 };
+
 const authUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const url = process.env['quickbooks.apiUrl'];
 const tokenName = 'qb_access_token';
@@ -67,7 +68,7 @@ class QBO
             const res = await api.post('/batch', { 'BatchItemRequest': temp });
 
             // add results to array
-            results.push(res.data.BatchItemResponse);
+            results.push(...res.data.BatchItemResponse);
         }
 
         return results;

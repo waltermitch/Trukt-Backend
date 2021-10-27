@@ -169,3 +169,9 @@ paths:
       $ref: paths\notes\put.yaml
     delete:
       $ref: paths\notes\delete.yaml
+  /invoice/order/{orderGuid}/export:
+    put:
+      $ref: paths\invoice\export.yaml
+  /bill/order/{orderGuid}/export:
+    put:
+      $ref: paths\bill\export.yaml
