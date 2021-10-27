@@ -6,7 +6,7 @@ class CoupaService
     {
         const batch = [];
         for (const invoice of invoices)
-            if (invoice.lines[0].commodity.identifier && invoice.externalSourceData?.coupa?.invoiced != true)
+            if (invoice.lines[0].commodity.identifier && invoice.externalSourceData?.coupa?.invoice)
             {
                 invoice.orderNumber = invoice.number;
                 invoice.description = invoice.lines[0].commodity.description;
