@@ -1,4 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const LoadboardService = require('../Services/LoadboardService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
 const GeneralFuncApi = require('../Azure/GeneralFuncApi');
@@ -1288,6 +1289,13 @@ class OrderService
             });
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
+
+            // update loadboard postings (async)
+            orderUpdated.jobs.map(async (job) =>
+            {
+                await LoadboardService.updatePostings(job.guid)
+                    .catch(err => console.log(err));
+            });
 
             await trx.commit();
             return orderUpdated;
