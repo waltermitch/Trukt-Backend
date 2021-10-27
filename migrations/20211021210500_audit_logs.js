@@ -154,11 +154,11 @@ exports.up = function (knex)
 exports.down = function (knex)
 {
     return knex.raw(`
-        DROP FUNCTION IF EXISTS ${SCHEMA_NAME}.if_modified_func;
-        DROP FUNCTION IF EXISTS ${SCHEMA_NAME}.audit_modification_register(regclass);
-        DROP FUNCTION IF EXISTS ${SCHEMA_NAME}.audit_modification_unregister(regclass);
-        DROP VIEW IF EXISTS ${SCHEMA_NAME}.registered_tables;
-        DROP TABLE IF EXISTS ${SCHEMA_NAME}.${MODIFICATION_TABLE};
-        DROP SCHEMA IF EXISTS ${SCHEMA_NAME};
+        DROP FUNCTION IF EXISTS ${SCHEMA_NAME}.if_modified_func CASCADE;
+        DROP FUNCTION IF EXISTS ${SCHEMA_NAME}.audit_modification_register(regclass) CASCADE;
+        DROP FUNCTION IF EXISTS ${SCHEMA_NAME}.audit_modification_unregister(regclass) CASCADE;
+        DROP VIEW IF EXISTS ${SCHEMA_NAME}.registered_tables CASCADE;
+        DROP TABLE IF EXISTS ${SCHEMA_NAME}.${MODIFICATION_TABLE} CASCADE;
+        DROP SCHEMA IF EXISTS ${SCHEMA_NAME} CASCADE;
     `);
 };
