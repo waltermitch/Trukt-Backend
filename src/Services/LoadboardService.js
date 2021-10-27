@@ -490,8 +490,8 @@ class LoadboardService
     static async getjobDataForUpdate(jobId)
     {
         const job = await Job.query().findById(jobId).withGraphFetched(`[
-            commodities(distinct).[vehicle, commType], order.[client, clientContact, owner],
-            stops(filterDistinct).[primaryContact, terminal], loadboardPosts(getExistingFromList),
+            commodities(distinct).[vehicle, commType], order.[client, clientContact],
+            stops(distinct).[primaryContact, terminal], loadboardPosts(getExistingFromList),
             equipmentType
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getValid')
