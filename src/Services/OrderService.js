@@ -692,7 +692,7 @@ class OrderService
                 number: item.number
             },
             partner: item.client.sfId,
-            refrence: item.referenceNumber,
+            reference: item.referenceNumber,
             action: action,
             date: DateTime.utc().toString(),
             scac: 'RCGQ',
