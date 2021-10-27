@@ -1,0 +1,17 @@
+{
+    "register": [
+        {
+            "schema": "rcg_tms",
+            "tables": [
+                "invoice_bills",
+                "invoice_bill_lines"
+            ]
+        }
+    ],
+    "unregister": [
+        {
+            "schema": "rcg_tms",
+            "tables": []
+        }
+    ]
+}
