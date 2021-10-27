@@ -2,7 +2,6 @@ const enabledModules = process.env['accounting.modules'].split(';');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const QuickBooksService = require('./QuickBooksService');
 const InvoiceLine = require('../Models/InvoiceLine');
-const InvoiceBill = require('../Models/InvoiceBill');
 const Bill = require('../Models/InvoiceBill');
 const Order = require('../Models/Order');
 const currency = require('currency.js');
