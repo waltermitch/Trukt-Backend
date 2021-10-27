@@ -1,5 +1,6 @@
 const enabledModules = process.env['accounting.modules'].split(';');
 const QuickBooksService = require('./QuickBooksService');
+const CoupaService = require('./CoupaService');
 const Invoice = require('../Models/InvoiceBill');
 const Order = require('../Models/Order');
 
@@ -62,13 +63,15 @@ class InvoiceService
         return invoiceObject;
     }
 
-    static async createInvoices(arr)
+    static async exportInvoices(arr)
     {
-        // query to get all the orders with related objects
-        const qb = Order.query().withGraphJoined('[invoices.[consignee, lines.[commodity.[stops.[terminal]], item.qbAccount]], client]');
+        // array for results
+        const results = [];
 
-        // append all the order guids
-        qb.whereIn('guid', arr);
+        // query to get all the orders with related objects
+        const qb = Order.query().whereIn('guid', arr);
+
+        qb.withGraphFetched('[invoices.[consignee, lines(isNotPaid).[commodity.[stops.[terminal]], item.qbAccount]], client]');
 
         // get all the orders
         const orders = await qb;
@@ -77,21 +80,74 @@ class InvoiceService
         const QBInvoices = [];
         const CoupaInvoices = [];
 
+        // map used to get external data later on
+        const invoiceMap = new Map();
+
         for (const order of orders)
+            for (const invoice of order.invoices)
+            {
+                if (invoice.isPaid)
+                    continue;
+
+                // add existing invoice externalSourceData to map
+                invoiceMap.set(invoice.guid, invoice.externalSourceData || {});
+
+                // map some order fiels to invoice
+                invoice.client = order.client;
+                invoice.orderNumber = order.number;
+
+                if (enabledModules.includes('coupa') && ['LKQ Corporation', 'LKQ Self Service']?.includes(order?.client?.name))
+                    CoupaInvoices.push(order);
+                else if (enabledModules.includes('quickbooks'))
+                    QBInvoices.push(invoice);
+            }
+
+        const promises = await Promise.allSettled([QuickBooksService.createInvoices(QBInvoices), CoupaService.createInvoices(CoupaInvoices)]);
+
+        // for each successful invoice, update the invoice in the database
+        for (const promise of promises)
+            if (promise.reason)
+                console.log(promise.reason);
+            else
+                for (const e of promise.value)
+                    if (e?.Invoice)
+                    {
+                        // merge existing externalSourceData with new data
+                        const mergedData = Object.assign({}, invoiceMap.get(e.bId), { 'quickbooks': { 'invoice': { 'Id': e.Invoice.Id, 'DocNumber': e.Invoice.DocNumber } } });
+
+                        // update in map
+                        invoiceMap.set(e.bId, mergedData);
+                    }
+                    else if (e.CoupaInvoice)
+                    {
+                        // merge existing externalSourceData with new data
+                        const mergedData = Object.assign({}, invoiceMap.get(e.guid), { 'coupa': { 'invoice': e.CoupaInvoice } });
+
+                        // update in map
+                        invoiceMap.set(e.guid, mergedData);
+                    }
+                    else if (e.error)
+                    {
+                        const mergedData = Object.assign({}, invoiceMap.get(e.guid), { 'error': e });
+
+                        // update in map
+                        invoiceMap.set(e.guid, mergedData);
+                    }
+
+        // update all invoices in db
+        await Promise.allSettled(Array.from(invoiceMap.entries()).map(async ([guid, data]) =>
         {
-            if (enabledModules.includes('coupa') && ['LKQ Corporation', 'LKQ Self Service']?.includes(order?.client?.name))
-                CoupaInvoices.push(order);
-            else if (enabledModules.includes('quickbooks'))
-                QBInvoices.push(order);
+            if (!data.error)
+            {
+                const invoice = await Invoice.query().patchAndFetchById(guid, { externalSourceData: data });
 
-            const res = await QuickBooksService.createInvoices(QBInvoices);
+                results.push(invoice);
+            }
+            else
+                results.push(data.error);
+        }));
 
-            // submit coupa PO's don't await
-            // temporary commenting out
-            // Coupa.sendInvoices(CoupaInvoices);
-
-            return res;
-        }
+        return results;
     }
 
     static async searchInvoices(orderGuid)
