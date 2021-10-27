@@ -4,7 +4,6 @@ class BillController
 {
     static async getBill(req, res)
     {
-
         const result = await BillService.getBill(req.params.billGuid);
         if (result)
         {
@@ -24,8 +23,16 @@ class BillController
 
         const result = await BillService.exportBills(orders);
 
-        res.status(200);
-        res.json(result);
+        if (result)
+        {
+            res.status(200);
+            res.json(result[0]);
+        }
+        else
+        {
+            res.status(404);
+            res.json({ 'error': 'Order Not Found' });
+        }
     }
 
     static async exportBills(req, res)

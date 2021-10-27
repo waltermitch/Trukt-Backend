@@ -54,7 +54,18 @@ class InvoiceController
         }
     }
 
-    static async createInvoices(req, res)
+    static async exportInvoice(req, res)
+    {
+        const result = await InvoiceService.exportInvoices([req.params.orderGuid]);
+
+        if (result)
+        {
+            res.status(200);
+            res.json(result[0]);
+        }
+    }
+
+    static async exportInvoices(req, res)
     {
         const orders = req.body?.orders;
 
@@ -65,7 +76,7 @@ class InvoiceController
         }
         else
         {
-            const result = await InvoiceService.createInvoices(orders);
+            const result = await InvoiceService.exportInvoices(orders);
 
             res.status(200);
             res.json(result);
