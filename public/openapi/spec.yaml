@@ -2565,60 +2565,6 @@ paths:
           description: Job not found
           content:
             application/json: {}
-  /invoice:
-    post:
-      summary: Invoice Orders
-      operationId: invoiceOrders
-      description: Invoices Orders
-      tags:
-        - Invoice
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              description: List of Order guids
-              properties:
-                orders:
-                  type: array
-                  items:
-                    description: Order guid
-                    $ref: '#/components/schemas/guid'
-                  minItems: 1
-              required:
-                - orders
-      responses:
-        '200':
-          description: invoices
-          content:
-            application/json: {}
-  /bill:
-    post:
-      summary: Bill Jobs
-      operationId: billJobs
-      description: Bills Jobs
-      tags:
-        - Invoice
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              description: List of Job guids
-              properties:
-                orders:
-                  type: array
-                  items:
-                    description: Job guid
-                    $ref: '#/components/schemas/guid'
-                  minItems: 1
-              required:
-                - jobs
-      responses:
-        '200':
-          description: bills
-          content:
-            application/json: {}
   /index/order/number:
     get:
       summary: Get next order index number

@@ -116,12 +116,6 @@ paths:
   /invoice/job/{jobGuid}:
     get:
       $ref: paths\invoice\getJobInvoices.yaml
-  /invoice:
-    post:
-      $ref: paths\invoice\post.yaml
-  /bill:
-    post:
-      $ref: paths\bill\post.yaml
   /index/order/number:
     get:
       $ref: paths\index\order\get.yaml
