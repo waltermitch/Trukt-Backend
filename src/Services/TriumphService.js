@@ -1,6 +1,6 @@
 const Triumph = require('../Triumph/API');
 
-class TriumphService 
+class TriumphService
 {
 
 }
