@@ -1,8 +1,8 @@
+const StatusLogType = require('../Models/StatusLogType');
+const StatusLog = require('../Models/StatusLog');
+const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const User = require('../Models/User');
-const StatusLog = require('../Models/StatusLog');
-const StatusLogType = require('../Models/StatusLogType');
-const OrderJob = require('../Models/OrderJob');
 
 class StatusManagerService
 {

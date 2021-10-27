@@ -1,34 +1,32 @@
-const R = require('ramda');
-const NodeCache = require('node-cache');
-
-const Order = require('../Models/Order');
-const OrderStop = require('../Models/OrderStop');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const InvoiceLineItem = require('../Models/InvoiceLineItem');
+const ComparisonType = require('../Models/ComparisonType');
+const GeneralFuncApi = require('../Azure/GeneralFuncApi');
 const OrderStopLink = require('../Models/OrderStopLink');
-const OrderJob = require('../Models/OrderJob');
-const OrderJobType = require('../Models/OrderJobType');
-const SFAccount = require('../Models/SFAccount');
-const SFContact = require('../Models/SFContact');
-const SFRecordType = require('../Models/SFRecordType');
-const Commodity = require('../Models/Commodity');
 const CommodityType = require('../Models/CommodityType');
-const Vehicle = require('../Models/Vehicle');
-const Terminal = require('../Models/Terminal');
+const OrderJobType = require('../Models/OrderJobType');
+const SFRecordType = require('../Models/SFRecordType');
 const Contact = require('../Models/TerminalContact');
 const InvoiceBill = require('../Models/InvoiceBill');
 const InvoiceLine = require('../Models/InvoiceLine');
-const InvoiceLineItem = require('../Models/InvoiceLineItem');
-const Expense = require('../Models/Expense');
-const ComparisonType = require('../Models/ComparisonType');
-const User = require('../Models/User');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const SFAccount = require('../Models/SFAccount');
+const OrderStop = require('../Models/OrderStop');
+const SFContact = require('../Models/SFContact');
+const Commodity = require('../Models/Commodity');
 const StatusLog = require('../Models/StatusLog');
-const GeneralFuncApi = require('../Azure/GeneralFuncApi');
-
 const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
+const OrderJob = require('../Models/OrderJob');
+const Terminal = require('../Models/Terminal');
+const Expense = require('../Models/Expense');
+const Vehicle = require('../Models/Vehicle');
+const Order = require('../Models/Order');
+const NodeCache = require('node-cache');
+const User = require('../Models/User');
 const { DateTime } = require('luxon');
 const axios = require('axios');
 const https = require('https');
+const R = require('ramda');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -60,6 +58,7 @@ class OrderService
     {
 
         dateFilterComparisonTypes = dates && await OrderService.getComparisonTypesCached();
+
         const jobFieldsToReturn = [
             'guid',
             'number',
