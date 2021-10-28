@@ -1,4 +1,4 @@
-const LOCATIONS_TABLE_NAME = 'locations';
+const LOCATIONS_TABLE_NAME = 'location_links';
 const PHOTO_TABLE_NAME = 'photos';
 const SCHEMA_NAME = 'copart';
 const LOT_TABLE_NAME = 'lots';
@@ -9,13 +9,11 @@ exports.up = function (knex)
         .createTable(LOCATIONS_TABLE_NAME, (table) =>
         {
             table.uuid('guid').primary();
-            table.string('name').notNullable();
-            table.string('address').notNullable();
-            table.string('city').notNullable();
-            table.string('state').notNullable();
-            table.string('zip').notNullable();
-            table.string('notes');
+            table.uuid('terminal_guid').notNullable();
+            table.foreign('terminal_guid').references('guid').inTable('rcg_tms.terminals');
             table.boolean('sublot');
+            table.string('yard_number');
+            table.string('notes');
         })
         .createTable(LOT_TABLE_NAME, (table) =>
         {
