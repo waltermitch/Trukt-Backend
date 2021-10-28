@@ -228,164 +228,179 @@ class OrderService
 
         try
         {
-            // use trx (transaction) because none of the data should be left in the database if any of it fails
-            const contactRecordType = await SFRecordType.query(trx)
-                .modify('byType', 'contact')
-                .modify('byName', 'account contact');
-            const commTypes = await CommodityType.query(trx);
-            const jobTypes = await OrderJobType.query(trx);
-            const invoiceLineItems = await InvoiceLineItem.query(trx);
+
+            // client is required and always should be checked.
+            // vehicles are not checked and are created or found
+            const dataCheck = { client: true, vehicles: false, terminals: false };
+            const jobsDataCheck = [];
 
             // order object will be used to link OrderStopLink from the job
-            let order = Order.fromJson({});
+            let order = Order.fromJson({
+                // these fields cannot be set by the user
+                status: 'new',
+                isDeleted: false,
+                isCompleted: false,
+                dateCompleted: null,
+                invoices: [],
+
+                // these fields maybe set by the user
+                instructions: orderObj.instructions || 'no instructions provided',
+                referenceNumber: orderObj.referenceNumber,
+                bol: orderObj.bol,
+                bolUrl: orderObj.bolUrl,
+                estimatedDistance: orderObj.estimatedDistance,
+                isDummy: orderObj.isDummy || false,
+                isTender: orderObj.isTender || false,
+                estimatedExpense: orderObj.estimatedExpense || 0,
+                estimatedRevenue: orderObj.estimatedRevenue || 0,
+                quotedRevenue: orderObj.quotedRevenue,
+                dateExpectedCompleteBy: orderObj.dateExpectedCompleteBy
+            });
+
             order.setCreatedBy(currentUser);
 
-            orderObj.client = await SFAccount.query(trx)
-                .modify('byType', 'client')
-                .findOne((builder) =>
-                {
-                    builder
-                        .orWhere('guid', orderObj.client.guid)
-                        .orWhere(
-                            'salesforce.accounts.sfId',
-                            orderObj.client.guid
-                        );
-                });
+            // DO NOT change the ordering of these promises, it will mess up _dataCheck and other destructured code
+            let orderInfoPromises = [];
+            orderInfoPromises.push(SFAccount.query(trx).modify('client', orderObj.client.guid));
+            orderInfoPromises.push(dataCheck.consignee = isUseful(orderObj.consignee) ? SFAccount.query(trx).modify('bySomeId', orderObj.consignee.guid) : null);
+            orderInfoPromises.push(dataCheck.dispatcher = isUseful(orderObj.dispatcher) ? User.query(trx).findById(orderObj.dispatcher.guid) : null);
+            orderInfoPromises.push(dataCheck.referrer = isUseful(orderObj.referrer) ? SFAccount.query(trx).findById(orderObj.referrer.guid) : null);
+            orderInfoPromises.push(dataCheck.salesperson = isUseful(orderObj.salesperson) ? SFAccount.query(trx).findById(orderObj.salesperson.guid) : null);
+            orderInfoPromises.push(Promise.all(orderObj.terminals.map(t =>
+            {
+                const term = Terminal.fromJson(t);
+                term.setCreatedBy(currentUser);
+                return term.findOrCreate(trx).then(term => { term['#id'] = t['#id']; return term; });
+            })));
+            orderInfoPromises.push(Promise.all(orderObj.commodities.map(com => isUseful(com.vehicle) ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
 
-            if (isUseful(orderObj?.consignee))
+            const jobInfoPromises = [];
+            for (const job of orderObj.jobs)
             {
-                orderObj.consignee = await SFAccount.query(trx).findOne(
-                    (builder) =>
-                    {
-                        builder
-                            .orWhere('guid', orderObj.consignee.guid)
-                            .orWhere(
-                                'salesforce.accounts.sfId',
-                                orderObj.consignee.guid
-                            );
-                    }
-                );
-            }
-            else
-            {
-                orderObj.consignee = orderObj.client;
+                const jobPromises = [];
+                const jobDataCheck = {};
+                jobPromises.push(jobDataCheck.vendor = isUseful(job.vendor) ? SFAccount.query(trx).modify('byType', 'carrier').findById(job.vendor.guid) : null);
             }
 
-            if (isUseful(orderObj?.referrer))
-            {
-                orderObj.referrer = await SFAccount.query(trx).findById(
-                    orderObj.referrer?.guid
-                );
-                order.graphLink('referrer', orderObj.referrer);
-            }
+            // use trx (transaction) because none of the data should be left in the database if any of it fails
+            const [
+                contactRecordType,
+                commTypes,
+                jobTypes,
+                invoiceLineItems,
+                orderInformation,
+                jobInformation
+            ] = await Promise.all([
+                SFRecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact'),
+                CommodityType.query(trx),
+                OrderJobType.query(trx),
+                InvoiceLineItem.query(trx),
+                Promise.all(orderInfoPromises),
+                Promise.all(jobInfoPromises)
+            ]);
 
-            // salesperson
-            if (isUseful(orderObj?.salesperson))
-            {
-                orderObj.salesperson = await SFAccount.query(trx).findById(
-                    orderObj.salesperson.guid
-                );
-                order.graphLink('salesperson', orderObj.salesperson);
-            }
+            // checks if the data that was provided in the payload was found in the database
+            // will throw an error if it wasn't found.
+            OrderService._dataCheck(dataCheck, orderInformation);
 
-            // dispatcher / manager responsible for the order
-            if (isUseful(orderObj?.dispatcher))
-            {
-                const dispatcher = await User.query(trx).findById(orderObj.dispatcher.guid);
-                if (!dispatcher)
-                {
-                    throw new Error(
-                        'dispatcher ' +
-                        JSON.stringify(orderObj.dispatcher) +
-                        ' doesn\'t exist'
-                    );
-                }
-                orderObj.dispatcher = dispatcher;
-                order.graphLink('dispatcher', orderObj.dispatcher);
-            }
+            // DO NOT change this ordering of models
+            const [
+                client,
+                consignee,
+                dispatcher,
+                referrer,
+                salesperson,
+                terminals,
+                vehicles
+            ] = orderInformation;
 
-            order.graphLink('consignee', orderObj.consignee);
-            order.graphLink('client', orderObj.client);
+            order.graphLink('client', client);
+            order.graphLink('consignee', consignee || client);
+            order.graphLink('referrer', referrer);
+            order.graphLink('salesperson', salesperson);
+            order.graphLink('dispatcher', dispatcher);
+
+            orderInfoPromises = [];
 
             if (isUseful(orderObj.clientContact))
             {
-                const clientContact = SFContact.fromJson(
-                    orderObj.clientContact
-                );
-
-                if (orderObj.client) clientContact.linkAccount(orderObj.client);
-
+                const clientContact = SFContact.fromJson(orderObj.clientContact);
+                clientContact.linkAccount(client);
                 clientContact.linkRecordType(contactRecordType);
-                const contact = await clientContact.findOrCreate(trx);
-                order.graphLink('clientContact', contact);
+                orderInfoPromises.push(clientContact.findOrCreate(trx));
+            }
+            else
+            {
+                orderInfoPromises.push(null);
             }
 
-            const commodities = {};
-            for (const commObj of orderObj.commodities || [])
+            // terminal cache will be used for linking stop contacts to terminals
+            // need to map all the terminals so that they are reuseable
+            const terminalsCache = terminals.reduce((cache, term, i) =>
             {
-                const commodity = Commodity.fromJson(commObj);
-                commodity.setCreatedBy(currentUser);
-                const commType = commTypes.find((it) =>
-                    CommodityType.compare(commodity, it)
-                );
-                if (!commType)
-                {
-                    throw new Error(
-                        `unknown commodity ${commodity.commType?.category} ${commodity.commType?.type}`
-                    );
-                }
-                commodity.graphLink('commType', commType);
-
-                if (commodity.isVehicle())
-                {
-                    const vehicle = await Vehicle.fromJson(
-                        commodity.vehicle
-                    ).findOrCreate(trx);
-                    commodity.graphLink('vehicle', vehicle);
-                }
-                commodities[commObj['#id']] = commodity;
-            }
-
-            const terminals = {};
-            for (const terminalObj of orderObj.terminals || [])
-            {
-                let terminal = Terminal.fromJson(terminalObj);
-                terminal.setCreatedBy(currentUser);
-                terminal = await terminal.findOrCreate(trx);
-                if (!terminal.isResolved)
-                {
-                    // TODO: check if the terminal is resolved and put it inside of the service-bus queue
-                }
-
-                const terminalIndex = terminalObj['#id'];
-                terminal.setIndex(terminalIndex);
+                // need to set the index because the terminals are pulled from the database
+                // the index will be used to tie them together to the OrderStops
+                const terminalIndex = term['#id'];
 
                 // store to use as a cache for later
-                terminals[terminalIndex] = terminal;
-            }
+                cache[terminalIndex] = terminals[i];
+                return cache;
+            }, {});
 
-            const terminalContacts = {};
-            const stopswithContacts = Order.allStops(orderObj).filter((it) =>
-                OrderStop.hasContact(it)
-            );
-
-            for (const stop of stopswithContacts)
+            // create promises for each contact that the stops will be using
+            const allStops = Order.allStops(orderObj).map(it => OrderStop.fromJson(it));
+            orderInfoPromises.push(Promise.all(allStops.map((stop) =>
             {
-                const terminal = terminals[stop.terminal];
-                for (const contactType of ['primaryContact', 'alternativeContact'])
+                const terminal = terminalsCache[stop.terminal];
+
+                console.log(stop.terminal, terminal);
+                for (const contactType of OrderStop.contactTypes)
                 {
                     if (stop[contactType])
                     {
-                        let contact = Contact.fromJson(stop[contactType]);
+                        const contact = Contact.fromJson(stop[contactType]);
                         contact.linkTerminal(terminal);
-                        const key = contact.uniqueKey();
-                        if (!(key in terminalContacts))
-                        {
-                            contact.setCreatedBy(currentUser);
-                            contact = await contact.findOrCreate(trx);
-                            terminalContacts[key] = { '#dbRef': contact.guid };
-                        }
-                        stop[contactType] = terminalContacts[key];
+                        contact.setCreatedBy(currentUser);
+                        return contact.findOrCreate(trx);
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+            })));
+
+            // commodities are reused in the system
+            const commodityCache = orderObj.commodities.reduce((cache, com, i) =>
+            {
+                const commodity = Commodity.fromJson(com);
+                const commType = commTypes.find((it) => CommodityType.compare(commodity, it));
+                if (!commType)
+                {
+                    const commTypeStr = commodity.typeId ? commodity.typeId : `${commodity.commType?.category} ${commodity.commType?.type}`;
+                    throw new Error(`Unknown commodity type: ${commTypeStr}`);
+                }
+                commodity.graphLink('commType', commType);
+                commodity.setCreatedBy(currentUser);
+
+                // check to see if the commodity is a vehicle (it would have been created or found in the database)
+                vehicles[i] && commodity.graphLink('vehicle', vehicles[i]);
+                cache[com['#id']] = commodity;
+                return cache;
+            }, {});
+
+            const [clientContact, stopContacts] = await Promise.all(orderInfoPromises);
+
+            order.graphLink('clientContact', clientContact);
+
+            for (const stop of allStops)
+            {
+                for (const contactType of OrderStop.contactTypes)
+                {
+                    const contact = stopContacts.shift();
+                    if (contact)
+                    {
+                        stop.graphLink(contactType, contact);
                     }
                 }
             }
@@ -396,18 +411,18 @@ class OrderService
             // not appear in the orders
             const stopsCache = {};
 
-            const orderStops = [];
-            for (const stopObj of orderObj.stops)
+            const orderStops = orderObj.stops.map((stopObj =>
             {
                 const stop = OrderStop.fromJson(stopObj);
                 stop.setCreatedBy(currentUser);
-                orderStops.push(stop);
-            }
+                return stop;
+            }));
+
             order.stopLinks = OrderService.buildStopLinksGraph(
                 orderStops,
                 stopsCache,
-                terminals,
-                commodities
+                terminalsCache,
+                commodityCache
             );
 
             for (const stopLink of order.stopLinks)
@@ -524,8 +539,8 @@ class OrderService
                 job.stopLinks = OrderService.buildStopLinksGraph(
                     jobStops,
                     stopsCache,
-                    terminals,
-                    commodities
+                    terminalsCache,
+                    commodityCache
                 );
                 for (const stopLink of job.stopLinks)
                 {
@@ -552,8 +567,8 @@ class OrderService
                 job.stopLinks = OrderService.buildStopLinksGraph(
                     orderStops,
                     stopsCache,
-                    terminals,
-                    commodities
+                    terminalsCache,
+                    commodityCache
                 );
 
                 for (const stopLink of job.stopLinks)
@@ -609,7 +624,7 @@ class OrderService
                 const jobBillLines = jobInputCommodities?.map(commodity =>
                 {
                     const itemId = 1;
-                    const commodityReference = commodities[commodity['#id']];
+                    const commodityReference = commodityCache[commodity['#id']];
                     const commodityRevenue = commodity.revenue;
                     const commodityExpense = commodity.expense;
 
@@ -652,7 +667,6 @@ class OrderService
                 .insertGraph(order, { allowRefs: true });
 
             await trx.commit();
-
             return order;
         }
         catch (err)
@@ -687,6 +701,31 @@ class OrderService
         bill.lines.push(...lines);
 
         return bill;
+    }
+
+    /**
+     * Checks the data that was returned form the database
+     * If the dataCheck object has a key and it is true, it will check for the dataRecs if it is not null
+     * @param {Object<string, boolean>} dataCheck object with names that can be alphabetically mapped
+     * @param {BaseModel[]} dataRecs list of model instances, must be in alphabetical order
+     */
+    static _dataCheck(dataCheck, dataRecs)
+    {
+        const keys = Object.keys(dataCheck);
+        keys.sort();
+        if (keys.length != dataRecs.length)
+        {
+            throw new Error('_dataCheck dataCheck keys length do not match the dataRecs length');
+        }
+
+        for (const [i, key] of keys.entries())
+        {
+            if (dataCheck[key] && !dataRecs[i])
+            {
+                throw new Error(`${key} record doesn't exist.`);
+            }
+        }
+
     }
 
     static async calculateTotalDistance(stops)
