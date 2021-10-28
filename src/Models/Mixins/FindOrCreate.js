@@ -1,3 +1,6 @@
+const R = require('ramda');
+
+const findNotNil = R.find(R.compose(R.not, R.isNil));
 const mixin =
 {
     /**
@@ -35,21 +38,20 @@ const mixin =
     /**
      * some records are to be shared with other parent records
      * this method is designed to locate those records before deciding to create them
-     * @returns
+     * @returns Promise
      */
     async findOrCreate(trx)
     {
-        let record = undefined;
-
+        const promises = [];
         if (this.hasId())
         {
             // find using an id
             const { field, id } = this.findIdValue();
-            record = await this.constructor.query(trx).findOne(field, id);
+            promises.push(this.constructor.query(trx).findOne(field, id));
         }
 
         const uniqueCols = this.constructor.uniqueColumns;
-        if (!record && uniqueCols)
+        if (uniqueCols)
         {
             // if a column in postgres has a null value
             // then it isnt considered unique and doesnt follow the constraint
@@ -68,42 +70,39 @@ const mixin =
                     }
                 }
 
-                record = await qb;
+                promises.push(qb);
             }
         }
 
-        if (!record)
+        return Promise.all(promises).then(async (searches) =>
         {
-            record = Object.keys(this).reduce((obj, field) =>
+            // return the first non-nil element
+            let found = findNotNil(searches);
+            if (!found)
             {
-                obj[field] = this[field] || null;
-                return obj;
-            }, {});
+                // create a shallow clone.
+                const record = Object.assign({}, this);
 
-            // when using this method, make sure that #id and #ref are not used in the model
-            // will cause the insert method to crash, also findOrCreate is not used for graphs
-            for (const x of ['#id', '#ref', '#dbRef'])
-            {
-                if (x in record)
+                // when using this method, make sure that #id and #ref are not used in the model
+                // will cause the insert method to crash, also findOrCreate is not used for graphs
+                delete record['#id'];
+                delete record['#ref'];
+                delete record['#dbRef'];
+
+                const idCols = this.constructor?.idColumns || [this.constructor?.idColumn];
+
+                // remove the id columns because insert will fail, id values should not be provided by external sources
+                // id columns are columns that are used to identify the record in our database
+                // external data identifiers can be stored in "non-identifying" columns
+                for (const field of idCols)
                 {
-                    delete record[x];
+                    delete record[field];
                 }
+                found = await this.constructor.query(trx).insertAndFetch(this.constructor.fromJson(record));
             }
 
-            const idCols = this.constructor?.idColumns || [this.constructor?.idColumn];
-
-            // remove the id columns because insert will fail, id values should not be provided by external sources
-            // id columns are columns that are used to identify the record in our database
-            // external data identifiers can be stored in "non-identifying" columns
-            for (const field of idCols)
-            {
-                delete record[field];
-            }
-            record = this.constructor.fromJson(record);
-            record = await this.constructor.query(trx).insertAndFetch(record);
-        }
-
-        return record;
+            return found;
+        });
     }
 };
 
