@@ -13,7 +13,7 @@ class InvoiceService
         return res;
     }
 
-    static async getOrderInvoice(guid)
+    static async getOrderInvoicesandBills(guid)
     {
         // Using order model to get all invoices
         const res = await Order
@@ -59,6 +59,54 @@ class InvoiceService
         };
 
         return invoiceObject;
+    }
+
+    static async getJobOrderFinances(guid, type)
+    {
+        // Using order model to get all invoices
+        const res = await Order
+            .query()
+            .findById(guid)
+            .withGraphJoined({
+                invoices: Invoice.fetch.details,
+                jobs: { bills: Invoice.fetch.details }
+            });
+
+        // order was not found, return undefined
+        if (res == undefined)
+        {
+            return undefined;
+        }
+
+        // using type to make it more concrete
+        if (type == 'job')
+        {
+            // flatten all the bills and assign job guid and number to each bill
+            return res.jobs.reduce((bills, job) =>
+            {
+                const jobObject = {
+                    guid: job.guid,
+                    number: job.number
+                };
+                bills.push(...job.bills.map((bill) =>
+                {
+                    bill.job = jobObject;
+                    return bill;
+                }));
+                return bills;
+            }, []);
+        }
+        if (type == 'order')
+        {
+            // assigning orderId and Number to order invoice
+            Object.assign(res.invoices[0], {
+                order: {
+                    guid: res.guid,
+                    number: res.number
+                }
+            });
+            return res.invoices;
+        }
     }
 
     static async createInvoices(arr)
