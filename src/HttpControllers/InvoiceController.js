@@ -90,7 +90,26 @@ class InvoiceController
         }
     }
 
-    static async createInvoices(req, res)
+    static async exportInvoice(req, res)
+    {
+        const result = (await InvoiceService.exportInvoices([req.params.orderGuid]))?.[0];
+
+        if (result)
+        {
+            if (result.error)
+                res.status(400);
+            else
+                res.status(200);
+
+            res.json(result);
+        }
+        else
+        {
+            res.status(404);
+        }
+    }
+
+    static async exportInvoices(req, res)
     {
         const orders = req.body?.orders;
 
@@ -101,10 +120,18 @@ class InvoiceController
         }
         else
         {
-            const result = await InvoiceService.createInvoices(orders);
+            const result = await InvoiceService.exportInvoices(orders);
 
-            res.status(200);
-            res.json(result);
+            if (result)
+            {
+                res.status(200);
+                res.json(result);
+            }
+            else
+            {
+                res.status(404);
+                res.json({ 'error': 'Order Not Found' });
+            }
         }
     }
 

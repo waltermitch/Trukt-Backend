@@ -1,5 +1,5 @@
-const Terminal = require('../Models/Terminal');
 const ArcgisClient = require('../ArcgisClient');
+const Terminal = require('../Models/Terminal');
 
 const keywordFields = {
     'name': ['name'],

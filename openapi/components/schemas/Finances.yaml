@@ -5,16 +5,16 @@ InvoiceAndBillsOutbound:
       type: array
       description: All of the invoices that belong to the order.
       items:
-        $ref: '#/Invoice'
+        $ref: "#/Invoice"
     bills:
       type: array
       description: All of the bills that belong to all of the jobs for the order.
       items:
-        $ref: '#/Bill'
+        $ref: "#/Bill"
 
 Invoice:
   allOf:
-    - $ref: '#/InvoiceBill'
+    - $ref: "#/InvoiceBill"
     - type: object
       description: An invoice for a client that requested an order.
       properties:
@@ -29,7 +29,7 @@ Invoice:
               example: RC10000
 Bill:
   allOf:
-    - $ref: '#/InvoiceBill'
+    - $ref: "#/InvoiceBill"
     - type: object
       description: A bill for a vendor that serviced a job.
       properties:
@@ -81,13 +81,13 @@ InvoiceBill:
     dateCreated:
       $ref: .\Common.yaml#/dateCreated
     paymentTerms:
-      $ref: '#/PaymentTerms'
+      $ref: "#/PaymentTerms"
     paymentMethod:
-      $ref: '#/PaymentMethod'
+      $ref: "#/PaymentMethod"
     consignee:
       $ref: .\Account.yaml#/Consignee
     lines:
-      $ref: '#/InvoiceLine'
+      $ref: "#/InvoiceLine"
 
 InvoiceLine:
   type: object
@@ -124,14 +124,28 @@ InvoiceLine:
 PaymentTerms:
   type: string
   enum:
-    - 'Due on receipt'
-    - 'Net 15'
-    - 'Net 30'
-    - 'Net 60'
+    - "Due on receipt"
+    - "Net 15"
+    - "Net 30"
+    - "Net 60"
 
 PaymentMethod:
   type: string
   enum:
-    - 'Cash'
-    - 'Check'
-    - 'Credit Card'
+    - "Cash"
+    - "Check"
+    - "Credit Card"
+
+Error:
+  type: object
+  properties:
+    error:
+      type: string
+      description: The error message.
+    system:
+      type: string
+      description: The accounting system that the error occurred in.
+    guid:
+      allOf:
+        - $ref: .\Common.yaml#/guid
+        - description: The guid of the bill/invoice that the error occurred in.
