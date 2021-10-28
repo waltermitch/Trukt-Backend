@@ -1870,6 +1870,32 @@ paths:
                   error:
                     type: string
                     example: Order not found
+  '/order/{orderGuid}/invoices':
+    get:
+      summary: Get Invoices by Order
+      operationId: getOrderInvoices
+      description: Get all details of all the Invoices that are related to the Order.
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+        '404':
+          description: Order not found
+          content:
+            application/json: {}
   '/job/{jobGuid}/notes':
     get:
       summary: Get Job Notes by Job guid
@@ -1903,6 +1929,32 @@ paths:
                   error:
                     type: string
                     description: Job Not Found
+  '/job/{jobGuid}/bills':
+    get:
+      summary: Get Bills by Job
+      operationId: getJobBills
+      description: Get all details of all the Bills that are related to the Job.
+      tags:
+        - Job
+      parameters:
+        - in: path
+          name: jobGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bill'
+        '404':
+          description: Job not found
+          content:
+            application/json: {}
   /picklist/options:
     get:
       summary: Get picklist options
