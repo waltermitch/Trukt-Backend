@@ -229,7 +229,8 @@
                     "createdByGuid",
                     "updatedByGuid",
                     "primaryContactGuid",
-                    "alternativeContactGuid"
+                    "alternativeContactGuid",
+                    "resolvedTimes"
                 ]
             }
         }
