@@ -6,14 +6,9 @@ definitions:
       image: mongo
     postgres:
       image: postgres
+      variables:
+        POSTGRES_PASSWORD: 'test'
   steps:
-    - step: &decrypt
-        name: decrypt
-        script:
-          - npm run decrypt -- local.settings.enc local.settings.json
-          - npm install
-        artifacts:
-          - '*.json'
     - step: &jest-test
         name: All Tests
         caches:
@@ -39,6 +34,22 @@ definitions:
           - npm run decrypt -- local.settings.enc local.settings.json
           - npm install
           - npm run test:unit
+    - step: &integration-db-test
+        name: Integration test
+        services:
+          - postgres
+        caches:
+          - node
+        script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
+          - npm install --only=dev
+          - node ./tools/migrator.js init
+          - node ./tools/migrator.js up --all
+          - node ./tools/migrator.js seed sys -a
+          - node ./tools/migrator.js seed dev salesforce
+          - node ./tools/migrator.js seed dep users,audit_register
+          - npm run test:integration:db
     - step: &db-migration
         name: DB Migration
         caches:
@@ -52,12 +63,13 @@ definitions:
 
 pipelines:
   default:
-    - step: *jest-test
+    - step: *unit-test
+    - step: *integration-db-test
 
   pull-requests:
-    '**':  
+    '**':
       - step: *unit-test
-      - step: *jest-test
+      - step: *integration-db-test
 
   branches:
     'dev':
