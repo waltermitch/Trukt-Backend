@@ -36,7 +36,43 @@ class InvoiceController
                 }
                 orderGuid = result.orderGuid;
             }
-            const result = await InvoiceService.getOrderInvoice(orderGuid);
+            const result = await InvoiceService.getOrderInvoicesandBills(orderGuid);
+            if (!result)
+            {
+                res.status(404);
+                res.send(`Order with Guid ${orderGuid} not found.`);
+            }
+            else
+            {
+                res.status(200);
+                res.json(result);
+            }
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async getFinances(req, res, next, type)
+    {
+        let orderGuid = req.params.orderGuid;
+
+        try
+        {
+            // get request is job
+            if (type == 'job')
+            {
+                // get Order Guid
+                const result = await OrderJob.query().findById(req.params.jobGuid);
+                if (!result)
+                {
+                    res.status(404).send(`Job with Guid ${req.params.jobGuid} not found.`);
+                    return;
+                }
+                orderGuid = result.orderGuid;
+            }
+            const result = await InvoiceService.getJobOrderFinances(orderGuid, type);
             if (!result)
             {
                 res.status(404);
