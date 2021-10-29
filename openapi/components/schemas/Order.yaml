@@ -165,16 +165,10 @@ Order:
           - type: object
             properties:
               terminal:
-                allOf:
-                  - $ref: './Common.yaml#/guidObject'
-                  - $ref: ./Terminal.yaml
+                $ref: ./Terminal.yaml#/TerminalOutbound
               commodities:
                 $ref: ./Commodity.yaml#/CommodityOutbound
     terminals:
       type: array
       items:
-        allOf:
-          - $ref: './Common.yaml#/guidObject'
-          - $ref: ./Terminal.yaml
-
-
+        $ref: ./Terminal.yaml#/TerminalOutbound
