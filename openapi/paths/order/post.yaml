@@ -119,9 +119,8 @@ requestBody:
           terminals:
             type: array
             items:
-              allOf:
-                - $ref: '..\..\components\schemas\Terminal.yaml'
-                - $ref: '..\..\components\schemas\Common.yaml#/indexObject'
+              $ref: '..\..\components\schemas\Terminal.yaml#/TerminalInbound'
+
           commodities:
             type: array
             items:
@@ -256,7 +255,7 @@ responses:
                       terminal:
                         allOf:
                           - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
-                          - $ref: ..\..\components\schemas\Terminal.yaml
+                          - $ref: ..\..\components\schemas\Terminal.yaml#/TerminalOutbound
                       commodities:
                         $ref: ..\..\components\schemas\Commodity.yaml#/CommodityOutbound
             terminals:
@@ -264,4 +263,4 @@ responses:
               items:
                 allOf:
                   - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
-                  - $ref: ..\..\components\schemas\Terminal.yaml
+                  - $ref: ..\..\components\schemas\Terminal.yaml#/TerminalOutbound
