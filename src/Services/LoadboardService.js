@@ -223,8 +223,12 @@ class LoadboardService
             job.vendorGuid = carrier.guid;
             job.vendorAgentGuid = carrierContact.guid;
 
-            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job.bills[0].guid);
-
+            if(job.bills.length == 0)
+            {
+                throw new Error('Job bill missing. Bill is required in order to set payment method and payment terms');
+            }
+            
+            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job?.bills[0]?.guid);
             const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
             for (const line of lines)
                 line.transacting(trx);
