@@ -1,17 +1,18 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 /* eslint-disable padding-line-between-statements */
-const SFAccount = require('../src/Models/SFAccount');
-const Order = require('../src/Models/Order');
-const OrderJob = require('../src/Models/OrderJob');
-const OrderJobType = require('../src/Models/OrderJobType');
-const LineItem = require('../src/Models/InvoiceLineItem');
-const InvoiceBill = require('../src/Models/InvoiceBill');
-const InvoiceLine = require('../src/Models/InvoiceLine');
-const Bill = require('../src/Models/Bill');
-const Invoice = require('../src/Models/Invoice');
-const LineLink = require('../src/Models/LineLink');
-const BaseModel = require('../src/Models/BaseModel');
+const SFAccount = require('../../../src/Models/SFAccount');
+const SFRecordType = require('../../../src/Models/SFRecordType');
+const Order = require('../../../src/Models/Order');
+const OrderJob = require('../../../src/Models/OrderJob');
+const OrderJobType = require('../../../src/Models/OrderJobType');
+const LineItem = require('../../../src/Models/InvoiceLineItem');
+const InvoiceBill = require('../../../src/Models/InvoiceBill');
+const InvoiceLine = require('../../../src/Models/InvoiceLine');
+const Bill = require('../../../src/Models/Bill');
+const Invoice = require('../../../src/Models/Invoice');
+const LineLink = require('../../../src/Models/LineLink');
+const BaseModel = require('../../../src/Models/BaseModel');
 
 // this is an integration test/functional test, meaning this tests
 // how everything works together along with the db triggers
@@ -26,7 +27,14 @@ describe('Tests the invoice line and and invoice line links triggers', () =>
         trx = await BaseModel.startTransaction();
 
         // data setup
-        const client = (await SFAccount.query(trx).modify('byType', 'Client').limit(1))[0];
+        const rt = await SFRecordType.query(trx).select().modify('byType', 'Account').modify('byName', 'Client');
+        const clientModel = SFAccount.fromJson({
+            name: 'Integration Test Client',
+            recordTypeId: rt.sfId,
+            accountSource: 'Integration Test',
+            description: 'This client is from an integration test, if you find this client in a live environment, please delete'
+        });
+        const client = await SFAccount.query(trx).insertAndFetch(clientModel);
         const lineItems = [{ id: 1000, name: 'test revenue line item', type: 'revenue' }, { id: 1001, name: 'test expense line item', type: 'expense' }];
         await LineItem.query(trx).insertAndFetch(lineItems);
         const jobTypes = await OrderJobType.query(trx);
