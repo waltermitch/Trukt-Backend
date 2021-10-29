@@ -1,34 +1,33 @@
-const R = require('ramda');
-const NodeCache = require('node-cache');
-
-const Order = require('../Models/Order');
-const OrderStop = require('../Models/OrderStop');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const LoadboardService = require('../Services/LoadboardService');
+const InvoiceLineItem = require('../Models/InvoiceLineItem');
+const ComparisonType = require('../Models/ComparisonType');
+const GeneralFuncApi = require('../Azure/GeneralFuncApi');
 const OrderStopLink = require('../Models/OrderStopLink');
-const OrderJob = require('../Models/OrderJob');
-const OrderJobType = require('../Models/OrderJobType');
-const SFAccount = require('../Models/SFAccount');
-const SFContact = require('../Models/SFContact');
-const SFRecordType = require('../Models/SFRecordType');
-const Commodity = require('../Models/Commodity');
 const CommodityType = require('../Models/CommodityType');
-const Vehicle = require('../Models/Vehicle');
-const Terminal = require('../Models/Terminal');
+const OrderJobType = require('../Models/OrderJobType');
+const SFRecordType = require('../Models/SFRecordType');
 const Contact = require('../Models/TerminalContact');
 const InvoiceBill = require('../Models/InvoiceBill');
 const InvoiceLine = require('../Models/InvoiceLine');
-const InvoiceLineItem = require('../Models/InvoiceLineItem');
-const Expense = require('../Models/Expense');
-const ComparisonType = require('../Models/ComparisonType');
-const User = require('../Models/User');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const SFAccount = require('../Models/SFAccount');
+const OrderStop = require('../Models/OrderStop');
+const SFContact = require('../Models/SFContact');
+const Commodity = require('../Models/Commodity');
 const StatusLog = require('../Models/StatusLog');
-const GeneralFuncApi = require('../Azure/GeneralFuncApi');
-
 const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
+const OrderJob = require('../Models/OrderJob');
+const Terminal = require('../Models/Terminal');
+const Expense = require('../Models/Expense');
+const Vehicle = require('../Models/Vehicle');
+const Order = require('../Models/Order');
+const NodeCache = require('node-cache');
+const User = require('../Models/User');
 const { DateTime } = require('luxon');
 const axios = require('axios');
 const https = require('https');
+const R = require('ramda');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -60,6 +59,7 @@ class OrderService
     {
 
         dateFilterComparisonTypes = dates && await OrderService.getComparisonTypesCached();
+
         const jobFieldsToReturn = [
             'guid',
             'number',
@@ -68,7 +68,8 @@ class OrderService
             'status',
             'dateCreated',
             'actualRevenue',
-            'actualExpense'
+            'actualExpense',
+            'dateUpdated'
         ];
 
         const baseOrderQuery = OrderJob.query().select(jobFieldsToReturn).page(page, rowCount);
@@ -494,6 +495,7 @@ class OrderService
                 dateCompleted: null,
                 invoices: []
             });
+
             order.setClientNote(orderObj.clientNotes?.note, currentUser);
 
             // this part creates all the financial records for this order
@@ -623,24 +625,24 @@ class OrderService
     static async handleLoadTenders(action, orderGuids, reason)
     {
         const responses = [];
-        
+
         const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
 
         /**
          * if the lengths do not match, that means one of the orders does not exist.
          * find the guid that does not exist and add it to responses
          */
-    
-        const hashedOrders = orders.reduce((map, obj)=>
+
+        const hashedOrders = orders.reduce((map, obj) =>
         {
             map[obj.guid] = obj;
             return map;
         }, {});
 
         const filteredOrders = [];
-        for(const guid of orderGuids)
+        for (const guid of orderGuids)
         {
-            if(hashedOrders[guid] === undefined)
+            if (hashedOrders[guid] === undefined)
             {
                 responses.push({
                     orderGuid: guid,
@@ -653,22 +655,22 @@ class OrderService
             {
                 let message = null;
 
-                if(hashedOrders[guid].jobs[0].isTransport === false)
+                if (hashedOrders[guid].jobs[0].isTransport === false)
                 {
                     message = 'Order does not have a transport job.';
                 }
-    
-                if(hashedOrders[guid].isTender === false)
+
+                if (hashedOrders[guid].isTender === false)
                 {
                     message = 'Order is not a tender.';
                 }
-    
-                if(hashedOrders[guid].isDeleted === true)
+
+                if (hashedOrders[guid].isDeleted === true)
                 {
                     message = 'Order is deleted.';
                 }
-    
-                if(message)
+
+                if (message)
                 {
                     responses.push({
                         orderGuid: guid,
@@ -677,21 +679,21 @@ class OrderService
                         message
                     });
                 }
-    
-                if(hashedOrders[guid].isTender && !hashedOrders[guid].isDeleted)
+
+                if (hashedOrders[guid].isTender && !hashedOrders[guid].isDeleted)
                 {
                     filteredOrders.push(hashedOrders[guid]);
                 }
             }
         }
 
-        const logicAppPayloads = filteredOrders.map((item)=> ({
+        const logicAppPayloads = filteredOrders.map((item) => ({
             order: {
                 guid: item.guid,
                 number: item.number
             },
             partner: item.client.sfId,
-            refrence: item.referenceNumber,
+            reference: item.referenceNumber,
             action: action,
             date: DateTime.utc().toString(),
             scac: 'RCGQ',
@@ -700,12 +702,12 @@ class OrderService
         }));
 
         let apiResponses = [];
-        if(filteredOrders.length)
+        if (filteredOrders.length)
         {
-            apiResponses = await Promise.allSettled(logicAppPayloads.map((item)=> logicAppInstance.post(process.env['azure.logicApp.params'], item)));
+            apiResponses = await Promise.allSettled(logicAppPayloads.map((item) => logicAppInstance.post(process.env['azure.logicApp.params'], item)));
         }
 
-        const formattedResponses = apiResponses.map((item, index)=>({
+        const formattedResponses = apiResponses.map((item, index) => ({
             orderGuid: filteredOrders[index].guid,
             jobGuid: filteredOrders[index].jobs[0].guid,
             status: item.status === 'fulfilled' ? 200 : 400,
@@ -725,25 +727,25 @@ class OrderService
      */
     static async loadTendersHelper(responses, isTender, isDeleted, statusId, currentUser)
     {
-        const successfulResponses = responses.filter((item)=> item.status === 200);
+        const successfulResponses = responses.filter((item) => item.status === 200);
 
-        const successfulResponseGuids = successfulResponses.map((item)=> item.orderGuid);
+        const successfulResponseGuids = successfulResponses.map((item) => item.orderGuid);
 
-        if(successfulResponseGuids.length)
+        if (successfulResponseGuids.length)
         {
-           await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
+            await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
                 isTender,
                 isDeleted,
                 status: 'New'
             });
 
-           await Promise.allSettled(successfulResponses.map((item)=>
-             StatusManagerHandler.registerStatus({
-               orderGuid: item.orderGuid,
-               jobGuid: item.jobGuid,
-               userGuid: currentUser,
-               statusId
-           })));
+            await Promise.allSettled(successfulResponses.map((item) =>
+                StatusManagerHandler.registerStatus({
+                    orderGuid: item.orderGuid,
+                    jobGuid: item.jobGuid,
+                    userGuid: currentUser,
+                    statusId
+                })));
 
         }
     }
@@ -755,7 +757,7 @@ class OrderService
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
-        
+
         const responses = await this.handleLoadTenders('accept', orderGuids, null);
 
         await this.loadTendersHelper(responses, false, false, 8, currentUser);
@@ -768,15 +770,15 @@ class OrderService
      * @param {string} reason
      * @param {string} currentUser
      */
-       static async rejectLoadTenders(orderGuids, reason, currentUser)
-       {
+    static async rejectLoadTenders(orderGuids, reason, currentUser)
+    {
 
-            const responses = await this.handleLoadTenders('reject', orderGuids, reason);
+        const responses = await this.handleLoadTenders('reject', orderGuids, reason);
 
-            await this.loadTendersHelper(responses, true, true, 9, currentUser);
-      
-            return responses;
-        }
+        await this.loadTendersHelper(responses, true, true, 9, currentUser);
+
+        return responses;
+    }
 
     static async updateClientNote(orderGuid, body, currentUser)
     {
@@ -1289,6 +1291,13 @@ class OrderService
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
+            // update loadboard postings (async)
+            orderUpdated.jobs.map(async (job) =>
+            {
+                await LoadboardService.updatePostings(job.guid)
+                    .catch(err => console.log(err));
+            });
+
             await trx.commit();
             return orderUpdated;
         }
@@ -1698,11 +1707,12 @@ class OrderService
             switch (contactAction)
             {
                 case 'findOrCreate':
-                    const terminalContactFound = await Contact.query().findOne({
+                    const terminalContact = Contact.fromJson({
                         terminalGuid: terminal.guid,
                         name: contactInput.name,
                         phoneNumber: contactInput.phoneNumber
                     });
+                    const terminalContactFound = await Contact.query().findOne(terminalContact);
 
                     // Contact exists, now we have to add non essential information
                     if (terminalContactFound)

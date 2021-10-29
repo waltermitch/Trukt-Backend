@@ -2,6 +2,7 @@ const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJobType = require('./OrderJobType');
 const BaseModel = require('./BaseModel');
+const { raw } = require('objection');
 
 const jobTypeFields = ['category', 'type'];
 
@@ -268,7 +269,70 @@ class OrderJob extends BaseModel
 
     static sorted(query, sortField = {})
     {
-        return query.orderBy(sortField.field || 'number', sortField.order || 'ASC');
+        const { field, order } = sortField;
+        const sortFieldQuery = OrderJob.customSort(field);
+
+        return query.orderBy(sortFieldQuery, order || 'ASC');
+    }
+
+    static customSort(sortField = 'number')
+    {
+        const SFAccount = require('./SFAccount');
+        const Order = require('./Order');
+        const Terminal = require('./Terminal');
+        const OrderStop = require('./OrderStop');
+        const OrderStopLink = require('./OrderStopLink');
+        const User = require('./User');
+
+        switch (sortField)
+        {
+            case 'clientName':
+                return SFAccount.query().select('name').where('guid',
+                    Order.query().select('clientGuid').whereRaw('guid = order_guid')
+                );
+            case 'dispatcherName':
+                return User.query().select('name').where('guid',
+                    Order.query().select('dispatcher_guid').whereRaw('guid = order_guid')
+                ).toKnexQuery();
+            case 'salespersonName':
+                return SFAccount.query().select('name').where('guid',
+                    Order.query().select('salespersonGuid').whereRaw('guid = order_guid')
+                );
+            case 'pickupTerminal':
+                return Terminal.query().select('name').where('guid',
+                    OrderStop.query().select('terminalGuid').whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'pickup').orderBy('dateRequestedStart').limit(1)
+                );
+            case 'deliveryTerminal':
+                return Terminal.query().select('name').where('guid',
+                    OrderStop.query().select('terminalGuid').whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'delivery').orderBy('dateRequestedStart', 'desc').limit(1)
+                );
+            case 'requestedPickupDate':
+                return OrderStop.query().min('dateRequestedStart')
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'pickup');
+            case 'requestedDeliveryDate':
+                return OrderStop.query().max('dateRequestedStart')
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'delivery');
+            case 'scheduledPickupDate':
+                return OrderStop.query().min('dateScheduledStart')
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'pickup');
+            case 'scheduledDeliveryDate':
+                return OrderStop.query().max('dateScheduledStart')
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'delivery');
+            default:
+                return sortField;
+        }
     }
 
     static globalSearch(query, keyword)

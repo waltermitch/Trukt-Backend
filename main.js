@@ -19,8 +19,15 @@ run();
 
 async function run()
 {
-    await PGListener.listen();
-    await Mongo.connect();
+    try
+    {
+        await PGListener.listen();
+        await Mongo.connect();
+    }
+    catch (error)
+    {
+        console.error(`Start error: ${error.message || error}`);
+    }
 
     const store = new KnexSessionStore
         ({

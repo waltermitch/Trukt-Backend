@@ -10,7 +10,7 @@ requestBody:
         type: object
         description: List of Job guids
         properties:
-          orders:
+          jobs:
             type: array
             items:
               description: Job guid

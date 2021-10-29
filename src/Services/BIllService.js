@@ -1,11 +1,10 @@
-const QuickBooksService = require('./QuickBooksService');
-const OrderJob = require('../Models/OrderJob');
-const QBO = require('../QuickBooks/API');
-const currency = require('currency.js');
-const InvoiceLine = require('../Models/InvoiceLine');
+const enabledModules = process.env['accounting.modules'].split(';');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
+const QuickBooksService = require('./QuickBooksService');
+const InvoiceLine = require('../Models/InvoiceLine');
 const Bill = require('../Models/InvoiceBill');
-const InvoiceBill = require('../Models/InvoiceBill');
+const Order = require('../Models/Order');
+const currency = require('currency.js');
 
 let transportItem;
 
@@ -18,24 +17,98 @@ class BillService
 {
     static async getBill(guid)
     {
-        const res = await Bill.query()
-            .findOne({ 'guid': guid, 'isDeleted': false })
-            .withGraphFetched(InvoiceBill.fetch.details);
+        const search = guid.replace(/%/g, '');
 
-        return res;
+        const res = await Bill.query().findOne({ 'guid': search });
+
+        return res?.[0];
     }
 
-    static async createBills(arr)
+    static async exportBills(arr)
     {
-        const qb = OrderJob.query().withGraphFetched('[bills.[lines.[commodity.[stops.[terminal]], item.qbAccount]], vendor]');
+        // array for results
+        const results = [];
 
-        for (const guid of arr)
-            qb.orWhere('guid', '=', guid);
+        // query to get all the orders with related objects
+        const qb = Order.query().whereIn('guid', arr);
+
+        qb.withGraphFetched('[jobs.[bills.[lines.[commodity.[stops.[terminal]], item.qbAccount]], vendor]]');
 
         // get all the orders
         const orders = await qb;
 
-        await QuickBooksService.createBills(orders);
+        if (!orders.length)
+            return null;
+
+        // which system to send bills to
+        const qbBills = [];
+        const billMap = new Map();
+
+        // loop through all the orders
+        for (const order of orders)
+            for (const job of order.jobs)
+                for (const bill of job.bills)
+                {
+                    if (bill.isPaid && Object.keys(bill?.externalSourceData).length > 0)
+                    {
+                        results.push({
+                            guid: bill.guid,
+                            error: 'Bill Already Maked As Paid',
+                            externalSourceData: bill.externalSourceData
+                        });
+                        continue;
+                    }
+
+                    // add existing bill to map
+                    billMap.set(bill.guid, bill.externalSourceData || {});
+
+                    // map parent fields to child object
+                    bill.jobNumber = job.number;
+                    bill.vendor = job.vendor;
+
+                    if (enabledModules.includes('quickbooks'))
+                    {
+                        qbBills.push(bill);
+                    }
+                }
+
+        const promises = await Promise.allSettled([QuickBooksService.createBills(qbBills)]);
+
+        // for each successful bill save to db
+        for (const promise of promises)
+            if (promise.reason)
+                console.log(promise.reason);
+            else
+                for (const e of promise.value)
+                    if (e.Bill)
+                    {
+                        // merge existing externalSourceData with new data
+                        const mergedData = Object.assign({}, billMap.get(e.bId), { 'quickbooks': { 'Bill': { 'Id': e.Bill.Id } } });
+
+                        // update in map
+                        billMap.set(e.bId, mergedData);
+                    }
+                    else if (e.error || e.Fault)
+                    {
+                        const mergedData = Object.assign({}, billMap.get(e.guid), { 'error': e.Fault ? { 'error': e } : e });
+
+                        billMap.set(e.guid, mergedData);
+                    }
+
+        // save all bills to db
+        await Promise.allSettled(Array.from(billMap.entries()).map(async ([guid, data]) =>
+        {
+            if (!data.error)
+            {
+                const bill = await Bill.query().patchAndFetchById(guid, { externalSourceData: data, isPaid: true });
+
+                results.push(bill);
+            }
+            else
+                results.push(data.error);
+        }));
+
+        return results;
     }
 
     /**

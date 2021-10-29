@@ -2,14 +2,15 @@
     This migration file is STRICTLY for local database instances.
     Use Heroku Connect to get the correct database for the specific environments.
 */
-
+const allowedEnvs = ['local', 'pipeline'];
 const fs = require('fs');
 
 const SALESFORCE_TABLES = ['account', 'contact', 'recordtype'];
 
 exports.up = async function (knex)
 {
-    if (process.env.NODE_ENV === 'local')
+
+    if (allowedEnvs.includes(process.env.NODE_ENV))
     {
         const content = fs.readFileSync('./sql/salesforce_schema.sql', { encoding: 'utf-8' });
         return knex.raw(content);
@@ -23,7 +24,7 @@ exports.up = async function (knex)
 
 exports.down = async function (knex)
 {
-    if (process.env.NODE_ENV === 'local')
+    if (allowedEnvs.includes(process.env.NODE_ENV))
     {
         let builder = knex.schema.withSchema('salesforce');
 

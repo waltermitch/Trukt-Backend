@@ -1614,15 +1614,7 @@ paths:
                   type: object
                   properties:
                     field:
-                      type: string
-                      enum:
-                        - status
-                        - number
-                        - dateCreated
-                        - actualRevenue
-                        - actualExpense
-                        - estimatedExpense
-                        - estimatedRevenue
+                      $ref: '#/components/schemas/Get Orders sort fields'
                     order:
                       description: Sorting order
                       type: string
@@ -2573,60 +2565,6 @@ paths:
           description: Job not found
           content:
             application/json: {}
-  /invoice:
-    post:
-      summary: Invoice Orders
-      operationId: invoiceOrders
-      description: Invoices Orders
-      tags:
-        - Invoice
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              description: List of Order guids
-              properties:
-                orders:
-                  type: array
-                  items:
-                    description: Order guid
-                    $ref: '#/components/schemas/guid'
-                  minItems: 1
-              required:
-                - orders
-      responses:
-        '200':
-          description: invoices
-          content:
-            application/json: {}
-  /bill:
-    post:
-      summary: Bill Jobs
-      operationId: billJobs
-      description: Bills Jobs
-      tags:
-        - Invoice
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              description: List of Job guids
-              properties:
-                orders:
-                  type: array
-                  items:
-                    description: Job guid
-                    $ref: '#/components/schemas/guid'
-                  minItems: 1
-              required:
-                - jobs
-      responses:
-        '200':
-          description: bills
-          content:
-            application/json: {}
   /index/order/number:
     get:
       summary: Get next order index number
@@ -3162,6 +3100,68 @@ paths:
               schema:
                 type: string
                 example: Note does not exist
+  '/invoice/order/{orderGuid}/export':
+    put:
+      summary: Export Order Invoices
+      operationId: exportInvoices
+      description: Export all the invoices on this order
+      tags:
+        - Invoice
+        - Order
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Order Not Found
+          content:
+            application/json: {}
+  '/bill/order/{orderGuid}/export':
+    put:
+      summary: Export Order Bills
+      operationId: exportBills
+      description: Export all the bills for all the jobs on this order
+      tags:
+        - Bill
+        - Order
+      parameters:
+        - in: path
+          name: orderGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bill'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Order Not Found
+          content:
+            application/json: {}
 components:
   schemas:
     guid:
@@ -4211,6 +4211,27 @@ components:
       type: string
       format: date-time
       example: '2021-08-10T07:59:59.000Z'
+    Get Orders sort fields:
+      type: string
+      enum:
+        - status
+        - number
+        - dateCreated
+        - actualRevenue
+        - actualExpense
+        - estimatedExpense
+        - estimatedRevenue
+        - dateUpdated
+        - clientName
+        - dispatcherName
+        - salespersonName
+        - pickupTerminal
+        - deliveryTerminal
+        - requestedPickupDate
+        - requestedDeliveryDate
+        - scheduledPickupDate
+        - scheduledDeliveryDate
+      default: number
     Job With All Data:
       type: object
       properties:
@@ -5098,6 +5119,19 @@ components:
         - update
       description: types of notes that internal notes store
       example: lead
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: The error message.
+        system:
+          type: string
+          description: The accounting system that the error occurred in.
+        guid:
+          allOf:
+            - $ref: '#/components/schemas/guid'
+            - description: The guid of the bill/invoice that the error occurred in.
   responses:
     ValidationErrorResponse:
       description: Bad Request
