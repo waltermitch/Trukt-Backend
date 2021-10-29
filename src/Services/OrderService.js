@@ -850,10 +850,7 @@ class OrderService
 
                 // commodity can be the index number or string, or it can be an object with fields
                 if (typeof commodity === 'object')
-                {
-                    stopLink.lotNumber = commodity.lotNumber;
                     commodity = commodity['#id'];
-                }
 
                 stopLink.commodity = commodityCache[commodity];
                 commodityCache[commodity] = { '#ref': commodity };
@@ -1874,7 +1871,7 @@ class OrderService
 
     static async updateOrCreateStopLink(stopLinkData, currentUser, trx)
     {
-        const { orderGuid, commodityGuid, stopGuid, lotNumber } = stopLinkData;
+        const { orderGuid, commodityGuid, stopGuid } = stopLinkData;
         const stopLinkFound = await OrderStopLink.query(trx).findOne({
             orderGuid,
             stopGuid,
@@ -1884,7 +1881,7 @@ class OrderService
         if (stopLinkFound)
         {
             return await OrderStopLink.query(trx)
-                .patch({ lotNumber, updatedByGuid: currentUser })
+                .patch({ updatedByGuid: currentUser })
                 .where('id', stopLinkFound.id);
         }
         else

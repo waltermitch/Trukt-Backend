@@ -56,8 +56,6 @@ exports.seed = async function (trx)
         User.query(trx).findOne('name', 'ilike', '%')
     ]);
 
-
-
     if (!vehicleTypes) throw new Error('No vehicle types found. Run the proper seed.');
     if (!transportJobType) throw new Error('No transport job type found. Run the proper seed.');
     if (!user) throw new Error('No user found. Run the proper seed.');
