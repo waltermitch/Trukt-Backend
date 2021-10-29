@@ -91,6 +91,10 @@ Commodity Freight:
 Commodity Vehicle:
   type: object
   properties:
+    lotNumber:
+      description: The lot number for this commodity at this stop.
+      type: string
+      nullable: true
     category:
       type: string
       enum:
@@ -125,10 +129,10 @@ CommodityUpdate:
       properties:
         $ref: '#/CommodityBase/properties'
     - oneOf:
-      - type: object
-        properties:
-          $ref: '#/CommodityTypeIdProperties'
-      - $ref: '#/CommodityCategory'
+        - type: object
+          properties:
+            $ref: '#/CommodityTypeIdProperties'
+        - $ref: '#/CommodityCategory'
 
 CommodityTypeIdProperties:
   typeId:

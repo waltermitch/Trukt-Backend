@@ -99,6 +99,6 @@ properties:
           description: The value of the index field from a Commodity in this payload.
         lotNumber:
           type: string
-          description: The lot number for this commodity at this stop.
+          description: The lot number for this commodity.
       required:
         - index

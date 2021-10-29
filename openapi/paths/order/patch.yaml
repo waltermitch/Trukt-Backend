@@ -74,12 +74,12 @@ requestBody:
             type: object
             nullable: true
             anyOf:
-            - additionalProperties: false
-              properties:
-                $ref: '..\..\components\schemas\Contact.yaml#/properties'
-            - additionalProperties: false
-              properties:
-                $ref: '..\..\components\schemas\Common.yaml#/guidObject/properties'
+              - additionalProperties: false
+                properties:
+                  $ref: '..\..\components\schemas\Contact.yaml#/properties'
+              - additionalProperties: false
+                properties:
+                  $ref: '..\..\components\schemas\Common.yaml#/guidObject/properties'
           dispatcher:
             allOf:
               - description: The dispatcher responsible for this order.
@@ -123,9 +123,9 @@ requestBody:
                         - description: The vendor or carrier contact that can be contacted if any questions arise.
                         - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
                     vendorAgent:
-                        allOf:
-                          - description: The vendor or carrier employee that will be completing the job. Usually for carriers this is the driver.
-                          - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
+                      allOf:
+                        - description: The vendor or carrier employee that will be completing the job. Usually for carriers this is the driver.
+                        - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
                     dispatcher:
                       allOf:
                         - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
@@ -165,20 +165,20 @@ requestBody:
               allOf:
                 - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
                 - $ref: '..\..\components\schemas\Common.yaml#/indexObject'
-                - anyOf:   
-                  - type: object
-                    properties:
-                      primaryContact:
-                        anyOf:
-                          - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
-                          - $ref: '..\..\components\schemas\Contact.yaml'
-                      alternativeContact:
-                        anyOf:
-                          - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
-                          - $ref: '..\..\components\schemas\Contact.yaml'
-                  - type: object
-                    properties:
-                      $ref: '..\..\components\schemas\Stop.yaml#/properties'
+                - anyOf:
+                    - type: object
+                      properties:
+                        primaryContact:
+                          anyOf:
+                            - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
+                            - $ref: '..\..\components\schemas\Contact.yaml'
+                        alternativeContact:
+                          anyOf:
+                            - $ref: '..\..\components\schemas\Common.yaml#/guidObjectNullable'
+                            - $ref: '..\..\components\schemas\Contact.yaml'
+                    - type: object
+                      properties:
+                        $ref: '..\..\components\schemas\Stop.yaml#/properties'
           terminals:
             type: array
             items:
@@ -202,8 +202,8 @@ requestBody:
             type: array
             items:
               allOf:
-              - $ref: '..\..\components\schemas\Common.yaml#/indexObject'
-              - $ref: '..\..\components\schemas\Commodity.yaml#/CommodityUpdate'
+                - $ref: '..\..\components\schemas\Common.yaml#/indexObject'
+                - $ref: '..\..\components\schemas\Commodity.yaml#/CommodityUpdate'
         required:
           - guid
 responses:
