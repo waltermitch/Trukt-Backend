@@ -6,7 +6,7 @@ exports.up = function (knex)
     return knex
         .raw(`
             -- Creating hstore data the for ability to store different types of data
-            CREATE EXTENSION IF NOT EXISTS hstore;
+            CREATE EXTENSION IF NOT EXISTS hstore SCHEMA public;
 
             -- Creating separate schema for loging information and not to clutter rcg_tms with tables
             CREATE SCHEMA ${SCHEMA_NAME};
