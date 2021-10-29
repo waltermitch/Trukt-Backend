@@ -242,6 +242,12 @@ class LoadboardService
             job.delivery.setScheduledDates(body.delivery.dateType, body.delivery.startDate, body.delivery.endDate);
             job.delivery.setUpdatedBy(currentUser);
             allPromises.push(OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid));
+            
+            if(job.delivery.dateScheduledStart < job.pickup.dateScheduledStart ||
+                job.delivery.dateScheduledEnd < job.pickup.dateScheduledEnd)
+            {
+                throw new Error('Pickup dates should be before delivery date');
+            }
 
             const jobForUpdate = Job.fromJson({
                 vendorGuid: carrier.guid,
