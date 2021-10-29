@@ -2631,6 +2631,7 @@ paths:
       summary: Get Expense by guid
       operationId: getExpense
       description: Get Expense
+      deprecated: true
       tags:
         - Expense
       parameters:
@@ -2648,6 +2649,7 @@ paths:
       summary: Update Expense
       operationId: patchExpenseParam
       description: Update Expense
+      deprecated: true
       tags:
         - Expense
       parameters:
@@ -2670,6 +2672,7 @@ paths:
       summary: Delete Expense by guid
       operationId: deleteExpense
       description: Delete Expense
+      deprecated: true
       tags:
         - Expense
       parameters:
@@ -2686,6 +2689,7 @@ paths:
       summary: Create Expense
       operationId: postExpense
       description: Create Expense
+      deprecated: true
       tags:
         - Expense
       requestBody:
@@ -2707,6 +2711,7 @@ paths:
       summary: Update Expense
       operationId: patchExpense
       description: Update Expense
+      deprecated: true
       tags:
         - Expense
       requestBody:
@@ -2724,6 +2729,7 @@ paths:
       summary: Search Expenses
       operationId: searchExpense
       description: Search Expenses related to Order
+      deprecated: true
       tags:
         - Expense
       parameters:
@@ -4776,6 +4782,13 @@ components:
           description: >-
             Indicates that this invoice/bill line item or service is an
             accessorial charge.
+        dateCharged:
+          allOf:
+            - description: The date this invoice/bill line was charged.
+            - $ref: '#/components/schemas/dateTime'
+        transactionNumber:
+          description: Transaction number for this invoice/bill line.
+          type: string
     InvoiceBill:
       type: object
       properties:
@@ -4894,6 +4907,13 @@ components:
         isPaid:
           description: Is expense paid
           type: boolean
+        dateCharged:
+          allOf:
+            - description: Date on which the expense is charged
+            - $ref: '#/components/schemas/dateTime'
+        transactionNumber:
+          description: Transaction number for the expense
+          type: string
       required:
         - itemId
         - amount
