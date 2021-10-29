@@ -4845,6 +4845,13 @@ components:
         isPaid:
           description: Is expense paid
           type: boolean
+        dateCharged:
+          allOf:
+            - description: Date on which the expense is charged
+            - $ref: '#/components/schemas/dateTime'
+        transactionNumber:
+          description: Transaction number for the expense
+          type: string
       required:
         - itemId
         - amount
