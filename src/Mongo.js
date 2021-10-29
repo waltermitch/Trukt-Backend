@@ -1,8 +1,8 @@
 const { MongoClient } = require('mongodb');
 const Lock = require('./MongoLock');
 
-const dbUrl = process.env['mongo.connection.uri'];
-const dbName = process.env['mongo.database'];
+const dbUrl = process.env['mongo.connection.uri'] || process.env.MONGO_CONNECTION_URI;
+const dbName = process.env['mongo.database'] || process.env.MONGO_DATABASE;
 
 const dbOptions =
 {

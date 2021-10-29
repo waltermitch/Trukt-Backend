@@ -20,6 +20,17 @@ module.exports = () =>
 {
     switch (env)
     {
+        case 'pipeline':
+            conConfig.client = process.env.KNEX_CLIENT;
+            conConfig.migrations.tableName = process.env.KNEX_MIGRATION_TABLE;
+            conConfig.connection = {
+                user: process.env.KNEX_CONNECTION_USER,
+                password: process.env.KNEX_CONNECTION_PASSWORD,
+                port: process.env.KNEX_CONNECTION_PORT,
+                database: process.env.KNEX_CONNECTION_DATABASE
+            };
+
+            break;
         case 'local':
         case 'test':
             conConfig.connection = {};
