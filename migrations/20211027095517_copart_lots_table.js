@@ -8,37 +8,34 @@ exports.up = function (knex)
     return knex.schema.withSchema(SCHEMA_NAME)
         .createTable(LOCATIONS_TABLE_NAME, (table) =>
         {
-            table.uuid('guid').primary();
+            table.increments('id', { primaryKey: true }).notNullable();
             table.uuid('terminal_guid').notNullable();
             table.foreign('terminal_guid').references('guid').inTable('rcg_tms.terminals');
             table.boolean('sublot');
             table.string('yard_number');
-            table.string('notes');
         })
         .createTable(LOT_TABLE_NAME, (table) =>
         {
             // primary key is lot
             table.string('lot', 20).primary();
             table.string('full_vin');
-            table.string('yard_name');
             table.string('make');
             table.string('model');
             table.string('year');
             table.string('model_group');
-            table.uuid('location_guid');
+            table.integer('location_id').notNullable();
             table.string('auction_date');
             table.string('lot_acv');
-            table.string('lot_color');
-            table.string('yard_number');
+            table.string('color');
             table.string('odometer_reading_received');
             table.string('odometer_reading_description');
             table.boolean('has_keys');
             table.string('title_description');
             table.string('damage_description');
-            table.string('lot_condition_code');
-            table.string('lot_condition_description');
+            table.string('condition_code');
+            table.string('condition_description');
             table.string('current_high_bid');
-            table.string('body_style');
+            table.string('body');
             table.string('engine');
             table.string('drive');
             table.string('fuel_type_description');
@@ -47,10 +44,10 @@ exports.up = function (knex)
             table.boolean('off_site_flag');
             table.string('sale_status');
             table.string('seller_name');
-            table.string('transaction_type');
-            table.string('lane');
+            table.string('transmission_type');
+            table.string('notes');
 
-            table.foreign('location_guid').references('guid').inTable(`${SCHEMA_NAME}.${LOCATIONS_TABLE_NAME}`);
+            table.foreign('location_id').references('id').inTable(`${SCHEMA_NAME}.${LOCATIONS_TABLE_NAME}`);
 
         })
         .raw(`
