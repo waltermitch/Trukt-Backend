@@ -376,7 +376,8 @@ class OrderJob extends BaseModel
             // search client and client contact attributes
             .orWhereIn('orderGuid', Order.query().select('guid')
                 .whereIn('clientContactGuid', SFContact.query().select('guid').where('email', 'ilike', `%${keyword}%`))
-                .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`)));
+                .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
+                .orWhere('referenceNumber', 'ilike', `%${keyword}%`));
     }
 
     static modifiers = {
