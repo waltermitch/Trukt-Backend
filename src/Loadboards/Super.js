@@ -79,8 +79,8 @@ class Super extends Loadboard
             },
             delivery:
             {
-                scheduled_at: !this.data.delivery.dateScheduledStart ? this.data.delivery.dateScheduledStart : this.data.delivery.dateRequestedStart,
-                scheduled_ends_at: !this.data.delivery.dateScheduledEnd ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
+                scheduled_at: !this.data.delivery.dateScheduledStart.invalid ? this.data.delivery.dateScheduledStart : this.data.delivery.dateRequestedStart,
+                scheduled_ends_at: !this.data.delivery.dateScheduledEnd.invalid ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
                 scheduled_at_by_customer: this.data.delivery.dateRequestedStart,
                 scheduled_ends_at_by_customer: this.data.delivery.dateRequestedEnd,
                 notes: this.data.delivery.notes,
