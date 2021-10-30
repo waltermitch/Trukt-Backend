@@ -103,19 +103,9 @@ responses:
           type: array
           items:
             allOf:
-              - $ref: ..\..\components\schemas\Common.yaml#/guidObject
-              - $ref: ..\..\components\schemas\Terminal.yaml
+              - $ref: ..\..\components\schemas\Terminal.yaml#/TerminalOutbound
               - type: object
                 properties:
-                  locationType:
-                    type: string
-                    enum:
-                      - dealer
-                      - private
-                      - auction
-                      - repo yard
-                      - port
-                      - business
                   primaryContact:
                     $ref: ..\..\components\schemas\Contact.yaml
                   alternativeContact:

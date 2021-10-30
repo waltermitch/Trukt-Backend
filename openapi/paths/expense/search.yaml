@@ -1,6 +1,7 @@
 summary: Search Expenses
 operationId: searchExpense
 description: Search Expenses related to Order
+deprecated: true
 tags:
   - Expense
 parameters:
