@@ -1,6 +1,7 @@
 summary: Delete Expense by guid
 operationId: deleteExpense
 description: Delete Expense
+deprecated: true
 tags:
   - Expense
 parameters:

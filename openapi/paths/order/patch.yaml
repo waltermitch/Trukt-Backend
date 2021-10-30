@@ -183,21 +183,12 @@ requestBody:
             type: array
             items:
               allOf:
-                - $ref: '..\..\components\schemas\Terminal.yaml'
-                - $ref: '..\..\components\schemas\Common.yaml#/indexObject'
+                - $ref: '..\..\components\schemas\Terminal.yaml#/TerminalInbound'
                 - type: object
-                  properties:
-                    $ref: '..\..\components\schemas\Common.yaml#/guidObject/properties'
-                - type: object
-                  properties:
-                    locationType:
-                      $ref: '..\..\components\schemas\Common.yaml#/Enums/terminalLocationType'
                   required:
-                    - street1
-                    - city
-                    - state
+                    - name
                     - zipCode
-                    - country
+
           commodities:
             type: array
             items:
@@ -331,7 +322,7 @@ responses:
                       terminal:
                         allOf:
                           - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
-                          - $ref: ..\..\components\schemas\Terminal.yaml
+                          - $ref: ..\..\components\schemas\Terminal.yaml#/TerminalOutbound
                       commodities:
                         $ref: ..\..\components\schemas\Commodity.yaml#/CommodityOutbound
             terminals:
@@ -339,4 +330,4 @@ responses:
               items:
                 allOf:
                   - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
-                  - $ref: ..\..\components\schemas\Terminal.yaml
+                  - $ref: ..\..\components\schemas\Terminal.yaml#/TerminalOutbound

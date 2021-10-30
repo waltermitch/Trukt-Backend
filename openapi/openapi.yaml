@@ -63,9 +63,15 @@ paths:
   /order/{orderGuid}/clientNote:
     put:
       $ref: paths\order\putClientNote.yaml
+  /order/{orderGuid}/invoices:
+    get:
+      $ref: paths\order\getOrderInvoice.yaml
   /job/{jobGuid}/notes:
     get:
       $ref: paths\job\getNotes.yaml
+  /job/{jobGuid}/bills:
+    get:
+      $ref: paths\job\getBills.yaml
   /picklist/options:
     get:
       $ref: paths\picklist\get.yaml
