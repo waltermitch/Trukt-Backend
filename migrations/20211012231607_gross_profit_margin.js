@@ -5,20 +5,59 @@ exports.up = function(knex)
 {
     return knex.schema.withSchema('rcg_tms').table(orderTable, (table) =>
     {
-        table.decimal('gross_profit_margin', 5, 2);
+        table.decimal('gross_profit_margin', 5, 2).default(0);
     }).table(jobTable, (table) =>
     {
-        table.decimal('gross_profit_margin', 5, 2);
+        table.decimal('gross_profit_margin', 5, 2).default(0);
+    }).then(() =>
+    {
+        return knex.schema.withSchema('rcg_tms').alterTable(orderTable, (table) =>
+        {
+            table.dropColumn('actual_income');
+            table.decimal('actual_revenue', 15, 2).alter().unsigned().default(0).comment('This is the actual amount of money that the order brings into the company');
+            table.decimal('actual_expense', 15, 2).alter().unsigned().default(0).comment('This is the actual amoutn of money that was spent on this order');
+        }).table(jobTable, (table) =>
+        {
+            table.dropColumn('actual_income');
+            table.decimal('actual_revenue', 15, 2).alter().unsigned().default(0).comment('This is the actual amount of money that the job brings into the company');
+            table.decimal('actual_expense', 15, 2).alter().unsigned().default(0).comment('This is the actual amount of money that was spent on this job');
+        }).then(() =>
+        {
+            return knex.raw(`
+                ALTER TABLE rcg_tms.${orderTable}
+                ADD actual_income numeric(15,2) 
+                GENERATED ALWAYS AS (rcg_tms.${orderTable}.actual_revenue - rcg_tms.${orderTable}.actual_expense) STORED;
+                
+                ALTER TABLE rcg_tms.${jobTable}
+                ADD actual_income numeric(15,2) 
+                GENERATED ALWAYS AS (rcg_tms.${jobTable}.actual_revenue - rcg_tms.${jobTable}.actual_expense) STORED;
+                `);
+        });
     });
 };
 
 exports.down = function(knex)
 {
-    return knex.schema.withSchema('rcg_tms').table(orderTable, (table) =>
+    return knex.schema.withSchema('rcg_tms').alterTable(orderTable, (table) =>
     {
         table.dropColumn('gross_profit_margin');
-    }).table(jobTable, (table) =>
+        table.dropColumn('actual_income');
+    }).alterTable(jobTable, (table) =>
     {
         table.dropColumn('gross_profit_margin');
+        table.dropColumn('actual_income');
+    }).then(() =>
+    {
+        return knex.schema.withSchema('rcg_tms').alterTable(orderTable, (table) =>
+        {
+            table.decimal('actual_revenue', 15, 2).alter().unsigned().comment('This is the actual amount of money that the order brings into the company');
+            table.decimal('actual_expense', 15, 2).alter().unsigned().comment('This is the actual amount of money that was spent on this order');
+            table.decimal('actual_income', 15, 2).comment('This the the actual income / profit made on the order');
+        }).table(jobTable, (table) =>
+        {
+            table.decimal('actual_revenue', 15, 2).alter().unsigned().comment('This is the actual amount of money that the job brings into the company');
+            table.decimal('actual_expense', 15, 2).alter().unsigned().comment('This is the actual amount of money that was spent on this job');
+            table.decimal('actual_income', 15, 2).comment('This the the actual income / profit made on the job');
+        });
     });
 };
