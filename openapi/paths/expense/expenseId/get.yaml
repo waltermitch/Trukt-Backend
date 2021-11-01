@@ -1,6 +1,7 @@
 summary: Get Expense by guid
 operationId: getExpense
 description: Get Expense
+deprecated: true
 tags:
   - Expense
 parameters:
