@@ -40,20 +40,24 @@ exports.up = function(knex)
                 (ibll.line1_guid = ibl.guid AND ibll.line2_guid = COALESCE(NEW.guid, OLD.guid))
                 INTO job_guid;
             ELSE
-                SELECT b.job_guid, oj.order_guid FROM rcg_tms.bills b LEFT JOIN rcg_tms.order_jobs oj ON oj.guid = b.job_guid 
-                WHERE b.bill_guid = COALESCE(NEW.invoice_guid, OLD.invoice_guid) INTO job_guid, order_guid;
+                SELECT b.job_guid, oj.order_guid 
+                FROM rcg_tms.bills b 
+                LEFT JOIN rcg_tms.order_jobs oj 
+                ON oj.guid = b.job_guid 
+                WHERE b.bill_guid = COALESCE(NEW.invoice_guid, OLD.invoice_guid) 
+                INTO job_guid, order_guid;
 
            END IF;
 
             IF (TG_OP = 'UPDATE') THEN
                 IF (TG_WHEN = 'BEFORE') THEN
-                    IF(OLD.is_deleted is true AND NEW.is_deleted is true) THEN
-                        RAISE EXCEPTION 'Updating forbiden on invoice bill line: (%), record is deleted', NEW.guid;
+                    IF (OLD.is_deleted is true AND NEW.is_deleted is true) THEN
+                        RAISE EXCEPTION 'Updating forbidden on invoice bill line: (%), record is deleted', NEW.guid;
                     END IF;
                 ELSIF (TG_WHEN = 'AFTER') THEN
                     amount = NEW.amount - OLD.amount;
                     -- soft delete scenario, same action as a hard delete
-                    IF(NEW.is_deleted is true AND OLD.is_deleted is false) THEN
+                    IF (NEW.is_deleted is true AND OLD.is_deleted is false) THEN
                         IF (is_revenue = is_order_line) THEN 
                             UPDATE rcg_tms.orders SET actual_revenue = actual_revenue - OLD.amount,
                             actual_income = actual_income - OLD.amount
@@ -72,7 +76,7 @@ exports.up = function(knex)
                             WHERE guid = job_guid;
                         END IF;
                     -- soft undelete scenario, same action as an insert
-                    ELSIF(OLD.is_deleted is true AND NEW.is_deleted is false) THEN
+                    ELSIF (OLD.is_deleted is true AND NEW.is_deleted is false) THEN
                         IF (is_revenue = is_order_line) THEN 
                             UPDATE rcg_tms.orders SET actual_revenue = actual_revenue + NEW.amount,
                             actual_income = actual_income + NEW.amount
@@ -91,7 +95,7 @@ exports.up = function(knex)
                             WHERE guid = job_guid;
                         END IF;
                     -- updating active line
-                    ELSIF(NEW.amount <> OLD.amount) THEN
+                    ELSIF (NEW.amount <> OLD.amount) THEN
                         IF (is_order_line = is_revenue) THEN 
                             UPDATE rcg_tms.orders SET actual_revenue = actual_revenue + amount,
                             actual_income = actual_income + amount
