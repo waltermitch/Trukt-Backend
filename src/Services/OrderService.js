@@ -1,4 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const CommodityService = require('../Services/CommodityService');
 const LoadboardService = require('../Services/LoadboardService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
@@ -1193,7 +1194,10 @@ class OrderService
      */
     static async patchOrder(orderInput, currentUser)
     {
+        // init transaction
         const trx = await Order.startTransaction();
+
+        // extract payload fields
         const {
             guid,
             dispatcher,
@@ -1208,9 +1212,11 @@ class OrderService
             stops = [],
             jobs = [],
             expenses = [],
+            delete: toDelete,
             ...orderData
         } = orderInput;
 
+        // wrapping in try catch to roll back transaction
         try
         {
             const [
@@ -1278,6 +1284,9 @@ class OrderService
                 invoices: orderInvoices,
                 ...orderData
             });
+
+            console.log(orderGraph);
+
             orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
 
             const orderToUpdate = Order.query(trx).skipUndefined().upsertGraphAndFetch(orderGraph, {
@@ -1285,6 +1294,24 @@ class OrderService
                 noDelete: true,
                 allowRefs: true
             });
+
+            // handle deletions
+            const deletions = [];
+            if (toDelete)
+            {
+                Object.keys(toDelete).forEach((e) =>
+                {
+                    switch (e)
+                    {
+                        case 'commodities':
+                            for (const guid of toDelete.commodities)
+                                deletions.push({ func: CommodityService.deleteCommodity, params: [guid, currentUser, trx] });
+                            break;
+                    }
+                });
+            }
+
+            await Promise.all(deletions.map(({ func, params }) => func(...params)));
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
@@ -1300,6 +1327,7 @@ class OrderService
         }
         catch (error)
         {
+            console.log(error);
             await trx.rollback();
             throw { message: error?.nativeError?.detail || error?.message || error };
         }
