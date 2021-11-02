@@ -2,7 +2,6 @@ const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJobType = require('./OrderJobType');
 const BaseModel = require('./BaseModel');
-const { raw } = require('objection');
 
 const jobTypeFields = ['category', 'type'];
 
