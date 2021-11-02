@@ -1,7 +1,7 @@
-const LINE_FUNCTION_NAME = 'line_sum_calculator';
+const LINE_FUNCTION_NAME = 'rcg_invoice_line_order_job_expense_summation';
 const LINE_TRIGGER_NAME = 'rcg_lines_trigger_update';
 const TABLE_NAME = 'invoice_bill_lines';
-const preventPriceChange = 'prvent_price_change';
+const LINE_TRIGGER_FORBID_NAME = 'rcg_forbid_soft_delete_line_update';
 
 const LINKS_FUNCTION_NAME = 'line_links_sum_calculator';
 const LINKS_TRIGGER_NAME = 'rcg_lines_links_trigger_update';
@@ -50,11 +50,7 @@ exports.up = function(knex)
            END IF;
 
             IF (TG_OP = 'UPDATE') THEN
-                IF (TG_WHEN = 'BEFORE') THEN
-                    IF (OLD.is_deleted is true AND NEW.is_deleted is true) THEN
-                        RAISE EXCEPTION 'Updating forbidden on invoice bill line: (%), record is deleted', NEW.guid;
-                    END IF;
-                ELSIF (TG_WHEN = 'AFTER') THEN
+                IF (TG_WHEN = 'AFTER') THEN
                     amount = NEW.amount - OLD.amount;
                     -- soft delete scenario, same action as a hard delete
                     IF (NEW.is_deleted is true AND OLD.is_deleted is false) THEN
@@ -63,13 +59,13 @@ exports.up = function(knex)
                             WHERE guid = order_guid;
 
                             UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - OLD.amount
-                            WHERE guid = job_guid;
+                            WHERE guid = job_guid AND job_guid IS NOT null;
                         ELSE
                             UPDATE rcg_tms.orders SET actual_expense = actual_expense - OLD.amount
                             WHERE guid = order_guid;
 
                             UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - OLD.amount
-                            WHERE guid = job_guid;
+                            WHERE guid = job_guid AND job_guid IS NOT null;
                         END IF;
                     -- soft undelete scenario, same action as an insert
                     ELSIF (OLD.is_deleted is true AND NEW.is_deleted is false) THEN
@@ -78,13 +74,13 @@ exports.up = function(knex)
                             WHERE guid = order_guid;
 
                             UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + NEW.amount
-                            WHERE guid = job_guid;
+                            WHERE guid = job_guid AND job_guid IS NOT null;
                         ELSE
                             UPDATE rcg_tms.orders SET actual_expense = actual_expense + NEW.amount
                             WHERE guid = order_guid;
 
                             UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + NEW.amount
-                            WHERE guid = job_guid;
+                            WHERE guid = job_guid AND job_guid IS NOT null;
                         END IF;
                     -- updating active line
                     ELSIF (NEW.amount <> OLD.amount) THEN
@@ -93,13 +89,13 @@ exports.up = function(knex)
                             WHERE guid = order_guid;
 
                             UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + amount
-                            WHERE guid = job_guid;
+                            WHERE guid = job_guid AND job_guid IS NOT null;
                         ELSE
                             UPDATE rcg_tms.orders SET actual_expense = actual_expense + amount
                             WHERE guid = order_guid;
 
                             UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + amount
-                            WHERE guid = job_guid;     
+                            WHERE guid = job_guid AND job_guid IS NOT null;     
                         END IF;
                     END IF;
                 END IF;
@@ -109,13 +105,13 @@ exports.up = function(knex)
                     WHERE guid = order_guid;
 
                     UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + NEW.amount
-                    WHERE guid = job_guid;
+                    WHERE guid = job_guid AND job_guid IS NOT null;
                 ELSE
                     UPDATE rcg_tms.orders SET actual_expense = actual_expense + NEW.amount
                     WHERE guid = order_guid;
 
                     UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + NEW.amount
-                    WHERE guid = job_guid;
+                    WHERE guid = job_guid AND job_guid IS NOT null;
                 END IF;
             ELSEIF (TG_OP = 'DELETE') THEN
                 IF (OLD.is_deleted is false) THEN
@@ -124,13 +120,13 @@ exports.up = function(knex)
                         WHERE guid = order_guid;
 
                         UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - OLD.amount
-                        WHERE guid = job_guid;
+                        WHERE guid = job_guid AND job_guid IS NOT null;
                     ELSE
                         UPDATE rcg_tms.orders SET actual_expense = actual_expense - OLD.amount
                         WHERE guid = order_guid;
 
                         UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - OLD.amount
-                        WHERE guid = job_guid; 
+                        WHERE guid = job_guid AND job_guid IS NOT null; 
                     END IF;     
                 END IF;
             END IF;
@@ -171,20 +167,21 @@ exports.up = function(knex)
             IF (TG_OP = 'INSERT') THEN
                 IF (is_revenue is true) THEN
                     UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + invoice_line_amount
-                    WHERE guid = job_guid; 
+                    WHERE guid = job_guid AND job_guid IS NOT null; 
                 ELSE
                     UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + invoice_line_amount
-                    WHERE guid = job_guid;
+                    WHERE guid = job_guid AND job_guid IS NOT null;
                 END IF;
-            ELSIF (TG_OP = 'UPDATE') THEN
-                RAISE EXCEPTION 'Updating records on this table is forbidden.';
+            -- The update operation case is already covered in the function rcg_tms.invoice_bill_links_func.
+            -- That function already forbids update operations on records of this table so
+            -- it is not needed here.
             ELSIF (TG_OP = 'DELETE') THEN
                 IF (is_revenue is true) THEN
                     UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - invoice_line_amount
-                    WHERE guid = job_guid;
+                    WHERE guid = job_guid AND job_guid IS NOT null;
                 ELSE
                     UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - invoice_line_amount
-                    WHERE guid = job_guid;
+                    WHERE guid = job_guid AND job_guid IS NOT null;
                 END IF;
             END IF;
             RETURN NEW;
@@ -200,11 +197,11 @@ exports.up = function(knex)
     FOR EACH ROW
     EXECUTE FUNCTION ${LINE_FUNCTION_NAME}();
 
-    CREATE TRIGGER ${preventPriceChange}
+    CREATE TRIGGER ${LINE_TRIGGER_FORBID_NAME}
     BEFORE UPDATE
     ON rcg_tms.invoice_bill_lines
     FOR EACH ROW
-    EXECUTE FUNCTION ${LINE_FUNCTION_NAME}();
+    EXECUTE FUNCTION rcg_tms.rcg_forbid_soft_delete_update();
 
     CREATE TRIGGER ${LINKS_TRIGGER_NAME}
     AFTER INSERT OR UPDATE OR DELETE 
@@ -219,7 +216,7 @@ exports.down = function(knex)
 {
     return knex.raw(`  
     DROP TRIGGER ${LINE_TRIGGER_NAME} ON rcg_tms.${TABLE_NAME};
-    DROP TRIGGER ${preventPriceChange} ON rcg_tms.${TABLE_NAME};
+    DROP TRIGGER ${LINE_TRIGGER_FORBID_NAME} ON rcg_tms.${TABLE_NAME};
     DROP TRIGGER ${LINKS_TRIGGER_NAME} ON rcg_tms.${LINKS_TABLE_NAME};
     DROP FUNCTION rcg_tms.${LINE_FUNCTION_NAME}();
     DROP FUNCTION rcg_tms.${LINKS_FUNCTION_NAME}();`);
