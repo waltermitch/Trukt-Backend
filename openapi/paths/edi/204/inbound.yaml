@@ -62,7 +62,7 @@ post:
             terminals:
               type: array
               items:
-                $ref: ..\..\..\components\schemas\Terminal.yaml
+                $ref: ..\..\..\components\schemas\Terminal.yaml#/TerminalInboundIndex
               minLength: 1
             commodities:
               type: array

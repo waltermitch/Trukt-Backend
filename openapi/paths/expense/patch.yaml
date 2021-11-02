@@ -1,6 +1,7 @@
 summary: Update Expense
 operationId: patchExpense
 description: Update Expense
+deprecated: true
 tags:
   - Expense
 requestBody:

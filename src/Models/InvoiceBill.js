@@ -151,12 +151,12 @@ class InvoiceBill extends BaseModel
             delete json[field];
         }
 
-        if ('paymentTerms' in json)
+        if (json?.paymentTerms)
         {
             json.paymentTerms = json.paymentTerms.name;
         }
 
-        if ('paymentMethod' in json)
+        if (json?.paymentMethod)
         {
             json.paymentMethod = json.paymentMethod.name;
         }

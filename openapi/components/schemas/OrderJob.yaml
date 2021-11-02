@@ -74,9 +74,7 @@ Job With All Related Data:
           - type: object
             properties:
               terminal:
-                allOf:
-                  - $ref: './Common.yaml#/guidObject'
-                  - $ref: ./Terminal.yaml
+                $ref: ./Terminal.yaml#/TerminalBase
               commodities:
                 $ref: ./Commodity.yaml#/Commodity
   allOf:
@@ -87,7 +85,7 @@ Job With All Data:
   type: object
   properties:
     guid:
-        $ref: ./Common.yaml#/guid
+      $ref: ./Common.yaml#/guid
     number:
       type: string
       pattern: /[A-Z]{2}\d{5}/
@@ -164,7 +162,7 @@ Job With All Data:
       $ref: ./Common.yaml#/updatedByGuid
     loadType:
       type: string
-      enum: 
+      enum:
         - 'full truck load'
         - 'partial truck load'
     isStarted:
@@ -189,11 +187,11 @@ Job With All Data:
     grossProfitmargin:
       type: string
       description: The gross profit made on this job
-      example: "28.17"
+      example: '28.17'
     netProfitmargin:
       type: string
       description: The gross margin made on this job
-      example: "17.28"
+      example: '17.28'
     vendor:
       allOf:
         - $ref: './Account.yaml#/account'

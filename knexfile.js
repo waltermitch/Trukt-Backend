@@ -5,7 +5,7 @@ const { knexSnakeCaseMappers } = require('objection');
 
 const env = process.env.NODE_ENV || process.env.ENV;
 const conConfig = {
-    client: process.env['knex.client'],
+    client: process.env['knex.client'] || process.env.KNEX_CLIENT,
     searchPath: ['rcg_tms', 'public', 'salesforce'],
     migrations: {
         tableName: process.env['knex.migration.table']

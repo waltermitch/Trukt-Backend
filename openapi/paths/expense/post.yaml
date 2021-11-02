@@ -1,6 +1,7 @@
 summary: Create Expense
 operationId: postExpense
 description: Create Expense
+deprecated: true
 tags:
   - Expense
 requestBody:
