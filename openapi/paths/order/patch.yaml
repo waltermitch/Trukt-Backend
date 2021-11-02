@@ -188,13 +188,21 @@ requestBody:
                   required:
                     - name
                     - zipCode
-
           commodities:
             type: array
             items:
               allOf:
                 - $ref: '..\..\components\schemas\Common.yaml#/indexObject'
                 - $ref: '..\..\components\schemas\Commodity.yaml#/CommodityUpdate'
+          delete:
+            description: 'Object of keys with guids, that need to be deleted'
+            type: object
+            nullable: true
+            properties:
+              commodities:
+                type: array
+                items:
+                  $ref: '..\..\components\schemas\Common.yaml#/guid'
         required:
           - guid
 responses:
