@@ -45,14 +45,16 @@ describe('Tests the invoice line and and invoice line links triggers', () =>
             clientGuid: client.guid,
             actualRevenue: 0,
             actualExpense: 0,
-            actualIncome: 0,
+            estimatedRevenue: 0,
+            estimatedExpense: 0,
             jobs: [
                 {
                     index: 'job_1',
                     createdByGuid: process.env.SYSTEM_USER,
                     actualRevenue: 0,
                     actualExpense: 0,
-                    actualIncome: 0,
+                    estimatedRevenue: 0,
+                    estimatedExpense: 0,
                     isTransport: true,
                     isDeleted: false,
                     isStarted: false,
