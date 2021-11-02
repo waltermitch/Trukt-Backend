@@ -31,7 +31,7 @@ exports.up = function (knex)
                     RAISE EXCEPTION 'Inverse exists: (%, %), cannot create link', NEW.line1_guid, NEW.line2_guid;
                 END IF;
             ELSEIF(TG_OP = 'UPDATE') THEN
-                RAISE EXCEPTION 'Updating records on this table is forbidden.';
+                RAISE EXCEPTION 'Updating records on the invoice_line_links table is forbidden. Cannot update link with line1Guid: (%), line2Guid: (%)', OLD.line1_guid, OLD.line2_guid;
             END IF;
             RETURN NEW;
         END;
