@@ -59,97 +59,77 @@ exports.up = function(knex)
                     -- soft delete scenario, same action as a hard delete
                     IF (NEW.is_deleted is true AND OLD.is_deleted is false) THEN
                         IF (is_revenue = is_order_line) THEN 
-                            UPDATE rcg_tms.orders SET actual_revenue = actual_revenue - OLD.amount,
-                            actual_income = actual_income - OLD.amount
+                            UPDATE rcg_tms.orders SET actual_revenue = actual_revenue - OLD.amount
                             WHERE guid = order_guid;
 
-                            UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - OLD.amount,
-                            actual_income = actual_income - OLD.amount
+                            UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - OLD.amount
                             WHERE guid = job_guid;
                         ELSE
-                            UPDATE rcg_tms.orders SET actual_expense = actual_expense - OLD.amount,
-                            actual_income = actual_income + OLD.amount
+                            UPDATE rcg_tms.orders SET actual_expense = actual_expense - OLD.amount
                             WHERE guid = order_guid;
 
-                            UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - OLD.amount,
-                            actual_income = actual_income + OLD.amount
+                            UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - OLD.amount
                             WHERE guid = job_guid;
                         END IF;
                     -- soft undelete scenario, same action as an insert
                     ELSIF (OLD.is_deleted is true AND NEW.is_deleted is false) THEN
                         IF (is_revenue = is_order_line) THEN 
-                            UPDATE rcg_tms.orders SET actual_revenue = actual_revenue + NEW.amount,
-                            actual_income = actual_income + NEW.amount
+                            UPDATE rcg_tms.orders SET actual_revenue = actual_revenue + NEW.amount
                             WHERE guid = order_guid;
 
-                            UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + NEW.amount,
-                            actual_income = actual_income + NEW.amount
+                            UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + NEW.amount
                             WHERE guid = job_guid;
                         ELSE
-                            UPDATE rcg_tms.orders SET actual_expense = actual_expense + NEW.amount,
-                            actual_income = actual_income - NEW.amount
+                            UPDATE rcg_tms.orders SET actual_expense = actual_expense + NEW.amount
                             WHERE guid = order_guid;
 
-                            UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + NEW.amount,
-                            actual_income = actual_income - NEW.amount
+                            UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + NEW.amount
                             WHERE guid = job_guid;
                         END IF;
                     -- updating active line
                     ELSIF (NEW.amount <> OLD.amount) THEN
                         IF (is_order_line = is_revenue) THEN 
-                            UPDATE rcg_tms.orders SET actual_revenue = actual_revenue + amount,
-                            actual_income = actual_income + amount
+                            UPDATE rcg_tms.orders SET actual_revenue = actual_revenue + amount
                             WHERE guid = order_guid;
 
-                            UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + amount,
-                            actual_income = actual_income + amount
+                            UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + amount
                             WHERE guid = job_guid;
                         ELSE
-                            UPDATE rcg_tms.orders SET actual_expense = actual_expense + amount,
-                            actual_income = actual_income - amount
+                            UPDATE rcg_tms.orders SET actual_expense = actual_expense + amount
                             WHERE guid = order_guid;
 
-                            UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + amount,
-                            actual_income = actual_income - amount
+                            UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + amount
                             WHERE guid = job_guid;     
                         END IF;
                     END IF;
                 END IF;
             ELSEIF (TG_OP = 'INSERT') THEN
                 IF (is_order_line = is_revenue) THEN 
-                    UPDATE rcg_tms.orders SET actual_revenue = actual_revenue + NEW.amount,
-                    actual_income = actual_income + NEW.amount
+                    UPDATE rcg_tms.orders SET actual_revenue = actual_revenue + NEW.amount
                     WHERE guid = order_guid;
 
-                    UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + NEW.amount,
-                    actual_income = actual_income + NEW.amount
+                    UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + NEW.amount
                     WHERE guid = job_guid;
                 ELSE
-                    UPDATE rcg_tms.orders SET actual_expense = actual_expense + NEW.amount,
-                    actual_income = actual_income - NEW.amount
+                    UPDATE rcg_tms.orders SET actual_expense = actual_expense + NEW.amount
                     WHERE guid = order_guid;
 
-                    UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + NEW.amount,
-                    actual_income = actual_income - NEW.amount
+                    UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + NEW.amount
                     WHERE guid = job_guid;
                 END IF;
             ELSEIF (TG_OP = 'DELETE') THEN
                 IF (OLD.is_deleted is false) THEN
                      IF (is_revenue = is_order_line) THEN 
-                        UPDATE rcg_tms.orders SET actual_revenue = actual_revenue - OLD.amount,
-                        actual_income = actual_income - OLD.amount
+                        UPDATE rcg_tms.orders SET actual_revenue = actual_revenue - OLD.amount
                         WHERE guid = order_guid;
 
-                        UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - OLD.amount,
-                        actual_income = actual_income - OLD.amount
+                        UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - OLD.amount
                         WHERE guid = job_guid;
                     ELSE
-                        UPDATE rcg_tms.orders SET actual_expense = actual_expense - OLD.amount,
-                        actual_income = actual_income + OLD.amount
+                        UPDATE rcg_tms.orders SET actual_expense = actual_expense - OLD.amount
                         WHERE guid = order_guid;
 
-                        UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - OLD.amount,
-                        actual_income = actual_income + OLD.amount
+                        UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - OLD.amount
                         WHERE guid = job_guid; 
                     END IF;     
                 END IF;
@@ -190,24 +170,20 @@ exports.up = function(knex)
 
             IF (TG_OP = 'INSERT') THEN
                 IF (is_revenue is true) THEN
-                    UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + invoice_line_amount,
-                    actual_income = actual_income + invoice_line_amount
+                    UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + invoice_line_amount
                     WHERE guid = job_guid; 
                 ELSE
-                    UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + invoice_line_amount,
-                    actual_income = actual_income - invoice_line_amount
+                    UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + invoice_line_amount
                     WHERE guid = job_guid;
                 END IF;
             ELSIF (TG_OP = 'UPDATE') THEN
                 RAISE EXCEPTION 'Updating records on this table is forbidden.';
             ELSIF (TG_OP = 'DELETE') THEN
                 IF (is_revenue is true) THEN
-                    UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - invoice_line_amount,
-                    actual_income = actual_income - invoice_line_amount
+                    UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - invoice_line_amount
                     WHERE guid = job_guid;
                 ELSE
-                    UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - invoice_line_amount,
-                    actual_income = actual_income + invoice_line_amount
+                    UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - invoice_line_amount
                     WHERE guid = job_guid;
                 END IF;
             END IF;
