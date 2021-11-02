@@ -147,22 +147,22 @@ exports.up = function(knex)
             invoice_line_guid uuid;
             invoice_line_amount decimal;
         BEGIN
-            SELECT ibl.guid, ibl.amount from rcg_tms.invoice_bill_lines ibl 
+            SELECT ibl.guid, ibl.amount, (ibli.type = 'revenue') FROM rcg_tms.invoice_bill_lines ibl 
             LEFT JOIN rcg_tms.invoices i 
             ON ibl.invoice_guid = i.invoice_guid 
+            LEFT JOIN rcg_tms.invoice_bill_line_items ibli
+            ON ibl.item_id = ibli.id
             WHERE (ibl.guid = COALESCE(NEW.line1_guid, OLD.line1_guid)
             OR ibl.guid = COALESCE(NEW.line2_guid, OLD.line2_guid)) 
             AND ibl.invoice_guid = i.invoice_guid
-            INTO invoice_line_guid, invoice_line_amount;
+            INTO invoice_line_guid, invoice_line_amount, is_revenue;
 
-            SELECT b.job_guid, (ibli.type = 'revenue') from rcg_tms.invoice_bill_lines ibl 
+            SELECT b.job_guid FROM rcg_tms.invoice_bill_lines ibl 
             LEFT JOIN rcg_tms.bills b 
-            ON ibl.invoice_guid = b.bill_guid 
-            LEFT JOIN rcg_tms.invoice_bill_line_items ibli
-            ON ibl.item_id = ibli.id
+            ON ibl.invoice_guid = b.bill_guid
             WHERE (ibl.guid in (COALESCE(NEW.line1_guid,OLD.line1_guid), COALESCE(NEW.line2_guid, OLD.line2_guid)) AND ibl.guid <> invoice_line_guid) 
             AND ibl.invoice_guid = b.bill_guid
-            INTO job_guid, is_revenue;
+            INTO job_guid;
 
             IF (TG_OP = 'INSERT') THEN
                 IF (is_revenue is true) THEN
