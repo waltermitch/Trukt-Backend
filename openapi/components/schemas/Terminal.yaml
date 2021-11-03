@@ -44,11 +44,11 @@ TerminalBase:
       allOf:
         - type: string
           description: The zip code in which this terminal is located.
-        - $ref: '.\Common.yaml#/zipCode'
+        - $ref: './Common.yaml#/zipCode'
     latitude:
-      $ref: '.\Common.yaml#/latitude'
+      $ref: './Common.yaml#/latitude'
     longitude:
-      $ref: '.\Common.yaml#/longitude'
+      $ref: './Common.yaml#/longitude'
 
 # All of the required properties for a Terminal
 RequiredProps:
@@ -62,19 +62,19 @@ TerminalOutbound:
     - type: object
       properties:
         guid:
-          $ref: '.\Common.yaml#/guid'
+          $ref: './Common.yaml#/guid'
     - $ref: '#/TerminalBase'
 
 TerminalInboundIndex:
   allOf:
-    - $ref: '.\Common.yaml#/indexObject'
+    - $ref: './Common.yaml#/indexObject'
     - $ref: '#/TerminalBase'
   required:
     $ref: '#/RequiredProps'
 
 TerminalInboundGuid:
   allOf:
-    - $ref: '.\Common.yaml#/guidObject'
+    - $ref: './Common.yaml#/guidObject'
     - $ref: '#/TerminalBase'
   required:
     $ref: '#/RequiredProps'

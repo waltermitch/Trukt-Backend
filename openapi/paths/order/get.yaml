@@ -7,13 +7,13 @@ parameters:
   - in: path
     name: guid
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
-      
+
 responses:
   200:
     description: order
     content:
-      application/json: 
+      application/json:
         schema:
-          $ref: ..\..\components\schemas\Order.yaml#/Order
+          $ref: ../../components/schemas/Order.yaml#/Order

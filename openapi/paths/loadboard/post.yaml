@@ -7,7 +7,7 @@ parameters:
   - in: path
     name: jobId
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 requestBody:
   content:
@@ -15,13 +15,13 @@ requestBody:
       schema:
         type: object
         properties:
-          posts: 
+          posts:
             description: List of loadboard to create
             type: array
-            items: 
+            items:
               type: object
-              properties: 
-                loadboard: 
+              properties:
+                loadboard:
                   description: Name of the loadboard
                   type: string
               required:

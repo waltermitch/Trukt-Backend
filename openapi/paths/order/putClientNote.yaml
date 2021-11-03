@@ -6,8 +6,8 @@ tags:
 parameters:
   - in: path
     name: orderGuid
-    schema: 
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 requestBody:
   content:
@@ -27,7 +27,7 @@ responses:
   202:
     description: Orders
     content:
-      application/json: 
+      application/json:
         schema:
           type: object
           properties:
@@ -37,10 +37,10 @@ responses:
                 note:
                   type: string
                   example: Your order has been shipped and is on its way
-                updatedByGuid: 
-                  $ref: ..\..\components\schemas\Common.yaml#/guid
+                updatedByGuid:
+                  $ref: ../../components/schemas/Common.yaml#/guid
                 dateUpdated:
-                  $ref: ..\..\components\schemas\Common.yaml#/dateUpdated
+                  $ref: ../../components/schemas/Common.yaml#/dateUpdated
   404:
     description: Orders
     content:

@@ -5,12 +5,12 @@ Commodity:
 
 CommodityInbound:
   allOf:
-    - $ref: .\Common.yaml#/indexObject
+    - $ref: ./Common.yaml#/indexObject
     - $ref: '#/Commodity'
 
 CommodityOutbound:
   allOf:
-    - $ref: .\Common.yaml#/guidObject
+    - $ref: ./Common.yaml#/guidObject
     - $ref: '#/Commodity with Type ID'
     - $ref: '#/Commodity with Category and Type'
 
