@@ -15,7 +15,9 @@ router
     .get(`/job/:jobGuid(${uuidRegexStr})/bills`, (req, res, next) => invoiceController.getFinances(req, res, next, 'job'))
     .post(`${billPrefix}`, (req, res) => http(req, res, billController.createBills))
     .post(`${invoicePrefix}`, (req, res) => http(req, res, invoiceController.createInvoices))
+    .put(`${invoicePrefix}/link/:line1Guid(${uuidRegexStr})/:line2Guid(${uuidRegexStr})`, (req, res) => invoiceController.LinkInvoiceLines(req, res))
     .put(`${invoicePrefix}/order/:orderGuid(${uuidRegexStr})/export`, (req, res) => http(req, res, invoiceController.exportInvoice))
-    .put(`${billPrefix}/order/:orderGuid(${uuidRegexStr})/export`, (req, res) => http(req, res, billController.exportBill));
+    .put(`${billPrefix}/order/:orderGuid(${uuidRegexStr})/export`, (req, res) => http(req, res, billController.exportBill))
+    .delete(`${invoicePrefix}/link/:line1Guid(${uuidRegexStr})/:line2Guid(${uuidRegexStr})`, (req, res) => invoiceController.UnLinkInvoiceLines(req, res));
 
 module.exports = router;
