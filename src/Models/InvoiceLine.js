@@ -40,6 +40,22 @@ class InvoiceLine extends BaseModel
                     from: 'rcgTms.invoiceBillLines.invoiceGuid',
                     to: 'rcgTms.invoiceBills.guid'
                 }
+            },
+            bill: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./Bill'),
+                join: {
+                    from: 'rcgTms.invoiceBillLines.invoiceGuid',
+                    to: 'rcgTms.bills.billGuid'
+                }
+            },
+            invoice: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./Invoice'),
+                join: {
+                    from: 'rcgTms.invoiceBillLines.invoiceGuid',
+                    to: 'rcgTms.invoices.invoiceGuid'
+                }
             }
         };
 
