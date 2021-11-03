@@ -8,13 +8,13 @@ TMSUser:
   type: object
   properties:
     guid:
-      $ref: .\Common.yaml#/guid
+      $ref: ./Common.yaml#/guid
     name:
       type: string
       description: The name of the TMS User.
       example: John Doe
     email:
-      $ref: .\Common.yaml#/email
+      $ref: ./Common.yaml#/email
 
 CreatedBy:
   allOf:

@@ -103,14 +103,14 @@ responses:
           type: array
           items:
             allOf:
-              - $ref: ..\..\components\schemas\Terminal.yaml#/TerminalOutbound
+              - $ref: ../../components/schemas/Terminal.yaml#/TerminalOutbound
               - type: object
                 properties:
                   primaryContact:
-                    $ref: ..\..\components\schemas\Contact.yaml
+                    $ref: ../../components/schemas/Contact.yaml
                   alternativeContact:
-                    $ref: ..\..\components\schemas\Contact.yaml
+                    $ref: ../../components/schemas/Contact.yaml
                   contacts:
                     type: array
                     items:
-                      $ref: ..\..\components\schemas\Contact.yaml
+                      $ref: ../../components/schemas/Contact.yaml

@@ -7,28 +7,28 @@ parameters:
   - in: path
     name: requestGuid
     schema:
-      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../../components/schemas/Common.yaml#/guid'
     required: true
 responses:
   200:
     description: Request has been decline
     content:
-      application/json: 
+      application/json:
         schema:
-          $ref:  ..\..\..\components\schemas\LoadboardRequest.yaml#/mainResponsePayload
+          $ref: ../../../components/schemas/LoadboardRequest.yaml#/mainResponsePayload
   404:
     description: Unable to accpet request or missing request GUID
-    content: 
-      application/json: 
+    content:
+      application/json:
         schema:
           type: object
           properties:
-            status: 
+            status:
               type: number
               example: 404
-            data: 
+            data:
               type: object
               properties:
                 detail:
-                  type: string  
-                  example: Not Found  
+                  type: string
+                  example: Not Found

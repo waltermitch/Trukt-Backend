@@ -60,6 +60,24 @@ definitions:
           - npm run decrypt -- local.settings.enc local.settings.json
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
+    - step: &azure-deployment
+        name: Azure Deployment
+        script:
+          - cd $BITBUCKET_CLONE_DIR && npm install
+          - npm run api-bundle
+          - apt update && apt install zip
+          - zip -r $ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js local.settings.js main.js package-lock.json package.json web.config openapi
+          - pipe: microsoft/azure-web-apps-deploy:1.0.3
+            variables:
+              AZURE_APP_ID: $AZURE_APP_ID
+              AZURE_PASSWORD: $AZURE_APP_SECRET
+              AZURE_TENANT_ID: $AZURE_TENANT_ID
+              AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
+              AZURE_APP_NAME: $AZURE_APP_NAME
+              ZIP_FILE: $ENV-$BITBUCKET_BUILD_NUMBER.zip
+              SLOT: $ENV
+        artifacts:
+          - '*.zip'
 
 pipelines:
   default:
@@ -76,11 +94,20 @@ pipelines:
       - step:
           <<: *db-migration
           deployment: development
+      - step:
+          <<: *azure-deployment
+          deployment: development
     'staging':
       - step:
           <<: *db-migration
           deployment: staging
+      - step:
+          <<: *azure-deployment
+          deployment: staging
     'production':
       - step:
           <<: *db-migration
+          deployment: production
+      - step:
+          <<: *azure-deployment
           deployment: production

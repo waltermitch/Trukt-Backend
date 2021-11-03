@@ -7,12 +7,12 @@ parameters:
   - in: path
     name: accountType
     schema:
-      $ref: '..\..\components\schemas\common.yaml#/Enums/accountType'
+      $ref: '../../components/schemas/Common.yaml#/Enums/accountType'
     required: true
   - in: path
     name: accountId
     schema:
-      $ref: '..\..\components\schemas\common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 responses:
   200:

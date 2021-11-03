@@ -7,7 +7,7 @@ parameters:
   - in: path
     name: orderGuid
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 responses:
   200:
@@ -17,7 +17,7 @@ responses:
         schema:
           type: array
           items:
-            $ref: ..\..\components\schemas\Finances.yaml#/Invoice
+            $ref: ../../components/schemas/Finances.yaml#/Invoice
   404:
     description: Order not found
     content:

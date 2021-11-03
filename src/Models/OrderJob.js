@@ -81,7 +81,7 @@ class OrderJob extends BaseModel
                         modelClass: OrderStopLink,
                         from: 'rcgTms.orderStopLinks.jobGuid',
                         to: 'rcgTms.orderStopLinks.commodityGuid',
-                        extra: ['lotNumber', 'stopGuid']
+                        extra: ['stopGuid']
                     },
                     to: 'rcgTms.commodities.guid'
                 }
@@ -353,10 +353,9 @@ class OrderJob extends BaseModel
 
             // search stoplink
             .orWhereIn('guid', OrderStopLink.query().select('jobGuid')
-                .where('lotNumber', 'ilike', `%${keyword}%`)
 
                 // search stop
-                .orWhereIn('stopGuid', OrderStop.query().select('guid')
+                .whereIn('stopGuid', OrderStop.query().select('guid')
 
                     // search terminal
                     .whereIn('terminalGuid', Terminal.query().select('guid')
@@ -376,7 +375,8 @@ class OrderJob extends BaseModel
             // search client and client contact attributes
             .orWhereIn('orderGuid', Order.query().select('guid')
                 .whereIn('clientContactGuid', SFContact.query().select('guid').where('email', 'ilike', `%${keyword}%`))
-                .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`)));
+                .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
+                .orWhere('referenceNumber', 'ilike', `%${keyword}%`));
     }
 
     static modifiers = {

@@ -10,47 +10,47 @@ requestBody:
         type: object
         properties:
           referenceNumber:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/referenceNumber'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/referenceNumber'
           inspectionType:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/inspectionType'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/inspectionType'
           instructions:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/instructions'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/instructions'
           clientNotes:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/clientNotes'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/clientNotes'
           estimatedRevenue:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedRevenue'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/estimatedRevenue'
           estimatedExpense:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedExpense'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/estimatedExpense'
           quotedRevenue:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/quotedRevenue'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/quotedRevenue'
           estimatedDistance:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedDistance'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/estimatedDistance'
           isDummy:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/isDummy'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/isDummy'
           dateExpectedCompleteBy:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/dateExpectedCompleteBy'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/dateExpectedCompleteBy'
           bol:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/bol'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/bol'
           bolUrl:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/bolUrl'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/bolUrl'
           client:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/client'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/client'
           clientContact:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/clientContact'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/clientContact'
           consignee:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/consignee'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/consignee'
           dispatcher:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/dispatcher'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/dispatcher'
           referrer:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/referrer'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/referrer'
           salesperson:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/salesperson'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/salesperson'
           jobs:
             type: array
             description: All of the jobs that will be worked by vendors for this order.
             items:
               allOf:
-                - $ref: ..\..\components\schemas\OrderJob.yaml#/Job
+                - $ref: ../../components/schemas/OrderJob.yaml#/Job
                 - type: object
                   properties:
                     index:
@@ -63,23 +63,23 @@ requestBody:
                         - partial truck load
                     inspectionType:
                       allOf:
-                        - $ref: '..\..\components\schemas\Common.yaml#/Enums/inspectionType'
+                        - $ref: '../../components/schemas/Common.yaml#/Enums/inspectionType'
                         - description: This field currently has not use.
                     vendor:
                       allOf:
-                        - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                        - $ref: '../../components/schemas/Common.yaml#/guidObject'
                         - description: The vendor or carrier responsible for completing this job.
                     vendorContact:
                       allOf:
-                        - $ref: '..\..\components\schemas\Contact.yaml'
+                        - $ref: '../../components/schemas/Contact.yaml'
                         - description: The vendor or carrier contact that can be contacted if any questions arise.
                     vendorAgent:
                       allOf:
-                        - $ref: '..\..\components\schemas\Contact.yaml'
+                        - $ref: '../../components/schemas/Contact.yaml'
                         - description: The vendor or carrier employee that will be completing the job. Usually for carriers this is the driver.
                     dispatcher:
                       allOf:
-                        - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                        - $ref: '../../components/schemas/Common.yaml#/guidObject'
                         - description: The dispatcher who is responsible for managing this job.
                     stops:
                       type: array
@@ -94,7 +94,7 @@ requestBody:
                                 type: array
                                 items:
                                   allOf:
-                                    - $ref: ..\..\components\schemas\Common.yaml#/indexObject
+                                    - $ref: ../../components/schemas/Common.yaml#/indexObject
                                     - type: object
                                       properties:
                                         lotNumber:
@@ -102,29 +102,29 @@ requestBody:
                                           type: string
                             required:
                               - index
-                          - $ref: ..\..\components\schemas\Stop.yaml
+                          - $ref: ../../components/schemas/Stop.yaml
                   required:
                     - index
                     - stops
           expenses:
             type: array
             items:
-              $ref: '..\..\components\schemas\Expense.yaml#/orderExpense'
+              $ref: '../../components/schemas/Expense.yaml#/orderExpense'
           stops:
             type: array
             items:
               allOf:
-                - $ref: '..\..\components\schemas\Common.yaml#/indexObject'
-                - $ref: '..\..\components\schemas\Stop.yaml'
+                - $ref: '../../components/schemas/Common.yaml#/indexObject'
+                - $ref: '../../components/schemas/Stop.yaml'
           terminals:
             type: array
             items:
-              $ref: '..\..\components\schemas\Terminal.yaml#/TerminalInbound'
+              $ref: '../../components/schemas/Terminal.yaml#/TerminalInbound'
 
           commodities:
             type: array
             items:
-              $ref: '..\..\components\schemas\Commodity.yaml#/CommodityInbound'
+              $ref: '../../components/schemas/Commodity.yaml#/CommodityInbound'
         required:
           - client
           - stops
@@ -139,15 +139,15 @@ responses:
           type: object
           properties:
             guid:
-              $ref: ..\..\components\schemas\Common.yaml#/guid
+              $ref: ../../components/schemas/Common.yaml#/guid
             number:
               type: string
-              pattern: /[A-Z]{2}\d{5}/
+              pattern: /[A-Z]{2}/d{5}/
               example: RC10000
             instructions:
               $ref: '#/requestBody/content/application~1json/schema/properties/instructions'
             status:
-              $ref: ..\..\components\schemas\Common.yaml#/Enums/orderStatus
+              $ref: ../../components/schemas/Common.yaml#/Enums/orderStatus
             distance:
               type: number
               description: The calculated distance required to travel to complete the full order in miles.
@@ -170,22 +170,22 @@ responses:
               $ref: '#/requestBody/content/application~1json/schema/properties/quotedRevenue'
             estimatedIncome:
               allOf:
-                - $ref: ..\..\components\schemas\Common.yaml#/currency
+                - $ref: ../../components/schemas/Common.yaml#/currency
                 - description: The calculated total estimated income for this order.
                   readOnly: true
             actualRevenue:
               allOf:
-                - $ref: ..\..\components\schemas\Common.yaml#/currency
+                - $ref: ../../components/schemas/Common.yaml#/currency
                 - description: The calculated revenue for this order.
                   readOnly: true
             actualExpense:
               allOf:
-                - $ref: ..\..\components\schemas\Common.yaml#/currency
+                - $ref: ../../components/schemas/Common.yaml#/currency
                 - description: The calculated expense for this order.
                   readOnly: true
             actualIncome:
               allOf:
-                - $ref: ..\..\components\schemas\Common.yaml#/currency
+                - $ref: ../../components/schemas/Common.yaml#/currency
                 - description: The calculated total income for this order.
                   readOnly: true
             dateExpectedCompleteBy:
@@ -197,13 +197,13 @@ responses:
               readOnly: true
               nullable: true
             dateCreated:
-              $ref: ..\..\components\schemas\Common.yaml#/dateCreated
+              $ref: ../../components/schemas/Common.yaml#/dateCreated
             dateUpdated:
-              $ref: ..\..\components\schemas\Common.yaml#/dateUpdated
+              $ref: ../../components/schemas/Common.yaml#/dateUpdated
             createdByGuid:
-              $ref: ..\..\components\schemas\Common.yaml#/createdByGuid
+              $ref: ../../components/schemas/Common.yaml#/createdByGuid
             updatedByGuid:
-              $ref: ..\..\components\schemas\Common.yaml#/updatedByGuid
+              $ref: ../../components/schemas/Common.yaml#/updatedByGuid
             referenceNumber:
               $ref: '#/requestBody/content/application~1json/schema/properties/referenceNumber'
             inspectionType:
@@ -232,7 +232,7 @@ responses:
             client:
               allOf:
                 - $ref: '#/requestBody/content/application~1json/schema/properties/client'
-                - $ref: ..\..\components\schemas\Account.yaml#/client
+                - $ref: ../../components/schemas/Account.yaml#/client
             consignee:
               $ref: '#/requestBody/content/application~1json/schema/properties/consignee'
             jobs:
@@ -243,24 +243,24 @@ responses:
               type: array
               items:
                 allOf:
-                  - $ref: '..\..\components\schemas\Expense.yaml#/orderExpense'
-                  - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
+                  - $ref: '../../components/schemas/Expense.yaml#/orderExpense'
+                  - $ref: '../../components/schemas/Common.yaml#/guidObject'
             stops:
               type: array
               items:
                 allOf:
-                  - $ref: ..\..\components\schemas\Stop.yaml
+                  - $ref: ../../components/schemas/Stop.yaml
                   - type: object
                     properties:
                       terminal:
                         allOf:
-                          - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
-                          - $ref: ..\..\components\schemas\Terminal.yaml#/TerminalOutbound
+                          - $ref: '../../components/schemas/Common.yaml#/guidObject'
+                          - $ref: ../../components/schemas/Terminal.yaml#/TerminalOutbound
                       commodities:
-                        $ref: ..\..\components\schemas\Commodity.yaml#/CommodityOutbound
+                        $ref: ../../components/schemas/Commodity.yaml#/CommodityOutbound
             terminals:
               type: array
               items:
                 allOf:
-                  - $ref: '..\..\components\schemas\Common.yaml#/guidObject'
-                  - $ref: ..\..\components\schemas\Terminal.yaml#/TerminalOutbound
+                  - $ref: '../../components/schemas/Common.yaml#/guidObject'
+                  - $ref: ../../components/schemas/Terminal.yaml#/TerminalOutbound
