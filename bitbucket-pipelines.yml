@@ -60,8 +60,8 @@ definitions:
           - npm run decrypt -- local.settings.enc local.settings.json
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
-    - step: &full-deployment
-        name: Azure deployment
+    - step: &azure-deployment
+        name: Azure Deployment
         script:
           - cd $BITBUCKET_CLONE_DIR && npm install
           - apt update && apt install zip
@@ -93,11 +93,17 @@ pipelines:
       - step:
           <<: *db-migration
           deployment: development
+      - step:
+          <<: *azure-deployment
     'staging':
       - step:
           <<: *db-migration
           deployment: staging
+      - step:
+          <<: *azure-deployment
     'production':
       - step:
           <<: *db-migration
           deployment: production
+      - step:
+          <<: *azure-deployment
