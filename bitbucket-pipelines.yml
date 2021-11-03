@@ -60,6 +60,14 @@ definitions:
           - npm run decrypt -- local.settings.enc local.settings.json
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
+    - step: &full-deployment
+        name: Azure deployment
+        script:
+          - cd $BITBUCKET_CLONE_DIR && npm install
+          - apt update && apt install zip
+          - zip -r $ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js local.settings.js main.js package-lock.json package.json web.config
+        artifacts:
+          - "*.zip"
 
 pipelines:
   default:
