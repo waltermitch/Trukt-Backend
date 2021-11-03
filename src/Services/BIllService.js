@@ -17,11 +17,9 @@ class BillService
 {
     static async getBill(guid)
     {
-        const search = guid.replace(/%/g, '');
+        const res = await Bill.query().findById(guid).withGraphFetched(Bill.fetch.details);
 
-        const res = await Bill.query().findOne({ 'guid': search });
-
-        return res?.[0];
+        return res;
     }
 
     static async exportBills(arr)
