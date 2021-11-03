@@ -2,7 +2,7 @@ const enabledModules = process.env['accounting.modules'].split(';');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const QuickBooksService = require('./QuickBooksService');
 const InvoiceLine = require('../Models/InvoiceLine');
-const Bill = require('../Models/InvoiceBill');
+const InvoiceBill = require('../Models/InvoiceBill');
 const Order = require('../Models/Order');
 const currency = require('currency.js');
 
@@ -17,7 +17,7 @@ class BillService
 {
     static async getBill(guid)
     {
-        const res = await Bill.query().findById(guid).withGraphFetched(Bill.fetch.details);
+        const res = await InvoiceBill.query().findById(guid).withGraphFetched(InvoiceBill.fetch.details);
 
         return res;
     }
@@ -98,7 +98,7 @@ class BillService
         {
             if (!data.error)
             {
-                const bill = await Bill.query().patchAndFetchById(guid, { externalSourceData: data, isPaid: true });
+                const bill = await InvoiceBill.query().patchAndFetchById(guid, { externalSourceData: data, isPaid: true });
 
                 results.push(bill);
             }

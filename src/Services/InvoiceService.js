@@ -1,7 +1,7 @@
 const enabledModules = process.env['accounting.modules'].split(';');
 const QuickBooksService = require('./QuickBooksService');
 const LineLinks = require('../Models/InvoiceLineLink');
-const Invoice = require('../Models/InvoiceBill');
+const InvoiceBill = require('../Models/InvoiceBill');
 const CoupaService = require('./CoupaService');
 const Line = require('../Models/InvoiceLine');
 const Order = require('../Models/Order');
@@ -10,9 +10,9 @@ class InvoiceService
 {
     static async getInvoice(guid)
     {
-        const res = await Invoice.query()
+        const res = await InvoiceBill.query()
             .findOne({ 'guid': guid, 'isDeleted': false })
-            .withGraphFetched(Invoice.fetch.details);
+            .withGraphFetched(InvoiceBill.fetch.details);
 
         return res;
     }
@@ -24,8 +24,8 @@ class InvoiceService
             .query()
             .findById(guid)
             .withGraphJoined({
-                invoices: Invoice.fetch.details,
-                jobs: { bills: Invoice.fetch.details }
+                invoices: InvoiceBill.fetch.details,
+                jobs: { bills: InvoiceBill.fetch.details }
             });
 
         // order was not found, return undefined
@@ -72,8 +72,8 @@ class InvoiceService
             .query()
             .findById(guid)
             .withGraphJoined({
-                invoices: Invoice.fetch.details,
-                jobs: { bills: Invoice.fetch.details }
+                invoices: InvoiceBill.fetch.details,
+                jobs: { bills: InvoiceBill.fetch.details }
             });
 
         // order was not found, return undefined
@@ -242,7 +242,7 @@ class InvoiceService
         {
             if (!data.error)
             {
-                const invoice = await Invoice.query().patchAndFetchById(guid, { externalSourceData: data });
+                const invoice = await InvoiceBill.query().patchAndFetchById(guid, { externalSourceData: data });
 
                 results.push(invoice);
             }
@@ -257,7 +257,7 @@ class InvoiceService
     {
         const search = orderGuid.replace(/%/g, '');
 
-        const res = await Invoice.query().where('order_guid', '=', search).withGraphJoined('lines');
+        const res = await InvoiceBill.query().where('order_guid', '=', search).withGraphJoined('lines');
 
         return res;
     }
