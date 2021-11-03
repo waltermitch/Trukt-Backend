@@ -4,13 +4,13 @@ LoadTenderResponseObject:
     orderGuid:
       allOf:
         - description: The load tender's order guid.
-        - $ref: '.\Common.yaml#/guid'
+        - $ref: './Common.yaml#/guid'
     jobGuid:
       allOf:
         - type: string
           nullable: true
           description: The load tender's job guid.
-        - $ref: '.\Common.yaml#/guid'
+        - $ref: './Common.yaml#/guid'
     status:
       type: number
       description: HTTP status code for the load tender action.
