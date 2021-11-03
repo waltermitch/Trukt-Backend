@@ -18,6 +18,34 @@ class InvoiceController
         }
     }
 
+    static async LinkInvoiceLines(req, res)
+    {
+        try
+        {
+            await InvoiceService.LinkLines(req.params.line1Guid, req.params.line2Guid);
+            res.status(200).send();
+        }
+        catch (error)
+        {
+            res.status(406);
+            res.json(`Cannot run due to Contraint: ${error.message}`);
+        }
+    }
+
+    static async UnLinkInvoiceLines(req, res)
+    {
+        try
+        {
+            await InvoiceService.UnLinkLines(req.params.line1Guid, req.params.line2Guid);
+            res.status(200).send();
+        }
+        catch (error)
+        {
+            res.status(406);
+            res.json(`Cannot run due to Contraint: ${error.message}`);
+        }
+    }
+
     static async getOrderFinances(req, res, next, type)
     {
         let orderGuid = req.params.orderGuid;
