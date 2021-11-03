@@ -220,7 +220,6 @@ class OrderJob extends BaseModel
             delete json.jobType.id;
             Object.assign(json, json.jobType);
             delete json.jobType;
-            delete json.typeId;
         }
 
         return json;
