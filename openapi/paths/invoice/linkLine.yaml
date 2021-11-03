@@ -7,12 +7,12 @@ parameters:
   - in: path
     name: line1Guid
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
   - in: path
     name: line2Guid
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true    
 responses:
   200:

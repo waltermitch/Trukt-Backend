@@ -115,9 +115,9 @@ paths:
       $ref: paths/invoice/get.yaml
   /invoice/link/{line1Guid}/{line2Guid}:
     put:
-      $ref: paths\invoice\linkLine.yaml
+      $ref: paths/invoice/linkLine.yaml
     delete:
-      $ref: paths\invoice\unlinkLine.yaml    
+      $ref: paths/invoice/unlinkLine.yaml    
   /bill/{billGuid}:
     get:
       $ref: paths/bill/get.yaml
