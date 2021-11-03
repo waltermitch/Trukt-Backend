@@ -1253,7 +1253,7 @@ class OrderService
                 currentUser, trx
             );
 
-            // Create stop contacts using terminals and return an object to faciliatet access, it uses the action from stopsChecked
+            // Create stop contacts using terminals and return an object to facilitate access, it uses the action from stopsChecked
             const stopContactsGraphMap = await OrderService.createStopContactsMap(stopsChecked, terminalsMap, currentUser, trx);
 
             const stopsToUpdate = OrderService.createStopsGraph(stopsChecked, terminalsMap, stopContactsGraphMap, currentUser);

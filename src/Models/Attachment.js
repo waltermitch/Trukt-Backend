@@ -1,4 +1,4 @@
-const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
 
 class Attachment extends BaseModel

@@ -1,6 +1,7 @@
 const BaseModel = require('../BaseModel');
 
 const authors = ['createdBy', 'updatedBy', 'deletedBy'];
+
 function setBy(obj, field, user)
 {
     if (!obj[field])

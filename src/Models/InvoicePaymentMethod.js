@@ -2,7 +2,6 @@ const BaseModel = require('./BaseModel');
 
 class InvoicePaymentMethod extends BaseModel
 {
-
     static get tableName()
     {
         return 'rcgTms.invoiceBillPaymentMethods';

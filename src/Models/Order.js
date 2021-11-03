@@ -1,8 +1,8 @@
-const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const IncomeCalcs = require('./Mixins/IncomeCalcs');
-const OrderJob = require('./OrderJob');
 const OrderJobType = require('./OrderJobType');
+const BaseModel = require('./BaseModel');
+const OrderJob = require('./OrderJob');
 const { DateTime } = require('luxon');
 
 class Order extends BaseModel

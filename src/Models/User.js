@@ -1,5 +1,5 @@
-const BaseModel = require('./BaseModel');
 const { isNotDeleted } = require('./Mixins/RecordAuthors');
+const BaseModel = require('./BaseModel');
 
 class User extends BaseModel
 {

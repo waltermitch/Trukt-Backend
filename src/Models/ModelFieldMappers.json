@@ -287,11 +287,7 @@
     "User": {
         "hide": {
             "external": {
-                "into": [
-                    "dateCreated",
-                    "dateUpdated",
-                    "dateDeleted"
-                ]
+                "into": ["dateCreated", "dateUpdated", "dateDeleted"]
             }
         }
     },
@@ -332,11 +328,7 @@
     "Attachment": {
         "hide": {
             "external": {
-                "into": [
-                    "isDeleted",
-                    "dateDeleted",
-                    "deletedByGuid"
-                ]
+                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
             }
         }
     },
@@ -396,20 +388,14 @@
     "InvoicePaymentMethod": {
         "hide": {
             "external": {
-                "into": [
-                    "externalId",
-                    "externalSource"
-                ]
+                "into": ["externalId", "externalSource"]
             }
         }
     },
     "InvoicePaymentTerm": {
         "hide": {
             "external": {
-                "into": [
-                    "externalId",
-                    "externalSource"
-                ]
+                "into": ["externalId", "externalSource"]
             }
         }
     }
