@@ -11,7 +11,7 @@ const InvoiceBill = require('../../../src/Models/InvoiceBill');
 const InvoiceLine = require('../../../src/Models/InvoiceLine');
 const Bill = require('../../../src/Models/Bill');
 const Invoice = require('../../../src/Models/Invoice');
-const LineLink = require('../../../src/Models/LineLink');
+const InvoiceLineLink = require('../../../src/Models/InvoiceLineLink');
 const BaseModel = require('../../../src/Models/BaseModel');
 
 // this is an integration test/functional test, meaning this tests
@@ -45,14 +45,16 @@ describe('Tests the invoice line and and invoice line links triggers', () =>
             clientGuid: client.guid,
             actualRevenue: 0,
             actualExpense: 0,
-            actualIncome: 0,
+            estimatedRevenue: 0,
+            estimatedExpense: 0,
             jobs: [
                 {
                     index: 'job_1',
                     createdByGuid: process.env.SYSTEM_USER,
                     actualRevenue: 0,
                     actualExpense: 0,
-                    actualIncome: 0,
+                    estimatedRevenue: 0,
+                    estimatedExpense: 0,
                     isTransport: true,
                     isDeleted: false,
                     isStarted: false,
@@ -144,14 +146,14 @@ describe('Tests the invoice line and and invoice line links triggers', () =>
 
     const insertLinks = async () =>
     {
-        await LineLink.query(trx).insert({ line1Guid: context.invoiceBillLines[2], line2Guid: context.invoiceBillLines[0] });
+        await InvoiceLineLink.query(trx).insert({ line1Guid: context.invoiceBillLines[2], line2Guid: context.invoiceBillLines[0] });
 
-        await LineLink.query(trx).insert({ line1Guid: context.invoiceBillLines[3], line2Guid: context.invoiceBillLines[1] });
+        await InvoiceLineLink.query(trx).insert({ line1Guid: context.invoiceBillLines[3], line2Guid: context.invoiceBillLines[1] });
     };
 
     const deleteLinks = async() =>
     {
-        await LineLink.query(trx).delete().whereIn('line1Guid', context.invoiceBillLines);
+        await InvoiceLineLink.query(trx).delete().whereIn('line1Guid', context.invoiceBillLines);
     };
 
     // after each test, rollback all the data that was inserted
@@ -307,9 +309,9 @@ describe('Tests the invoice line and and invoice line links triggers', () =>
     });
     it('Tests the order job actual expense fields on adding line links', async () =>
     {
-        await LineLink.query(trx).insert({ line1Guid: context.invoiceBillLines[2], line2Guid: context.invoiceBillLines[0] });
+        await InvoiceLineLink.query(trx).insert({ line1Guid: context.invoiceBillLines[2], line2Guid: context.invoiceBillLines[0] });
 
-        await LineLink.query(trx).insert({ line1Guid: context.invoiceBillLines[3], line2Guid: context.invoiceBillLines[1] });
+        await InvoiceLineLink.query(trx).insert({ line1Guid: context.invoiceBillLines[3], line2Guid: context.invoiceBillLines[1] });
 
         // retrieving order and job from the db
         const getOrder = await Order.query(trx)
@@ -490,7 +492,7 @@ describe('Tests the invoice line and and invoice line links triggers', () =>
             createdByGuid: process.env.SYSTEM_USER
         });
 
-        await LineLink.query(trx).insert({ line1Guid: be.guid, line2Guid: ie.guid });
+        await InvoiceLineLink.query(trx).insert({ line1Guid: be.guid, line2Guid: ie.guid });
 
         // retrieving order and job from the db
         const getOrder = await Order.query(trx)

@@ -1,6 +1,6 @@
 const BaseModel = require('./BaseModel');
 
-class LineLink extends BaseModel
+class InvoiceLineLink extends BaseModel
 {
     static get tableName()
     {
@@ -13,4 +13,4 @@ class LineLink extends BaseModel
     }
 }
 
-module.exports = LineLink;
+module.exports = InvoiceLineLink;
