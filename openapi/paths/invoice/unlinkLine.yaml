@@ -1,6 +1,6 @@
-summary: Link Line Item
-operationId: putLineLink
-description: Link line item.
+summary: Unlink Invoice and Bill Lines
+operationId: unlinkInoiveBillLines
+description: Unlink Invoice and Bill Lines.
 tags:
   - Invoice
 parameters:

@@ -159,8 +159,8 @@ class InvoiceService
             // if job belongs to order then we link lines
             if (orderGuid === orderGuid2)
             {
-                // deleted the linked items from table
-                await LineLinks.query().deleteById([line1Guid, line2Guid]);
+                // deleted the linked items from table, considers both options
+                await LineLinks.query().delete().where({ line1Guid: line1Guid, line2Guid: line2Guid }).orWhere({ line1Guid: line2Guid, line2Guid: line1Guid });
                 return;
             }
         }
