@@ -95,16 +95,19 @@ pipelines:
           <<: *db-migration
           deployment: development
       - step:
+          deployment: development
           <<: *azure-deployment
     'staging':
       - step:
           <<: *db-migration
           deployment: staging
       - step:
+          deployment: development
           <<: *azure-deployment
     'production':
       - step:
           <<: *db-migration
           deployment: production
       - step:
+          deployment: development
           <<: *azure-deployment
