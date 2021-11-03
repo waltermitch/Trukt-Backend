@@ -102,12 +102,12 @@ pipelines:
           <<: *db-migration
           deployment: staging
       - step:
-          deployment: development
+          deployment: staging
           <<: *azure-deployment
     'production':
       - step:
           <<: *db-migration
           deployment: production
       - step:
-          deployment: development
+          deployment: production
           <<: *azure-deployment
