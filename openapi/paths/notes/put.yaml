@@ -7,7 +7,7 @@ parameters:
   - in: path
     name: noteGuid
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 requestBody:
   content:
@@ -18,7 +18,7 @@ requestBody:
           title:
             type: string
             description: This is a useless field, so fill it up as you wish.
-          body: 
+          body:
             description: Note for external use only.
             type: string
             maxLength: 3000
@@ -28,18 +28,18 @@ requestBody:
             description: types of notes that internal notes store
             example: lead
         required:
-          - body  
-          - type                 
+          - body
+          - type
 
 responses:
   204:
     description: Notes have been updated
     content:
-      application/json: {}   
-  400: 
+      application/json: {}
+  400:
     description: Failed to update data note with input values
     content:
-      application/json: {}          
+      application/json: {}
   404:
     description: Note does not exist
     content:

@@ -5,7 +5,7 @@ Order:
       $ref: ./Common.yaml#/guid
     number:
       type: string
-      pattern: /[A-Z]{2}\d{5}/
+      pattern: /[A-Z]{2}/d{5}/
       example: RC10000
     instructions:
       type: string

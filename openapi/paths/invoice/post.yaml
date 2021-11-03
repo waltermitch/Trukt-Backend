@@ -14,7 +14,7 @@ requestBody:
             type: array
             items:
               description: Order guid
-              $ref: '..\..\components\schemas\common.yaml#/guid'
+              $ref: '../../components/schemas/Common.yaml#/guid'
             minItems: 1
         required:
           - orders

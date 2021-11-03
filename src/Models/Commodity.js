@@ -216,7 +216,6 @@ class Commodity extends BaseModel
         json = super.$formatDatabaseJson(json);
 
         delete json.commType;
-        delete json.lotNumber;
         delete json.stopGuid;
         return json;
     }

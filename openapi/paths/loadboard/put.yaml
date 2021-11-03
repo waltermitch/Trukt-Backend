@@ -7,7 +7,7 @@ parameters:
   - in: path
     name: jobId
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 requestBody:
   content:
@@ -15,17 +15,25 @@ requestBody:
       schema:
         type: object
         properties:
-          posts: 
+          posts:
             description: List of loadboards to post on
             type: array
-            items: 
+            items:
               type: object
-              properties: 
-                loadboard: 
+              properties:
+                loadboard:
                   description: Name of the loadboard
                   type: string
-                  enum: [SUPERDISPATCH, SHIPCARS, CENTRALDISPATCH, CARDELIVERYNETWORK, TRUCKSTOP, DAT]
-                loadboardInstructions: 
+                  enum:
+                    [
+                      SUPERDISPATCH,
+                      SHIPCARS,
+                      CENTRALDISPATCH,
+                      CARDELIVERYNETWORK,
+                      TRUCKSTOP,
+                      DAT,
+                    ]
+                loadboardInstructions:
                   description: Instructions to publish
                   type: string
                   maxLength: 60

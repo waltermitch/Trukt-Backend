@@ -223,8 +223,12 @@ class LoadboardService
             job.vendorGuid = carrier.guid;
             job.vendorAgentGuid = carrierContact.guid;
 
-            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job.bills[0].guid);
-
+            if(job.bills.length == 0)
+            {
+                throw new Error('Job bill missing. Bill is required in order to set payment method and payment terms');
+            }
+            
+            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job?.bills[0]?.guid);
             const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
             for (const line of lines)
                 line.transacting(trx);
@@ -238,6 +242,12 @@ class LoadboardService
             job.delivery.setScheduledDates(body.delivery.dateType, body.delivery.startDate, body.delivery.endDate);
             job.delivery.setUpdatedBy(currentUser);
             allPromises.push(OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid));
+            
+            if(job.delivery.dateScheduledStart < job.pickup.dateScheduledStart ||
+                job.delivery.dateScheduledEnd < job.pickup.dateScheduledEnd)
+            {
+                throw new Error('Pickup dates should be before delivery date');
+            }
 
             const jobForUpdate = Job.fromJson({
                 vendorGuid: carrier.guid,

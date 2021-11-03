@@ -2,10 +2,7 @@
     "register": [
         {
             "schema": "rcg_tms",
-            "tables": [
-                "invoice_bills",
-                "invoice_bill_lines"
-            ]
+            "tables": ["invoice_bills", "invoice_bill_lines", "orders"]
         }
     ],
     "unregister": [

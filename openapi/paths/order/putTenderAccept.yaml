@@ -12,7 +12,7 @@ requestBody:
           orderGuids:
             type: array
             items:
-              $ref: '..\..\components\schemas\common.yaml#/guid'
+              $ref: '../../components/schemas/Common.yaml#/guid'
             description: Array of load tender guids to accept.
             minItems: 1
             maxItems: 100
@@ -25,4 +25,4 @@ responses:
     content:
       application/json:
         schema:
-          $ref: ..\..\components\schemas\EDI.yaml#/LoadTenderResponses
+          $ref: ../../components/schemas/EDI.yaml#/LoadTenderResponses
