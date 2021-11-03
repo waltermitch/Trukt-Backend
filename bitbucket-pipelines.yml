@@ -77,7 +77,7 @@ definitions:
               ZIP_FILE: $ENV-$BITBUCKET_BUILD_NUMBER.zip
               SLOT: $ENV
         artifacts:
-          - "*.zip"
+          - '*.zip'
 
 pipelines:
   default:
@@ -95,19 +95,19 @@ pipelines:
           <<: *db-migration
           deployment: development
       - step:
-          deployment: development
           <<: *azure-deployment
+          deployment: development
     'staging':
       - step:
           <<: *db-migration
           deployment: staging
       - step:
-          deployment: staging
           <<: *azure-deployment
+          deployment: staging
     'production':
       - step:
           <<: *db-migration
           deployment: production
       - step:
-          deployment: production
           <<: *azure-deployment
+          deployment: production
