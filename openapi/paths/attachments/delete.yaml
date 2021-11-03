@@ -7,8 +7,8 @@ parameters:
   - in: path
     name: guid
     schema:
-      $ref: '..\..\components\schemas\common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 responses:
-  "204":
+  '204':
     description: Deleted Attachment

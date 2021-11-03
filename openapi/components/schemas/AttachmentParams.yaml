@@ -11,7 +11,7 @@ properties:
     required: true
     allowEmptyValue: false
     schema:
-      $ref: '.\Common.yaml#/guid'
+      $ref: './Common.yaml#/guid'
     description: The guid of the parent object
   - in: query
     name: parentType

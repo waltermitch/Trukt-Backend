@@ -47,7 +47,7 @@ InvoiceBill:
   type: object
   properties:
     guid:
-      $ref: .\Common.yaml#/guid
+      $ref: ./Common.yaml#/guid
     referenceNumber:
       type: string
       description: The reference number for this record.
@@ -73,19 +73,19 @@ InvoiceBill:
       description: The date this invoice/bill was closed out.
     total:
       allOf:
-        - $ref: .\Common.yaml#/currency
+        - $ref: ./Common.yaml#/currency
         - description: The total sum of all the invoice/bill lines.
     isPaid:
       type: boolean
       description: Indicates whether the invoice/bill was paid.
     dateCreated:
-      $ref: .\Common.yaml#/dateCreated
+      $ref: ./Common.yaml#/dateCreated
     paymentTerms:
       $ref: '#/PaymentTerms'
     paymentMethod:
       $ref: '#/PaymentMethod'
     consignee:
-      $ref: .\Account.yaml#/Consignee
+      $ref: ./Account.yaml#/Consignee
     lines:
       $ref: '#/InvoiceLine'
 
@@ -93,7 +93,7 @@ InvoiceLine:
   type: object
   properties:
     guid:
-      $ref: .\Common.yaml#/guid
+      $ref: ./Common.yaml#/guid
     name:
       type: string
       description: The name of the item or service of the invoice/bill line.
@@ -106,17 +106,17 @@ InvoiceLine:
       description: User notes for the current invoice/bill line.
     amount:
       allOf:
-        - $ref: .\Common.yaml#/currency
+        - $ref: ./Common.yaml#/currency
         - description: The amount that is charged for this line.
     dateCreated:
-      $ref: .\Common.yaml#/dateCreated
+      $ref: ./Common.yaml#/dateCreated
     isPaid:
       type: boolean
       description: Indicates if this invoice/bill line was paid.
     createdBy:
-      $ref: .\User.yaml#/CreatedBy
+      $ref: ./User.yaml#/CreatedBy
     commodity:
-      $ref: .\Commodity.yaml#/CommodityOutbound
+      $ref: ./Commodity.yaml#/CommodityOutbound
     isAccessorial:
       type: boolean
       description: Indicates that this invoice/bill line item or service is an accessorial charge.
@@ -154,5 +154,5 @@ Error:
       description: The accounting system that the error occurred in.
     guid:
       allOf:
-        - $ref: .\Common.yaml#/guid
+        - $ref: ./Common.yaml#/guid
         - description: The guid of the bill/invoice that the error occurred in.

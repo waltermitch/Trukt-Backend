@@ -3,14 +3,14 @@ required:
   - name
 properties:
   guid:
-    $ref: '.\Common.yaml#/guid'
+    $ref: './Common.yaml#/guid'
   name:
     type: string
     minLength: 1
     maxLength: 121
   email:
-    $ref: '.\Common.yaml#/email'
+    $ref: './Common.yaml#/email'
   phoneNumber:
-    $ref: '.\Common.yaml#/phoneNumber'
+    $ref: './Common.yaml#/phoneNumber'
   mobileNumber:
-    $ref: '.\Common.yaml#/phoneNumber'
+    $ref: './Common.yaml#/phoneNumber'

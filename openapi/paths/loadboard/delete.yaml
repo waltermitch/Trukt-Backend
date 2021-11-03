@@ -7,7 +7,7 @@ parameters:
   - in: path
     name: jobId
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 requestBody:
   content:

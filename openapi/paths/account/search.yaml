@@ -7,16 +7,16 @@ parameters:
   - in: path
     name: accountType
     schema:
-      $ref: '..\..\components\schemas\common.yaml#/Enums/accountType'
-    required: true  
+      $ref: '../../components/schemas/Common.yaml#/Enums/accountType'
+    required: true
   - in: query
     name: pg
-    schema: 
-      $ref: '..\..\components\schemas\Common.yaml#/page'
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/page'
   - in: query
     name: rc
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/rowCount'
+      $ref: '../../components/schemas/Common.yaml#/rowCount'
   - in: query
     name: search
     schema:
