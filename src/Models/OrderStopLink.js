@@ -70,10 +70,7 @@ class OrderStopLink extends BaseModel
             // dont want to reuse commodities, because can have different data per stoplink
             const commodity = Commodity.fromJson(stopLink.commodity);
             if (!(stop.commodities.find(it => it.guid == commodity.guid)))
-            {
-                commodity.lotNumber = stopLink.lotNumber;
                 stop.commodities.push(commodity);
-            }
         }
         return Object.values(stopCache);
     }

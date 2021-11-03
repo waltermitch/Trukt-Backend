@@ -1297,9 +1297,7 @@ paths:
                                         Commodity in this payload.
                                     lotNumber:
                                       type: string
-                                      description: >-
-                                        The lot number for this commodity at
-                                        this stop.
+                                      description: The lot number for this commodity.
                                   required:
                                     - index
                 terminals:
@@ -3404,7 +3402,7 @@ components:
                 description: The value of the index field from a Commodity in this payload.
               lotNumber:
                 type: string
-                description: The lot number for this commodity at this stop.
+                description: The lot number for this commodity.
             required:
               - index
     index:
@@ -3583,6 +3581,10 @@ components:
     Commodity Vehicle:
       type: object
       properties:
+        lotNumber:
+          description: The lot number for this commodity at this stop.
+          type: string
+          nullable: true
         category:
           type: string
           enum:

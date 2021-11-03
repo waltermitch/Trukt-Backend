@@ -2,7 +2,6 @@ const schemaName = 'quickbooks';
 
 exports.up = function (knex)
 {
-
     return knex.raw(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`);
 };
 
