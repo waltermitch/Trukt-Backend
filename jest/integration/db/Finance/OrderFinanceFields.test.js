@@ -166,53 +166,11 @@ describe('Actual Finance Fields', () =>
                 const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
                     .then(newInvoiceLine =>
                     {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.transactionNumber = 'NEWTRX10005';
-                        return InvoiceLine.query(trx).patch(clone);
-                    });
-
-                const INCOME_AMOUNT = currency(ZERO_MONEY).subtract(sourceLine.amount).toString();
-                await expectOrderFieldsToMatchFactory(trx, context.order.guid, context.job.guid)(sourceLine.amount, ZERO_MONEY, INCOME_AMOUNT);
-            });
-
-            it('Soft-Delete', async () =>
-            {
-                const sourceLine = context.invoiceLines[0];
-                const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.isDeleted = true;
-                        return InvoiceLine.query(trx).patchAndFetchById(clone.guid, clone);
-                    });
-
-                // even though it is soft deleted, the amount should not change
-                expect(invoiceLine.amount).toBe(sourceLine.amount);
-                await expectOrderFieldsToMatchFactory(trx, context.order.guid, context.job.guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-            });
-
-            it('Un-Delete', async () =>
-            {
-                const sourceLine = context.invoiceLines[0];
-                const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.isDeleted = true;
-                        return InvoiceLine.query(trx)
-                            .patchAndFetchById(clone.guid, clone)
-                            .then(deletedInvoiceLine =>
-                            {
-                                deletedInvoiceLine.isDeleted = false;
-                                return InvoiceLine.query(trx)
-                                    .patchAndFetchById(deletedInvoiceLine.guid, deletedInvoiceLine);
-                            });
+                        newInvoiceLine.transactionNumber = 'NEWTRX10005';
+                        return InvoiceLine.query(trx).patchAndFetchById(newInvoiceLine.guid, newInvoiceLine);
                     });
 
                 const INCOME_AMOUNT = currency(0).subtract(sourceLine.amount).toString();
-
-                // even though it is soft deleted, the amount should not change
-                expect(invoiceLine.amount).toBe(sourceLine.amount);
                 await expectOrderFieldsToMatchFactory(trx, context.order.guid, context.job.guid)(sourceLine.amount, ZERO_MONEY, INCOME_AMOUNT);
             });
 
@@ -234,27 +192,6 @@ describe('Actual Finance Fields', () =>
                 expect(invoiceLine).toBe(undefined);
                 await expectOrderFieldsToMatchFactory(trx, context.order.guid, context.job.guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
 
-            });
-
-            it('Hard Delete Soft-Deleted', async () =>
-            {
-                const sourceLine = context.invoiceLines[0];
-                const invoiceLine = await InvoiceLine.query(trx)
-                    .insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .patchAndFetchById(newInvoiceLine.guid, { isDeleted: true })
-                            .then(() =>
-                            {
-                                return InvoiceLine.query(trx)
-                                    .deleteById(newInvoiceLine.guid)
-                                    .then(() => { return InvoiceLine.query(trx).findById(newInvoiceLine.guid); });
-                            });
-                    });
-
-                expect(invoiceLine).toBe(undefined);
-                await expectOrderFieldsToMatchFactory(trx, context.order.guid, context.job.guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
             });
         });
 
@@ -292,49 +229,9 @@ describe('Actual Finance Fields', () =>
                 const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
                     .then(newInvoiceLine =>
                     {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.transactionNumber = 'NEWTRX10005';
-                        return InvoiceLine.query(trx).patch(clone);
+                        newInvoiceLine.transactionNumber = 'NEWTRX10005';
+                        return InvoiceLine.query(trx).patchAndFetchById(newInvoiceLine.guid, newInvoiceLine);
                     });
-                await expectOrderFieldsToMatchFactory(trx, context.order.guid, context.job.guid)(ZERO_MONEY, sourceLine.amount, sourceLine.amount);
-            });
-
-            it('Soft-Delete', async () =>
-            {
-                const sourceLine = context.invoiceLines[1];
-                const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.isDeleted = true;
-                        return InvoiceLine.query(trx).patchAndFetchById(clone.guid, clone);
-                    });
-
-                // even though it is soft deleted, the amount should not change
-                expect(invoiceLine.amount).toBe(sourceLine.amount);
-                await expectOrderFieldsToMatchFactory(trx, context.order.guid, context.job.guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-            });
-
-            it('Un-Delete', async () =>
-            {
-                const sourceLine = context.invoiceLines[1];
-                const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.isDeleted = true;
-                        return InvoiceLine.query(trx)
-                            .patchAndFetchById(clone.guid, clone)
-                            .then(deletedInvoiceLine =>
-                            {
-                                deletedInvoiceLine.isDeleted = false;
-                                return InvoiceLine.query(trx)
-                                    .patchAndFetchById(deletedInvoiceLine.guid, deletedInvoiceLine);
-                            });
-                    });
-
-                // even though it is soft deleted, the amount should not change
-                expect(invoiceLine.amount).toBe(sourceLine.amount);
                 await expectOrderFieldsToMatchFactory(trx, context.order.guid, context.job.guid)(ZERO_MONEY, sourceLine.amount, sourceLine.amount);
             });
 
@@ -350,31 +247,6 @@ describe('Actual Finance Fields', () =>
                             .then(() =>
                             {
                                 return InvoiceLine.query(trx).findById(newInvoiceLine.guid);
-                            });
-                    });
-
-                expect(invoiceLine).toBe(undefined);
-                await expectOrderFieldsToMatchFactory(trx, context.order.guid, context.job.guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-            });
-
-            it('Hard Delete Soft-Deleted', async () =>
-            {
-                const sourceLine = context.invoiceLines[1];
-                const invoiceLine = await InvoiceLine.query(trx)
-                    .insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .patchAndFetchById(newInvoiceLine.guid, { isDeleted: true })
-                            .then(() =>
-                            {
-                                return InvoiceLine.query(trx)
-                                    .deleteById(newInvoiceLine.guid)
-                                    .then(() =>
-                                    {
-                                        return InvoiceLine.query(trx)
-                                            .findById(newInvoiceLine.guid);
-                                    });
                             });
                     });
 
@@ -443,84 +315,13 @@ describe('Actual Finance Fields', () =>
                 await expectFieldsToMatch(SUM_AMOUNT, ZERO_MONEY, INCOME_AMOUNT);
 
                 /**
-                 *  TEST WITH SOFT-DELETE
-                 */
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(sourceLines[1].amount, ZERO_MONEY, currency(0).subtract(sourceLines[1].amount).toString());
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(sourceLines[0].amount, ZERO_MONEY, currency(0).subtract(sourceLines[0].amount).toString());
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(SUM_AMOUNT, ZERO_MONEY, INCOME_AMOUNT);
-
-                /**
                  *  TEST HARD-DELETING OF THE INVOICE LINES
                  */
 
-                // WITH SOFT DELETES
                 invoiceLines = await InvoiceLine.query(trx)
-                    .patch({ isDeleted: true })
-                    .whereIn('guid', [sourceLines[0].guid, sourceLines[1].guid])
-                    .then(() =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .findByIds([sourceLines[0].guid, sourceLines[1].guid])
-                            .delete()
-                            .then(() => { return Promise.all(FIND_INVOICELINES); });
-                    });
-
-                // hard deleted, invoice lines should be gone
-                expect(invoiceLines[0]).toBe(undefined);
-                expect(invoiceLines[1]).toBe(undefined);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                delete sourceLines[0].guid;
-                delete sourceLines[1].guid;
-                invoiceLines = await InvoiceLine.query(trx)
-                    .insertAndFetch(sourceLines)
-                    .then((newLines) =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .findByIds(newLines.map(it => it.guid)).delete()
-                            .then(() =>
-                            {
-                                return Promise.all([InvoiceLine.query(trx).findById(newLines[0].guid), InvoiceLine.query(trx).findById(newLines[1].guid)]);
-                            });
-                    });
+                    .findByIds([sourceLines[0].guid, sourceLines[1].guid])
+                    .delete()
+                    .then(() => { return Promise.all(FIND_INVOICELINES); });
 
                 // hard deleted, invoice lines should be gone
                 expect(invoiceLines[0]).toBe(undefined);
@@ -588,84 +389,13 @@ describe('Actual Finance Fields', () =>
                 await expectFieldsToMatch(ZERO_MONEY, SUM_AMOUNT, SUM_AMOUNT);
 
                 /**
-                 *  TEST WITH SOFT-DELETE
-                 */
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, sourceLines[1].amount, sourceLines[1].amount);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, sourceLines[0].amount, sourceLines[0].amount);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, SUM_AMOUNT, SUM_AMOUNT);
-
-                /**
                  *  TEST HARD-DELETING OF THE INVOICE LINES
                  */
 
-                // WITH SOFT DELETES
                 invoiceLines = await InvoiceLine.query(trx)
-                    .patch({ isDeleted: true })
-                    .whereIn('guid', [sourceLines[0].guid, sourceLines[1].guid])
-                    .then(() =>
-                    {
-                        return InvoiceLine.query(trx)
                             .findByIds([sourceLines[0].guid, sourceLines[1].guid])
                             .delete()
                             .then(() => { return Promise.all(FIND_INVOICELINES); });
-                    });
-
-                expect(invoiceLines[0]).toBe(undefined);
-                expect(invoiceLines[1]).toBe(undefined);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                delete sourceLines[0].guid;
-                delete sourceLines[1].guid;
-                invoiceLines = await InvoiceLine.query(trx)
-                    .insertAndFetch(sourceLines)
-                    .then((newLines) =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .findByIds(newLines.map(it => it.guid))
-                            .delete()
-                            .then(() =>
-                            {
-                                return Promise.all([InvoiceLine.query(trx).findById(newLines[0].guid), InvoiceLine.query(trx).findById(newLines[1].guid)]);
-                            });
-                    });
 
                 expect(invoiceLines[0]).toBe(undefined);
                 expect(invoiceLines[1]).toBe(undefined);
@@ -732,87 +462,14 @@ describe('Actual Finance Fields', () =>
                 await expectFieldsToMatch(sourceLines[1].amount, sourceLines[0].amount, INCOME_AMOUNT);
 
                 /**
-                 *  TEST WITH SOFT-DELETE
-                 */
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(currency(sourceLines[0].amount).toString());
-                expect(invoiceLines[1].amount).toBe(currency(sourceLines[1].amount).toString());
-
-                await expectFieldsToMatch(sourceLines[1].amount, ZERO_MONEY, '-1200.56');
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(currency(sourceLines[0].amount).toString());
-                expect(invoiceLines[1].amount).toBe(currency(sourceLines[1].amount).toString());
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(currency(sourceLines[0].amount).toString());
-                expect(invoiceLines[1].amount).toBe(currency(sourceLines[1].amount).toString());
-
-                await expectFieldsToMatch(ZERO_MONEY, '3200.00', '3200.00');
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(currency(sourceLines[0].amount).toString());
-                expect(invoiceLines[1].amount).toBe(currency(sourceLines[1].amount).toString());
-
-                await expectFieldsToMatch(sourceLines[1].amount, sourceLines[0].amount, INCOME_AMOUNT);
-
-                /**
                  *  TEST HARD-DELETING OF THE INVOICE LINES
                  */
 
-                // WITH SOFT DELETES
                 invoiceLines = await InvoiceLine.query(trx)
-                    .patch({ isDeleted: true })
-                    .whereIn('guid', [sourceLines[0].guid, sourceLines[1].guid])
-                    .then(() =>
-                    {
-                        return InvoiceLine.query(trx)
                             .findByIds([sourceLines[0].guid, sourceLines[1].guid])
                             .delete()
                             .then(() => { return Promise.all(FIND_INVOICELINES); });
-                    });
 
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0]).toBe(undefined);
-                expect(invoiceLines[1]).toBe(undefined);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                delete sourceLines[0].guid;
-                delete sourceLines[1].guid;
-                invoiceLines = await InvoiceLine.query(trx)
-                    .insertAndFetch(sourceLines)
-                    .then((newLines) =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .findByIds(newLines.map(it => it.guid))
-                            .delete()
-                            .then(() =>
-                            {
-                                return Promise.all([InvoiceLine.query(trx).findById(newLines[0].guid), InvoiceLine.query(trx).findById(newLines[1].guid)]);
-                            });
-                    });
-
-                // soft deleted, so nothing should be broken
                 expect(invoiceLines[0]).toBe(undefined);
                 expect(invoiceLines[1]).toBe(undefined);
 
@@ -861,51 +518,10 @@ describe('Actual Finance Fields', () =>
                 const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
                     .then(newInvoiceLine =>
                     {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.transactionNumber = 'NEWTRX10005';
-                        return InvoiceLine.query(trx).patch(clone);
+                        newInvoiceLine.transactionNumber = 'NEWTRX10005';
+                        return InvoiceLine.query(trx).patchAndFetchById(newInvoiceLine.guid, newInvoiceLine);
                     });
 
-                await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(ZERO_MONEY, EXPECTED_AMOUNT, EXPECTED_AMOUNT);
-            });
-
-            it('Soft-Delete', async () =>
-            {
-                const sourceLine = context.billLines[0];
-                const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.isDeleted = true;
-                        return InvoiceLine.query(trx).patchAndFetchById(clone.guid, clone);
-                    });
-
-                // even though it is soft deleted, the amount should not change
-                expect(invoiceLine.amount).toBe(sourceLine.amount);
-                await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-            });
-
-            it('Un-Delete', async () =>
-            {
-                const sourceLine = context.billLines[0];
-                const EXPECTED_AMOUNT = sourceLine.amount;
-                const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.isDeleted = true;
-                        return InvoiceLine.query(trx)
-                            .patchAndFetchById(clone.guid, clone)
-                            .then(deletedInvoiceLine =>
-                            {
-                                deletedInvoiceLine.isDeleted = false;
-                                return InvoiceLine.query(trx)
-                                    .patchAndFetchById(deletedInvoiceLine.guid, deletedInvoiceLine);
-                            });
-                    });
-
-                // even though it is soft deleted, the amount should not change
-                expect(invoiceLine.amount).toBe(EXPECTED_AMOUNT);
                 await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(ZERO_MONEY, EXPECTED_AMOUNT, EXPECTED_AMOUNT);
             });
 
@@ -927,31 +543,6 @@ describe('Actual Finance Fields', () =>
                 expect(invoiceLine).toBe(undefined);
                 await await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
             });
-
-            it('Hard Delete Soft-Deleted', async () =>
-            {
-                const sourceLine = context.billLines[0];
-                const invoiceLine = await InvoiceLine.query(trx)
-                    .insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .patchAndFetchById(newInvoiceLine.guid, { isDeleted: true })
-                            .then(() =>
-                            {
-                                return InvoiceLine.query(trx)
-                                    .deleteById(newInvoiceLine.guid)
-                                    .then(() =>
-                                    {
-                                        return InvoiceLine.query(trx).findById(newInvoiceLine.guid);
-                                    });
-                            });
-                    });
-
-                expect(invoiceLine).toBe(undefined);
-                await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-            });
-
         });
 
         /**
@@ -998,52 +589,10 @@ describe('Actual Finance Fields', () =>
                 const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
                     .then(newInvoiceLine =>
                     {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.transactionNumber = 'NEWTRX10005';
-                        return InvoiceLine.query(trx).patch(clone);
+                        newInvoiceLine.transactionNumber = 'NEWTRX10005';
+                        return InvoiceLine.query(trx).patchAndFetchById(newInvoiceLine.guid, newInvoiceLine);
                     });
 
-                await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(EXPECTED_AMOUNT, ZERO_MONEY, NEG_EXPECTED_AMOUNT);
-            });
-
-            it('Soft-Delete', async () =>
-            {
-                const sourceLine = context.billLines[1];
-                const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.isDeleted = true;
-                        return InvoiceLine.query(trx).patchAndFetchById(clone.guid, clone);
-                    });
-
-                // even though it is soft deleted, the amount should not change
-                expect(invoiceLine.amount).toBe(sourceLine.amount);
-                await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-            });
-
-            it('Un-Delete', async () =>
-            {
-                const sourceLine = context.billLines[1];
-                const EXPECTED_AMOUNT = sourceLine.amount;
-                const NEG_EXPECTED_AMOUNT = currency(0).subtract(EXPECTED_AMOUNT).toString();
-                const invoiceLine = await InvoiceLine.query(trx).insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        const clone = InvoiceLine.fromJson(newInvoiceLine);
-                        clone.isDeleted = true;
-                        return InvoiceLine.query(trx)
-                            .patchAndFetchById(clone.guid, clone)
-                            .then(deletedInvoiceLine =>
-                            {
-                                deletedInvoiceLine.isDeleted = false;
-                                return InvoiceLine.query(trx)
-                                    .patchAndFetchById(deletedInvoiceLine.guid, deletedInvoiceLine);
-                            });
-                    });
-
-                // even though it is soft deleted, the amount should not change
-                expect(invoiceLine.amount).toBe(EXPECTED_AMOUNT);
                 await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(EXPECTED_AMOUNT, ZERO_MONEY, NEG_EXPECTED_AMOUNT);
             });
 
@@ -1066,33 +615,6 @@ describe('Actual Finance Fields', () =>
                 expect(invoiceLine).toBe(undefined);
                 await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
             });
-
-            it('Hard Delete Soft-Deleted', async () =>
-            {
-                const sourceLine = context.billLines[1];
-                const invoiceLine = await InvoiceLine.query(trx)
-                    .insert(sourceLine)
-                    .then(newInvoiceLine =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .patchAndFetchById(newInvoiceLine.guid, { isDeleted: true })
-                            .then(() =>
-                            {
-                                return InvoiceLine.query(trx)
-                                    .deleteById(newInvoiceLine.guid)
-                                    .then(() =>
-                                    {
-                                        return InvoiceLine.query(trx)
-                                            .findById(newInvoiceLine.guid);
-                                    });
-                            });
-                    });
-
-                expect(invoiceLine).toBe(undefined);
-
-                await expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid)(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-            });
-
         });
 
         /**
@@ -1101,7 +623,87 @@ describe('Actual Finance Fields', () =>
 
         describe('CRUD Mulitple Lines', () =>
         {
-            it('InvoiceLines Revenue CRUD', async () =>
+            /**
+             *  TEST EXPENSE INTERACTION WITH ORDER
+             *
+             *  Expense on Job is opposite (Accounts Receivable)
+             *  Revenue on Job is opposite (Accounts Payable)
+             */
+
+            it('Expense', async () =>
+            {
+                const expectFieldsToMatch = expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid);
+
+                const INCOME_AMOUNT = '4400.56';
+                const SUM_AMOUNT = '4400.56';
+                const sourceLines = [
+                    {
+                        invoiceGuid: context.order.jobs[0].bills[0].guid,
+                        amount: '3200.00',
+                        itemId: EXPENSE_ID,
+                        createdByGuid: process.env.SYSTEM_USER
+                    },
+                    {
+                        invoiceGuid: context.order.jobs[0].bills[0].guid,
+                        amount: '1200.56',
+                        itemId: EXPENSE_ID,
+                        createdByGuid: process.env.SYSTEM_USER
+                    }
+                ];
+
+                let invoiceLines = await InvoiceLine.query(trx).insert(sourceLines);
+                sourceLines[0].guid = invoiceLines[0].guid;
+                sourceLines[1].guid = invoiceLines[1].guid;
+
+                const FIND_INVOICELINES = [InvoiceLine.query(trx).findById(sourceLines[0].guid), InvoiceLine.query(trx).findById(sourceLines[1].guid)];
+
+                expect(invoiceLines[0].amount).toEqual(sourceLines[0].amount);
+                expect(invoiceLines[1].amount).toEqual(sourceLines[1].amount);
+
+                await expectFieldsToMatch(ZERO_MONEY, SUM_AMOUNT, INCOME_AMOUNT);
+
+                /**
+                 *  TEST WITH __NO__ $$$$ AMOUNT UPDATE
+                 */
+                invoiceLines = await Promise.all(sourceLines.map(line =>
+                {
+                    return InvoiceLine.query(trx).patchAndFetchById(line.guid, { transactionNumber: 'trx100' });
+                }));
+
+                await expectFieldsToMatch(ZERO_MONEY, SUM_AMOUNT, INCOME_AMOUNT);
+
+                /**
+                 *  TEST WITH $$$$ AMOUNT UPDATE
+                 */
+                invoiceLines = await Promise.all(sourceLines.map(line =>
+                {
+                    return InvoiceLine.query(trx).patchAndFetchById(line.guid, { amount: '1800' });
+                }));
+
+                await expectFieldsToMatch(ZERO_MONEY, '3600.00', '3600.00');
+
+                invoiceLines = await Promise.all(sourceLines.map(line =>
+                {
+                    return InvoiceLine.query(trx).patchAndFetchById(line.guid, { amount: line.amount });
+                }));
+
+                await expectFieldsToMatch(ZERO_MONEY, SUM_AMOUNT, INCOME_AMOUNT);
+
+                /**
+                 *  TEST HARD-DELETING OF THE INVOICE LINES
+                 */
+
+                invoiceLines = await InvoiceLine.query(trx)
+                            .findByIds([sourceLines[0].guid, sourceLines[1].guid])
+                            .delete()
+                            .then(() => { return Promise.all(FIND_INVOICELINES); });
+
+                expect(invoiceLines[0]).toBe(undefined);
+                expect(invoiceLines[1]).toBe(undefined);
+                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
+            });
+
+            it('Revenue', async () =>
             {
                 const expectFieldsToMatch = expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid);
 
@@ -1162,87 +764,14 @@ describe('Actual Finance Fields', () =>
                 await expectFieldsToMatch(SUM_AMOUNT, ZERO_MONEY, INCOME_AMOUNT);
 
                 /**
-                 *  TEST WITH SOFT-DELETE
-                 */
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch('1200.56', ZERO_MONEY, '-1200.56');
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch('3200.00', ZERO_MONEY, '-3200.00');
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(SUM_AMOUNT, ZERO_MONEY, INCOME_AMOUNT);
-
-                /**
                  *  TEST HARD-DELETING OF THE INVOICE LINES
                  */
 
-                // WITH SOFT DELETES
                 invoiceLines = await InvoiceLine.query(trx)
-                    .patch({ isDeleted: true })
-                    .whereIn('guid', [sourceLines[0].guid, sourceLines[1].guid])
-                    .then(() =>
-                    {
-                        return InvoiceLine.query(trx)
                             .findByIds([sourceLines[0].guid, sourceLines[1].guid])
                             .delete()
                             .then(() => { return Promise.all(FIND_INVOICELINES); });
-                    });
 
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0]).toBe(undefined);
-                expect(invoiceLines[1]).toBe(undefined);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                delete sourceLines[0].guid;
-                delete sourceLines[1].guid;
-                invoiceLines = await InvoiceLine.query(trx)
-                    .insertAndFetch(sourceLines)
-                    .then((newLines) =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .findByIds(newLines.map(it => it.guid))
-                            .delete()
-                            .then(() =>
-                            {
-                                return Promise.all([InvoiceLine.query(trx).findById(newLines[0].guid), InvoiceLine.query(trx).findById(newLines[1].guid)]);
-                            });
-                    });
-
-                // hard deleted so lines should not exist
                 expect(invoiceLines[0]).toBe(undefined);
                 expect(invoiceLines[1]).toBe(undefined);
 
@@ -1253,7 +782,7 @@ describe('Actual Finance Fields', () =>
              *  TEST REVENUE AND EXPENSE INTERACTION WITH ORDER
              */
 
-            it('InvoiceLines Revenue and Expense CRUD', async () =>
+            it('Revenue and Expense', async () =>
             {
                 // function to check if the order finance fields match the job finance fields
                 const expectFieldsToMatch = expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid);
@@ -1317,251 +846,17 @@ describe('Actual Finance Fields', () =>
                 await expectFieldsToMatch(sourceLines[0].amount, sourceLines[1].amount, INCOME_AMOUNT);
 
                 /**
-                 *  TEST WITH SOFT-DELETE
-                 */
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, '1200.56', '1200.56');
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: true })
-                    .then(() =>
-                    {
-                        return Promise.all(FIND_INVOICELINES);
-                    });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: false })
-                    .then(() =>
-                    {
-                        return Promise.all(FIND_INVOICELINES);
-                    });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch('3200.00', ZERO_MONEY, '-3200.00');
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: false })
-                    .then(() =>
-                    {
-                        return Promise.all(FIND_INVOICELINES);
-                    });
-
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch('3200.00', '1200.56', INCOME_AMOUNT);
-
-                /**
                  *  TEST HARD-DELETING OF THE INVOICE LINES
                  */
 
-                // WITH SOFT DELETES
                 invoiceLines = await InvoiceLine.query(trx)
-                    .patch({ isDeleted: true })
-                    .whereIn('guid', [sourceLines[0].guid, sourceLines[1].guid])
+                    .findByIds([sourceLines[0].guid, sourceLines[1].guid])
+                    .delete()
                     .then(() =>
                     {
-                        return InvoiceLine.query(trx).findByIds([sourceLines[0].guid, sourceLines[1].guid]).delete()
-                            .then(() =>
-                            {
-                                return Promise.all(FIND_INVOICELINES);
-                            });
+                        return Promise.all(FIND_INVOICELINES);
                     });
 
-                // hard deleted so lines should not exist
-                expect(invoiceLines[0]).toBe(undefined);
-                expect(invoiceLines[1]).toBe(undefined);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                // need to re-create the invoiceLines so have to remove the guid.
-                delete sourceLines[0].guid;
-                delete sourceLines[1].guid;
-                invoiceLines = await InvoiceLine.query(trx)
-                    .insertAndFetch(sourceLines)
-                    .then((newLines) =>
-                    {
-                        return InvoiceLine.query(trx).
-                            findByIds(newLines.map(it => it.guid))
-                            .delete()
-                            .then(() =>
-                            {
-                                return Promise.all([InvoiceLine.query(trx).findById(newLines[0].guid), InvoiceLine.query(trx).findById(newLines[1].guid)]);
-                            });
-                    });
-
-                // hard deleted so lines should not exist
-                expect(invoiceLines[0]).toBe(undefined);
-                expect(invoiceLines[1]).toBe(undefined);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-            });
-
-            /**
-             *  TEST EXPENSE INTERACTION WITH ORDER
-             *
-             *  Expense on Job is opposite (Accounts Receivable)
-             *  Revenue on Job is opposite (Accounts Payable)
-             */
-
-            it('InvoiceLines Expense CRUD', async () =>
-            {
-                const expectFieldsToMatch = expectFieldsToMatchFactory(trx, context.order.guid, context.order.jobs[0].guid);
-
-                const INCOME_AMOUNT = '4400.56';
-                const SUM_AMOUNT = '4400.56';
-                const sourceLines = [
-                    {
-                        invoiceGuid: context.order.jobs[0].bills[0].guid,
-                        amount: '3200.00',
-                        itemId: EXPENSE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
-                    },
-                    {
-                        invoiceGuid: context.order.jobs[0].bills[0].guid,
-                        amount: '1200.56',
-                        itemId: EXPENSE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
-                    }
-                ];
-
-                let invoiceLines = await InvoiceLine.query(trx).insert(sourceLines);
-                sourceLines[0].guid = invoiceLines[0].guid;
-                sourceLines[1].guid = invoiceLines[1].guid;
-
-                const FIND_INVOICELINES = [InvoiceLine.query(trx).findById(sourceLines[0].guid), InvoiceLine.query(trx).findById(sourceLines[1].guid)];
-
-                expect(invoiceLines[0].amount).toEqual(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toEqual(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, SUM_AMOUNT, INCOME_AMOUNT);
-
-                /**
-                 *  TEST WITH __NO__ $$$$ AMOUNT UPDATE
-                 */
-                invoiceLines = await Promise.all(sourceLines.map(line =>
-                {
-                    return InvoiceLine.query(trx).patchAndFetchById(line.guid, { transactionNumber: 'trx100' });
-                }));
-
-                await expectFieldsToMatch(ZERO_MONEY, SUM_AMOUNT, INCOME_AMOUNT);
-
-                /**
-                 *  TEST WITH $$$$ AMOUNT UPDATE
-                 */
-                invoiceLines = await Promise.all(sourceLines.map(line =>
-                {
-                    return InvoiceLine.query(trx).patchAndFetchById(line.guid, { amount: '1800' });
-                }));
-
-                await expectFieldsToMatch(ZERO_MONEY, '3600.00', '3600.00');
-
-                invoiceLines = await Promise.all(sourceLines.map(line =>
-                {
-                    return InvoiceLine.query(trx).patchAndFetchById(line.guid, { amount: line.amount });
-                }));
-
-                await expectFieldsToMatch(ZERO_MONEY, SUM_AMOUNT, INCOME_AMOUNT);
-
-                /**
-                 *  TEST WITH SOFT-DELETE
-                 */
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, sourceLines[1].amount, sourceLines[1].amount);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: true })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[0].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, sourceLines[0].amount, sourceLines[0].amount);
-
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patchAndFetchById(sourceLines[1].guid, { isDeleted: false })
-                    .then(() => { return Promise.all(FIND_INVOICELINES); });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0].amount).toBe(sourceLines[0].amount);
-                expect(invoiceLines[1].amount).toBe(sourceLines[1].amount);
-
-                await expectFieldsToMatch(ZERO_MONEY, SUM_AMOUNT, INCOME_AMOUNT);
-
-                /**
-                 *  TEST HARD-DELETING OF THE INVOICE LINES
-                 */
-
-                // WITH SOFT DELETES
-                invoiceLines = await InvoiceLine.query(trx)
-                    .patch({ isDeleted: true })
-                    .whereIn('guid', [sourceLines[0].guid, sourceLines[1].guid])
-                    .then(() =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .findByIds([sourceLines[0].guid, sourceLines[1].guid])
-                            .delete()
-                            .then(() => { return Promise.all(FIND_INVOICELINES); });
-                    });
-
-                // soft deleted, so nothing should be broken
-                expect(invoiceLines[0]).toBe(undefined);
-                expect(invoiceLines[1]).toBe(undefined);
-                await expectFieldsToMatch(ZERO_MONEY, ZERO_MONEY, ZERO_MONEY);
-
-                // need to re-create the invoiceLines so have to remove the guid.
-                delete sourceLines[0].guid;
-                delete sourceLines[1].guid;
-                invoiceLines = await InvoiceLine.query(trx)
-                    .insertAndFetch(sourceLines)
-                    .then((newLines) =>
-                    {
-                        return InvoiceLine.query(trx)
-                            .findByIds(newLines.map(it => it.guid))
-                            .delete()
-                            .then(() =>
-                            {
-                                return Promise.all([InvoiceLine.query(trx).findById(newLines[0].guid), InvoiceLine.query(trx).findById(newLines[1].guid)]);
-                            });
-                    });
-
-                // soft deleted, so nothing should be broken
                 expect(invoiceLines[0]).toBe(undefined);
                 expect(invoiceLines[1]).toBe(undefined);
 
@@ -1634,124 +929,6 @@ describe('Actual Finance Fields', () =>
 
                 await expectFieldsToMatchFactory(trx, context.order.guid, context.job.guid)('100.00', '80.00', '-20.00');
             });
-
-            it('Soft-Delete Bill Line', async () =>
-            {
-                const sourceBillLine = context.billLines[0];
-                const sourceInvoiceLine = context.invoiceLines[0];
-                const DIFFERENCE = currency(0).subtract(sourceInvoiceLine.amount).toString();
-                const lines = await InvoiceLine.query(trx).insertAndFetch([sourceInvoiceLine, sourceBillLine]);
-                const link = await InvoiceLineLink.query(trx).insertAndFetch({
-                    line1Guid: lines[0].guid,
-                    line2Guid: lines[1].guid
-                }).then((newLink) =>
-                {
-                    return InvoiceLine.query(trx)
-                        .findById(lines[1].guid)
-                        .patch({ isDeleted: true });
-                });
-
-                const [order, job] = await Promise.all([Order.query(trx).findById(context.order.guid), OrderJob.query(trx).findById(context.job.guid)]);
-
-                expect(order.actualExpense).toBe(sourceInvoiceLine.amount);
-                expect(order.actualRevenue).toBe(ZERO_MONEY);
-                expect(order.actualIncome).toBe(DIFFERENCE);
-
-                expect(job.actualExpense).toBe(ZERO_MONEY);
-                expect(job.actualRevenue).toBe(ZERO_MONEY);
-                expect(job.actualIncome).toBe(ZERO_MONEY);
-            });
-
-            it('Soft-Delete Invoice Line', async () =>
-            {
-                const sourceBillLine = context.billLines[0];
-                const sourceInvoiceLine = context.invoiceLines[0];
-                const lines = await InvoiceLine.query(trx).insertAndFetch([sourceInvoiceLine, sourceBillLine]);
-                const link = await InvoiceLineLink.query(trx).insertAndFetch({
-                    line1Guid: lines[0].guid,
-                    line2Guid: lines[1].guid
-                }).then((newLink) =>
-                {
-                    return InvoiceLine.query(trx)
-                        .findById(lines[0].guid)
-                        .patch({ isDeleted: true });
-                });
-
-                const [order, job] = await Promise.all([Order.query(trx).findById(context.order.guid), OrderJob.query(trx).findById(context.job.guid)]);
-
-                expect(order.actualExpense).toBe(ZERO_MONEY);
-                expect(order.actualRevenue).toBe(sourceBillLine.amount);
-                expect(order.actualIncome).toBe(sourceBillLine.amount);
-
-                expect(job.actualExpense).toBe(ZERO_MONEY);
-                expect(job.actualRevenue).toBe(sourceBillLine.amount);
-                expect(job.actualIncome).toBe(sourceBillLine.amount);
-            });
-
-            it('Remove Link Soft-Deleted Bill Line', async () =>
-            {
-                const sourceBillLine = context.billLines[0];
-                const sourceInvoiceLine = context.invoiceLines[0];
-                const DIFFERENCE = currency(0).subtract(sourceInvoiceLine.amount).toString();
-                const lines = await InvoiceLine.query(trx).insertAndFetch([sourceInvoiceLine, sourceBillLine]);
-                const link = await InvoiceLineLink.query(trx).insertAndFetch({
-                    line1Guid: lines[0].guid,
-                    line2Guid: lines[1].guid
-                }).then((newLink) =>
-                {
-                    return InvoiceLine.query(trx)
-                        .findById(lines[1].guid)
-                        .patch({ isDeleted: true })
-                        .then(() =>
-                        {
-                            return InvoiceLineLink.query(trx).where(newLink).delete();
-                        });
-                });
-
-                // this is the number of links deleted
-                expect(link).toBe(1);
-                const [order, job] = await Promise.all([Order.query(trx).findById(context.order.guid), OrderJob.query(trx).findById(context.job.guid)]);
-
-                expect(order.actualExpense).toBe(sourceInvoiceLine.amount);
-                expect(order.actualRevenue).toBe(ZERO_MONEY);
-                expect(order.actualIncome).toBe(DIFFERENCE);
-
-                expect(job.actualExpense).toBe(ZERO_MONEY);
-                expect(job.actualRevenue).toBe(ZERO_MONEY);
-                expect(job.actualIncome).toBe(ZERO_MONEY);
-            });
-
-            it('Remove Link Soft-Deleted Invoice Line', async () =>
-            {
-                const sourceBillLine = context.billLines[0];
-                const sourceInvoiceLine = context.invoiceLines[0];
-                const lines = await InvoiceLine.query(trx).insertAndFetch([sourceInvoiceLine, sourceBillLine]);
-                const link = await InvoiceLineLink.query(trx).insertAndFetch({
-                    line1Guid: lines[0].guid,
-                    line2Guid: lines[1].guid
-                }).then((newLink) =>
-                {
-                    return InvoiceLine.query(trx)
-                        .findById(lines[0].guid)
-                        .patch({ isDeleted: true })
-                        .then(() =>
-                        {
-                            return InvoiceLineLink.query(trx).where(newLink).delete();
-                        });
-                });
-
-                // this is the number of links deleted
-                expect(link).toBe(1);
-                const [order, job] = await Promise.all([Order.query(trx).findById(context.order.guid), OrderJob.query(trx).findById(context.job.guid)]);
-
-                expect(order.actualExpense).toBe(ZERO_MONEY);
-                expect(order.actualRevenue).toBe(sourceBillLine.amount);
-                expect(order.actualIncome).toBe(sourceBillLine.amount);
-
-                expect(job.actualExpense).toBe(ZERO_MONEY);
-                expect(job.actualRevenue).toBe(sourceBillLine.amount);
-                expect(job.actualIncome).toBe(sourceBillLine.amount);
-            });
         });
 
         describe('Revenue Lines', () =>
@@ -1814,124 +991,6 @@ describe('Actual Finance Fields', () =>
                 });
 
                 await expectFieldsToMatchFactory(trx, context.order.guid, context.job.guid)('80.00', '100.00', '20.00');
-            });
-
-            it('Soft-Delete Bill Line', async () =>
-            {
-                const sourceBillLine = context.billLines[1];
-                const sourceInvoiceLine = context.invoiceLines[1];
-                const lines = await InvoiceLine.query(trx).insertAndFetch([sourceInvoiceLine, sourceBillLine]);
-                const link = await InvoiceLineLink.query(trx).insertAndFetch({
-                    line1Guid: lines[0].guid,
-                    line2Guid: lines[1].guid
-                }).then((newLink) =>
-                {
-                    return InvoiceLine.query(trx)
-                        .findById(lines[1].guid)
-                        .patch({ isDeleted: true });
-                });
-
-                const [order, job] = await Promise.all([Order.query(trx).findById(context.order.guid), OrderJob.query(trx).findById(context.job.guid)]);
-
-                expect(order.actualExpense).toBe(ZERO_MONEY);
-                expect(order.actualRevenue).toBe(sourceInvoiceLine.amount);
-                expect(order.actualIncome).toBe(sourceInvoiceLine.amount);
-
-                expect(job.actualExpense).toBe(ZERO_MONEY);
-                expect(job.actualRevenue).toBe(ZERO_MONEY);
-                expect(job.actualIncome).toBe(ZERO_MONEY);
-            });
-
-            it('Soft-Delete Invoice Line', async () =>
-            {
-                const sourceBillLine = context.billLines[1];
-                const sourceInvoiceLine = context.invoiceLines[1];
-                const INCOME_AMOUNT = currency(0).subtract(sourceBillLine.amount).toString();
-                const lines = await InvoiceLine.query(trx).insertAndFetch([sourceInvoiceLine, sourceBillLine]);
-                const link = await InvoiceLineLink.query(trx).insertAndFetch({
-                    line1Guid: lines[0].guid,
-                    line2Guid: lines[1].guid
-                }).then((newLink) =>
-                {
-                    return InvoiceLine.query(trx)
-                        .findById(lines[0].guid)
-                        .patch({ isDeleted: true });
-                });
-
-                const [order, job] = await Promise.all([Order.query(trx).findById(context.order.guid), OrderJob.query(trx).findById(context.job.guid)]);
-
-                expect(order.actualExpense).toBe(sourceBillLine.amount);
-                expect(order.actualRevenue).toBe(ZERO_MONEY);
-                expect(order.actualIncome).toBe(INCOME_AMOUNT);
-
-                expect(job.actualExpense).toBe(sourceBillLine.amount);
-                expect(job.actualRevenue).toBe(ZERO_MONEY);
-                expect(job.actualIncome).toBe(INCOME_AMOUNT);
-            });
-
-            it('Remove Link Soft-Deleted Bill Line', async () =>
-            {
-                const sourceBillLine = context.billLines[1];
-                const sourceInvoiceLine = context.invoiceLines[1];
-                const lines = await InvoiceLine.query(trx).insertAndFetch([sourceInvoiceLine, sourceBillLine]);
-                const link = await InvoiceLineLink.query(trx).insertAndFetch({
-                    line1Guid: lines[0].guid,
-                    line2Guid: lines[1].guid
-                }).then((newLink) =>
-                {
-                    return InvoiceLine.query(trx)
-                        .findById(lines[1].guid)
-                        .patch({ isDeleted: true })
-                        .then(() =>
-                        {
-                            return InvoiceLineLink.query(trx).where(newLink).delete();
-                        });
-                });
-
-                // this is the number of links deleted
-                expect(link).toBe(1);
-                const [order, job] = await Promise.all([Order.query(trx).findById(context.order.guid), OrderJob.query(trx).findById(context.job.guid)]);
-
-                expect(order.actualExpense).toBe(ZERO_MONEY);
-                expect(order.actualRevenue).toBe(sourceInvoiceLine.amount);
-                expect(order.actualIncome).toBe(sourceInvoiceLine.amount);
-
-                expect(job.actualExpense).toBe(ZERO_MONEY);
-                expect(job.actualRevenue).toBe(ZERO_MONEY);
-                expect(job.actualIncome).toBe(ZERO_MONEY);
-            });
-
-            it('Remove Link Soft-Deleted Invoice Line', async () =>
-            {
-                const sourceBillLine = context.billLines[1];
-                const sourceInvoiceLine = context.invoiceLines[1];
-                const INCOME_AMOUNT = currency(0).subtract(sourceBillLine.amount).toString();
-                const lines = await InvoiceLine.query(trx).insertAndFetch([sourceInvoiceLine, sourceBillLine]);
-                const link = await InvoiceLineLink.query(trx).insertAndFetch({
-                    line1Guid: lines[0].guid,
-                    line2Guid: lines[1].guid
-                }).then((newLink) =>
-                {
-                    return InvoiceLine.query(trx)
-                        .findById(lines[0].guid)
-                        .patch({ isDeleted: true })
-                        .then(() =>
-                        {
-                            return InvoiceLineLink.query(trx).where(newLink).delete();
-                        });
-                });
-
-                // this is the number of links deleted
-                expect(link).toBe(1);
-                const [order, job] = await Promise.all([Order.query(trx).findById(context.order.guid), OrderJob.query(trx).findById(context.job.guid)]);
-
-                expect(order.actualExpense).toBe(sourceBillLine.amount);
-                expect(order.actualRevenue).toBe(ZERO_MONEY);
-                expect(order.actualIncome).toBe(INCOME_AMOUNT);
-
-                expect(job.actualExpense).toBe(sourceBillLine.amount);
-                expect(job.actualRevenue).toBe(ZERO_MONEY);
-                expect(job.actualIncome).toBe(INCOME_AMOUNT);
             });
         });
     });
