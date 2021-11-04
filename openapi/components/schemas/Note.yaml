@@ -1,7 +1,7 @@
 type: object
 properties:
   guid:
-    $ref: .\Common.yaml#/guid
+    $ref: ./Common.yaml#/guid
   title:
     type: string
     minLength: 1
@@ -10,11 +10,11 @@ properties:
   isBroadcast:
     type: boolean
   dateCreated:
-    $ref: .\Common.yaml#/dateCreated
+    $ref: ./Common.yaml#/dateCreated
   createdByGuid:
-    $ref: .\Common.yaml#/createdByGuid
+    $ref: ./Common.yaml#/createdByGuid
   createdBy:
-    $ref: .\Common.yaml#/createdBy
+    $ref: ./Common.yaml#/createdBy
   type:
     type: string
     enum:

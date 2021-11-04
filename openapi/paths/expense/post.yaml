@@ -12,7 +12,7 @@ requestBody:
         description: List Of Expenses
         items:
           description: Expense
-          $ref: '..\..\components\schemas\Expense.yaml#/expense'
+          $ref: '../../components/schemas/Expense.yaml#/expense'
           minItems: 1
 responses:
   200:

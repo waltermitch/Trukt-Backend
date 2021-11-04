@@ -7,17 +7,17 @@ parameters:
   - in: path
     name: noteGuid
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
-    required: true     
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
 
 responses:
   204:
     description: Notes have been deleted
     content:
-      application/json: {}            
+      application/json: {}
 
   404:
-    description:  Note does not exist
+    description: Note does not exist
     content:
       application/json:
         schema:

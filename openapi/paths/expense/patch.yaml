@@ -8,7 +8,7 @@ requestBody:
   content:
     application/json:
       schema:
-        $ref: '..\..\components\schemas\Expense.yaml#/expense'
+        $ref: '../../components/schemas/Expense.yaml#/expense'
 responses:
   200:
     description: expense

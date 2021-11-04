@@ -825,7 +825,7 @@ paths:
                     $ref: '#/components/schemas/guid'
                   number:
                     type: string
-                    pattern: '/[A-Z]{2}\d{5}/'
+                    pattern: '/[A-Z]{2}/d{5}/'
                     example: RC10000
                   instructions:
                     $ref: '#/components/schemas/instructions'
@@ -1338,7 +1338,7 @@ paths:
                     $ref: '#/components/schemas/guid'
                   number:
                     type: string
-                    pattern: '/[A-Z]{2}\d{5}/'
+                    pattern: '/[A-Z]{2}/d{5}/'
                     example: RC10000
                   instructions:
                     $ref: '#/components/schemas/instructions'
@@ -3273,7 +3273,7 @@ components:
       format: email
     phoneNumber:
       type: string
-      pattern: \d+
+      pattern: /d+
       example: (916) 999-1234
     Contact:
       type: object
@@ -3640,30 +3640,6 @@ components:
       oneOf:
         - $ref: '#/components/schemas/Commodity with Type ID'
         - $ref: '#/components/schemas/Commodity with Category and Type'
-    EDI214StopStatus:
-      allOf:
-        - $ref: '#/components/schemas/EDI214Status'
-        - type: object
-          properties:
-            code:
-              $ref: '#/components/schemas/edi214StopCodeType'
-            reason:
-              description: EDI 214 AT702 appointment status reason code
-    EDI214Appointment:
-      allOf:
-        - $ref: '#/components/schemas/EDI214Status'
-        - type: object
-          required:
-            - code
-            - type
-            - reason
-          properties:
-            type:
-              $ref: '#/components/schemas/edi214Type'
-            code:
-              $ref: '#/components/schemas/edi214AppointmentCodeType'
-            reason:
-              description: EDI 214 AT704 appointment status reason code
     edi214Type:
       type: string
       enum:
@@ -3822,6 +3798,15 @@ components:
         - X6
         - X8
         - XB
+    EDI214StopStatus:
+      allOf:
+        - $ref: '#/components/schemas/EDI214Status'
+        - type: object
+          properties:
+            code:
+              $ref: '#/components/schemas/edi214StopCodeType'
+            reason:
+              description: EDI 214 AT702 appointment status reason code
     edi214AppointmentCodeType:
       description: EDI 214  AT703 appointment status code
       type: string
@@ -3835,6 +3820,21 @@ components:
         - LP
         - X9
         - XA
+    EDI214Appointment:
+      allOf:
+        - $ref: '#/components/schemas/EDI214Status'
+        - type: object
+          required:
+            - code
+            - type
+            - reason
+          properties:
+            type:
+              $ref: '#/components/schemas/edi214Type'
+            code:
+              $ref: '#/components/schemas/edi214AppointmentCodeType'
+            reason:
+              description: EDI 214 AT704 appointment status reason code
     edi:
       description: EDI data parsed in JSON format. Do not decode/encode as JSON String.
       type: object
@@ -3999,7 +3999,7 @@ components:
     currency:
       type: string
       format: currency
-      pattern: '^(?:[1-9][0-9]*|0)\.[0-9]{2}$'
+      pattern: '^(?:[1-9][0-9]*|0)/.[0-9]{2}$'
       example: '12345.67'
     orderExpense:
       type: object
@@ -4311,7 +4311,7 @@ components:
           $ref: '#/components/schemas/guid'
         number:
           type: string
-          pattern: '/[A-Z]{2}\d{5}/'
+          pattern: '/[A-Z]{2}/d{5}/'
           example: RC10000
         status:
           $ref: '#/components/schemas/orderStatus'
@@ -4454,7 +4454,7 @@ components:
           $ref: '#/components/schemas/guid'
         number:
           type: string
-          pattern: '/[A-Z]{2}\d{5}/'
+          pattern: '/[A-Z]{2}/d{5}/'
           example: RC10000
         instructions:
           type: string

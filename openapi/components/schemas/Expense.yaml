@@ -51,7 +51,7 @@ orderExpense:
         - dispatcher
     amount:
       allOf:
-        - $ref: ..\..\components\schemas\Common.yaml#/currency
+        - $ref: ../../components/schemas/Common.yaml#/currency
         - description: The amount that is owed for this expense.
           minimum: 0
     item:

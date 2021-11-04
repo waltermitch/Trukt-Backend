@@ -7,18 +7,18 @@ parameters:
   - in: path
     name: jobGuid
     schema:
-      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../../components/schemas/Common.yaml#/guid'
     required: true
 responses:
   200:
     description: requests
     content:
-      application/json: 
+      application/json:
         schema:
           type: array
           description: Array of request that exist
-          items: 
-            $ref:  ..\..\..\components\schemas\LoadboardRequest.yaml#/mainResponsePayload
- 
+          items:
+            $ref: ../../../components/schemas/LoadboardRequest.yaml#/mainResponsePayload
+
   404:
     description: request do not exist
