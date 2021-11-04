@@ -1,6 +1,5 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
-const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJob = require('./OrderJob');
 const OrderJobType = require('./OrderJobType');
 const { DateTime } = require('luxon');
@@ -235,13 +234,6 @@ class Order extends BaseModel
         };
     }
 
-    $parseDatabaseJson(json)
-    {
-        json = super.$parseDatabaseJson(json);
-        json.netProfitMargin = this.calculateNetProfitMargin(json.actualRevenue, json.actualExpense);
-        return json;
-    }
-
     static allStops(order)
     {
         let stops = order.stops;
@@ -250,18 +242,6 @@ class Order extends BaseModel
             stops = stops.concat(job.stops);
         }
         return stops;
-    }
-
-    async $beforeInsert(context)
-    {
-        await super.$beforeInsert(context);
-        this.calculateEstimatedIncome();
-    }
-
-    async $beforeUpdate(opt, context)
-    {
-        await super.$beforeUpdate(opt, context);
-        this.calculateEstimatedIncome();
     }
 
     setClientNote(note, user)
@@ -303,6 +283,5 @@ class Order extends BaseModel
 
 }
 
-Object.assign(Order.prototype, IncomeCalcs);
 Object.assign(Order.prototype, RecordAuthorMixin);
 module.exports = Order;
