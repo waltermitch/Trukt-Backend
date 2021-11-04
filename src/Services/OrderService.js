@@ -1,3 +1,6 @@
+const currency = require('currency.js');
+const { v4: uuid } = require('uuid');
+
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -605,107 +608,59 @@ class OrderService
             order.setClientNote(orderObj.clientNotes?.note, currentUser);
 
             // this part creates all the financial records for this order
-            if (orderObj.expenses.length > 0)
+            const orderInvoices = [];
+            const orderJobs = [];
+
+            for (const job of order.jobs)
             {
-                const actors = {
-                    client: order.consignee,
-                    referrer: order.referrer,
-                    salesperson: order.salesperson,
-                    dispatcher: order.dispatcher
-                };
+                let jobEstimatedExpense = currency(0);
+                let jobEstimatedRevenue = currency(0);
 
-                // there can be many vendors
-                for (const job of order.jobs)
+                // Take out commodities from jobs cause that elements can't be save as it comes
+                const { commodities: jobInputCommodities, ...jobData } = job;
+                const jobBillLines = jobInputCommodities?.map(commodity =>
                 {
-                    actors[job.index + 'vendor'] = job.vendor;
-                }
+                    const itemId = 1;
+                    const commodityReference = commodities[commodity['#id']];
+                    const commodityRevenue = commodity.revenue;
+                    const commodityExpense = commodity.expense;
 
-                // going to use the actor role name as the key for quick storage
-                const invoices = {};
+                    jobEstimatedExpense = jobEstimatedExpense.add(currency(commodityExpense));
+                    jobEstimatedRevenue = jobEstimatedRevenue.add(currency(commodityRevenue));
 
-                for (const expense of orderObj.expenses)
-                {
-                    let invoiceKey = expense.account;
-                    if (expense.job)
-                    {
-                        // this is a job expense, there are many vendors so have to make unique key
-                        invoiceKey = expense.job + expense.account;
-                    }
-
-                    if (!(invoiceKey in invoices))
-                    {
-                        const invoiceBill = InvoiceBill.fromJson({
-                            // mark as invoice only if it is for the client, everyone else is a bill
-                            isInvoice: expense.account === 'client',
-                            lines: []
-                        });
-                        invoiceBill.consignee = actors[invoiceKey];
-                        invoiceBill.setCreatedBy(currentUser);
-                        invoices[invoiceKey] = invoiceBill;
-                    }
-                    const invoice = invoices[invoiceKey];
-
-                    const lineItem = invoiceLineItems.find(
-                        (it) => expense.item === it.name && expense.item
+                    const orderInvoiceLine = OrderService.createInvoiceLineGraph(
+                        commodityRevenue,
+                        itemId,
+                        currentUser,
+                        commodityReference
                     );
-                    if (!lineItem)
-                    {
-                        throw new Error(
-                            'Unknown expense item: ' + expense.item
-                        );
-                    }
-                    const invoiceLine = InvoiceLine.fromJson({
-                        amount: expense.amount
-                    });
-                    invoiceLine.graphLink('item', lineItem);
-                    invoiceLine.setCreatedBy(currentUser);
+                    orderInvoices.push(orderInvoiceLine);
 
-                    if (expense.commodity)
-                    {
-                        invoiceLine.commodity = commodities[expense.commodity];
-                    }
+                    const jobInvoiceLine = OrderService.createInvoiceLineGraph(
+                        commodityExpense,
+                        itemId,
+                        currentUser,
+                        commodityReference
+                    );
+                    jobInvoiceLine.link = { '#ref': orderInvoiceLine['#id'] };
 
-                    invoice.lines.push(invoiceLine);
-                }
-
-                const orderInvoices = [];
-                const jobInvoices = {};
-                Object.keys(invoices).map((it) =>
-                {
-                    const match = it.match(/(.*?)vendor$/);
-                    if (match)
-                    {
-                        if (match[1])
-                        {
-                            jobInvoices[match[1]] = invoices[it];
-                        }
-                        else
-                        {
-                            throw new Error(
-                                'expense specifies vendor account but not linked to a job'
-                            );
-                        }
-                    }
-                    else
-                    {
-                        orderInvoices.push(invoices[it]);
-                    }
+                    return jobInvoiceLine;
                 });
 
-                for (const jobIndex of Object.keys(jobInvoices))
-                {
-                    const job = order.jobs.find((it) => it['#id'] === jobIndex);
-                    job.bills.push(jobInvoices[jobIndex]);
-                }
-                order.invoices = orderInvoices;
+                if (jobBillLines)
+                    jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser);
+
+                jobData.estimatedExpense = jobEstimatedExpense.value;
+                jobData.estimatedRevenue = jobEstimatedRevenue.value;
+
+                orderJobs.push(jobData);
             }
 
-            order = await Order.query(trx)
-                .skipUndefined()
-                .insertGraph(order, {
-                    allowRefs: true
-                })
-                .returning('guid');
+            order.jobs = orderJobs;
+            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, order.consignee);
+
+            order = await Order.query(trx).skipUndefined()
+                .insertGraph(order, { allowRefs: true, relate: true });
 
             await trx.commit();
 
@@ -716,6 +671,33 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static createInvoiceLineGraph(amount, itemId, currentUser, commodity)
+    {
+        const jobBillLine = InvoiceLine.fromJson({
+            amount,
+            itemId,
+            commodity
+        });
+
+        jobBillLine['#id'] = uuid();
+        jobBillLine.setCreatedBy(currentUser);
+
+        return jobBillLine;
+    }
+
+    static createInvoiceBillGraph(lines, isInvoice, currentUser, consignee)
+    {
+        const bill = InvoiceBill.fromJson({
+            isInvoice,
+            lines: [],
+            consignee
+        });
+        bill.setCreatedBy(currentUser);
+        bill.lines.push(...lines);
+
+        return bill;
     }
 
     static async calculateTotalDistance(stops)

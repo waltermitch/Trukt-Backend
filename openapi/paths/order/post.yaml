@@ -16,11 +16,7 @@ requestBody:
           instructions:
             $ref: '../../components/schemas/Order.yaml#/Order/properties/instructions'
           clientNotes:
-            $ref: '../../components/schemas/Order.yaml#/Order/properties/clientNotes'
-          estimatedRevenue:
-            $ref: '../../components/schemas/Order.yaml#/Order/properties/estimatedRevenue'
-          estimatedExpense:
-            $ref: '../../components/schemas/Order.yaml#/Order/properties/estimatedExpense'
+            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/clientNotes'
           quotedRevenue:
             $ref: '../../components/schemas/Order.yaml#/Order/properties/quotedRevenue'
           estimatedDistance:
@@ -81,6 +77,22 @@ requestBody:
                       allOf:
                         - $ref: '../../components/schemas/Common.yaml#/guidObject'
                         - description: The dispatcher who is responsible for managing this job.
+                    commodities:
+                      type: array
+                      items:
+                        type: object
+                        properties: 
+                          index: 
+                            type: string
+                            description: Unique index per commodity, this field can be any string value
+                          expense:
+                            $ref: ..\..\components\schemas\Expense.yaml#/expense/properties/amount
+                          revenue:
+                            $ref: ..\..\components\schemas\Expense.yaml#/expense/properties/amount
+                        required:
+                          - index
+                          - expense
+                          - revenue
                     stops:
                       type: array
                       items:
@@ -106,10 +118,6 @@ requestBody:
                   required:
                     - index
                     - stops
-          expenses:
-            type: array
-            items:
-              $ref: '../../components/schemas/Expense.yaml#/orderExpense'
           stops:
             type: array
             items:
@@ -162,10 +170,10 @@ responses:
               type: boolean
               default: false
               example: false
-            estimatedExpense:
-              $ref: '#/requestBody/content/application~1json/schema/properties/estimatedExpense'
             estimatedRevenue:
-              $ref: '#/requestBody/content/application~1json/schema/properties/estimatedRevenue'
+              $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedRevenue'
+            estimatedExpense:
+              $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedExpense'          
             quotedRevenue:
               $ref: '#/requestBody/content/application~1json/schema/properties/quotedRevenue'
             estimatedIncome:

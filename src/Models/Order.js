@@ -244,6 +244,19 @@ class Order extends BaseModel
         return stops;
     }
 
+    async $beforeInsert(context)
+    {
+        await super.$beforeInsert(context);
+        this.calculateEstimatedRevenueAndExpense();
+        this.calculateEstimatedIncome();
+    }
+
+    async $beforeUpdate(opt, context)
+    {
+        await super.$beforeUpdate(opt, context);
+        this.calculateEstimatedIncome();
+    }
+
     setClientNote(note, user)
     {
         if (note && note.length > 3000)
