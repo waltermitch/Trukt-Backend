@@ -1,7 +1,5 @@
-const { query } = require('../Mongo');
-const HttpRouteController = require('./HttpRouteController');
 
-class RequestController extends HttpRouteController
+class RequestController
 {
     async handleGet(contextm, req)
     {

@@ -1,11 +1,10 @@
-const HttpRouteController = require('./HttpRouteController');
 const LoadboardService = require('../Services/LoadboardService');
 
 // this is imported here because the file needs to be imported somewhere
 // in order for it to be able to listen to incoming events from service bus
 const LoadboardHandler = require('../Loadboards/LoadboardHandler');
 
-class LoadboardController extends HttpRouteController
+class LoadboardController
 {
     static async createJobPost(req, res, next)
     {
@@ -41,7 +40,7 @@ class LoadboardController extends HttpRouteController
         catch (e)
         {
             let status = 400;
-            if(e.toString() == 'Error: Job not found')
+            if (e.toString() == 'Error: Job not found')
             {
                 status = 404;
             }
@@ -67,7 +66,7 @@ class LoadboardController extends HttpRouteController
         catch (e)
         {
             let status = 400;
-            if(e.toString() == 'Error: Job not found')
+            if (e.toString() == 'Error: Job not found')
             {
                 status = 404;
             }
@@ -90,7 +89,7 @@ class LoadboardController extends HttpRouteController
         catch (e)
         {
             let status = 400;
-            if(e.toString() == 'Error: Job not found')
+            if (e.toString() == 'Error: Job not found')
             {
                 status = 404;
             }
@@ -112,7 +111,7 @@ class LoadboardController extends HttpRouteController
         catch (err)
         {
             let status = 400;
-            if(err.toString() == 'Error: Job not found')
+            if (err.toString() == 'Error: Job not found')
             {
                 status = 404;
             }
@@ -134,7 +133,7 @@ class LoadboardController extends HttpRouteController
         catch (err)
         {
             let status = 400;
-            if(err.toString() == 'Error: No active offers to undispatch')
+            if (err.toString() == 'Error: No active offers to undispatch')
             {
                 status = 404;
             }
