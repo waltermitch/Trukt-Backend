@@ -1,0 +1,46 @@
+summary: Update User Fields In Orders
+operationId: updateOrderUsers
+description: Updates the user fields, like salesperson, dispatcher in the orders specified in the request.
+tags:
+  - Bulk
+requestBody:
+  content:
+    application/json:
+      schema:
+        properties:
+          orders:
+            type: array
+            items:
+              type: string
+              description: Order Guid
+              $ref: '../../components/schemas/Common.yaml#/guid'
+          dispatcher:
+            type: string
+            description: Dispatcher Guid
+            $ref: '../../components/schemas/Common.yaml#/guid'
+          salesperson:
+            type: string
+            description: Salesperson Guid
+            $ref: '../../components/schemas/Common.yaml#/guid'
+responses:
+  200:
+    description: Update Received Successfully (note that this does not mean every order was updated successfully)
+    content:
+      application/json:
+        schema:
+          properties:
+            orderGuid:
+              type: object
+              description: This is key value pair of orderGuid
+              properties:
+                error:
+                  type: string
+                  description: Error message, null if no error
+                  nullable: true
+                status:
+                  type: number
+                  description: Signifies the status of this specific order update
+                  enum:
+                    - 200
+                    - 400
+                    - 404

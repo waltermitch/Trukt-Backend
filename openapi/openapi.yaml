@@ -117,7 +117,7 @@ paths:
     put:
       $ref: paths/invoice/linkLine.yaml
     delete:
-      $ref: paths/invoice/unlinkLine.yaml    
+      $ref: paths/invoice/unlinkLine.yaml
   /bill/{billGuid}:
     get:
       $ref: paths/bill/get.yaml
@@ -186,3 +186,9 @@ paths:
   /bill/order/{orderGuid}/export:
     put:
       $ref: paths/bill/export.yaml
+  /bulk/order/users:
+    put:
+      $ref: paths/bulk/updateOrderUsers.yaml
+  /bulk/jobs/users:
+    put:
+      $ref: paths/bulk/updateJobUsers.yaml
