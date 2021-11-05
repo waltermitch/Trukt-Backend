@@ -18,6 +18,24 @@ class BillController
         }
     }
 
+    static async updateBillLine(req, res)
+    {
+        const billGuid = req.params.billGuid;
+        const lineGuid = req.params.lineGuid;
+        const line = InvoiceLine.fromJson(req.body);
+        try
+        {
+            const result = await BillService.updateBillLine(billGuid, lineGuid, line);
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
+    }
+
     static async createBillLine(req, res)
     {
         const billGuid = req.params.billGuid;
