@@ -6,7 +6,7 @@ class InvoiceLineLink extends BaseModel
     {
         return 'rcgTms.invoice_bill_line_links';
     }
-    
+
     static get idColumn()
     {
         return ['line1Guid', 'line2Guid'];

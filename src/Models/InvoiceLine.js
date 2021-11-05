@@ -1,5 +1,8 @@
 const { RecordAuthorMixin, isNotDeleted, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
+const InvoiceBill = require('../Models/InvoiceBill');
+const Invoice = require('../Models/Invoice');
+const Bill = require('../Models/Bill');
 
 class InvoiceLine extends BaseModel
 {
@@ -131,6 +134,29 @@ class InvoiceLine extends BaseModel
         return json;
     }
 
+    linkBill(bill)
+    {
+        if (bill instanceof Bill)
+        {
+            this.invoiceGuid = bill.billGuid;
+        }
+        else if (bill instanceof InvoiceBill)
+        {
+            this.invoiceGuid = bill.guid;
+        }
+    }
+
+    linkInvoice(invoice)
+    {
+        if (invoice instanceof Invoice)
+        {
+            this.invoiceGuid = invoice.invoiceGuid;
+        }
+        else if (invoice instanceof InvoiceBill)
+        {
+            this.invoiceGuid = invoice.guid;
+        }
+    }
 }
 
 Object.assign(InvoiceLine.prototype, RecordAuthorMixin);
