@@ -20,6 +20,8 @@ router
     .put(`${invoicePrefix}/link/:line1Guid(${uuidRegexStr})/:line2Guid(${uuidRegexStr})`, (req, res) => invoiceController.LinkInvoiceLines(req, res))
     .put(`${invoicePrefix}/order/:orderGuid(${uuidRegexStr})/export`, (req, res) => http(req, res, invoiceController.exportInvoice))
     .put(`${billPrefix}/order/:orderGuid(${uuidRegexStr})/export`, (req, res) => http(req, res, billController.exportBill))
+    .put(`${billPrefix}/:billGuid(${uuidRegexStr})/line/:lineGuid(${uuidRegexStr})`, (req, res) => billController.updateBillLine(req, res))
+    .put(`${invoicePrefix}/:invoiceGuid(${uuidRegexStr})/line/:lineGuid(${uuidRegexStr})`, (req, res) => invoiceController.updateInvoiceLine(req, res))
     .delete(`${invoicePrefix}/link/:line1Guid(${uuidRegexStr})/:line2Guid(${uuidRegexStr})`, (req, res) => invoiceController.UnLinkInvoiceLines(req, res));
 
 module.exports = router;
