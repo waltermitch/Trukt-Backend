@@ -121,12 +121,18 @@ paths:
   /bill/{billGuid}:
     get:
       $ref: paths/bill/get.yaml
+  /bill/{billGuid}/line:
+    post:
+      $ref: paths/bill/addBillLine.yaml
   /invoice/order/{orderGuid}:
     get:
       $ref: paths/invoice/getOrderInvoices.yaml
   /invoice/job/{jobGuid}:
     get:
       $ref: paths/invoice/getJobInvoices.yaml
+  /invoice/{invoiceGuid}/line:
+    post:
+      $ref: paths/bill/addInvoiceLine.yaml
   /index/order/number:
     get:
       $ref: paths/index/order/get.yaml
