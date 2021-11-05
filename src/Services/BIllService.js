@@ -60,7 +60,7 @@ class BillService
             }
 
             // bulk insert into Lines table
-            const [newLine1, newLine2] = await InvoiceLine.query(trx).insert(linksArray);
+            const [newLine1, newLine2] = await InvoiceLine.query(trx).insertAndFetch(linksArray);
 
             // if invoice then link lines
             if (newLine2)
