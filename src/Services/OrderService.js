@@ -2042,6 +2042,43 @@ class OrderService
             return { 'guid': com.order?.guid, 'number': com.order?.number, 'dateCreated': com.order?.dateCreated };
         });
     }
+
+    static async bulkUpdateUsers({ orders = [], dispatcher = undefined, salesperson = undefined })
+    {
+        const results = {};
+
+        const payload = {
+            dispatcherGuid: dispatcher,
+            salespersonGuid: salesperson
+        };
+
+        // remove and check for undefineds
+        const cleaned = R.pickBy((it) => it !== undefined, payload);
+
+        if (Object.keys(cleaned).length === 0)
+            throw { 'status': 400, 'data': 'Missing Update Values' };
+
+        const promises = await Promise.allSettled(orders.map(async (order) =>
+        {
+            // need to catch and throw in order to be able to return the guid for mapping of errors
+            const res = await Order.query().findById(order).patch(payload).returning('guid')
+                .catch((err) => { throw { 'guid': order, 'data': err }; });
+
+            return { 'guid': order, 'data': res };
+        }));
+
+        for (const e of promises)
+        {
+            if (e.reason)
+                results[e.reason.guid] = { 'error': e.reason.data, 'status': 400 };
+            else if (e.value?.data === undefined)
+                results[e.value.guid] = { 'error': 'Order Not Found', 'status': 404 };
+            else if (e.value.data)
+                results[e.value.guid] = { 'status': 200 };
+        }
+
+        return results;
+    }
 }
 
 module.exports = OrderService;
