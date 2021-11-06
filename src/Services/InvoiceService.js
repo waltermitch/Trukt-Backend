@@ -191,6 +191,76 @@ class InvoiceService
         return newLine;
     }
 
+    static async deleteInvoiceLine(invoiceGuid, lineGuid)
+    {
+        // To make sure correct invoice was passed in
+        const invoice = await Invoice.query().findById(invoiceGuid);
+
+        // if no bill throw error
+        if (!invoice)
+        {
+            throw new Error('Invoice does not exist.');
+        }
+
+        // returning updated bill
+        const newLine = await InvoiceLine.query().patchAndFetchById(lineGuid, { isDeleted: true });
+
+        // if line doesn't exist
+        if (!newLine)
+        {
+            throw new Error('Line does not exist.');
+        }
+
+        return;
+    }
+
+    static async deleteInvoiceLines(invoiceGuid, lineGuids)
+    {
+        // running transaction, because I want to undue updates because of failure
+        const result = await InvoiceLine.transaction(async trx =>
+        {
+            // To make sure correct invoice was passed in
+            const invoice = await Invoice.query(trx).findById(invoiceGuid);
+
+            // incorrect invoice
+            if (!invoice)
+            {
+                throw new Error('Invoice does not exist.');
+            }
+
+            // to patch multiple lines at once
+            const patchArrays = [];
+
+            // creating array of patch updates
+            for (let i = 0; i < lineGuids.length; i++)
+            {
+                patchArrays.push(InvoiceLine.query(trx).findById(lineGuids[i]).patch({ isDeleted: true }));
+            }
+
+            // executing all updates
+            const deletedLines = await Promise.all(patchArrays);
+
+            // if any failed will return guids that failed
+            if (deletedLines.includes(0))
+            {
+                const guids = [];
+                for (let i = 0; i < deletedLines.length; i++)
+                {
+                    if (deletedLines[i] == 0)
+                    {
+                        guids.push(lineGuids[i]);
+                    }
+                }
+
+                throw new Error(`Lines with guid(s): ${guids} :do not exist.`);
+            }
+
+            // if succeed then, returns nothing
+            return;
+        });
+        return result;
+    }
+
     static async LinkLines(line1Guid, line2Guid, trx = null)
     {
         const Lines = await Line.query(trx).findByIds([line1Guid, line2Guid]).withGraphFetched('[invoice, bill, invoiceBill.[job]]');

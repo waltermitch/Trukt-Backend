@@ -65,6 +65,39 @@ class InvoiceController
         }
     }
 
+    static async softDeleteInvoiceLine(req, res)
+    {
+        const invoiceGuid = req.params.invoiceGuid;
+        const lineGuid = req.params.lineGuid;
+        try
+        {
+            const result = await InvoiceService.deleteInvoiceLine(invoiceGuid, lineGuid);
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
+    }
+
+    static async softDeleteInvoiceLines(req, res)
+    {
+        const invoiceGuid = req.params.invoiceGuid;
+        const lineGuids = req.body;
+        try
+        {
+            await InvoiceService.deleteInvoiceLines(invoiceGuid, lineGuids);
+            res.status(200).send();
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
+    }
+
     static async LinkInvoiceLines(req, res)
     {
         try
