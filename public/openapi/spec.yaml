@@ -3253,7 +3253,7 @@ paths:
       summary: Update User Fields In Orders
       operationId: updateOrderUsers
       description: >-
-        Updates the user fields, like salesperson, dispatcher in the order
+        Updates the user fields, like salesperson, dispatcher in the orders
         specified in the request.
       tags:
         - Bulk
@@ -3276,6 +3276,8 @@ paths:
                   type: string
                   description: Salesperson Guid
                   $ref: '#/components/schemas/guid'
+              required:
+                - orders
       responses:
         '200':
           description: >-
@@ -3300,7 +3302,17 @@ paths:
                           - 200
                           - 400
                           - 404
-  /bulk/jobs/users:
+        '400':
+          description: 'Didn''t provide any values to update, (i.e missing "dispatcher")'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Missing Update Values
+  /bulk/job/users:
     put:
       summary: Update User Fields In Jobs
       operationId: updateJobUsers
@@ -3324,10 +3336,8 @@ paths:
                   type: string
                   description: Dispatcher Guid
                   $ref: '#/components/schemas/guid'
-                salesperson:
-                  type: string
-                  description: Salesperson Guid
-                  $ref: '#/components/schemas/guid'
+              required:
+                - jobs
       responses:
         '200':
           description: >-
@@ -3353,6 +3363,16 @@ paths:
                           - 200
                           - 400
                           - 404
+        '400':
+          description: 'Didn''t provide any values to update, (i.e missing "dispatcher")'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Missing Update Values
 components:
   schemas:
     guid:

@@ -189,6 +189,6 @@ paths:
   /bulk/order/users:
     put:
       $ref: paths/bulk/updateOrderUsers.yaml
-  /bulk/jobs/users:
+  /bulk/job/users:
     put:
       $ref: paths/bulk/updateJobUsers.yaml

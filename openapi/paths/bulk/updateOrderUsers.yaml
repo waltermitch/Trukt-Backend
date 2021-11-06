@@ -22,6 +22,8 @@ requestBody:
             type: string
             description: Salesperson Guid
             $ref: '../../components/schemas/Common.yaml#/guid'
+        required:
+          - orders
 responses:
   200:
     description: Update Received Successfully (note that this does not mean every order was updated successfully)
@@ -44,3 +46,13 @@ responses:
                     - 200
                     - 400
                     - 404
+  400:
+    description: Didn't provide any values to update, (i.e missing "dispatcher")
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: Missing Update Values
