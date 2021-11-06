@@ -22,6 +22,10 @@ router
     .put(`${billPrefix}/order/:orderGuid(${uuidRegexStr})/export`, (req, res) => http(req, res, billController.exportBill))
     .put(`${billPrefix}/:billGuid(${uuidRegexStr})/line/:lineGuid(${uuidRegexStr})`, (req, res) => billController.updateBillLine(req, res))
     .put(`${invoicePrefix}/:invoiceGuid(${uuidRegexStr})/line/:lineGuid(${uuidRegexStr})`, (req, res) => invoiceController.updateInvoiceLine(req, res))
+    .delete(`${billPrefix}/:billGuid/line/:lineGuid`, (req, res) => billController.softDeleteBillLine(req, res))
+    .delete(`${invoicePrefix}/:invoiceGuid/line/:lineGuid`, (req, res) => invoiceController.softDeleteInvoiceLine(req, res))
+    .delete(`${billPrefix}/:billGuid/lines`, (req, res) => billController.softDeleteBillLines(req, res))
+    .delete(`${invoicePrefix}/:invoiceGuid/lines`, (req, res) => invoiceController.softDeleteInvoiceLines(req, res))
     .delete(`${invoicePrefix}/link/:line1Guid(${uuidRegexStr})/:line2Guid(${uuidRegexStr})`, (req, res) => invoiceController.UnLinkInvoiceLines(req, res));
 
 module.exports = router;
