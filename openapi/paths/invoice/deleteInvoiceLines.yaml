@@ -1,0 +1,33 @@
+summary: Delete Invoice Lines
+operationId: deleteInvoiceLines
+description: Delete Invoice Lines.
+tags:
+  - Invoice
+parameters:
+  - in: path
+    name: invoiceGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+requestBody:
+   content: 
+    application/json:
+      schema:
+        type: array
+        items:
+          $ref: ../../components/schemas/Common.yaml#/guid
+
+responses:
+  200:
+    description: OK
+    content:
+      application/json: {}
+
+  404:
+    description: Invoice or Line not found
+    content:
+      application/json: 
+        schema:
+          type: string
+          example: Invoice not found.
