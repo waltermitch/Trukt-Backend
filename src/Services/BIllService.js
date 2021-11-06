@@ -100,6 +100,80 @@ class BillService
         return newLine;
     }
 
+    static async deleteBillLine(billGuid, lineGuid)
+    {
+        // To make sure if bill has been passed
+        const bill = await Bill.query().findById(billGuid);
+
+        // if no bill throw error
+        if (!bill)
+        {
+            throw new Error('Bill does not exist.');
+        }
+
+        // returning updated bill
+        const newLine = await InvoiceLine.query().patchAndFetchById(lineGuid, { isDeleted: true });
+
+        // if line doesn't exist
+        if (!newLine)
+        {
+            throw new Error('Line does not exist.');
+        }
+
+        return;
+    }
+
+    static async deleteBillLines(billGuid, lineGuids)
+    {
+        const result = await InvoiceLine.transaction(async trx =>
+        {
+            // To make sure if bill has been passed
+            const bill = await Bill.query(trx).findById(billGuid);
+
+            // if no bill throw error
+            if (!bill)
+            {
+                throw new Error('Bill does not exist.');
+            }
+
+            // OLD WAY if transactions is not OK
+            // const newLine = await InvoiceLine.query().patch({ isDeleted: true }).whereIn('guid', lineGuids);
+
+            // to patch multiple lines at once
+            const patchArrays = [];
+
+            // creating array of patch updates
+            for (let i = 0; i < lineGuids.length; i++)
+            {
+                patchArrays.push(InvoiceLine.query(trx).findById(lineGuids[i]).patch({ isDeleted: true }));
+            }
+
+            // executing all updates
+            const deletedLines = await Promise.all(patchArrays);
+
+            // if any failed will return guids that failed
+            if (deletedLines.includes(0))
+            {
+                const guids = [];
+                for (let i = 0; i < deletedLines.length; i++)
+                {
+                    if (deletedLines[i] == 0)
+                    {
+                        guids.push(lineGuids[i]);
+                    }
+                }
+
+                throw new Error(`Lines with guid(s): ${guids} :do not exist.`);
+            }
+
+            // if succeed then, returns nothing
+            return;
+        });
+
+        // returns result of transaction
+        return result;
+    }
+
     static async exportBills(arr)
     {
         // array for results
