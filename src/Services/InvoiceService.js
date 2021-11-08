@@ -1,18 +1,21 @@
 const enabledModules = process.env['accounting.modules'].split(';');
 const QuickBooksService = require('./QuickBooksService');
 const LineLinks = require('../Models/InvoiceLineLink');
-const Invoice = require('../Models/InvoiceBill');
+const InvoiceBill = require('../Models/InvoiceBill');
 const CoupaService = require('./CoupaService');
 const Line = require('../Models/InvoiceLine');
 const Order = require('../Models/Order');
+const InvoiceLine = require('../Models/InvoiceLine');
+const Invoice = require('../Models/Invoice');
+const Bill = require('../Models/Bill');
 
 class InvoiceService
 {
     static async getInvoice(guid)
     {
-        const res = await Invoice.query()
+        const res = await InvoiceBill.query()
             .findOne({ 'guid': guid, 'isDeleted': false })
-            .withGraphFetched(Invoice.fetch.details);
+            .withGraphFetched(InvoiceBill.fetch.details);
 
         return res;
     }
@@ -24,8 +27,8 @@ class InvoiceService
             .query()
             .findById(guid)
             .withGraphJoined({
-                invoices: Invoice.fetch.details,
-                jobs: { bills: Invoice.fetch.details }
+                invoices: InvoiceBill.fetch.details,
+                jobs: { bills: InvoiceBill.fetch.details }
             });
 
         // order was not found, return undefined
@@ -72,8 +75,8 @@ class InvoiceService
             .query()
             .findById(guid)
             .withGraphJoined({
-                invoices: Invoice.fetch.details,
-                jobs: { bills: Invoice.fetch.details }
+                invoices: InvoiceBill.fetch.details,
+                jobs: { bills: InvoiceBill.fetch.details }
             });
 
         // order was not found, return undefined
@@ -113,9 +116,58 @@ class InvoiceService
         }
     }
 
-    static async LinkLines(line1Guid, line2Guid)
+    static async addInvoiceLine(invoiceGuid, billGuid, line, currentUser)
     {
-        const Lines = await Line.query().findByIds([line1Guid, line2Guid]).withGraphFetched('[invoice, bill, invoiceBill.[job]]');
+        const result = await InvoiceLine.transaction(async trx =>
+        {
+            // verifying bill and invoice
+            const [bill, invoice] = await Promise.all([billGuid && Bill.query(trx).findById(billGuid), Invoice.query(trx).findById(invoiceGuid)]);
+
+            // if invoice doesn't exist in table throw error
+            if (!invoice)
+            {
+                throw new Error('Invoice does not exist.');
+            }
+
+            // if wrong billGuid
+            if (billGuid && !bill)
+            {
+                throw new Error('Bill does not exist.');
+            }
+
+            // for bulk insert
+            const linksArray = [];
+
+            line.setCreatedBy(currentUser);
+            line.linkInvoice(invoice);
+            linksArray.push(line);
+
+            // if billGuid exists create line and link
+            if (billGuid)
+            {
+                const billLine = InvoiceLine.fromJson(line);
+                billLine.linkBill(bill);
+                linksArray.push(billLine);
+            }
+
+            // bulk insert into Lines table
+            const [newLine1, newLine2] = await InvoiceLine.query(trx).insert(linksArray);
+
+            // if two lines then link lines
+            if (newLine2)
+            {
+                await InvoiceService.LinkLines(newLine1.guid, newLine2.guid, trx);
+            }
+
+            // return only the invoice item
+            return newLine1;
+        });
+        return result;
+    }
+
+    static async LinkLines(line1Guid, line2Guid, trx = null)
+    {
+        const Lines = await Line.query(trx).findByIds([line1Guid, line2Guid]).withGraphFetched('[invoice, bill, invoiceBill.[job]]');
 
         // not allowed to link transport items
         if (Lines[0]?.itemId == 1 && Lines[1]?.itemId == 1)
@@ -133,8 +185,7 @@ class InvoiceService
             if (orderGuid === orderGuid2)
             {
                 // inserting after succesfully jumping through constraints
-                await LineLinks.query().insert({ line1Guid: line1Guid, line2Guid: line2Guid });
-                return;
+                await LineLinks.query(trx).insert({ line1Guid: line1Guid, line2Guid: line2Guid });
             }
         }
     }
@@ -242,7 +293,7 @@ class InvoiceService
         {
             if (!data.error)
             {
-                const invoice = await Invoice.query().patchAndFetchById(guid, { externalSourceData: data });
+                const invoice = await InvoiceBill.query().patchAndFetchById(guid, { externalSourceData: data });
 
                 results.push(invoice);
             }
@@ -257,7 +308,7 @@ class InvoiceService
     {
         const search = orderGuid.replace(/%/g, '');
 
-        const res = await Invoice.query().where('order_guid', '=', search).withGraphJoined('lines');
+        const res = await InvoiceBill.query().where('order_guid', '=', search).withGraphJoined('lines');
 
         return res;
     }

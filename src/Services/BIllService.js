@@ -2,9 +2,12 @@ const enabledModules = process.env['accounting.modules'].split(';');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const QuickBooksService = require('./QuickBooksService');
 const InvoiceLine = require('../Models/InvoiceLine');
-const Bill = require('../Models/InvoiceBill');
+const InvoiceBill = require('../Models/InvoiceBill');
 const Order = require('../Models/Order');
 const currency = require('currency.js');
+const InvoiceService = require('./InvoiceService');
+const Invoice = require('../Models/Invoice');
+const Bill = require('../Models/Bill');
 
 let transportItem;
 
@@ -17,9 +20,58 @@ class BillService
 {
     static async getBill(guid)
     {
-        const res = await Bill.query().findById(guid).withGraphFetched(Bill.fetch.details);
+        const res = await InvoiceBill.query().findById(guid).withGraphFetched(InvoiceBill.fetch.details);
 
         return res;
+    }
+
+    static async addBillLine(billGuid, invoiceGuid, line, currentUser)
+    {
+        const result = await InvoiceLine.transaction(async trx =>
+        {
+            // verifying bill and invoice
+            const [bill, invoice] = await Promise.all([Bill.query(trx).findById(billGuid), invoiceGuid && Invoice.query(trx).findById(invoiceGuid)]);
+
+            // if bill doesn't exist in table throw error
+            if (!bill)
+            {
+                throw new Error('Bill does not exist.');
+            }
+
+            // if wrong invoice has been provided
+            if (invoiceGuid && !invoice)
+            {
+                throw new Error('Invoice does not exist.');
+            }
+
+            // for bulk insert
+            const linksArray = [];
+
+            line.setCreatedBy(currentUser);
+            line.linkBill(bill);
+            linksArray.push(line);
+
+            // if invoiceGuid exists create line and link
+            if (invoiceGuid)
+            {
+                const invoiceLine = InvoiceLine.fromJson(line);
+                invoiceLine.linkInvoice(invoice);
+                linksArray.push(invoiceLine);
+            }
+
+            // bulk insert into Lines table
+            const [newLine1, newLine2] = await InvoiceLine.query(trx).insert(linksArray);
+
+            // if invoice then link lines
+            if (newLine2)
+            {
+                await InvoiceService.LinkLines(newLine1.guid, newLine2.guid, trx);
+            }
+
+            // return only the bill item
+            return newLine1;
+        });
+        return result;
     }
 
     static async exportBills(arr)
@@ -98,7 +150,7 @@ class BillService
         {
             if (!data.error)
             {
-                const bill = await Bill.query().patchAndFetchById(guid, { externalSourceData: data, isPaid: true });
+                const bill = await InvoiceBill.query().patchAndFetchById(guid, { externalSourceData: data, isPaid: true });
 
                 results.push(bill);
             }

@@ -1,4 +1,5 @@
 const BillService = require('../Services/BillService');
+const InvoiceLine = require('../Models/InvoiceLine');
 
 class BillController
 {
@@ -14,6 +15,34 @@ class BillController
         {
             res.status(404);
             res.send();
+        }
+    }
+
+    static async createBillLine(req, res)
+    {
+        const billGuid = req.params.billGuid;
+        const invoiceGuid = (req.body.invoiceGuid || null);
+        const currentUser = req.session.userGuid;
+        const line = InvoiceLine.fromJson(req.body);
+        delete line.invoiceGuid;
+        try
+        {
+            const result = await BillService.addBillLine(billGuid, invoiceGuid, line, currentUser);
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            if (error.message == 'Cannot link transport items!')
+            {
+                res.status(406);
+                res.json(error.message);
+            }
+            else
+            {
+                res.status(404);
+                res.json(error.message);
+            }
         }
     }
 
