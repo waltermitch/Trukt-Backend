@@ -1,5 +1,6 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
+const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJob = require('./OrderJob');
 const OrderJobType = require('./OrderJobType');
 const { DateTime } = require('luxon');
@@ -296,5 +297,6 @@ class Order extends BaseModel
 
 }
 
+Object.assign(Order.prototype, IncomeCalcs);
 Object.assign(Order.prototype, RecordAuthorMixin);
 module.exports = Order;
