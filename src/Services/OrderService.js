@@ -154,7 +154,7 @@ class OrderService
                     skipFetched: true
                 }).skipUndefined();
                 await trx.commit();
-                order.expenses = [];
+
                 const terminalCache = {};
                 order.stops = OrderStopLink.toStops(order.stopLinks);
                 delete order.stopLinks;
@@ -167,21 +167,12 @@ class OrderService
                     }
                 }
 
-                for (const invoice of [...order.invoices, ...order.bills])
-                {
-                    for (const line of invoice.lines)
-                    {
-                        order.expenses.push(
-                            Expense.fromInvoiceLine(order, invoice, line)
-                        );
-                    }
-                }
                 delete order.invoices;
                 delete order.bills;
 
                 for (const job of order.jobs)
                 {
-                    job.stops = OrderStopLink.toStops(job.stopLinks);
+                    job.stops = R.clone(OrderStopLink.toStops(job.stopLinks));
                     delete job.stopLinks;
 
                     for (const stop of job.stops)
@@ -190,15 +181,12 @@ class OrderService
                         {
                             terminalCache[stop.terminal.guid] = stop.terminal;
                         }
-                    }
 
-                    for (const bill of job.bills)
-                    {
-                        for (const line of bill.lines)
+                        for (const commodity of stop.commodities)
                         {
-                            order.expenses.push(
-                                Expense.fromInvoiceLine(job, bill, line)
-                            );
+                            const { amount, link = [] } = job.findInvocieLineByCommodityAndType(commodity.guid, 1);
+                            commodity.expense = amount || null;
+                            commodity.revenue = link[0]?.amount || null;
                         }
                     }
 

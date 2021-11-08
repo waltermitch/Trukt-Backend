@@ -227,7 +227,7 @@ class Order extends BaseModel
                         }
                     },
                     bills: {
-                        lines: { item: true }
+                        lines: { item: true, link: true }
                     }
                 }
             }
