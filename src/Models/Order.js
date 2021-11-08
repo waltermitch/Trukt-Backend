@@ -3,6 +3,7 @@ const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAu
 const OrderJob = require('./OrderJob');
 const OrderJobType = require('./OrderJobType');
 const { DateTime } = require('luxon');
+const currency = require('currency.js');
 
 class Order extends BaseModel
 {
@@ -227,7 +228,7 @@ class Order extends BaseModel
                         }
                     },
                     bills: {
-                        lines: { item: true }
+                        lines: { item: true, link: true }
                     }
                 }
             }
@@ -242,6 +243,12 @@ class Order extends BaseModel
             stops = stops.concat(job.stops);
         }
         return stops;
+    }
+
+    async $beforeInsert(context)
+    {
+        await super.$beforeInsert(context);
+        this.calculateEstimatedRevenueAndExpense();
     }
 
     setClientNote(note, user)
@@ -280,6 +287,20 @@ class Order extends BaseModel
         filterIsTender: this.filterIsTender,
         filterJobCategories: this.filterJobCategories
     };
+
+    calculateEstimatedRevenueAndExpense()
+    {
+        let orderEstimatedRevenue = currency(0);
+        let orderEstimatedExpense = currency(0);
+
+        for (const { estimatedRevenue, estimatedExpense } of this.jobs)
+        {
+            orderEstimatedRevenue = orderEstimatedRevenue.add(currency(estimatedRevenue));
+            orderEstimatedExpense = orderEstimatedExpense.add(currency(estimatedExpense));
+        }
+        this.estimatedRevenue = orderEstimatedRevenue.value;
+        this.estimatedExpense = orderEstimatedExpense.value;
+    }
 
 }
 

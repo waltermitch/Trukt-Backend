@@ -76,7 +76,15 @@ Job With All Related Data:
               terminal:
                 $ref: ./Terminal.yaml#/TerminalBase
               commodities:
-                $ref: ./Commodity.yaml#/Commodity
+                allOf:
+                - type: object
+                  properties:
+                    expense:
+                      $ref: ./Expense.yaml#/expense/properties/amount
+                    revenue:
+                      $ref: ./Expense.yaml#/expense/properties/amount
+                - $ref: ./Commodity.yaml#/Commodity
+                
   allOf:
     - $ref: '#/Job With All Data'
     - type: object

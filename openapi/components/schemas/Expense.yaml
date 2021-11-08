@@ -10,6 +10,8 @@ expense:
       oneOf:
         - type: number
         - type: string
+          format: currency
+          example: '99.99'
     itemId:
       description: New item id
       type: number

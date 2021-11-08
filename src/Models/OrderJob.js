@@ -364,6 +364,16 @@ class OrderJob extends BaseModel
         sorted: this.sorted,
         globalSearch: this.globalSearch
     };
+
+    findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
+    {
+        for (const bill of this.bills)
+        {
+            const lineFound = bill.lines?.find(line => line.commodityGuid === commodityGuid && line.itemId == lineTypeId);
+            if (lineFound) return lineFound;
+        }
+        return {};
+    }
 }
 
 Object.assign(OrderJob.prototype, RecordAuthorMixin);
