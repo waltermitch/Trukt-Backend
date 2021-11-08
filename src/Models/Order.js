@@ -1,9 +1,9 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
-const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJob = require('./OrderJob');
 const OrderJobType = require('./OrderJobType');
 const { DateTime } = require('luxon');
+const currency = require('currency.js');
 
 class Order extends BaseModel
 {
@@ -288,8 +288,21 @@ class Order extends BaseModel
         filterJobCategories: this.filterJobCategories
     };
 
+    calculateEstimatedRevenueAndExpense()
+    {
+        let orderEstimatedRevenue = currency(0);
+        let orderEstimatedExpense = currency(0);
+
+        for (const { estimatedRevenue, estimatedExpense } of this.jobs)
+        {
+            orderEstimatedRevenue = orderEstimatedRevenue.add(currency(estimatedRevenue));
+            orderEstimatedExpense = orderEstimatedExpense.add(currency(estimatedExpense));
+        }
+        this.estimatedRevenue = orderEstimatedRevenue.value;
+        this.estimatedExpense = orderEstimatedExpense.value;
+    }
+
 }
 
-Object.assign(Order.prototype, IncomeCalcs);
 Object.assign(Order.prototype, RecordAuthorMixin);
 module.exports = Order;
