@@ -59,6 +59,18 @@ class InvoiceLine extends BaseModel
                     from: 'rcgTms.invoiceBillLines.invoiceGuid',
                     to: 'rcgTms.invoices.invoiceGuid'
                 }
+            },
+            link: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: InvoiceLine,
+                join: {
+                    from: 'rcgTms.invoiceBillLines.guid',
+                    through: {
+                        from: 'rcgTms.invoiceBillLineLinks.line2Guid',
+                        to: 'rcgTms.invoiceBillLineLinks.line1Guid'
+                    },
+                    to: 'rcgTms.invoiceBillLines.guid'
+                }
             }
         };
 
