@@ -47,6 +47,24 @@ class InvoiceController
         }
     }
 
+    static async updateInvoiceLine(req, res)
+    {
+        const invoiceGuid = req.params.invoiceGuid;
+        const lineGuid = req.params.lineGuid;
+        const line = InvoiceLine.fromJson(req.body);
+        try
+        {
+            const result = await InvoiceService.updateInvoiceLine(invoiceGuid, lineGuid, line);
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
+    }
+
     static async LinkInvoiceLines(req, res)
     {
         try

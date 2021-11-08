@@ -162,6 +162,7 @@ InvoiceBillLine:
   properties:
     dateCharged:
       type: string
+      format: date-time      
       description: When the charge has occured.
       example: "2020-01-01T01:01:01.000Z"
     transactionNumber:
@@ -180,10 +181,20 @@ InvoiceBillLine:
       type: string
       description: Notes about the invoice or bill line.
       example: The longest notes that you have ever seen. Alex don't peek into here... neither VLAD. BAD BAD BAD
+    paid:
+      type: boolean
+      example: true
+    dateCreated:
+      type: string
+      format: date-time
+      readOnly: true
+      description: When the initial line was created.
+      example: "2020-01-01T01:01:01.000Z"  
 
 InvoiceBillBody:
   dateCharged:
     type: string
+    format: date-time
     description: When the charge has occured.
     example: "2020-01-01T01:01:01.000Z"
   transactionNumber:

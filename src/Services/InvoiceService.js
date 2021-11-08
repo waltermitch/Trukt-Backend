@@ -151,7 +151,7 @@ class InvoiceService
             }
 
             // bulk insert into Lines table
-            const [newLine1, newLine2] = await InvoiceLine.query(trx).insert(linksArray);
+            const [newLine1, newLine2] = await InvoiceLine.query(trx).insertAndFetch(linksArray);
 
             // if two lines then link lines
             if (newLine2)
@@ -163,6 +163,32 @@ class InvoiceService
             return newLine1;
         });
         return result;
+    }
+
+    static async updateInvoiceLine(invoiceGuid, lineGuid, line)
+    {
+        // To make sure if bill has been passed
+        const invoice = await Invoice.query().findById(invoiceGuid);
+
+        // if no bill throw error
+        if (!invoice)
+        {
+            throw new Error('Invoice does not exist.');
+        }
+
+        // linking and updateing
+        line.linkInvoice(invoice);
+
+        // returning updated bill
+        const newLine = await InvoiceLine.query().patchAndFetchById(lineGuid, line);
+
+        // if line doesn't exist
+        if (!newLine)
+        {
+            throw new Error('Line does not exist.');
+        }
+
+        return newLine;
     }
 
     static async LinkLines(line1Guid, line2Guid, trx = null)

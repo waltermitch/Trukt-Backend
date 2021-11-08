@@ -60,7 +60,7 @@ class BillService
             }
 
             // bulk insert into Lines table
-            const [newLine1, newLine2] = await InvoiceLine.query(trx).insert(linksArray);
+            const [newLine1, newLine2] = await InvoiceLine.query(trx).insertAndFetch(linksArray);
 
             // if invoice then link lines
             if (newLine2)
@@ -72,6 +72,32 @@ class BillService
             return newLine1;
         });
         return result;
+    }
+
+    static async updateBillLine(billGuid, lineGuid, line)
+    {
+        // To make sure if bill has been passed
+        const bill = await Bill.query().findById(billGuid);
+
+        // if no bill throw error
+        if (!bill)
+        {
+            throw new Error('Bill does not exist.');
+        }
+
+        // linking and updateing
+        line.linkBill(bill);
+
+        // returning updated bill
+        const newLine = await InvoiceLine.query().patchAndFetchById(lineGuid, line);
+
+        // if line doesn't exist
+        if (!newLine)
+        {
+            throw new Error('Line does not exist.');
+        }
+
+        return newLine;
     }
 
     static async exportBills(arr)

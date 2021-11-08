@@ -124,6 +124,9 @@ paths:
   /bill/{billGuid}/line:
     post:
       $ref: paths/bill/addBillLine.yaml
+  /bill/{billGuid}/line/{lineGuid}:
+    put:
+      $ref: paths/bill/updateBillLine.yaml
   /invoice/order/{orderGuid}:
     get:
       $ref: paths/invoice/getOrderInvoices.yaml
@@ -132,7 +135,10 @@ paths:
       $ref: paths/invoice/getJobInvoices.yaml
   /invoice/{invoiceGuid}/line:
     post:
-      $ref: paths/bill/addInvoiceLine.yaml
+      $ref: paths/invoice/addInvoiceLine.yaml
+  /invoice/{invoiceGuid}/line/{lineGuid}:
+    put:
+      $ref: paths/invoice/updateInvoiceLine.yaml
   /index/order/number:
     get:
       $ref: paths/index/order/get.yaml
