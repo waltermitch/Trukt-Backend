@@ -647,6 +647,7 @@ class OrderService
             order.jobs = orderJobs;
             order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, order.consignee);
 
+            order.calculateEstimatedRevenueAndExpense();
             order = await Order.query(trx).skipUndefined()
                 .insertGraph(order, { allowRefs: true, relate: true });
 
