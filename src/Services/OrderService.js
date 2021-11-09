@@ -172,7 +172,7 @@ class OrderService
 
                 for (const job of order.jobs)
                 {
-                    job.stops = R.clone(OrderStopLink.toStops(job.stopLinks));
+                    job.stops = OrderStopLink.toStops(job.stopLinks);
                     delete job.stopLinks;
 
                     for (const stop of job.stops)
