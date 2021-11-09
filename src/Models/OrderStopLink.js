@@ -54,6 +54,8 @@ class OrderStopLink extends BaseModel
 
     static toStops(stopLinks)
     {
+        // not to have recursive requires
+        const OrderStop = require('./OrderStop');
         const stopCache = {};
 
         for (const stopLink of stopLinks)
@@ -61,7 +63,7 @@ class OrderStopLink extends BaseModel
 
             if (!(stopLink.stop.guid in stopCache))
             {
-                const stop = stopLink.stop;
+                const stop = OrderStop.fromJson(stopLink.stop);
                 stop.commodities = [];
                 stopCache[stop.guid] = stop;
             }

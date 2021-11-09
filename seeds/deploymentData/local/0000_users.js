@@ -5,5 +5,5 @@ exports.seed = async function (knex)
         guid: process.env.SYSTEM_USER,
         name: 'TMS System',
         email: 'system@rcglogistics.com'
-     });
+    }).onConflict('guid').merge();
 };

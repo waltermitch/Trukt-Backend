@@ -1,0 +1,46 @@
+summary: Update Invoice Line
+operationId: updateInvoiceLine
+description: Update Invoice Line.
+tags:
+  - Invoice
+parameters:
+  - in: path
+    name: invoiceGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+  - in: path
+    name: lineGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true  
+
+requestBody:
+  content: 
+    application/json:
+      schema:
+        type: object
+        properties:          
+          $ref: ../../components/schemas/Finances.yaml#/InvoiceBillBody           
+        required:
+          - dateCharged
+          - transactionNumber
+          - itemId
+          - amount
+          - notes
+
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/Finances.yaml#/InvoiceBillLine
+            
+  404:
+    description: Invoice or Line not found
+    content:
+      application/json: 
+        schema:
+          type: string
+          example: Invoice does not exist.

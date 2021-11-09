@@ -1,9 +1,9 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
-const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJob = require('./OrderJob');
 const OrderJobType = require('./OrderJobType');
 const { DateTime } = require('luxon');
+const currency = require('currency.js');
 
 class Order extends BaseModel
 {
@@ -228,18 +228,11 @@ class Order extends BaseModel
                         }
                     },
                     bills: {
-                        lines: { item: true }
+                        lines: { item: true, link: true }
                     }
                 }
             }
         };
-    }
-
-    $parseDatabaseJson(json)
-    {
-        json = super.$parseDatabaseJson(json);
-        json.netProfitMargin = this.calculateNetProfitMargin(json.actualRevenue, json.actualExpense);
-        return json;
     }
 
     static allStops(order)
@@ -250,18 +243,6 @@ class Order extends BaseModel
             stops = stops.concat(job.stops);
         }
         return stops;
-    }
-
-    async $beforeInsert(context)
-    {
-        await super.$beforeInsert(context);
-        this.calculateEstimatedIncome();
-    }
-
-    async $beforeUpdate(opt, context)
-    {
-        await super.$beforeUpdate(opt, context);
-        this.calculateEstimatedIncome();
     }
 
     setClientNote(note, user)
@@ -301,8 +282,24 @@ class Order extends BaseModel
         filterJobCategories: this.filterJobCategories
     };
 
+    calculateEstimatedRevenueAndExpense()
+    {
+        if (this.jobs)
+        {
+            let orderEstimatedRevenue = currency(0);
+            let orderEstimatedExpense = currency(0);
+
+            for (const { estimatedRevenue, estimatedExpense } of this.jobs)
+            {
+                orderEstimatedRevenue = orderEstimatedRevenue.add(currency(estimatedRevenue));
+                orderEstimatedExpense = orderEstimatedExpense.add(currency(estimatedExpense));
+            }
+            this.estimatedRevenue = orderEstimatedRevenue.value;
+            this.estimatedExpense = orderEstimatedExpense.value;
+        }
+    }
+
 }
 
-Object.assign(Order.prototype, IncomeCalcs);
 Object.assign(Order.prototype, RecordAuthorMixin);
 module.exports = Order;

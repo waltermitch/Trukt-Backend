@@ -1,5 +1,8 @@
 const { RecordAuthorMixin, isNotDeleted, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
+const InvoiceBill = require('../Models/InvoiceBill');
+const Invoice = require('../Models/Invoice');
+const Bill = require('../Models/Bill');
 
 class InvoiceLine extends BaseModel
 {
@@ -39,6 +42,34 @@ class InvoiceLine extends BaseModel
                 join: {
                     from: 'rcgTms.invoiceBillLines.invoiceGuid',
                     to: 'rcgTms.invoiceBills.guid'
+                }
+            },
+            bill: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./Bill'),
+                join: {
+                    from: 'rcgTms.invoiceBillLines.invoiceGuid',
+                    to: 'rcgTms.bills.billGuid'
+                }
+            },
+            invoice: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./Invoice'),
+                join: {
+                    from: 'rcgTms.invoiceBillLines.invoiceGuid',
+                    to: 'rcgTms.invoices.invoiceGuid'
+                }
+            },
+            link: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: InvoiceLine,
+                join: {
+                    from: 'rcgTms.invoiceBillLines.guid',
+                    through: {
+                        from: 'rcgTms.invoiceBillLineLinks.line2Guid',
+                        to: 'rcgTms.invoiceBillLineLinks.line1Guid'
+                    },
+                    to: 'rcgTms.invoiceBillLines.guid'
                 }
             }
         };
@@ -115,6 +146,29 @@ class InvoiceLine extends BaseModel
         return json;
     }
 
+    linkBill(bill)
+    {
+        if (bill instanceof Bill)
+        {
+            this.invoiceGuid = bill.billGuid;
+        }
+        else if (bill instanceof InvoiceBill)
+        {
+            this.invoiceGuid = bill.guid;
+        }
+    }
+
+    linkInvoice(invoice)
+    {
+        if (invoice instanceof Invoice)
+        {
+            this.invoiceGuid = invoice.invoiceGuid;
+        }
+        else if (invoice instanceof InvoiceBill)
+        {
+            this.invoiceGuid = invoice.guid;
+        }
+    }
 }
 
 Object.assign(InvoiceLine.prototype, RecordAuthorMixin);

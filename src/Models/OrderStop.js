@@ -131,6 +131,11 @@ class OrderStop extends BaseModel
     {
         this.setDates('Scheduled', dateType, startDate, endDate);
     }
+
+    static get contactTypes()
+    {
+        return ['primaryContact', 'alternativeContact'];
+    }
 }
 
 Object.assign(OrderStop.prototype, RecordAuthorMixin);
