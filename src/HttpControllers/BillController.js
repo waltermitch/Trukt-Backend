@@ -36,7 +36,7 @@ class BillController
         }
     }
 
-    static async softDeleteBillLine(req, res)
+    static async deleteBillLine(req, res)
     {
         const billGuid = req.params.billGuid;
         const lineGuid = req.params.lineGuid;
@@ -53,7 +53,7 @@ class BillController
         }
     }
 
-    static async softDeleteBillLines(req, res)
+    static async deleteBillLines(req, res)
     {
         const billGuid = req.params.billGuid;
         const lineGuids = req.body;
