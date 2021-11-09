@@ -203,7 +203,7 @@ class InvoiceService
         }
 
         // returning updated bill
-        const newLine = await InvoiceLine.query().patchAndFetchById(lineGuid, { isDeleted: true });
+        const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
 
         // if line doesn't exist
         if (!newLine)
@@ -234,7 +234,7 @@ class InvoiceService
             // creating array of patch updates
             for (let i = 0; i < lineGuids.length; i++)
             {
-                patchArrays.push(InvoiceLine.query(trx).findById(lineGuids[i]).patch({ isDeleted: true }));
+                patchArrays.push(InvoiceLine.query(trx).deleteById(lineGuids[i]));
             }
 
             // executing all updates

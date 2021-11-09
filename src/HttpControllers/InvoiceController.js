@@ -65,7 +65,7 @@ class InvoiceController
         }
     }
 
-    static async softDeleteInvoiceLine(req, res)
+    static async deleteInvoiceLine(req, res)
     {
         const invoiceGuid = req.params.invoiceGuid;
         const lineGuid = req.params.lineGuid;
@@ -82,7 +82,7 @@ class InvoiceController
         }
     }
 
-    static async softDeleteInvoiceLines(req, res)
+    static async deleteInvoiceLines(req, res)
     {
         const invoiceGuid = req.params.invoiceGuid;
         const lineGuids = req.body;
