@@ -245,12 +245,6 @@ class Order extends BaseModel
         return stops;
     }
 
-    async $beforeInsert(context)
-    {
-        await super.$beforeInsert(context);
-        this.calculateEstimatedRevenueAndExpense();
-    }
-
     setClientNote(note, user)
     {
         if (note && note.length > 3000)
@@ -290,16 +284,19 @@ class Order extends BaseModel
 
     calculateEstimatedRevenueAndExpense()
     {
-        let orderEstimatedRevenue = currency(0);
-        let orderEstimatedExpense = currency(0);
-
-        for (const { estimatedRevenue, estimatedExpense } of this.jobs)
+        if (this.jobs)
         {
-            orderEstimatedRevenue = orderEstimatedRevenue.add(currency(estimatedRevenue));
-            orderEstimatedExpense = orderEstimatedExpense.add(currency(estimatedExpense));
+            let orderEstimatedRevenue = currency(0);
+            let orderEstimatedExpense = currency(0);
+
+            for (const { estimatedRevenue, estimatedExpense } of this.jobs)
+            {
+                orderEstimatedRevenue = orderEstimatedRevenue.add(currency(estimatedRevenue));
+                orderEstimatedExpense = orderEstimatedExpense.add(currency(estimatedExpense));
+            }
+            this.estimatedRevenue = orderEstimatedRevenue.value;
+            this.estimatedExpense = orderEstimatedExpense.value;
         }
-        this.estimatedRevenue = orderEstimatedRevenue.value;
-        this.estimatedExpense = orderEstimatedExpense.value;
     }
 
 }

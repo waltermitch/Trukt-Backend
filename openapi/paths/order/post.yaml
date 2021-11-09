@@ -16,7 +16,7 @@ requestBody:
           instructions:
             $ref: '../../components/schemas/Order.yaml#/Order/properties/instructions'
           clientNotes:
-            $ref: '..\..\components\schemas\Order.yaml#/Order/properties/clientNotes'
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/clientNotes'
           quotedRevenue:
             $ref: '../../components/schemas/Order.yaml#/Order/properties/quotedRevenue'
           estimatedDistance:
@@ -81,14 +81,14 @@ requestBody:
                       type: array
                       items:
                         type: object
-                        properties: 
-                          index: 
+                        properties:
+                          index:
                             type: string
                             description: Unique index per commodity, this field can be any string value
                           expense:
-                            $ref: ..\..\components\schemas\Expense.yaml#/expense/properties/amount
+                            $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
                           revenue:
-                            $ref: ..\..\components\schemas\Expense.yaml#/expense/properties/amount
+                            $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
                         required:
                           - index
                           - expense
@@ -171,9 +171,9 @@ responses:
               default: false
               example: false
             estimatedRevenue:
-              $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedRevenue'
+              $ref: '../../components/schemas/Order.yaml#/Order/properties/estimatedRevenue'
             estimatedExpense:
-              $ref: '..\..\components\schemas\Order.yaml#/Order/properties/estimatedExpense'          
+              $ref: '../../components/schemas/Order.yaml#/Order/properties/estimatedExpense'
             quotedRevenue:
               $ref: '#/requestBody/content/application~1json/schema/properties/quotedRevenue'
             estimatedIncome:
