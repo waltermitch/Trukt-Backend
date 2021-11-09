@@ -1,67 +1,65 @@
 const OrderStopLink = require('../Models/OrderStopLink');
-const OrderStop = require('../Models/OrderStop');
+const knex = require('../Models/BaseModel').knex();
+const { DateTime } = require('luxon');
 
 class OrderStopService
 {
-    /*
-    Business Logic:
-    You will also need the Order’s OrderStopLinks.
-
-    When the status is “started” you will only mark the OrderStopLinks is_started column
-    and set the date_started field to the date field value from the payload.
-
-    When the status is “completed” you will mark the OrderStopLinks is_started
-    and is_completed column.
-    Set the date_completed column to the date field value from the payload.
-    If is_started is empty and date_started is null, then update the date_started to the date field value from the payload.
-
-    You will need to update the OrderStopLinks for the Order based on the status of the Jobs' OrderStopLinks.
-    Query for all of the OrderStopLinks that belong to each OrderStop that belong to an Order.
-    Check the OrderStopLinks are “started” that belong ONLY to the Jobs.
-    If ANY of the Jobs' commodity’s OrderStopLinks are “started”, then set the Order’s OrderStopLinks to “is_started” for that commodity.
-    Set the date to the earliest is_started date.
-    Check the OrderStopLinks are  “completed” that belong ONLY to the Jobs.
-    If ALL of the Jobs' commodity’s OrderStopLinks are “completed”, then set the Order’s OrderStopLinks to “completed” for that commodity.
-    Set the date to the latest is_completed date.
-    If ANY of the commoditys' OrderStopLinks are “started” for a particular OrderStop, then set the “date_started” of the OrderStop to the earliest date from the OrderStopLinks and set “started” column.
-    Set the “status” column to “En Route” irrelevant if the OrderStop type is “delivery” or “pickup”.
-    If ALL of the commoditys' OrderStopLinks are “completed” for a particular OrderStop, then set the “date_completed” of the OrderStop to the latest date from the OrderStopLinks and set “completed” column to true.
-    Set the “status” column to “Picked Up” or “Delivered” based on the OrderStop type.
-    Add status update to the status manager based on the OrderStop status if it changed. (This is the activity log.)
-    “Stop Marked Picked Up” - include the stop guid and commodities to the activity log.
-    “Stop Marked Delivered” - include the stop guid and commodities to the activity log.
-    Notify the Order State manager that the order was updated. (State manager will update the status of the order and jobs)
-    */
     static async updateStopStatus({ jobGuid, stopGuid, status }, { commodities, date })
     {
-        // update array
-        const updates = [];
+        // init transaction
+        const trx = await knex.transaction();
 
-        // Find the proper OrderStopLinks based on the commodity guids, job guid and stop guid.
-        const links = await OrderStopLink.query().where({ 'job_guid': jobGuid, 'stop_guid': stopGuid }).whereIn('commodity_guid', commodities);
+        // validate date (can remove this if we will rely on openapi validation)
+        if (!DateTime.fromISO(date).isValid)
+            throw new Error('Invalid date');
 
-        const linksPayload = {};
+        // first update the job stop links
+        let linksQuery = `UPDATE rcg_tms.order_stop_links
+                 SET
+                    is_started = COALESCE(NULLIF(is_started, false), true),
+                    date_started = COALESCE(NULLIF(date_started, NULL), '${date}')`;
 
-        if (status === 'started')
-        {
-            linksPayload.is_started = true;
-            linksPayload.date_started = date;
-        }
-        else if (status === 'completed')
-        {
-            linksPayload.is_started = true;
-            linksPayload.is_completed = true;
-            linksPayload.date_completed = date;
-        }
+        if (status === 'completed')
+            linksQuery += `, is_completed = COALESCE(NULLIF(is_completed, false), true),
+                           date_completed = COALESCE(NULLIF(date_completed, NULL), '${date}')`;
 
-        // check the status of the links if the current update is the "completed one"
-        for (const link of links)
-        {
-            if (link.is_started)
-            {
-                updates.push(OrderStopLink.query().update(linksPayload).where({ id: link.id }));
-            }
-        }
+        // append conditions (job_guid IS NULL should take care of updating the respective order stoplink)
+        linksQuery += ` WHERE (job_guid = '${jobGuid}' OR job_guid IS NULL) AND stop_guid = '${stopGuid}' AND commodity_guid IN ('${commodities.join('\',\'')}')
+                        RETURNING order_guid`;
+
+        // update all the links, we need order_guid to update order links after this
+        await knex.raw(linksQuery).transacting(trx);
+
+        // check if all the links are completed for this stop
+        const stopLinks = await OrderStopLink.query().where({ 'stop_guid': stopGuid, 'is_completed': false });
+
+        // calculate stop status
+        let stopQuery = `UPDATE rcg_tms.order_stops
+                         SET
+                            is_started = COALESCE(NULLIF(is_started, false), true),
+                            date_started = COALESCE(NULLIF(date_started, NULL), '${date}')`;
+
+        // if all the order stop links are completed for this stop, update the order stop
+        if (stopLinks.length === 0)
+            stopQuery += `, is_completed = COALESCE(NULLIF(is_completed, false), true),
+                            date_completed = COALESCE(NULLIF(date_completed, NULL), '${date}'),
+                            status = 
+                            CASE 
+                                WHEN stop_type = 'pickup' THEN 'Picked Up'
+                                WHEN stop_type = 'delivery' THEN 'Delivered'
+                            END`;
+        else
+            stopQuery += ', status = \'En Route\'';
+
+        // append conditions
+        stopQuery += ` WHERE guid = '${stopGuid}'`;
+
+        await knex.raw(stopQuery).transacting(trx);
+
+        // commit transaction
+        await trx.commit();
+
+        return stopLinks;
     }
 }
 
