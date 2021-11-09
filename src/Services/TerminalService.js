@@ -136,7 +136,8 @@ class TerminalService
         catch (error)
         {
             const message = `Error, terminal ${terminal?.guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
-            console.error(message);
+
+            // console.error(message);
             await trx.rollback();
             throw { message };
         }
