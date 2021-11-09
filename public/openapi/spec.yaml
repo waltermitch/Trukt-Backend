@@ -3195,6 +3195,46 @@ paths:
           description: Order Not Found
           content:
             application/json: {}
+  '/job/{jobGuid}/stop/{stopGuid}/status/{status}':
+    put:
+      summary: Update a Stop Status on a Job
+      operationId: updateStopStatus
+      description: Update the Status of a Stop on a job
+      tags:
+        - Job
+      parameters:
+        - in: path
+          name: jobGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: stopGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: status
+          schema:
+            $ref: '#/components/schemas/stopStatus'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commodities:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/guid'
+                date:
+                  $ref: '#/components/schemas/dateTime'
+      responses:
+        '200':
+          description: Notes
+          content:
+            application/json: {}
 components:
   schemas:
     guid:
@@ -5203,6 +5243,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/guid'
             - description: The guid of the bill/invoice that the error occurred in.
+    stopStatus:
+      type: string
+      enum:
+        - completed
+        - started
   responses:
     ValidationErrorResponse:
       description: Bad Request

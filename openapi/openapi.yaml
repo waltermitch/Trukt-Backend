@@ -181,3 +181,6 @@ paths:
   /bill/order/{orderGuid}/export:
     put:
       $ref: paths/bill/export.yaml
+  /job/{jobGuid}/stop/{stopGuid}/status/{status}:
+    put:
+      $ref: paths/job/updateStopStatus.yaml
