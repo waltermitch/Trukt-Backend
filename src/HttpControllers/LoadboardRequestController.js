@@ -1,7 +1,6 @@
 const LoadboardRequestService = require('../Services/LoadboardRequestService');
-const HttpRouteController = require('./HttpRouteController');
 
-class LoadboardRequestController extends HttpRouteController
+class LoadboardRequestController
 {
     static async getByJobGuid(req, res)
     {
