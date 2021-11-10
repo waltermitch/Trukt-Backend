@@ -1,5 +1,5 @@
 summary: Update Bill Line
-operationId: updateIBillLine
+operationId: updateBillLine
 description: Update Bill Line.
 tags:
   - Bill

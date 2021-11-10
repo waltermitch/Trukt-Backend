@@ -36,6 +36,40 @@ class BillController
         }
     }
 
+    static async deleteBillLine(req, res)
+    {
+        const billGuid = req.params.billGuid;
+        const lineGuid = req.params.lineGuid;
+        try
+        {
+            const result = await BillService.deleteBillLine(billGuid, lineGuid);
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
+    }
+
+    static async deleteBillLines(req, res)
+    {
+        const billGuid = req.params.billGuid;
+        const lineGuids = req.body;
+        try
+        {
+            const result = await BillService.deleteBillLines(billGuid, lineGuids);
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
+    }
+
     static async createBillLine(req, res)
     {
         const billGuid = req.params.billGuid;
