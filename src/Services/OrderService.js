@@ -649,7 +649,7 @@ class OrderService
 
             order.calculateEstimatedRevenueAndExpense();
             order = await Order.query(trx).skipUndefined()
-                .insertGraph(order, { allowRefs: true, relate: true });
+                .insertGraph(order, { allowRefs: true });
 
             await trx.commit();
 
