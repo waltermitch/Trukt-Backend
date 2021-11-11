@@ -117,16 +117,21 @@ paths:
     put:
       $ref: paths/invoice/linkLine.yaml
     delete:
-      $ref: paths/invoice/unlinkLine.yaml    
+      $ref: paths/invoice/unlinkLine.yaml
   /bill/{billGuid}:
     get:
       $ref: paths/bill/get.yaml
   /bill/{billGuid}/line:
     post:
       $ref: paths/bill/addBillLine.yaml
+  /bill/{billGuid}/lines:
+    delete:
+      $ref: paths/bill/deleteBillLines.yaml
   /bill/{billGuid}/line/{lineGuid}:
     put:
       $ref: paths/bill/updateBillLine.yaml
+    delete:
+      $ref: paths/bill/deleteBillLine.yaml
   /invoice/order/{orderGuid}:
     get:
       $ref: paths/invoice/getOrderInvoices.yaml
@@ -136,9 +141,14 @@ paths:
   /invoice/{invoiceGuid}/line:
     post:
       $ref: paths/invoice/addInvoiceLine.yaml
+  /invoice/{invoiceGuid}/lines:
+    delete:
+      $ref: paths/invoice/deleteInvoiceLines.yaml
   /invoice/{invoiceGuid}/line/{lineGuid}:
     put:
       $ref: paths/invoice/updateInvoiceLine.yaml
+    delete:
+      $ref: paths/invoice/deleteInvoiceLine.yaml
   /index/order/number:
     get:
       $ref: paths/index/order/get.yaml
@@ -201,3 +211,9 @@ paths:
   /job/{jobGuid}/stop/{stopGuid}/status/{status}:
     put:
       $ref: paths/job/updateStopStatus.yaml
+  /bulk/order/users:
+    put:
+      $ref: paths/bulk/updateOrderUsers.yaml
+  /bulk/job/users:
+    put:
+      $ref: paths/bulk/updateJobUsers.yaml

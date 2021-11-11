@@ -1,8 +1,7 @@
-const HttpRouteController = require('./HttpRouteController');
 const IndexNumberService = require('../Services/IndexNumberService');
 const { orderNumberRegex } = require('../Utils/Regexes');
 
-class IndexNumberController extends HttpRouteController
+class IndexNumberController
 {
 
     static async nextOrderNumber(req, res, next)

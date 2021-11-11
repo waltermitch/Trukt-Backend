@@ -1,0 +1,55 @@
+summary: Update User Fields In Jobs
+operationId: updateJobUsers
+description: Updates the user fields, like salesperson, dispatcher in the jobs specified in the request.
+tags:
+  - Bulk
+requestBody:
+  content:
+    application/json:
+      schema:
+        properties:
+          jobs:
+            type: array
+            items:
+              type: string
+              description: Job Guid
+              $ref: '../../components/schemas/Common.yaml#/guid'
+          dispatcher:
+            type: string
+            description: Dispatcher Guid
+            $ref: '../../components/schemas/Common.yaml#/guid'
+        required:
+          - jobs
+responses:
+  200:
+    description: Update Received Successfully (note that this does not mean every job was updated successfully)
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            jobGuid:
+              type: object
+              description: This is key value pair of jobGuid
+              properties:
+                error:
+                  type: string
+                  description: Error message, null if no error
+                  nullable: true
+                status:
+                  type: number
+                  description: Signifies the status of this specific job update
+                  enum:
+                    - 200
+                    - 400
+                    - 404
+  400:
+    description: Didn't provide any values to update, (i.e missing "dispatcher")
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: Missing Update Values

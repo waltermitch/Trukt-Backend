@@ -1,5 +1,4 @@
 const TerminalService = require('../Services/TerminalService');
-const HttpRouteController = require('./HttpRouteController');
 const { uuidRegex } = require('../Utils/Regexes');
 
 const searchableFields = [
@@ -14,7 +13,7 @@ const searchableFields = [
     'zip'
 ];
 
-class TerminalController extends HttpRouteController
+class TerminalController
 {
     static async search(req, res, next)
     {
