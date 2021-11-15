@@ -111,7 +111,7 @@ class TerminalService
      */
     static async getUnverifiedTerminals(limit = 100)
     {
-        return await Terminal.query().select()
+        return Terminal.query().select()
             .where('isResolved', false)
             .andWhere('resolvedTimes', '<', 3)
             .orderBy('dateCreated', 'resolvedTimes')
@@ -125,12 +125,17 @@ class TerminalService
         {
             const terminalAddress = Terminal.createStringAddress(terminal);
             const arcgisAddress = await ArcgisClient.findGeocode(terminalAddress);
-            const terminalToUpdate = TerminalService.updateTerminalInformation(arcgisAddress, guid, SYSTEM_USER);
+            const terminalToUpdate = TerminalService.updateTerminalInformation(arcgisAddress, terminal, SYSTEM_USER);
 
             return await TerminalService.updateTerminal(terminalToUpdate);
         }
         catch (error)
         {
+            /**
+             * Some terminals may return an error when inserting due to unique coordinates constraint,
+             * in those cases we mark those termianls as resolved = false (Which is the default) and resolved_times = 3
+             * so we stop checking that terminal but still know that is not resolved.
+             */
             try
             {
                 const message = `Error, terminal ${guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
@@ -164,11 +169,12 @@ class TerminalService
      * Longitude is arcgis.X
      * https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find-address-candidates.htm#ESRI_SECTION1_CF39B0C8FC2547C3A52156F509C555FC
      */
-    static updateTerminalInformation(arcgisAddress, terminalGuid, system_user)
+    static updateTerminalInformation(arcgisAddress, { guid, resolvedTimes }, system_user)
     {
         const termninalToUpdate = {
-            guid: terminalGuid,
-            updatedByGuid: system_user
+            guid,
+            updatedByGuid: system_user,
+            resolvedTimes
         };
 
         if (ArcgisClient.isAddressFound(arcgisAddress))
