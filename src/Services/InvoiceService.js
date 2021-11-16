@@ -313,6 +313,9 @@ class InvoiceService
         }
     }
 
+    // This method will need to be redone, post Alpha launch
+    // very janky and inefficient, no time to fix
+    // TODO: refactor this method
     static async exportInvoices(arr)
     {
         // array for results
@@ -347,7 +350,7 @@ class InvoiceService
                 invoice.orderNumber = order.number;
 
                 if (enabledModules.includes('coupa') && ['LKQ Corporation', 'LKQ Self Service']?.includes(order?.client?.name))
-                    CoupaInvoices.push(order);
+                    CoupaInvoices.push(invoice);
                 else if (enabledModules.includes('quickbooks'))
                     QBInvoices.push(invoice);
             }
@@ -389,13 +392,30 @@ class InvoiceService
         {
             if (!data.error)
             {
-                const invoice = await InvoiceBill.query().patchAndFetchById(guid, { externalSourceData: data });
+                // start trx
+                const trx = await InvoiceBill.transaction();
 
-                results.push(invoice);
+                // update all invoices and their lines
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true })], InvoiceLine.query(trx).patch({ isPaid: true }).where('invoiceGuid', guid));
+
+                if (proms[0].status == 'fulfilled')
+                {
+                    await trx.commit();
+                    results.push(proms[0].value);
+                }
+                else
+                {
+                    await trx.rollback();
+                    results.push(proms[0].reason);
+                }
             }
             else
                 results.push(data.error);
         }));
+
+        // check length of results
+        if (results.length == 0)
+            return [{ success: true, message: 'All Invoices Already Paid For This Order' }];
 
         return results;
     }
