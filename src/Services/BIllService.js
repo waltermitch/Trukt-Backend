@@ -142,11 +142,12 @@ class BillService
             // creating array of patch updates
             for (let i = 0; i < lineGuids.length; i++)
             {
-                patchArrays.push(InvoiceLine.query(trx).deleteById(lineGuids[i]));
+                patchArrays.push(InvoiceLine.query(trx).delete().where('guid', lineGuids[i]).where('invoiceGuid', billGuid));
             }
 
             // executing all updates
             const deletedLines = await Promise.all(patchArrays);
+            console.log(deletedLines);
 
             // if any failed will return guids that failed
             if (deletedLines.includes(0))
