@@ -202,8 +202,6 @@ class InvoiceController
     {
         const result = (await InvoiceService.exportInvoices([req.params.orderGuid]))?.[0];
 
-        console.log(result);
-
         if (result)
         {
             if (result.error)
