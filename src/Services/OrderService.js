@@ -758,7 +758,6 @@ class OrderService
         return;
     }
 
-    // TODO: will have to update with better logic
     static async validateStopsBeforeUpdate(oldOrder, newOrder)
     {
         // get OrderStops and JobStops from database Fancy smancy queries
@@ -783,7 +782,7 @@ class OrderService
             for (let i = 0; i < updatedOrder.stops.length; i++)
             {
                 // if terminals are not the same
-                if (!shallowEqual(updatedOrder.stops[i].terminal, oldOrder.stops[i].terminal))
+                if (!R.equals(updatedOrder.stops[i].terminal, oldOrder.stops[i].terminal))
                 {
                     console.log('Updating Order Terminal');
 
@@ -816,7 +815,7 @@ class OrderService
                 for (let j = 0; j < updatedOrder.jobs[i].stops.length; j++)
                 {
                     // if terminals are not the same
-                    if (!shallowEqual(updatedOrder.jobs[i].stops[j].terminal, oldOrder.jobs[i].stops[j].terminal))
+                    if (!R.equals(updatedOrder.jobs[i].stops[j].terminal, oldOrder.jobs[i].stops[j].terminal))
                     {
                         console.log('Updating Job Stop!');
 
@@ -2660,21 +2659,3 @@ class OrderService
 }
 
 module.exports = OrderService;
-
-function shallowEqual(object1, object2)
-{
-    const keys1 = Object.keys(object1);
-    const keys2 = Object.keys(object2);
-    if (keys1.length !== keys2.length)
-    {
-        return false;
-    }
-    for (const key of keys1)
-    {
-        if (object1[key] !== object2[key])
-        {
-            return false;
-        }
-    }
-    return true;
-}
