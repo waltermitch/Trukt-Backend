@@ -1,0 +1,27 @@
+{
+    "table": "payment_term_mappings",
+    "schema": "quickbooks",
+    "unique": "term_id",
+    "data": [
+        {
+            "qb_term_id": "6",
+            "term_id": 1
+        },
+        {
+            "qb_term_id": "9",
+            "term_id": 2
+        },
+        {
+            "qb_term_id": "9",
+            "term_id": 3
+        },
+        {
+            "qb_term_id": "7",
+            "term_id": 4
+        },
+        {
+            "qb_term_id": "8",
+            "term_id": 5
+        }
+    ]
+}
