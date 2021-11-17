@@ -213,3 +213,7 @@ InvoiceBillBody:
     type: string
     description: Notes about the invoice or bill line.
     example: The longest notes that you have ever seen. Alex don't peek into here... neither VLAD. BAD BAD BAD
+  isPaid:
+    type: boolean
+    description: if item has been mark correctly.
+    example: true
