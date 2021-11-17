@@ -54,7 +54,7 @@ exports.up = function (knex)
         --This prevent to update the revenue or expense with null values.
         --For initial order creation the values are calculated in the server, this is because to allow the calcs to be done here
         -- it will require refactoring almost completly order.create to allow invoice_lines to be created with an existing order, job, bill and invoice
-        IF (order_guid is not NULL and job_guid is not NULL) THEN
+        IF (order_guid is not NULL OR job_guid is not NULL) THEN
             IF (TG_OP = 'UPDATE') THEN
                 IF (TG_WHEN = 'AFTER') THEN
                     amount = NEW.amount - OLD.amount;
