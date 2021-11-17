@@ -6,7 +6,7 @@ const LINKS_FUNCTION_NAME = 'rcg_line_links_sum_calculator';
 const LINKS_TRIGGER_NAME = 'rcg_lines_links_trigger_update';
 const LINKS_TABLE_NAME = 'invoice_bill_line_links';
 
-exports.up = function(knex)
+exports.up = function (knex)
 {
     return knex.raw(`
         CREATE OR REPLACE FUNCTION rcg_tms.${LINE_FUNCTION_NAME}()
@@ -147,24 +147,27 @@ exports.up = function(knex)
         WHERE (ibl.guid IN (COALESCE(NEW.line1_guid,OLD.line1_guid), COALESCE(NEW.line2_guid, OLD.line2_guid)))
         INTO job_guid;
 
-        IF (TG_OP = 'INSERT') THEN
-            IF (is_revenue) THEN
-                UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + invoice_line_amount
-                WHERE guid = job_guid AND job_guid IS NOT null; 
-            ELSE
-                UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + invoice_line_amount
-                WHERE guid = job_guid AND job_guid IS NOT null;
-            END IF;
-        -- The update operation case is already covered in the function rcg_tms.invoice_bill_links_func.
-        -- That function already forbids update operations on records of this table so
-        -- it is not needed here.
-        ELSIF (TG_OP = 'DELETE') THEN
-            IF (is_revenue) THEN
-                UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - invoice_line_amount
-                WHERE guid = job_guid AND job_guid IS NOT null;
-            ELSE
-                UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - invoice_line_amount
-                WHERE guid = job_guid AND job_guid IS NOT null;
+        --This prevent to update the revenue or expense with null values
+        IF (invoice_line_amount is not NULL) THEN
+            IF (TG_OP = 'INSERT') THEN
+                IF (is_revenue) THEN
+                    UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue + invoice_line_amount
+                    WHERE guid = job_guid AND job_guid IS NOT null; 
+                ELSE
+                    UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense + invoice_line_amount
+                    WHERE guid = job_guid AND job_guid IS NOT null;
+                END IF;
+            -- The update operation case is already covered in the function rcg_tms.invoice_bill_links_func.
+            -- That function already forbids update operations on records of this table so
+            -- it is not needed here.
+            ELSIF (TG_OP = 'DELETE') THEN
+                IF (is_revenue) THEN
+                    UPDATE rcg_tms.order_jobs SET actual_revenue = actual_revenue - invoice_line_amount
+                    WHERE guid = job_guid AND job_guid IS NOT null;
+                ELSE
+                    UPDATE rcg_tms.order_jobs SET actual_expense = actual_expense - invoice_line_amount
+                    WHERE guid = job_guid AND job_guid IS NOT null;
+                END IF;
             END IF;
         END IF;
         RETURN NEW;
@@ -189,7 +192,7 @@ exports.up = function(knex)
   `);
 };
 
-exports.down = function(knex)
+exports.down = function (knex)
 {
     return knex.raw(`  
     DROP TRIGGER ${LINE_TRIGGER_NAME} ON rcg_tms.${TABLE_NAME};

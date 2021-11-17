@@ -282,20 +282,32 @@ class Order extends BaseModel
         filterJobCategories: this.filterJobCategories
     };
 
-    calculateEstimatedRevenueAndExpense()
+    async $beforeInsert(queryContext)
+    {
+        this.calculateRevenueAndExpense();
+        await super.$beforeInsert(queryContext);
+    }
+
+    /**
+     * For order creation. given that all invoices have "transport", the actual and estimated expense and revenue have the same values
+     */
+    calculateRevenueAndExpense()
     {
         if (this.jobs)
         {
-            let orderEstimatedRevenue = currency(0);
-            let orderEstimatedExpense = currency(0);
+            let revenue = currency(0);
+            let expense = currency(0);
 
             for (const { estimatedRevenue, estimatedExpense } of this.jobs)
             {
-                orderEstimatedRevenue = orderEstimatedRevenue.add(currency(estimatedRevenue));
-                orderEstimatedExpense = orderEstimatedExpense.add(currency(estimatedExpense));
+                revenue = revenue.add(currency(estimatedRevenue));
+                expense = expense.add(currency(estimatedExpense));
             }
-            this.estimatedRevenue = orderEstimatedRevenue.value;
-            this.estimatedExpense = orderEstimatedExpense.value;
+            this.estimatedRevenue = revenue.value;
+            this.actualRevenue = revenue.value;
+
+            this.estimatedExpense = expense.value;
+            this.actualExpense = expense.value;
         }
     }
 
