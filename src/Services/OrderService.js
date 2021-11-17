@@ -235,7 +235,7 @@ class OrderService
             const jobsDataCheck = [];
 
             // order object will be used to link OrderStopLink from the job
-            let order = Order.fromJson({
+            const order = Order.fromJson({
                 // these fields cannot be set by the user
                 status: 'new',
                 isDeleted: false,
@@ -251,8 +251,6 @@ class OrderService
                 estimatedDistance: orderObj.estimatedDistance,
                 isDummy: orderObj.isDummy || false,
                 isTender: orderObj.isTender || false,
-                estimatedExpense: orderObj.estimatedExpense || 0,
-                estimatedRevenue: orderObj.estimatedRevenue || 0,
                 quotedRevenue: orderObj.quotedRevenue,
                 dateExpectedCompleteBy: orderObj.dateExpectedCompleteBy
             });
@@ -352,8 +350,6 @@ class OrderService
             orderInfoPromises.push(Promise.all(allStops.map((stop) =>
             {
                 const terminal = terminalsCache[stop.terminal];
-
-                console.log(stop.terminal, terminal);
                 for (const contactType of OrderStop.contactTypes)
                 {
                     if (stop[contactType])
@@ -446,73 +442,51 @@ class OrderService
                 // remove the stops so that they are not re-created in the graph insert
                 delete job.stops;
 
+                const [
+                    jobVendor,
+                    jobVendorContact,
+                    jobVendorAgent,
+                    jobDispatcher
+                ] = await Promise.all([
+                    isUseful(job.vendor) ? SFAccount.query(trx).modify('byType', 'carrier').findById(job.vendor.guid) : delete job.vendor,
+                    isUseful(job.vendorContact) ? SFContact.query(trx).findById(job.vendorContact.guid) : delete job.vendorContact,
+                    isUseful(job.vendorAgent) ? SFContact.query(trx).findById(job.vendorAgent.guid) : delete job.vendorAgent,
+                    isUseful(job.dispatcher) ? User.query(trx).findById(job.dispatcher.guid) : delete job.dispatcher
+                ]);
+
                 // vendor and driver are not always known when creating an order
                 // most orders created will not have a vendor attached, but on the offchance they might?
                 if (isUseful(job.vendor))
                 {
-                    const vendor = await SFAccount.query(trx)
-                        .modify('byType', 'carrier')
-                        .findById(job.vendor.guid);
-                    if (!vendor)
-                    {
-                        throw new Error('vendor doesnt exist');
-                    }
-                    job.graphLink('vendor', vendor);
-                }
-                else
-                {
-                    delete job.vendor;
+                    if (!jobVendor)
+                        throw new Error('Vendor doesnt exist');
+
+                    job.graphLink('vendor', jobVendor);
                 }
 
                 if (isUseful(job.vendorContact))
                 {
-                    const contact = await SFContact.query(trx).findById(
-                        job.vendorContact.guid
-                    );
-                    if (!contact)
-                    {
-                        throw new Error('vendor contact doesnt exist');
-                    }
-                    job.graphLink('vendorContact', contact);
-                }
-                else
-                {
-                    delete job.vendorContact;
+                    if (!jobVendorContact)
+                        throw new Error('Vendor contact doesnt exist');
+
+                    job.graphLink('vendorContact', jobVendorContact);
                 }
 
                 // this is the driver and what not
                 if (isUseful(job.vendorAgent))
                 {
-                    const contact = await SFContact.query(trx).findById(
-                        job.vendorAgent.guid
-                    );
-                    if (!contact)
-                    {
-                        throw new Error('vendor agent doesnt exist');
-                    }
-                    job.graphLink('vendorAgent', contact);
-                }
-                else
-                {
-                    delete job.vendorAgent;
+                    if (!jobVendorAgent)
+                        throw new Error('Vendor agent doesnt exist');
+
+                    job.graphLink('vendorAgent', jobVendorAgent);
                 }
 
                 if (isUseful(job.dispatcher))
                 {
-                    const dispatcher = await User.query(trx).findById(job.dispatcher.guid);
-                    if (!dispatcher)
-                    {
-                        throw new Error(
-                            'dispatcher ' +
-                            JSON.stringify(job.dispatcher) +
-                            ' doesnt exist'
-                        );
-                    }
-                    job.graphLink('dispatcher', dispatcher);
-                }
-                else
-                {
-                    delete job.dispatcher;
+                    if (!jobDispatcher)
+                        throw new Error(`Dispatcher ${job.dispatcher.guid} doesnt exist`);
+
+                    job.graphLink('dispatcher', jobDispatcher);
                 }
 
                 const jobType = jobTypes.find((it) =>
@@ -583,31 +557,6 @@ class OrderService
                 order.jobs.push(job);
             }
 
-            Object.assign(order, {
-                status: 'new',
-                instructions:
-                    orderObj.instructions || 'no instructions provided',
-                referenceNumber: orderObj.referenceNumber,
-                bol: orderObj.bol,
-                bolUrl: orderObj.bolUrl,
-                estimatedDistance: orderObj.estimatedDistance,
-                isDummy: orderObj.isDummy || false,
-
-                isTender: orderObj.isTender || false,
-
-                // this field cannot be set by the user
-                isDeleted: false,
-
-                // this field cannot be set by the user
-                isCompleted: false,
-                estimatedExpense: orderObj.estimatedExpense || null,
-                estimatedRevenue: orderObj.estimatedRevenue || null,
-                quotedRevenue: orderObj.quotedRevenue,
-                dateExpectedCompleteBy: order.dateExpectedCompleteBy,
-                dateCompleted: null,
-                invoices: []
-            });
-
             order.setClientNote(orderObj.clientNotes?.note, currentUser);
 
             // this part creates all the financial records for this order
@@ -616,8 +565,8 @@ class OrderService
 
             for (const job of order.jobs)
             {
-                let jobEstimatedExpense = currency(0);
-                let jobEstimatedRevenue = currency(0);
+                let expense = currency(0);
+                let revenue = currency(0);
 
                 // Take out commodities from jobs cause that elements can't be save as it comes
                 const { commodities: jobInputCommodities, ...jobData } = job;
@@ -628,8 +577,8 @@ class OrderService
                     const commodityRevenue = commodity.revenue;
                     const commodityExpense = commodity.expense;
 
-                    jobEstimatedExpense = jobEstimatedExpense.add(currency(commodityExpense));
-                    jobEstimatedRevenue = jobEstimatedRevenue.add(currency(commodityRevenue));
+                    expense = expense.add(currency(commodityExpense));
+                    revenue = revenue.add(currency(commodityRevenue));
 
                     const orderInvoiceLine = OrderService.createInvoiceLineGraph(
                         commodityRevenue,
@@ -653,8 +602,14 @@ class OrderService
                 if (jobBillLines)
                     jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser);
 
-                jobData.estimatedExpense = jobEstimatedExpense.value;
-                jobData.estimatedRevenue = jobEstimatedRevenue.value;
+                /**
+                * For order creation. given that all invoices are "transport", the actual and estimated expense and revenue have the same values
+                */
+                jobData.estimatedExpense = expense.value;
+                jobData.actualExpense = expense.value;
+
+                jobData.estimatedRevenue = revenue.value;
+                jobData.actualRevenue = revenue.value;
 
                 orderJobs.push(jobData);
             }
@@ -662,12 +617,11 @@ class OrderService
             order.jobs = orderJobs;
             order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, order.consignee);
 
-            order.calculateEstimatedRevenueAndExpense();
-            order = await Order.query(trx).skipUndefined()
+            const orderCreated = await Order.query(trx).skipUndefined()
                 .insertGraph(order, { allowRefs: true });
 
             await trx.commit();
-            return order;
+            return orderCreated;
         }
         catch (err)
         {
