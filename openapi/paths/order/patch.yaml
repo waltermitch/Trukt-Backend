@@ -141,27 +141,27 @@ requestBody:
                           commodities:
                             type: array
                             items:
+                              type: object
                               additionalProperties: false
-                              $ref: ../../components/schemas/Common.yaml#/indexObject
+                              properties:
+                                index:
+                                  type: string
+                                  description: Unique index per commodity, this field can be any string value
+                                expense:
+                                  $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
+                                revenue:
+                                  $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
+                                guid:
+                                  $ref: ../../components/schemas/Common.yaml#/guid
+                                lotNumber:
+                                  type: string
+                                  nullable: true
+                              required:
+                                - index
+                                - expense
+                                - revenue
                         required:
                           - index
-                    commodities:
-                      type: array
-                      items:
-                        type: object
-                        additionalProperties: false
-                        properties:
-                          index:
-                            type: string
-                            description: Unique index per commodity, this field can be any string value
-                          expense:
-                            $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
-                          revenue:
-                            $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
-                        required:
-                          - index
-                          - expense
-                          - revenue
                   required:
                     - index
                     - guid
