@@ -81,6 +81,7 @@ requestBody:
                       type: array
                       items:
                         type: object
+                        additionalProperties: false
                         properties:
                           index:
                             type: string
@@ -96,28 +97,22 @@ requestBody:
                     stops:
                       type: array
                       items:
-                        oneOf:
-                          - type: object
-                            properties:
-                              index:
-                                type: string
-                                description: The index field inside of the stops array in the payload
-                              commodities:
-                                type: array
-                                items:
-                                  allOf:
-                                    - $ref: ../../components/schemas/Common.yaml#/indexObject
-                                    - type: object
-                                      properties:
-                                        lotNumber:
-                                          description: The lot number for this commodity at this stop.
-                                          type: string
-                            required:
-                              - index
-                          - $ref: ../../components/schemas/Stop.yaml
+                        type: object
+                        properties:
+                          index:
+                            type: string
+                            description: The index field inside of the stops array in the payload
+                          commodities:
+                            type: array
+                            items:
+                              additionalProperties: false
+                              $ref: ../../components/schemas/Common.yaml#/indexObject
+                        required:
+                        - index
                   required:
                     - index
                     - stops
+                    - commodities
           stops:
             type: array
             items:
