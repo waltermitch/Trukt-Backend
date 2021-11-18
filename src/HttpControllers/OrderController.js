@@ -1,5 +1,7 @@
 const OrderService = require('../Services/OrderService');
 const NotesService = require('../Services/NotesService');
+const myEmitter = require('../Services/EventEmitter');
+const Order = require('../Models/Order');
 
 class OrderController
 {
@@ -42,6 +44,10 @@ class OrderController
         {
             let order = await OrderService.create(req.body, req.session.userGuid);
             order = await OrderService.getOrderByGuid(order.guid);
+            console.log(order.guid);
+
+            // register this event
+            myEmitter.emit('OrderCreate', order.guid);
 
             // registering order to status manager
             OrderService.registerCreateOrderStatusManager(order, req.session.userGuid);
@@ -97,7 +103,11 @@ class OrderController
         try
         {
             const { body } = req;
+            const oldOrder = await Order.query().findById(body.guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload);
             const order = await OrderService.patchOrder(body, req.session.userGuid);
+
+            // register this event
+            myEmitter.emit('OrderUpdate', { old: oldOrder, new: order });
 
             res.status(200);
             res.json(order);

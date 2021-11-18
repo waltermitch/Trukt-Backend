@@ -686,9 +686,7 @@ class OrderService
     static async calculateTotalDistance(stops)
     {
         // go through every order stop
-        stops.sort(
-            (firstStop, secondStop) => firstStop.sequence - secondStop.sequence
-        );
+        stops.sort(OrderStop.sortBySequence);
 
         // converting terminals into address strings
         const terminalStrings = stops.map((stop) =>
@@ -698,6 +696,137 @@ class OrderService
 
         // send all terminals to the General Function app and recieve only the distance value
         return await GeneralFuncApi.calculateDistances(terminalStrings);
+    }
+
+    static async calculatedDistances(OrderGuid)
+    {
+        // relations obejct for none repetitive code
+        const stopRelationObj = {
+            $modify: ['distinct'],
+            terminal: true
+        };
+
+        // TODO:add functionality to push to error DB when transaction fails
+
+        // start transaction to update distances
+        await Order.transaction(async (trx) =>
+        {
+            // get OrderStops and JobStops from database Fancy smancy queries
+            const order = await Order.query(trx).withGraphJoined({
+                jobs: { stops: stopRelationObj },
+                stops: stopRelationObj
+            }).findById(OrderGuid);
+
+            // array for transaction promises
+            const patchPromises = [];
+
+            let orderCounted = false;
+            for (const orderjob of [order, ...order.jobs])
+            {
+                // logic to handle order vs jobs model
+                let model;
+                if (orderCounted)
+                {
+                    model = OrderJob;
+                }
+                else
+                {
+                    model = Order;
+                    orderCounted = true;
+                }
+
+                // pushing distance call and update into array
+                patchPromises.push(
+                    OrderService.calculateTotalDistance(orderjob.stops).then(async (distance) =>
+                    {
+                        console.log(orderjob.guid);
+                        console.log(distance);
+                        await model.query(trx).patch({ distance }).findById(orderjob.guid);
+                    })
+                );
+            }
+
+            // execute all promises
+            await Promise.all(patchPromises);
+        });
+        return;
+    }
+
+    static async validateStopsBeforeUpdate(oldOrder, newOrder)
+    {
+        // get OrderStops and JobStops from database Fancy smancy queries
+        const updatedOrder = await Order.query().skipUndefined().withGraphJoined(Order.fetch.stopsPayload).findById(newOrder.guid);
+
+        // array to store promises
+        const patchArray = [];
+
+        // compate order stops
+        if (oldOrder.stops.length != updatedOrder.stops.length)
+        {
+            console.log('Updating Order Terminals');
+
+            // calculate distance
+            patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+            {
+                await Order.query().patch({ distance }).findById(updatedOrder.guid);
+            }));
+        }
+        else
+        {
+            for (let i = 0; i < updatedOrder.stops.length; i++)
+            {
+                // if terminals are not the same
+                if (!R.equals(updatedOrder.stops[i].terminal, oldOrder.stops[i].terminal))
+                {
+                    console.log('Updating Order Terminal');
+
+                    // calculate distance
+                    patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+                    {
+                        await Order.query().patch({ distance }).findById(updatedOrder.guid);
+                    }));
+                }
+            }
+        }
+
+        // loop through jobs array
+        for (let i = 0; i < updatedOrder.jobs.length; i++)
+        {
+            // if job stops length is different
+            if (updatedOrder.jobs[i].stops.length != oldOrder.jobs[i].stops.length)
+            {
+                console.log('Updateing Job terminals');
+
+                // calculate distance of jobs stops
+                patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+                {
+                    await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
+                }));
+            }
+            else
+            {
+                // loop through job stops terminals
+                for (let j = 0; j < updatedOrder.jobs[i].stops.length; j++)
+                {
+                    // if terminals are not the same
+                    if (!R.equals(updatedOrder.jobs[i].stops[j].terminal, oldOrder.jobs[i].stops[j].terminal))
+                    {
+                        console.log('Updating Job Stop!');
+
+                        // calculate distance
+                        patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+                        {
+                            await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
+                        }));
+                    }
+                }
+            }
+        }
+
+        if (patchArray.length != 0)
+        {
+            await Promise.all(patchArray);
+        }
     }
 
     /**
@@ -1474,6 +1603,7 @@ class OrderService
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
+            // TODO: Events here
             // update loadboard postings (async)
             orderUpdated.jobs.map(async (job) =>
             {
