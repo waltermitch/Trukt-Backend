@@ -141,14 +141,15 @@ requestBody:
                           commodities:
                             type: array
                             items:
-                              allOf:
-                                - $ref: ../../components/schemas/Common.yaml#/indexObject
+                              additionalProperties: false
+                              $ref: ../../components/schemas/Common.yaml#/indexObject
                         required:
                           - index
                     commodities:
                       type: array
                       items:
                         type: object
+                        additionalProperties: false
                         properties:
                           index:
                             type: string
