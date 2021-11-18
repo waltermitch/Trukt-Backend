@@ -111,6 +111,15 @@ class BillService
             throw new Error('Bill does not exist.');
         }
 
+        // to double check and see if commodity is attached
+        const checkLine = await InvoiceLine.query().findById(lineGuid);
+
+        // if attached throw error
+        if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
+        {
+            throw new Error('Cannot delete line.');
+        }
+
         // returning updated bill
         const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
 
