@@ -69,10 +69,7 @@ class OrderController
         }
         catch (error)
         {
-            next({
-                status: 500,
-                data: { message: error?.message || 'Internal server error' }
-            });
+            next(error);
         }
 
     }
@@ -107,10 +104,7 @@ class OrderController
         }
         catch (error)
         {
-            next({
-                status: 500,
-                data: { message: error?.message || 'Internal server error' }
-            });
+            next(error);
         }
     }
 
