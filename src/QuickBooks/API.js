@@ -1,5 +1,6 @@
 const InvoicePaymentMethod = require('../Models/InvoicePaymentMethod');
 const InvoicePaymentTerm = require('../Models/InvoicePaymentTerm');
+const QBPaymentTerm = require('../Models/QBPaymentTerm');
 const QBAccount = require('../Models/QBAccount');
 const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
@@ -137,13 +138,13 @@ class QBO
             .map((e) => { return { 'name': e.Name, 'id': e.Id }; });
 
         methods = methods.map((e) => { return { 'name': e.Name, 'externalId': e.Id, 'externalSource': 'QBO' }; });
-        terms = terms.map((e) => { return { 'name': e.Name, 'externalId': e.Id, 'externalSource': 'QBO' }; });
+        terms = terms.map((e) => { return { 'name': e.Name, 'id': e.Id }; });
 
         const trx = await QBAccount.startTransaction();
 
         try
         {
-            await Promise.all([QBAccount.query(trx).insert(accounts).onConflict('id').merge(), InvoicePaymentTerm.query(trx).insert(terms).onConflict('externalId').merge(), InvoicePaymentMethod.query(trx).insert(methods).onConflict('externalId').merge()]);
+            await Promise.all([QBAccount.query(trx).insert(accounts).onConflict('id').merge(), QBPaymentTerm.query(trx).insert(terms).onConflict('id').merge(), InvoicePaymentMethod.query(trx).insert(methods).onConflict('externalId').merge()]);
             await trx.commit();
         }
         catch (err)

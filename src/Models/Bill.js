@@ -9,7 +9,7 @@ class Bill extends BaseModel
 
     static get idColumn()
     {
-        return 'guid';
+        return 'bill_guid';
     }
 }
 

@@ -117,7 +117,7 @@ class NotesService
     static async getJobNotes(jobGuid)
     {
         // find all notes for job, (using extra join to know if job exists)
-        const job = await OrderJob.query().findById(jobGuid).withGraphJoined('notes(notDeleted).[createdBy]');
+        const job = await OrderJob.query().findById(jobGuid).withGraphJoined('notes(notDeleted).[createdBy]').orderBy('notes:dateCreated', 'desc');
 
         if (!job)
             return null;
@@ -130,7 +130,7 @@ class NotesService
     static async getAllNotes(orderGuid)
     {
         // find all notes for order and jobs, (using extra join to know if order exists)
-        const order = await Order.query().findById(orderGuid).withGraphJoined('[notes(notDeleted).[createdBy], jobs.[notes(notDeleted).[createdBy]]]');
+        const order = await Order.query().findById(orderGuid).withGraphJoined('[notes(notDeleted).[createdBy], jobs.[notes(notDeleted).[createdBy]]]').orderBy('jobs:notes:dateCreated', 'desc');
 
         if (!order)
             return null;

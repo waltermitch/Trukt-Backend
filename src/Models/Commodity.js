@@ -175,11 +175,7 @@ class Commodity extends BaseModel
             }
         }
 
-        if ('index' in json)
-        {
-            json['#id'] = json.index;
-            delete json.index;
-        }
+        this.mapIndex(json);
 
         return json;
     }

@@ -9,7 +9,7 @@ class Invoice extends BaseModel
 
     static get idColumn()
     {
-        return 'guid';
+        return 'invoice_guid';
     }
 }
 

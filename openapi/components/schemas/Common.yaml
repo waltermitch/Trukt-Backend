@@ -138,7 +138,7 @@ guidNullable:
   nullable: true
 phoneNumber:
   type: string
-  pattern: /d+
+  pattern: \d+
   example: '(916) 999-1234'
 stringNullable:
   type: string

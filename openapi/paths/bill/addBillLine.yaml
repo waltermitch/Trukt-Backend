@@ -1,0 +1,41 @@
+summary: Add Bill Line
+operationId: addBillLine
+description: Add bill Line.
+tags:
+  - Bill
+parameters:
+  - in: path
+    name: billGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+requestBody:
+  content: 
+    application/json:
+      schema:
+        type: object
+        properties:
+          invoiceGuid:
+            $ref: '../../components/schemas/Common.yaml#/guid'            
+          
+          $ref: ../../components/schemas/Finances.yaml#/InvoiceBillBody            
+        required:
+          - itemId
+          - amount
+
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/Finances.yaml#/InvoiceBillLine
+  404:
+    description: Bill or Invoice not found
+    content:
+      application/json: {}
+  406:
+    description: Cannot Link Lines
+    content:
+      application/json: {}

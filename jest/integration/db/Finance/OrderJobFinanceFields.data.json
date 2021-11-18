@@ -1,0 +1,58 @@
+{
+    "InvoiceLineItems": [
+        {
+            "id": "100000",
+            "name": "test expense",
+            "type": "expense"
+        },
+        {
+            "id": "100001",
+            "name": "test revenue",
+            "type": "revenue"
+        }
+    ],
+    "Client": {
+        "name": "Integration Test Client"
+    },
+    "Order": {
+        "referenceNumber": "TEST"
+    },
+    "Job": {
+        "isTransport": true,
+        "typeId": 1
+    },
+    "Bill": {
+        "isInvoice": false,
+        "isValid": true,
+        "referenceNumber": "DELETE-ME2"
+    },
+    "Invoice": {
+        "isInvoice": true,
+        "isValid": true,
+        "referenceNumber": "DELETE-ME1"
+    },
+    "InvoiceLines": [
+        {
+            "amount": "254.09",
+            "itemId": "100000",
+            "isDeleted": false
+        },
+        {
+            "amount": "150.54",
+            "itemId": "100001",
+            "isDeleted": false
+        }
+    ],
+    "BillLines": [
+        {
+            "amount": "154.32",
+            "itemId": "100000",
+            "isDeleted": false
+        },
+        {
+            "amount": "454.67",
+            "itemId": "100001",
+            "isDeleted": false
+        }
+    ]
+}

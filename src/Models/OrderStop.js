@@ -71,7 +71,7 @@ class OrderStop extends BaseModel
             distinct(builder)
             {
                 // use distinctOn because we are using pg
-                builder.distinctOn('guid');
+                builder.distinctOn('guid').select('*');
             }
         };
     }
@@ -130,6 +130,16 @@ class OrderStop extends BaseModel
     setScheduledDates(dateType, startDate, endDate)
     {
         this.setDates('Scheduled', dateType, startDate, endDate);
+    }
+
+    static get contactTypes()
+    {
+        return ['primaryContact', 'alternativeContact'];
+    }
+
+    static get sortBySequence()
+    {
+        return (firstStop, secondStop) => firstStop.sequence - secondStop.sequence;
     }
 }
 
