@@ -1207,7 +1207,8 @@ class OrderService
                             commType: true,
                             vehicle: true
                         }
-                    }
+                    },
+                    dispatcher: true
                 })
 
                 /**
