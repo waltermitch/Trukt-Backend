@@ -22,7 +22,6 @@ const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
 const Terminal = require('../Models/Terminal');
-const Expense = require('../Models/Expense');
 const Vehicle = require('../Models/Vehicle');
 const Order = require('../Models/Order');
 const NodeCache = require('node-cache');
@@ -1487,9 +1486,7 @@ class OrderService
         catch (error)
         {
             await trx.rollback();
-            throw {
-                message: error?.nativeError?.detail || error?.message || error
-            };
+            throw error;
         }
     }
 
