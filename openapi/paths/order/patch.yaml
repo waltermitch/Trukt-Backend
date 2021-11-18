@@ -143,22 +143,27 @@ requestBody:
                             items:
                               allOf:
                                 - $ref: ../../components/schemas/Common.yaml#/indexObject
-                                - type: object
-                                  properties:
-                                    lotNumber:
-                                      description: The lot number for this commodity at this stop.
-                                      type: string
                         required:
                           - index
+                    commodities:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          index:
+                            type: string
+                            description: Unique index per commodity, this field can be any string value
+                          expense:
+                            $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
+                          revenue:
+                            $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
+                        required:
+                          - index
+                          - expense
+                          - revenue
                   required:
                     - index
                     - guid
-          expenses:
-            type: array
-            items:
-              type: object
-              properties:
-                $ref: '../../components/schemas/Expense.yaml#/orderExpense/properties'
           stops:
             type: array
             items:
