@@ -2525,6 +2525,59 @@ paths:
           description: Invoice not found
           content:
             application/json: {}
+  '/invoice/link/{line1Guid}/{line2Guid}':
+    put:
+      summary: Link Invoice and Bill Lines
+      operationId: linkInvoiceBillLines
+      description: Link Invoice and Bill Lines.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: line1Guid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: line2Guid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json: {}
+        '406':
+          description: Constraint Violated
+          content:
+            application/json: {}
+    delete:
+      summary: Unlink Invoice and Bill Lines
+      operationId: unlinkInoiveBillLines
+      description: Unlink Invoice and Bill Lines.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: line1Guid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: line2Guid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json: {}
+        '406':
+          description: Constraint Violated
+          content:
+            application/json: {}
   '/bill/{billGuid}':
     get:
       summary: Get Bill
@@ -3204,6 +3257,131 @@ paths:
           description: Order Not Found
           content:
             application/json: {}
+  /bulk/order/users:
+    put:
+      summary: Update User Fields In Orders
+      operationId: updateOrderUsers
+      description: >-
+        Updates the user fields, like salesperson, dispatcher in the orders
+        specified in the request.
+      tags:
+        - Bulk
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                orders:
+                  type: array
+                  items:
+                    type: string
+                    description: Order Guid
+                    $ref: '#/components/schemas/guid'
+                dispatcher:
+                  type: string
+                  description: Dispatcher Guid
+                  $ref: '#/components/schemas/guid'
+                salesperson:
+                  type: string
+                  description: Salesperson Guid
+                  $ref: '#/components/schemas/guid'
+              required:
+                - orders
+      responses:
+        '200':
+          description: >-
+            Update Received Successfully (note that this does not mean every
+            order was updated successfully)
+          content:
+            application/json:
+              schema:
+                properties:
+                  orderGuid:
+                    type: object
+                    description: This is key value pair of orderGuid
+                    properties:
+                      error:
+                        type: string
+                        description: 'Error message, null if no error'
+                        nullable: true
+                      status:
+                        type: number
+                        description: Signifies the status of this specific order update
+                        enum:
+                          - 200
+                          - 400
+                          - 404
+        '400':
+          description: 'Didn''t provide any values to update, (i.e missing "dispatcher")'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Missing Update Values
+  /bulk/job/users:
+    put:
+      summary: Update User Fields In Jobs
+      operationId: updateJobUsers
+      description: >-
+        Updates the user fields, like salesperson, dispatcher in the jobs
+        specified in the request.
+      tags:
+        - Bulk
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                jobs:
+                  type: array
+                  items:
+                    type: string
+                    description: Job Guid
+                    $ref: '#/components/schemas/guid'
+                dispatcher:
+                  type: string
+                  description: Dispatcher Guid
+                  $ref: '#/components/schemas/guid'
+              required:
+                - jobs
+      responses:
+        '200':
+          description: >-
+            Update Received Successfully (note that this does not mean every job
+            was updated successfully)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobGuid:
+                    type: object
+                    description: This is key value pair of jobGuid
+                    properties:
+                      error:
+                        type: string
+                        description: 'Error message, null if no error'
+                        nullable: true
+                      status:
+                        type: number
+                        description: Signifies the status of this specific job update
+                        enum:
+                          - 200
+                          - 400
+                          - 404
+        '400':
+          description: 'Didn''t provide any values to update, (i.e missing "dispatcher")'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Missing Update Values
 components:
   schemas:
     guid:
@@ -3273,7 +3451,7 @@ components:
       format: email
     phoneNumber:
       type: string
-      pattern: /d+
+      pattern: \d+
       example: (916) 999-1234
     Contact:
       type: object

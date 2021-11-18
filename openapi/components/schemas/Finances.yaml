@@ -156,3 +156,64 @@ Error:
       allOf:
         - $ref: ./Common.yaml#/guid
         - description: The guid of the bill/invoice that the error occurred in.
+
+InvoiceBillLine:
+  type: object
+  properties:
+    dateCharged:
+      type: string
+      format: date-time      
+      description: When the charge has occured.
+      example: "2020-01-01T01:01:01.000Z"
+    transactionNumber:
+      type: string
+      description: Transaction Number.
+      example: asdf1212
+    amount:
+      type: string
+      description: Amount charged.
+      example: 334.80
+    itemId:
+      type: number
+      description: What kind of line item will it be.
+      example: 1
+    notes:
+      type: string
+      description: Notes about the invoice or bill line.
+      example: The longest notes that you have ever seen. Alex don't peek into here... neither VLAD. BAD BAD BAD
+    paid:
+      type: boolean
+      example: true
+    dateCreated:
+      type: string
+      format: date-time
+      readOnly: true
+      description: When the initial line was created.
+      example: "2020-01-01T01:01:01.000Z"  
+
+InvoiceBillBody:
+  dateCharged:
+    type: string
+    format: date-time
+    description: When the charge has occured.
+    example: "2020-01-01T01:01:01.000Z"
+  transactionNumber:
+    type: string
+    description: Transaction Number.
+    example: asdf1212
+  amount:
+    type: string
+    description: Amount charged.
+    example: 334.80
+  itemId:
+    type: number
+    description: What line item will we charge for.
+    example: 1
+  notes:
+    type: string
+    description: Notes about the invoice or bill line.
+    example: The longest notes that you have ever seen. Alex don't peek into here... neither VLAD. BAD BAD BAD
+  isPaid:
+    type: boolean
+    description: if item has been mark correctly.
+    example: true

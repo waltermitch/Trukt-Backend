@@ -1,16 +1,21 @@
 const enabledModules = process.env['accounting.modules'].split(';');
 const QuickBooksService = require('./QuickBooksService');
+const LineLinks = require('../Models/InvoiceLineLink');
+const InvoiceBill = require('../Models/InvoiceBill');
 const CoupaService = require('./CoupaService');
-const Invoice = require('../Models/InvoiceBill');
+const Line = require('../Models/InvoiceLine');
 const Order = require('../Models/Order');
+const InvoiceLine = require('../Models/InvoiceLine');
+const Invoice = require('../Models/Invoice');
+const Bill = require('../Models/Bill');
 
 class InvoiceService
 {
     static async getInvoice(guid)
     {
-        const res = await Invoice.query()
+        const res = await InvoiceBill.query()
             .findOne({ 'guid': guid, 'isDeleted': false })
-            .withGraphFetched(Invoice.fetch.details);
+            .withGraphFetched(InvoiceBill.fetch.details);
 
         return res;
     }
@@ -22,8 +27,8 @@ class InvoiceService
             .query()
             .findById(guid)
             .withGraphJoined({
-                invoices: Invoice.fetch.details,
-                jobs: { bills: Invoice.fetch.details }
+                invoices: InvoiceBill.fetch.details,
+                jobs: { bills: InvoiceBill.fetch.details }
             });
 
         // order was not found, return undefined
@@ -70,8 +75,8 @@ class InvoiceService
             .query()
             .findById(guid)
             .withGraphJoined({
-                invoices: Invoice.fetch.details,
-                jobs: { bills: Invoice.fetch.details }
+                invoices: InvoiceBill.fetch.details,
+                jobs: { bills: InvoiceBill.fetch.details }
             });
 
         // order was not found, return undefined
@@ -111,6 +116,206 @@ class InvoiceService
         }
     }
 
+    static async addInvoiceLine(invoiceGuid, billGuid, line, currentUser)
+    {
+        const result = await InvoiceLine.transaction(async trx =>
+        {
+            // verifying bill and invoice
+            const [bill, invoice] = await Promise.all([billGuid && Bill.query(trx).findById(billGuid), Invoice.query(trx).findById(invoiceGuid)]);
+
+            // if invoice doesn't exist in table throw error
+            if (!invoice)
+            {
+                throw new Error('Invoice does not exist.');
+            }
+
+            // if wrong billGuid
+            if (billGuid && !bill)
+            {
+                throw new Error('Bill does not exist.');
+            }
+
+            // for bulk insert
+            const linksArray = [];
+
+            line.setCreatedBy(currentUser);
+            line.linkInvoice(invoice);
+            linksArray.push(line);
+
+            // if billGuid exists create line and link
+            if (billGuid)
+            {
+                const billLine = InvoiceLine.fromJson(line);
+                billLine.linkBill(bill);
+                linksArray.push(billLine);
+            }
+
+            // bulk insert into Lines table
+            const [newLine1, newLine2] = await InvoiceLine.query(trx).insertAndFetch(linksArray);
+
+            // if two lines then link lines
+            if (newLine2)
+            {
+                await InvoiceService.LinkLines(newLine1.guid, newLine2.guid, trx);
+            }
+
+            // return only the invoice item
+            return newLine1;
+        });
+        return result;
+    }
+
+    static async updateInvoiceLine(invoiceGuid, lineGuid, line)
+    {
+        // To make sure if bill has been passed
+        const invoice = await Invoice.query().findById(invoiceGuid);
+
+        // if no bill throw error
+        if (!invoice)
+        {
+            throw new Error('Invoice does not exist.');
+        }
+
+        // linking and updateing
+        line.linkInvoice(invoice);
+
+        // returning updated bill
+        const newLine = await InvoiceLine.query().patchAndFetchById(lineGuid, line);
+
+        // if line doesn't exist
+        if (!newLine)
+        {
+            throw new Error('Line does not exist.');
+        }
+
+        return newLine;
+    }
+
+    static async deleteInvoiceLine(invoiceGuid, lineGuid)
+    {
+        // To make sure correct invoice was passed in
+        const invoice = await Invoice.query().findById(invoiceGuid);
+
+        // if no bill throw error
+        if (!invoice)
+        {
+            throw new Error('Invoice does not exist.');
+        }
+
+        // returning updated bill
+        const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
+
+        // if line doesn't exist
+        if (!newLine)
+        {
+            throw new Error('Line does not exist.');
+        }
+
+        return;
+    }
+
+    static async deleteInvoiceLines(invoiceGuid, lineGuids)
+    {
+        // running transaction, because I want to undue updates because of failure
+        const result = await InvoiceLine.transaction(async trx =>
+        {
+            // To make sure correct invoice was passed in
+            const invoice = await Invoice.query(trx).findById(invoiceGuid);
+
+            // incorrect invoice
+            if (!invoice)
+            {
+                throw new Error('Invoice does not exist.');
+            }
+
+            // to patch multiple lines at once
+            const patchArrays = [];
+
+            // creating array of patch updates
+            for (let i = 0; i < lineGuids.length; i++)
+            {
+                patchArrays.push(InvoiceLine.query(trx).delete().where('guid', lineGuids[i]).where('invoiceGuid', invoiceGuid));
+            }
+
+            // executing all updates
+            const deletedLines = await Promise.all(patchArrays);
+
+            // if any failed will return guids that failed
+            if (deletedLines.includes(0))
+            {
+                const guids = [];
+                for (let i = 0; i < deletedLines.length; i++)
+                {
+                    if (deletedLines[i] == 0)
+                    {
+                        guids.push(lineGuids[i]);
+                    }
+                }
+
+                throw new Error(`Lines with guid(s): ${guids} :do not exist.`);
+            }
+
+            // if succeed then, returns nothing
+            return;
+        });
+        return result;
+    }
+
+    static async LinkLines(line1Guid, line2Guid, trx = null)
+    {
+        const Lines = await Line.query(trx).findByIds([line1Guid, line2Guid]).withGraphFetched('[invoice, bill, invoiceBill.[job]]');
+
+        // not allowed to link transport items
+        if (Lines[0]?.itemId == 1 && Lines[1]?.itemId == 1)
+        {
+            throw new Error('Cannot link transport items!');
+        }
+
+        if (!((Lines[1].bill?.billGuid && Lines[0].bill?.billGuid) || (Lines[0].invoice?.invoiceGuid && Lines[1].invoice?.invoiceGuid)))
+        {
+            // getting order Guid to compare if job belongs to order
+            const orderGuid = (Lines[0].invoiceBill?.job?.orderGuid || Lines[1].invoiceBill?.job?.orderGuid);
+            const orderGuid2 = (Lines[0].invoice?.orderGuid || Lines[1].invoice?.orderGuid);
+
+            // if job belongs to order then we link lines
+            if (orderGuid === orderGuid2)
+            {
+                // inserting after succesfully jumping through constraints
+                await LineLinks.query(trx).insert({ line1Guid: line1Guid, line2Guid: line2Guid });
+            }
+        }
+    }
+
+    static async UnLinkLines(line1Guid, line2Guid)
+    {
+        const Lines = await Line.query().findByIds([line1Guid, line2Guid]).withGraphFetched('[invoice, bill, invoiceBill.[job]]');
+
+        // not allowed to unlink transport items
+        if (Lines[0]?.itemId == 1 && Lines[1]?.itemId == 1)
+        {
+            throw new Error('Cannot unlink transport items!');
+        }
+
+        // checking to see if order to order or job to job
+        if (!((Lines[1].bill?.billGuid && Lines[0].bill?.billGuid) || (Lines[0].invoice?.invoiceGuid && Lines[1].invoice?.invoiceGuid)))
+        {
+            // getting order Guid to compare if job belongs to order
+            const orderGuid = (Lines[0].invoiceBill?.job?.orderGuid || Lines[1].invoiceBill?.job?.orderGuid);
+            const orderGuid2 = (Lines[0].invoice?.orderGuid || Lines[1].invoice?.orderGuid);
+
+            // if job belongs to order then we link lines
+            if (orderGuid === orderGuid2)
+            {
+                // deleted the linked items from table, considers both options
+                await LineLinks.query().delete().where({ line1Guid: line1Guid, line2Guid: line2Guid }).orWhere({ line1Guid: line2Guid, line2Guid: line1Guid });
+                return;
+            }
+        }
+    }
+
+    // This method will need to be redone, post Alpha launch
+    // very janky and inefficient, no time to fix
+    // TODO: refactor this method
     static async exportInvoices(arr)
     {
         // array for results
@@ -145,7 +350,7 @@ class InvoiceService
                 invoice.orderNumber = order.number;
 
                 if (enabledModules.includes('coupa') && ['LKQ Corporation', 'LKQ Self Service']?.includes(order?.client?.name))
-                    CoupaInvoices.push(order);
+                    CoupaInvoices.push(invoice);
                 else if (enabledModules.includes('quickbooks'))
                     QBInvoices.push(invoice);
             }
@@ -187,13 +392,30 @@ class InvoiceService
         {
             if (!data.error)
             {
-                const invoice = await Invoice.query().patchAndFetchById(guid, { externalSourceData: data });
+                // start trx
+                const trx = await InvoiceBill.transaction();
 
-                results.push(invoice);
+                // update all invoices and their lines
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true })], InvoiceLine.query(trx).patch({ isPaid: true }).where('invoiceGuid', guid));
+
+                if (proms[0].status == 'fulfilled')
+                {
+                    await trx.commit();
+                    results.push(proms[0].value);
+                }
+                else
+                {
+                    await trx.rollback();
+                    results.push(proms[0].reason);
+                }
             }
             else
                 results.push(data.error);
         }));
+
+        // check length of results
+        if (results.length == 0)
+            return [{ success: true, message: 'All Invoices Already Paid For This Order' }];
 
         return results;
     }
@@ -202,7 +424,7 @@ class InvoiceService
     {
         const search = orderGuid.replace(/%/g, '');
 
-        const res = await Invoice.query().where('order_guid', '=', search).withGraphJoined('lines');
+        const res = await InvoiceBill.query().where('order_guid', '=', search).withGraphJoined('lines');
 
         return res;
     }

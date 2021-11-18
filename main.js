@@ -5,6 +5,7 @@ require('./local.settings');
 require('./src/HttpControllers/HttpRouteController');
 const express = require('express');
 const session = require('express-session');
+const cors = require('cors');
 const domain = require('./src/Domain');
 const KnexSessionStore = require('connect-session-knex')(session);
 const BaseModel = require('./src/Models/BaseModel');
@@ -15,7 +16,10 @@ const Mongo = require('./src/Mongo');
 const Auth = require('./src/Authorization/Auth');
 require('./src/CronJobs/Manager');
 
-run();
+run().catch((err) =>
+{
+    console.error(err);
+});
 
 async function run()
 {
@@ -65,6 +69,7 @@ async function run()
 
     const app = express();
     app.use(domain);
+    app.use(corsMiddleware());
     app.use(session(sessionConfig));
     app.use(express.json());
 
@@ -118,5 +123,28 @@ function printRoutes(filepath, routes)
         {
             console.log('\x1b[32m%s\x1b[0m\x1b[36m%s\x1b[0m', `- ${method.toUpperCase()}`, ` ${route.route.path.replace(/\([^)]+?\)/g, '')}`);
         }
+    }
+}
+
+function corsMiddleware()
+{
+    if (process.env?.CORS_ORIGINS)
+    {
+        const whitelistedOrigins = process.env.CORS_ORIGINS.split(',').map((origin) =>
+        {
+            if (/^\/.*\/$/.test(origin))
+            {
+                return new RegExp(origin);
+            }
+            return origin;
+        });
+
+        return cors({
+            origin: whitelistedOrigins
+        });
+    }
+    else
+    {
+        throw new Error('Missing CORS_ORIGINS env var.');
     }
 }

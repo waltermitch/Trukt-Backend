@@ -1,5 +1,6 @@
-const OrderJob = require('../Models/OrderJob');
 const InvoiceService = require('../Services/InvoiceService');
+const InvoiceLine = require('../Models/InvoiceLine');
+const OrderJob = require('../Models/OrderJob');
 
 class InvoiceController
 {
@@ -15,6 +16,113 @@ class InvoiceController
         {
             res.status(200);
             res.json(result);
+        }
+    }
+
+    static async createInvoiceLine(req, res)
+    {
+        const invoiceGuid = req.params.invoiceGuid;
+        const billGuid = (req.body.billGuid || null);
+        const currentUser = req.session.userGuid;
+        const line = InvoiceLine.fromJson(req.body);
+        delete line.billGuid;
+        try
+        {
+            const result = await InvoiceService.addInvoiceLine(invoiceGuid, billGuid, line, currentUser);
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            if (error.message == 'Cannot link transport items!')
+            {
+                res.status(406);
+                res.json(error.message);
+            }
+            else
+            {
+                res.status(404);
+                res.json(error.message);
+            }
+        }
+    }
+
+    static async updateInvoiceLine(req, res)
+    {
+        const invoiceGuid = req.params.invoiceGuid;
+        const lineGuid = req.params.lineGuid;
+        const line = InvoiceLine.fromJson(req.body);
+        try
+        {
+            const result = await InvoiceService.updateInvoiceLine(invoiceGuid, lineGuid, line);
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
+    }
+
+    static async deleteInvoiceLine(req, res)
+    {
+        const invoiceGuid = req.params.invoiceGuid;
+        const lineGuid = req.params.lineGuid;
+        try
+        {
+            const result = await InvoiceService.deleteInvoiceLine(invoiceGuid, lineGuid);
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
+    }
+
+    static async deleteInvoiceLines(req, res)
+    {
+        const invoiceGuid = req.params.invoiceGuid;
+        const lineGuids = req.body;
+        try
+        {
+            await InvoiceService.deleteInvoiceLines(invoiceGuid, lineGuids);
+            res.status(200).send();
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
+    }
+
+    static async LinkInvoiceLines(req, res)
+    {
+        try
+        {
+            await InvoiceService.LinkLines(req.params.line1Guid, req.params.line2Guid);
+            res.status(200).send();
+        }
+        catch (error)
+        {
+            res.status(406);
+            res.json(`Cannot run due to Contraint: ${error.message}`);
+        }
+    }
+
+    static async UnLinkInvoiceLines(req, res)
+    {
+        try
+        {
+            await InvoiceService.UnLinkLines(req.params.line1Guid, req.params.line2Guid);
+            res.status(200).send();
+        }
+        catch (error)
+        {
+            res.status(406);
+            res.json(`Cannot run due to Contraint: ${error.message}`);
         }
     }
 

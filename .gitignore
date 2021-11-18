@@ -28,6 +28,7 @@ dist/
 
 # vscode files
 .vscode/
+.vscode2/
 
 # Unit test reports
 TEST*.xml

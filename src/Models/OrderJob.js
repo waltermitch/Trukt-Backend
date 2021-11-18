@@ -1,5 +1,4 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
-const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJobType = require('./OrderJobType');
 const BaseModel = require('./BaseModel');
 
@@ -169,13 +168,6 @@ class OrderJob extends BaseModel
         };
     }
 
-    $parseDatabaseJson(json)
-    {
-        json = super.$parseDatabaseJson(json);
-        json.netProfitMargin = this.calculateNetProfitMargin(json.actualRevenue, json.actualExpense);
-        return json;
-    }
-
     $parseJson(json)
     {
         json = super.$parseJson(json);
@@ -228,18 +220,6 @@ class OrderJob extends BaseModel
     {
         const newIndex = 'job_' + Date.now() + index;
         super.setIndex(newIndex);
-    }
-
-    async $beforeInsert(context)
-    {
-        await super.$beforeInsert(context);
-        this.calculateEstimatedIncome();
-    }
-
-    async $beforeUpdate(opt, context)
-    {
-        await super.$beforeUpdate(opt, context);
-        this.calculateEstimatedIncome();
     }
 
     /**
@@ -384,8 +364,17 @@ class OrderJob extends BaseModel
         sorted: this.sorted,
         globalSearch: this.globalSearch
     };
+
+    findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
+    {
+        for (const bill of this.bills)
+        {
+            const lineFound = bill.lines?.find(line => line.commodityGuid === commodityGuid && line.itemId == lineTypeId);
+            if (lineFound) return lineFound;
+        }
+        return {};
+    }
 }
 
-Object.assign(OrderJob.prototype, IncomeCalcs);
 Object.assign(OrderJob.prototype, RecordAuthorMixin);
 module.exports = OrderJob;
