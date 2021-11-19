@@ -208,7 +208,7 @@ class InvoiceService
         // if attached throw error
         if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
         {
-            throw new Error('Cannot delete line.');
+            throw new Error('Cannot delete line becuase commodity is attached.');
         }
 
         // returning updated bill
@@ -243,7 +243,7 @@ class InvoiceService
             // creating array of patch updates
             for (let i = 0; i < lineGuids.length; i++)
             {
-                patchArrays.push(InvoiceLine.query(trx).delete().where('guid', lineGuids[i]).where('invoiceGuid', invoiceGuid));
+                patchArrays.push(InvoiceLine.query(trx).delete().where('guid', lineGuids[i]).where('invoiceGuid', invoiceGuid).whereNotNull('commodity_guid'));
             }
 
             // executing all updates
@@ -261,7 +261,7 @@ class InvoiceService
                     }
                 }
 
-                throw new Error(`Lines with guid(s): ${guids} :do not exist.`);
+                throw new Error(`Lines with guid(s): ${guids} cannot be deleted.`);
             }
 
             // if succeed then, returns nothing
