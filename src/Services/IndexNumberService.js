@@ -1,5 +1,5 @@
-const IndexNumber = require('../Models/IndexNumber');
 const { orderNumberRegex } = require('../Utils/Regexes');
+const IndexNumber = require('../Models/IndexNumber');
 
 const knex = IndexNumber.knex();
 

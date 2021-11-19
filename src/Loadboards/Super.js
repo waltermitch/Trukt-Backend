@@ -25,7 +25,7 @@ class Super extends Loadboard
         const payload =
         {
             customer: {
-                notes: null,
+                notes: this.data.order.clientNotes?.note,
                 address: this.data.order.client.billingStreet,
                 city: this.data.order.client.billingCity,
                 state: this.data.order.client.billingState,
@@ -79,8 +79,8 @@ class Super extends Loadboard
             },
             delivery:
             {
-                scheduled_at: !this.data.delivery.dateScheduledStart ? this.data.delivery.dateScheduledStart : this.data.delivery.dateRequestedStart,
-                scheduled_ends_at: !this.data.delivery.dateScheduledEnd ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
+                scheduled_at: !this.data.delivery.dateScheduledStart.invalid ? this.data.delivery.dateScheduledStart : this.data.delivery.dateRequestedStart,
+                scheduled_ends_at: !this.data.delivery.dateScheduledEnd.invalid ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
                 scheduled_at_by_customer: this.data.delivery.dateRequestedStart,
                 scheduled_ends_at_by_customer: this.data.delivery.dateRequestedEnd,
                 notes: this.data.delivery.notes,
@@ -269,7 +269,7 @@ class Super extends Loadboard
                 ]`);
 
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
-                for(const comPromise of commodityPromises)
+                for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                     allPromises.push(comPromise);
@@ -324,7 +324,7 @@ class Super extends Loadboard
                 ]`);
 
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
-                for(const comPromise of commodityPromises)
+                for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                     allPromises.push(comPromise);
@@ -412,7 +412,7 @@ class Super extends Loadboard
                 ]`);
 
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
-                for(const comPromise of commodityPromises)
+                for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                     allPromises.push(comPromise);
@@ -433,7 +433,7 @@ class Super extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
-            
+
             await Promise.all(allPromises);
             await trx.commit();
             return objectionPost.jobGuid;
@@ -478,7 +478,7 @@ class Super extends Loadboard
                 ]`);
 
                 const commodityPromises = this.updateCommodity(job.commodities, response.order.vehicles);
-                for(const comPromise of commodityPromises)
+                for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                     allPromises.push(comPromise);
@@ -573,14 +573,14 @@ class Super extends Loadboard
             allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid));
 
             const vendor = await SFAccount.query(trx)
-            .findById(dispatch.vendorGuid)
-            .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
-            .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
-            .select('salesforce.accounts.name as vendorName',
-            'salesforce.accounts.guid as vendorGuid',
-            'salesforce.contacts.guid as agentGuid',
-            'salesforce.contacts.name as agentName');
-            
+                .findById(dispatch.vendorGuid)
+                .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
+                .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+                .select('salesforce.accounts.name as vendorName',
+                    'salesforce.accounts.guid as vendorGuid',
+                    'salesforce.contacts.guid as agentGuid',
+                    'salesforce.contacts.name as agentName');
+
             await Promise.all(allPromises);
             await trx.commit();
 

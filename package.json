@@ -6,6 +6,8 @@
     "scripts": {
         "start": "node main.js",
         "test": "jest --coverage --detectOpenHandles --env=node --verbose  --forceExit",
+        "test:unit": "jest --testPathPattern=jest/unit --passWithNoTests",
+        "test:integration:db": "jest --testPathPattern=jest/integration/db --passWithNoTests",
         "encrypt": "bash ./tools/encrypt.sh",
         "decrypt": "bash ./tools/decrypt.sh",
         "setup": "bash ./tools/git_setup.sh && bash ./tools/decrypt.sh './local.settings.enc' './local.settings.json'",
@@ -15,7 +17,8 @@
         "check-settings": "bash ./tools/decrypt.sh local.settings.enc local.settings.copy2.json && diff local.settings.copy2.json local.settings.copy.json",
         "postcheck-settings": "rm ./local.settings.copy2.json",
         "knex-debug": "set DEBUG=knex* && node main.js",
-        "api-bundle": "openapi lint && openapi bundle main --output public/openapi/spec.yaml"
+        "api-bundle": "openapi lint && openapi bundle main --output public/openapi/spec.yaml",
+        "bundle-run": "npm run api-bundle && nodemon"
     },
     "author": "",
     "license": "ISC",
@@ -27,6 +30,7 @@
         "ajv-keywords": "^5.0.0",
         "axios": "^0.21.4",
         "connect-session-knex": "^2.1.0",
+        "cors": "^2.8.5",
         "currency.js": "^2.0.4",
         "express": "^4.17.1",
         "express-formidable": "^1.2.0",
@@ -49,7 +53,7 @@
         "uuid": "^8.3.2"
     },
     "devDependencies": {
-        "@redocly/openapi-cli": "^1.0.0-beta.55",
+        "@redocly/openapi-cli": "^1.0.0-beta.67",
         "@shelf/jest-mongodb": "^2.1.0",
         "axios-mock-adapter": "^1.19.0",
         "babel-eslint": "^10.1.0",

@@ -1,19 +1,20 @@
 summary: Update Expense
 operationId: patchExpenseParam
 description: Update Expense
+deprecated: true
 tags:
   - Expense
 parameters:
   - in: path
     name: expenseId
     schema:
-      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../../components/schemas/Common.yaml#/guid'
     required: true
 requestBody:
   content:
     application/json:
       schema:
-        $ref: '..\..\..\components\schemas\Expense.yaml#/expense'
+        $ref: '../../../components/schemas/Expense.yaml#/expense'
 responses:
   200:
     description: Expense

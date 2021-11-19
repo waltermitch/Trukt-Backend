@@ -4,7 +4,7 @@ description: Add Attachment to a given job/order
 tags:
   - Attachments
 parameters:
-  $ref: '..\..\components\schemas\AttachmentParams.yaml#/properties'
+  $ref: '../../components/schemas/AttachmentParams.yaml#/properties'
 
 requestBody:
   content:
@@ -14,7 +14,7 @@ requestBody:
         format: binary
 
 responses:
-  "201":
+  '201':
     description: Created Attachment
     content:
       application/json: {}

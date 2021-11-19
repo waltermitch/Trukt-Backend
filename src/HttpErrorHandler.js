@@ -1,8 +1,20 @@
+const validatorErrors = require('express-openapi-validator').error;
+
 /* eslint-disable */
 module.exports = (err, request, response, next) =>
 {
     let status;
     let data;
+
+    // handle openapi validator errors
+    if (err?.constructor?.name in validatorErrors)
+    {
+        response.status(err.status);
+        response.json({
+            errors: err.errors
+        });
+        return;
+    }
     if (err?.response?.data)
     {
         status = err.response.status;

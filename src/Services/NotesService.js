@@ -37,7 +37,7 @@ class NotesService
         };
 
         // find note by note GUID and patch the note and return job/order guid
-        const updatedNote = await Notes.query().patchAndFetchById(noteGuid, note).withGraphFetched('[job, order]');
+        const updatedNote = await Notes.query().patchAndFetchById(noteGuid, note).withGraphFetched('[job, order, createdBy]');
 
         // not doesn't exist
         if (updatedNote == undefined)
@@ -60,13 +60,11 @@ class NotesService
     static async deleteNote(noteGuid)
     {
         // find note being that needs to be deleted return job/order guid
-        const updatedNote = await Notes.query().patchAndFetchById(noteGuid, { isDeleted: true }).withGraphFetched('[job, order]');
+        const updatedNote = await Notes.query().patchAndFetchById(noteGuid, { isDeleted: true }).withGraphFetched('[job, order, createdBy]');
 
         // not doesn't exist
-        if (updatedNote == undefined)
-        {
+        if (!updatedNote)
             throw new Error('Note does not exist');
-        }
 
         // assigning guid
         const guid = updatedNote.job?.guid || updatedNote.order?.guid;
@@ -94,11 +92,58 @@ class NotesService
         // insert note into table with conjustion
         const createdNote = await Notes.query().insertGraph(notes, { allowRefs: true, relate: true });
 
+        // get related user
+        const note = await Notes.query().findById(createdNote.guid).withGraphFetched('createdBy');
+
         // update pubsub accordingly
-        await pubsub.publishToGroup(`${model.guid}`, { object: 'note', data: createdNote });
+        await pubsub.publishToGroup(`${model.guid}`, { object: 'note', data: note });
 
         // return full note
-        return createdNote;
+        return note;
+    }
+
+    static async getOrderNotes(orderGuid)
+    {
+        // find all notes for order, (using extra join to know if order exists)
+        const order = await Order.query().findById(orderGuid).withGraphJoined('notes(notDeleted).[createdBy]');
+
+        if (!order)
+            return null;
+
+        // return notes
+        return order.notes;
+    }
+
+    static async getJobNotes(jobGuid)
+    {
+        // find all notes for job, (using extra join to know if job exists)
+        const job = await OrderJob.query().findById(jobGuid).withGraphJoined('notes(notDeleted).[createdBy]').orderBy('notes:dateCreated', 'desc');
+
+        if (!job)
+            return null;
+
+        // return notes
+        return job?.notes;
+    }
+
+    // get all notes for an order
+    static async getAllNotes(orderGuid)
+    {
+        // find all notes for order and jobs, (using extra join to know if order exists)
+        const order = await Order.query().findById(orderGuid).withGraphJoined('[notes(notDeleted).[createdBy], jobs.[notes(notDeleted).[createdBy]]]').orderBy('jobs:notes:dateCreated', 'desc');
+
+        if (!order)
+            return null;
+
+        const jobNotes = {};
+        for (const job of order.jobs)
+            jobNotes[job.guid] = job.notes;
+
+        // return notes
+        return {
+            'order': order.notes,
+            'jobs': jobNotes
+        };
     }
 }
 

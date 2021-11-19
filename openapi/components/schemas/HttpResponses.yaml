@@ -1,0 +1,25 @@
+ValidationErrorResponse:
+  description: Bad Request
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          errors:
+            $ref: '#/ValidationError'
+
+ValidationError:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Path to the field/parameter where the validation failed
+      example: '.query.search'
+    message:
+      type: string
+      description: The message to correct the validation error.
+      example: "should have required property 'search'"
+    errorCode:
+      type: string
+      description: The openapi validation rule that was broken.
+      example: 'required.openapi.validation'

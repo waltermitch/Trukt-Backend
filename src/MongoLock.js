@@ -15,6 +15,17 @@ class MongoLock
     {
         this._locked = isLocked;
         this._ee = new EventEmitter();
+        this.tryAcquire = () =>
+        {
+            return new Promise(resolve =>
+            {
+                if (!this._locked)
+                {
+                    return resolve();
+                }
+            });
+        };
+        this._ee.on('release', this.tryAcquire);
     }
 
     acquire()
@@ -26,15 +37,6 @@ class MongoLock
             {
                 return resolve();
             }
-            const tryAcquire = () =>
-            {
-                if (!self._locked)
-                {
-                    self._ee.removeAllListeners('release', tryAcquire);
-                    return resolve();
-                }
-            };
-            self._ee.on('release', tryAcquire);
         });
     }
 

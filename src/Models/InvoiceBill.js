@@ -1,5 +1,5 @@
 const BaseModel = require('./BaseModel');
-const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin, isNotDeleted } = require('./Mixins/RecordAuthors');
 
 /**
  * This class represents an invoice or a bill
@@ -81,9 +81,30 @@ class InvoiceBill extends BaseModel
         };
     }
 
-    static get modifiers()
+    static get fetch()
     {
         return {
+            'details': {
+                $modify: ['isNotDeleted'],
+                paymentTerms: true,
+                paymentMethod: true,
+                consignee: true,
+                lines: {
+                    $modify: ['isNotDeleted'],
+                    createdBy: true,
+                    commodity: {
+                        commType: true,
+                        vehicle: true
+                    },
+                    item: true
+                }
+            }
+        };
+    }
+
+    static get modifiers()
+    {
+        const modifiers = {
             bill(builder)
             {
                 builder.where('isInvoice', false);
@@ -93,6 +114,54 @@ class InvoiceBill extends BaseModel
                 builder.where('isInvoice', true);
             }
         };
+
+        Object.assign(modifiers, isNotDeleted(InvoiceBill.tableName));
+
+        return modifiers;
+    }
+
+    $formatJson(json)
+    {
+        json = super.$formatJson(json);
+
+        if (json.consignee)
+        {
+            const consignee = json.consignee;
+            for (const field of [
+                'blacklist',
+                'dotNumber',
+                'loadboardInstructions',
+                'mcNumber',
+                'orderInstructions',
+                'preferred',
+                'qbId',
+                'scId',
+                'sdGuid',
+                'sfId',
+                'status',
+                'syncInSuper'
+            ])
+            {
+                delete consignee[field];
+            }
+        }
+
+        for (const field of ['paymentMethodId', 'paymentTermId'])
+        {
+            delete json[field];
+        }
+
+        if (json?.paymentTerms)
+        {
+            json.paymentTerms = json.paymentTerms.name;
+        }
+
+        if (json?.paymentMethod)
+        {
+            json.paymentMethod = json.paymentMethod.name;
+        }
+
+        return json;
     }
 }
 

@@ -1,4 +1,5 @@
 const BaseModel = require('./BaseModel');
+const { isNotDeleted } = require('./Mixins/RecordAuthors');
 
 class User extends BaseModel
 {
@@ -10,6 +11,18 @@ class User extends BaseModel
     static get idColumn()
     {
         return 'guid';
+    }
+
+    static get modifiers()
+    {
+        const relations = {
+            noSystemUser: builder =>
+            {
+                builder.andWhere('guid', '<>', process.env.SYSTEM_USER);
+            }
+        };
+        Object.assign(relations, isNotDeleted(User.tableName));
+        return relations;
     }
 
     $formatJson(json)

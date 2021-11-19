@@ -1,0 +1,24 @@
+summary: Get Bills by Job
+operationId: getJobBills
+description: Get all details of all the Bills that are related to the Job.
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            $ref: ../../components/schemas/Finances.yaml#/Bill
+  404:
+    description: Job not found
+    content:
+      application/json: {}

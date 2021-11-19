@@ -1,5 +1,8 @@
-const { RecordAuthorMixin, isNotDeleted } = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin, isNotDeleted, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
+const InvoiceBill = require('../Models/InvoiceBill');
+const Invoice = require('../Models/Invoice');
+const Bill = require('../Models/Bill');
 
 class InvoiceLine extends BaseModel
 {
@@ -15,7 +18,8 @@ class InvoiceLine extends BaseModel
 
     static get relationMappings()
     {
-        return {
+        const relations =
+        {
             commodity: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: require('./Commodity'),
@@ -39,8 +43,39 @@ class InvoiceLine extends BaseModel
                     from: 'rcgTms.invoiceBillLines.invoiceGuid',
                     to: 'rcgTms.invoiceBills.guid'
                 }
+            },
+            bill: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./Bill'),
+                join: {
+                    from: 'rcgTms.invoiceBillLines.invoiceGuid',
+                    to: 'rcgTms.bills.billGuid'
+                }
+            },
+            invoice: {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./Invoice'),
+                join: {
+                    from: 'rcgTms.invoiceBillLines.invoiceGuid',
+                    to: 'rcgTms.invoices.invoiceGuid'
+                }
+            },
+            link: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: InvoiceLine,
+                join: {
+                    from: 'rcgTms.invoiceBillLines.guid',
+                    through: {
+                        from: 'rcgTms.invoiceBillLineLinks.line2Guid',
+                        to: 'rcgTms.invoiceBillLineLinks.line1Guid'
+                    },
+                    to: 'rcgTms.invoiceBillLines.guid'
+                }
             }
         };
+
+        Object.assign(relations, AuthorRelationMappings(this.tableName));
+        return relations;
     }
 
     static get modifiers()
@@ -52,6 +87,14 @@ class InvoiceLine extends BaseModel
                 {
                     builder.where({ 'rcgTms.invoiceBillLineItems.name': 'transport', 'rcgTms.invoiceBillLineItems.type': 'revenue' });
                 });
+            },
+            isValid(builder)
+            {
+                builder.where('isValid', true);
+            },
+            isNotPaid(builder)
+            {
+                builder.where('isPaid', false);
             }
         };
         Object.assign(modifiers, isNotDeleted(InvoiceLine.tableName));
@@ -62,29 +105,73 @@ class InvoiceLine extends BaseModel
     {
         json = super.$parseJson(json);
 
-        if ('item' in json)
+        if (!(json?.item))
         {
-            switch (typeof json.item)
+            const item = {};
+            for (const field of ['name', 'type', 'isAccessorial'])
             {
-                case 'object':
-                    // do nothing because object is what we want
-                    break;
-                case 'string':
-                    // convert to the object the string value should be the name of the item
-                    json.item = { name: json.item };
-                    break;
-                case 'number':
-                    // convert to the object the number value should be the id of the item
-                    json.item = { id: json.item };
-                    break;
+                if (field in json)
+                {
+                    item[field] = json[field];
+                    delete json[field];
+                }
             }
-            if (json.itemId)
+
+            if ('itemId' in json)
             {
-                json.item.id = json.itemId;
+                item.id = json.itemId;
             }
-            delete json.itemId;
+
+            if (Object.keys(item) > 0)
+            {
+                json.item = item;
+            }
         }
         return json;
+    }
+
+    $formatJson(json)
+    {
+        json = super.$formatJson(json);
+        if ('item' in json)
+        {
+            for (const field of ['name', 'isAccessorial'])
+            {
+                json[field] = json.item[field];
+            }
+            json.itemId = json.item.id;
+            delete json.item;
+        }
+
+        if (json.commodity)
+        {
+            delete json.commodity.extraExternalData;
+        }
+        return json;
+    }
+
+    linkBill(bill)
+    {
+        if (bill instanceof Bill)
+        {
+            this.invoiceGuid = bill.billGuid;
+        }
+        else if (bill instanceof InvoiceBill)
+        {
+            this.invoiceGuid = bill.guid;
+        }
+    }
+
+    linkInvoice(invoice)
+    {
+        if (invoice instanceof Invoice)
+        {
+            this.invoiceGuid = invoice.invoiceGuid;
+        }
+        else if (invoice instanceof InvoiceBill)
+        {
+            this.invoiceGuid = invoice.guid;
+        }
     }
 }
 

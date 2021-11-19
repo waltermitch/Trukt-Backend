@@ -7,7 +7,7 @@ parameters:
   - in: path
     name: terminalGuid
     schema:
-      $ref: '..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 
 responses:
@@ -17,8 +17,8 @@ responses:
       application/json:
         schema:
           allOf:
-            - $ref: ..\..\components\schemas\Common.yaml#/guidObject
-            - $ref: ..\..\components\schemas\Terminal.yaml
+            - $ref: ../../components/schemas/Common.yaml#/guidObject
+            - $ref: ../../components/schemas/Terminal.yaml#/TerminalOutbound
             - type: object
               properties:
                 locationType:
@@ -31,10 +31,10 @@ responses:
                     - port
                     - business
                 primaryContact:
-                  $ref: ..\..\components\schemas\Contact.yaml
+                  $ref: ../../components/schemas/Contact.yaml
                 alternativeContact:
-                  $ref: ..\..\components\schemas\Contact.yaml
+                  $ref: ../../components/schemas/Contact.yaml
                 contacts:
                   type: array
                   items:
-                    $ref: ..\..\components\schemas\Contact.yaml
+                    $ref: ../../components/schemas/Contact.yaml

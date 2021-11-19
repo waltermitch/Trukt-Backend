@@ -10,11 +10,11 @@ requestBody:
         type: object
         description: List of Job guids
         properties:
-          orders:
+          jobs:
             type: array
             items:
               description: Job guid
-              $ref: '..\..\components\schemas\common.yaml#/guid'
+              $ref: '../../components/schemas/Common.yaml#/guid'
             minItems: 1
         required:
           - jobs

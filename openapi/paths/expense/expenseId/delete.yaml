@@ -1,13 +1,14 @@
 summary: Delete Expense by guid
 operationId: deleteExpense
 description: Delete Expense
+deprecated: true
 tags:
   - Expense
 parameters:
   - in: path
     name: expenseId
     schema:
-      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../../components/schemas/Common.yaml#/guid'
     required: true
 responses:
   204:

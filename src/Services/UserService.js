@@ -9,11 +9,31 @@ class UserService
         return user;
     }
 
-    static async search(query)
+    static async search({
+        search,
+        pg = 1,
+        rc = 25
+    })
     {
-        const users = await User.query().where('name', 'ilike', `%${query}%`).orderBy('name', 'asc');
+        // GUI will be using starting index of 1, database uses starting index of 0
+        pg = Math.max(1, pg) - 1;
 
-        return users.results || users;
+        // clamp the amount between 1 and 100
+        rc = Math.min(100, Math.max(1, rc));
+
+        // clean out any special characters
+        search = search.replace(/%/g, '');
+
+        const users = await User.query()
+            .where('name', 'ilike', `${search}%`)
+
+            // prevent users from finding the TMS  System user
+            .modify('noSystemUser')
+            .modify('isNotDeleted')
+            .orderBy('name', 'asc')
+            .page(pg, rc);
+
+        return users.results;
     }
 
 }

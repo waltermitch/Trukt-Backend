@@ -5,8 +5,8 @@ account:
   properties:
     guid:
       oneOf:
-        - $ref: .\SFID.yaml
-        - $ref: .\Common.yaml#/guid
+        - $ref: ./Common.yaml#/guid
+        - $ref: ./SFID.yaml
     name:
       type: string
 client:
@@ -23,7 +23,7 @@ client:
     billingCountry:
       type: string
     billingLatitude:
-      $ref: .\Common.yaml#/latitude
+      $ref: ./Common.yaml#/latitude
     billingLongitude:
       type: string
     billingPostalCode:
@@ -53,6 +53,46 @@ client:
       type: string
     shippingPostalCode:
       type: string
+    shippingState:
+      type: string
+    shippingStreet:
+      type: string
+Consignee:
+  type: object
+  properties:
+    guid:
+      $ref: ./Common.yaml#/guid
+    name:
+      type: string
+      example: ABC Company
+    email:
+      $ref: ./Common.yaml#/email
+    phoneNumber:
+      $ref: ./Common.yaml#/phoneNumber
+    billingCity:
+      type: string
+    billingCountry:
+      type: string
+    billingLatitude:
+      $ref: ./Common.yaml#/latitude
+    billingLongitude:
+      $ref: ./Common.yaml#/longitude
+    billingPostalCode:
+      $ref: ./Common.yaml#/zipCode
+    billingState:
+      type: string
+    billingStreet:
+      type: string
+    shippingCity:
+      type: string
+    shippingCountry:
+      type: string
+    shippingLatitude:
+      $ref: ./Common.yaml#/latitude
+    shippingLongitude:
+      $ref: ./Common.yaml#/longitude
+    shippingPostalCode:
+      $ref: ./Common.yaml#/zipCode
     shippingState:
       type: string
     shippingStreet:

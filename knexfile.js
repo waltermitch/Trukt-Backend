@@ -5,7 +5,7 @@ const { knexSnakeCaseMappers } = require('objection');
 
 const env = process.env.NODE_ENV || process.env.ENV;
 const conConfig = {
-    client: process.env['knex.client'],
+    client: process.env['knex.client'] || process.env.KNEX_CLIENT,
     searchPath: ['rcg_tms', 'public', 'salesforce'],
     migrations: {
         tableName: process.env['knex.migration.table']
@@ -20,6 +20,17 @@ module.exports = () =>
 {
     switch (env)
     {
+        case 'pipeline':
+            conConfig.client = process.env.KNEX_CLIENT;
+            conConfig.migrations.tableName = process.env.KNEX_MIGRATION_TABLE;
+            conConfig.connection = {
+                user: process.env.KNEX_CONNECTION_USER,
+                password: process.env.KNEX_CONNECTION_PASSWORD,
+                port: process.env.KNEX_CONNECTION_PORT,
+                database: process.env.KNEX_CONNECTION_DATABASE
+            };
+
+            break;
         case 'local':
         case 'test':
             conConfig.connection = {};

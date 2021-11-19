@@ -1,60 +1,128 @@
 image: node:14.15.0
 
 definitions:
-    services:
-        mongo:
-            image: mongo
-        postgres:
-            image: postgres
-    steps:
-        - step: &jest-test
-              name: Jest Unit Tests
-              caches:
-                  - node
-              services:
-                  - mongo
-              script:
-                  - npm run decrypt -- local.settings.enc local.settings.json
-                  - npm install
-                  - npm test
-        - step: &lint-test
-              name: ESLint
-              caches:
-                  - node
-              script:
-                  - npm install -g eslint
-                  - eslint $BITBUCKET_CLONE_DIR
-        - step: &db-migration
-              name: DB Migration
-              caches:
-                  - node
-              script:
-                  - cd $BITBUCKET_CLONE_DIR && npm install
-                  - npm install -g knex
-                  - npm run decrypt -- local.settings.enc local.settings.json
-                  - node ./tools/migrator.js init
-                  - node ./tools/migrator.js up --all
+  services:
+    mongo:
+      image: mongo
+    postgres:
+      image: postgres
+      variables:
+        POSTGRES_PASSWORD: 'test'
+  steps:
+    - step: &jest-test
+        name: All Tests
+        caches:
+          - node
+        services:
+          - mongo
+        script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
+          - npm test
+    - step: &lint-test
+        name: ESLint
+        caches:
+          - node
+        script:
+          - npm install -g eslint
+          - eslint $BITBUCKET_CLONE_DIR
+    - step: &unit-test
+        name: Unit Tests
+        caches:
+          - node
+        script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
+          - npm run test:unit
+    - step: &integration-db-test
+        name: Integration test
+        services:
+          - postgres
+        caches:
+          - node
+        script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
+          - npm install --only=dev
+          - node ./tools/migrator.js init
+          - node ./tools/migrator.js up --all
+          - node ./tools/migrator.js seed sys -a
+          - node ./tools/migrator.js seed dev salesforce
+          - node ./tools/migrator.js seed dep users,audit_register
+          - npm run test:integration:db
+    - step: &db-migration
+        name: DB Migration
+        caches:
+          - node
+        script:
+          - cd $BITBUCKET_CLONE_DIR && npm install
+          - npm install -g knex
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - node ./tools/migrator.js init
+          - node ./tools/migrator.js up --all
+          - node ./tools/migrator.js seed systemData --all
+          - node ./tools/migrator.js seed deploymentData --all --but qbo_account_mappings
+    - step: &azure-deployment
+        name: Azure Deployment
+        script:
+          - cd $BITBUCKET_CLONE_DIR && npm install
+          - npm run api-bundle
+          - apt update && apt install zip
+          - zip -r $ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js local.settings.js main.js package-lock.json package.json web.config openapi
+          - pipe: microsoft/azure-web-apps-deploy:1.0.3
+            variables:
+              AZURE_APP_ID: $AZURE_APP_ID
+              AZURE_PASSWORD: $AZURE_APP_SECRET
+              AZURE_TENANT_ID: $AZURE_TENANT_ID
+              AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
+              AZURE_APP_NAME: $AZURE_APP_NAME
+              ZIP_FILE: $ENV-$BITBUCKET_BUILD_NUMBER.zip
+              SLOT: $ENV
+        artifacts:
+          - '*.zip'
+    - step: &full-deployment
+        name: Full Deployment to Database and Azure
+        caches:
+          - node
+        script:
+          - cd $BITBUCKET_CLONE_DIR && npm install
+          - npm install -g knex
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - node ./tools/migrator.js init
+          - node ./tools/migrator.js up --all
+          - node ./tools/migrator.js seed systemData --all
+          - node ./tools/migrator.js seed deploymentData --all --but qbo_account_mappings
+          - npm run api-bundle
+          - apt update && apt install zip
+          - zip -r $ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js local.settings.js main.js package-lock.json package.json web.config openapi
+          - pipe: microsoft/azure-web-apps-deploy:1.0.3
+            variables:
+              AZURE_APP_ID: $AZURE_APP_ID
+              AZURE_PASSWORD: $AZURE_APP_SECRET
+              AZURE_TENANT_ID: $AZURE_TENANT_ID
+              AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
+              AZURE_APP_NAME: $AZURE_APP_NAME
+              ZIP_FILE: $ENV-$BITBUCKET_BUILD_NUMBER.zip
+              SLOT: $ENV
+        artifacts:
+          - '*.zip'
 
 pipelines:
-    default:
-        - step: *jest-test
+  pull-requests:
+    '**':
+      - step: *unit-test
+      - step: *integration-db-test
 
-    pull-requests:
-        "**":
-            - step: *jest-test
-
-    branches:
-        "{STS-**,admin,andrey,ilya,justin,valeriy,vlad}":
-            - step: *jest-test
-        "dev":
-            - step:
-                  <<: *db-migration
-                  deployment: development
-        "staging":
-            - step:
-                  <<: *db-migration
-                  deployment: staging
-        "production":
-            - step:
-                  <<: *db-migration
-                  deployment: production
+  branches:
+    'dev':
+      - step:
+          <<: *full-deployment
+          deployment: development
+    'staging':
+      - step:
+          <<: *full-deployment
+          deployment: staging
+    'production':
+      - step:
+          <<: *full-deployment
+          deployment: production

@@ -12,25 +12,15 @@ const api = new HTTPS(opts).connect();
 
 class Coupa
 {
-    static async sendInvoices(orders)
+    static async sendInvoices(invoices)
     {
-        for (const order of orders)
-            for (const invoice of order.invoices)
-                if (invoice?.commodity?.identifier)
-                {
-                    invoice.orderNumber = order.number;
-                    invoice.description = order.commodities[0].description;
-                    invoice.vin = order.commodities[0].identifier;
+        const res = await Promise.allSettled(invoices.map(invoice => Coupa.sendInvoice(invoice)));
 
-                    await Coupa.sendInvoice(invoice);
-                }
-
+        return res;
     }
 
     static async sendInvoice(data)
     {
-        console.log('Sending Coupa Invoice');
-
         const invoice = new Invoice(data);
 
         const res = await api.post('/cxml/invoices', invoice);
@@ -41,7 +31,25 @@ class Coupa
 
         console.log(parsedRes.cXML.Response[0].Status[0].$.code);
 
-        return { 'status': parsedRes.cXML.Response[0].Status[0].$.code, 'data': res.data };
+        const response = {};
+        if (parsedRes?.cXML?.Response?.[0]?.Status?.[0]?._?.includes('Unable to find order with PO Number'))
+        {
+            response.error = 'Invalid PO # - Update Super Order';
+            response.status = 404;
+        }
+        else if (res.status == 200 || res.status == 417)
+        {
+            response.status = 200;
+            response.CoupaInvoice = parsedRes?.cXML?.Response?.[0]?.Status?.[0];
+            response.guid = invoice.guid;
+        }
+        else
+        {
+            response.status = 400;
+            response.error = parsedRes?.cXML?.Response?.[0]?.Status?.[0];
+        }
+
+        return response;
     }
 
     static async parseXML(xml)

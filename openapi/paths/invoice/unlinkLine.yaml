@@ -1,0 +1,26 @@
+summary: Unlink Invoice and Bill Lines
+operationId: unlinkInoiveBillLines
+description: Unlink Invoice and Bill Lines.
+tags:
+  - Invoice
+parameters:
+  - in: path
+    name: line1Guid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+  - in: path
+    name: line2Guid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true 
+responses:
+  200:
+    description: OK
+    content:
+      application/json: {}
+
+  406:
+    description: Constraint Violated
+    content:
+      application/json: {}

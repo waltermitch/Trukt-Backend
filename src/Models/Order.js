@@ -1,8 +1,9 @@
 const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
-const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJob = require('./OrderJob');
 const OrderJobType = require('./OrderJobType');
+const { DateTime } = require('luxon');
+const currency = require('currency.js');
 
 class Order extends BaseModel
 {
@@ -40,10 +41,10 @@ class Order extends BaseModel
             },
             dispatcher: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
+                modelClass: User,
                 join: {
                     from: 'rcgTms.orders.dispatcherGuid',
-                    to: 'salesforce.accounts.guid'
+                    to: 'rcgTms.tmsUsers.guid'
                 }
             },
             jobs: {
@@ -62,7 +63,6 @@ class Order extends BaseModel
                     through: {
                         modelClass: require('./OrderStopLink'),
                         from: 'rcgTms.orderStopLinks.orderGuid',
-                        extra: ['lotNumber'],
                         to: 'rcgTms.orderStopLinks.commodityGuid'
                     },
                     to: 'rcgTms.commodities.guid'
@@ -153,6 +153,19 @@ class Order extends BaseModel
                     from: 'rcgTms.orders.guid',
                     to: 'rcgTms.ediData.orderGuid'
                 }
+            },
+            notes:
+            {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./Notes'),
+                join: {
+                    from: 'rcgTms.orders.guid',
+                    through: {
+                        from: 'rcgTms.orderNotes.orderGuid',
+                        to: 'rcgTms.orderNotes.noteGuid'
+                    },
+                    to: 'rcgTms.genericNotes.guid'
+                }
             }
         };
         Object.assign(relations, AuthorRelationMappings('rcgTms.orders'));
@@ -170,9 +183,7 @@ class Order extends BaseModel
                     $modify: ['byType']
                 },
                 clientContact: true,
-                dispatcher: {
-                    $modify: ['byType']
-                },
+                dispatcher: true,
                 referrer: {
                     $modify: ['byType']
                 },
@@ -203,9 +214,7 @@ class Order extends BaseModel
                     },
                     vendorAgent: true,
                     vendorContact: true,
-                    dispatcher: {
-                        $modify: ['byType']
-                    },
+                    dispatcher: true,
                     jobType: true,
                     stopLinks: {
                         commodity: {
@@ -219,18 +228,23 @@ class Order extends BaseModel
                         }
                     },
                     bills: {
-                        lines: { item: true }
+                        lines: { item: true, link: true }
                     }
+                }
+            },
+            'stopsPayload': {
+                jobs: {
+                    stops: {
+                        $modify: ['distinct'],
+                        terminal: true
+                    }
+                },
+                stops: {
+                    $modify: ['distinct'],
+                    terminal: true
                 }
             }
         };
-    }
-
-    $parseDatabaseJson(json)
-    {
-        json = super.$parseDatabaseJson(json);
-        json.netProfitMargin = this.calculateNetProfitMargin(json.actualRevenue, json.actualExpense);
-        return json;
     }
 
     static allStops(order)
@@ -243,16 +257,17 @@ class Order extends BaseModel
         return stops;
     }
 
-    async $beforeInsert(context)
+    setClientNote(note, user)
     {
-        await super.$beforeInsert(context);
-        this.calculateEstimatedIncome();
-    }
-
-    async $beforeUpdate(opt, context)
-    {
-        await super.$beforeUpdate(opt, context);
-        this.calculateEstimatedIncome();
+        if (note && note.length > 3000)
+        {
+            throw new Error('Client notes cannot exceed 3000 characters');
+        }
+        this.clientNotes = {
+            note,
+            updatedByGuid: user,
+            dateUpdated: DateTime.utc().toString()
+        };
     }
 
     static filterIsTender(query, isTender)
@@ -279,8 +294,36 @@ class Order extends BaseModel
         filterJobCategories: this.filterJobCategories
     };
 
+    async $beforeInsert(queryContext)
+    {
+        this.calculateRevenueAndExpense();
+        await super.$beforeInsert(queryContext);
+    }
+
+    /**
+     * For order creation. given that all invoices have "transport", the actual and estimated expense and revenue have the same values
+     */
+    calculateRevenueAndExpense()
+    {
+        if (this.jobs)
+        {
+            let revenue = currency(0);
+            let expense = currency(0);
+
+            for (const { estimatedRevenue, estimatedExpense } of this.jobs)
+            {
+                revenue = revenue.add(currency(estimatedRevenue));
+                expense = expense.add(currency(estimatedExpense));
+            }
+            this.estimatedRevenue = revenue.value;
+            this.actualRevenue = revenue.value;
+
+            this.estimatedExpense = expense.value;
+            this.actualExpense = expense.value;
+        }
+    }
+
 }
 
-Object.assign(Order.prototype, IncomeCalcs);
 Object.assign(Order.prototype, RecordAuthorMixin);
 module.exports = Order;

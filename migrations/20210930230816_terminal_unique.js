@@ -2,8 +2,7 @@ const SCHEMA_NAME = 'rcg_tms';
 const TABLE_NAME = 'terminals';
 
 /**
- * Right now this is causing issues for UpdateOrder and CreateOrder, it is going to be disable
- * until STS-1428 is resolve and fix the issue of checking references for terminals with same lat and lon
+ * Removed temporarily and added back in 20211025152400_terminals_unique_coordinates.js
  */
 
 exports.up = function (knex)

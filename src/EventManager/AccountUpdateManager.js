@@ -104,7 +104,8 @@ class AccountUpdateManager
         }
 
         // update database
-        await SFAccount.query().patch(update).where('guid', data?.guid);
+        if (Object.keys(update).length > 0)
+            await SFAccount.query().findById(data.guid).patch(update);
     }
 
     static async checkAccountUpdatedQueue()
