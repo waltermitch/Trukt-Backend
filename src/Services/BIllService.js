@@ -111,6 +111,15 @@ class BillService
             throw new Error('Bill does not exist.');
         }
 
+        // to double check and see if commodity is attached
+        const checkLine = await InvoiceLine.query().findById(lineGuid);
+
+        // if attached throw error
+        if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
+        {
+            throw new Error('Deleting a transport line attached to a commodity is forbidden.');
+        }
+
         // returning updated bill
         const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
 
@@ -142,12 +151,11 @@ class BillService
             // creating array of patch updates
             for (let i = 0; i < lineGuids.length; i++)
             {
-                patchArrays.push(InvoiceLine.query(trx).delete().where('guid', lineGuids[i]).where('invoiceGuid', billGuid));
+                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': billGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
             }
 
             // executing all updates
             const deletedLines = await Promise.all(patchArrays);
-            console.log(deletedLines);
 
             // if any failed will return guids that failed
             if (deletedLines.includes(0))
@@ -161,7 +169,7 @@ class BillService
                     }
                 }
 
-                throw new Error(`Lines with guid(s): ${guids} :do not exist.`);
+                throw new Error(`Lines with guid(s): ${guids} cannot be deleted.`);
             }
 
             // if succeed then, returns nothing
