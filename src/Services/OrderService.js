@@ -241,7 +241,7 @@ class OrderService
                 // these fields cannot be set by the user
                 status: 'new',
                 isDeleted: false,
-                isCompleted: false,
+                isComplete: false,
                 dateCompleted: null,
                 invoices: [],
 
@@ -740,8 +740,6 @@ class OrderService
                 patchPromises.push(
                     OrderService.calculateTotalDistance(orderjob.stops).then(async (distance) =>
                     {
-                        console.log(orderjob.guid);
-                        console.log(distance);
                         await model.query(trx).patch({ distance }).findById(orderjob.guid);
                     })
                 );
