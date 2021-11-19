@@ -76,7 +76,8 @@ class OrderService
             'dateCreated',
             'actualRevenue',
             'actualExpense',
-            'dateUpdated'
+            'dateUpdated',
+            'isDummy'
         ];
 
         const baseOrderQuery = OrderJob.query()
@@ -1341,6 +1342,7 @@ class OrderService
                  * Is necessary to use modifyGraph on stops and
                  * stops.commodities to avoid duplicate rows
                  */
+                .modifyGraph('order', 'getOrdersFields')
                 .modifyGraph('order.client', (builder) =>
                     builder.select('guid', 'name')
                 )
