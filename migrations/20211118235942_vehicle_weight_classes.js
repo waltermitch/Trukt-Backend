@@ -9,7 +9,7 @@ exports.up = function (knex)
         table.string('class');
         table.integer('min_weight').notNullable();
         table.integer('max_weight').notNullable();
-    }).raw(`ALTER TABLE ${TABLE_NAME} ADD CONSTRAINT max_weight_greater_than_min_weight CHECK (max_weight >= min_weight)`);
+    }).raw(`ALTER TABLE ${TABLE_NAME} ADD CONSTRAINT ${TABLE_NAME}_max_weight_greater_than_min_weight CHECK (max_weight >= min_weight)`);
 };
 
 exports.down = function (knex)
