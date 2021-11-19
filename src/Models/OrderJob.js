@@ -395,7 +395,18 @@ class OrderJob extends BaseModel
         },
         statusComplete: (queryBuilder) => { queryBuilder.orWhere({ 'isCompleted': true }); },
         statusCanceled: (queryBuilder) => { queryBuilder.orWhere({ 'isCanceled': true }); },
-        statusDeleted: (queryBuilder) => { queryBuilder.orWhere({ 'isDeleted': true }); }
+        statusDeleted: (queryBuilder) => { queryBuilder.orWhere({ 'isDeleted': true }); },
+        statusDispatched: (queryBuilder) =>
+        {
+            queryBuilder
+                .orWhere({
+                    'isReady': true,
+                    'isOnHold': false,
+                    'isDeleted': false,
+                    'isCanceled': false
+                })
+                .whereNotNull('vendorGuid');
+        }
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
