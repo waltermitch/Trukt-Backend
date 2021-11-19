@@ -145,9 +145,6 @@ requestBody:
                             $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
                           guid:
                             $ref: ../../components/schemas/Common.yaml#/guid
-                          lotNumber:
-                            type: string
-                            nullable: true
                         required:
                           - index
                           - expense
