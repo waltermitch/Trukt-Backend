@@ -378,6 +378,20 @@ class OrderJob extends BaseModel
                     'job.isCanceled': false,
                     'job.isComplete': false
                 });
+        },
+        statusTender: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .orWhere({
+                    'order.isTender': true,
+                    'job.isReady': false,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'job.isComplete': false
+                });
         }
     };
 
