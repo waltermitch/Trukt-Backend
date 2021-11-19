@@ -130,6 +130,28 @@ requestBody:
                       allOf:
                         - $ref: '../../components/schemas/Common.yaml#/guidObjectNullable'
                         - description: The dispatcher who is responsible for managing this job.
+                    commodities:
+                      type: array
+                      items:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          index:
+                            type: string
+                            description: Unique index per commodity, this field can be any string value
+                          expense:
+                            $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
+                          revenue:
+                            $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
+                          guid:
+                            $ref: ../../components/schemas/Common.yaml#/guid
+                          lotNumber:
+                            type: string
+                            nullable: true
+                        required:
+                          - index
+                          - expense
+                          - revenue
                     stops:
                       type: array
                       items:
@@ -147,19 +169,8 @@ requestBody:
                                 index:
                                   type: string
                                   description: Unique index per commodity, this field can be any string value
-                                expense:
-                                  $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
-                                revenue:
-                                  $ref: ../../components/schemas/Expense.yaml#/expense/properties/amount
-                                guid:
-                                  $ref: ../../components/schemas/Common.yaml#/guid
-                                lotNumber:
-                                  type: string
-                                  nullable: true
                               required:
                                 - index
-                                - expense
-                                - revenue
                         required:
                           - index
                   required:
@@ -312,12 +323,6 @@ responses:
               type: array
               items:
                 type: object
-            expenses:
-              type: array
-              items:
-                allOf:
-                  - $ref: '../../components/schemas/Expense.yaml#/orderExpense'
-                  - $ref: '../../components/schemas/Common.yaml#/guidObject'
             stops:
               type: array
               items:
