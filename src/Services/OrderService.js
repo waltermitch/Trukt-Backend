@@ -1,6 +1,3 @@
-const currency = require('currency.js');
-const { v4: uuid } = require('uuid');
-
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -23,15 +20,17 @@ const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
 const Terminal = require('../Models/Terminal');
 const Vehicle = require('../Models/Vehicle');
+const Invoice = require('../Models/Invoice');
 const Order = require('../Models/Order');
 const NodeCache = require('node-cache');
+const currency = require('currency.js');
 const User = require('../Models/User');
+const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
-const Invoice = require('../Models/Invoice');
-const Bill = require('../Models/Bill');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -230,7 +229,6 @@ class OrderService
 
         try
         {
-
             // client is required and always should be checked.
             // vehicles are not checked and are created or found
             const dataCheck = { client: true, vehicles: false, terminals: false };
@@ -967,7 +965,6 @@ class OrderService
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
-
         const responses = await this.handleLoadTenders('accept', orderGuids, null);
 
         await this.loadTendersHelper(responses, false, false, 8, currentUser);
@@ -982,7 +979,6 @@ class OrderService
      */
     static async rejectLoadTenders(orderGuids, reason, currentUser)
     {
-
         const responses = await this.handleLoadTenders('reject', orderGuids, reason);
 
         await this.loadTendersHelper(responses, true, true, 9, currentUser);
@@ -1142,18 +1138,14 @@ class OrderService
 
     static addFilterStatus(baseQuery, statusList)
     {
-        const doesStatusListHaveElements =
-            statusList?.length > 0 ? true : false;
-        return doesStatusListHaveElements
-            ? baseQuery.whereIn('status', statusList)
+        return statusList?.length
+            ? baseQuery.whereRaw('status ilike ANY(Array[?])', statusList)
             : baseQuery;
     }
 
     static addFilterCustomer(baseQuery, customerList)
     {
-        const doesCustomerListHaveElements =
-            customerList?.length > 0 ? true : false;
-        return doesCustomerListHaveElements
+        return customerList?.length
             ? baseQuery.whereIn(
                 'orderGuid',
                 Order.query()
@@ -1165,9 +1157,7 @@ class OrderService
 
     static addFilterDispatcher(baseQuery, dispatcherList)
     {
-        const doesDispatcherListHaveElements =
-            dispatcherList?.length > 0 ? true : false;
-        return doesDispatcherListHaveElements
+        return dispatcherList?.length
             ? baseQuery.whereIn(
                 'orderGuid',
                 Order.query()
@@ -1179,9 +1169,7 @@ class OrderService
 
     static addFilterSalesperson(baseQuery, salespersonList)
     {
-        const doesSalespersonListHaveElements =
-            salespersonList?.length > 0 ? true : false;
-        return doesSalespersonListHaveElements
+        return salespersonList?.length
             ? baseQuery.whereIn(
                 'orderGuid',
                 Order.query()
