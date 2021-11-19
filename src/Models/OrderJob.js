@@ -364,7 +364,21 @@ class OrderJob extends BaseModel
         sorted: this.sorted,
         globalSearch: this.globalSearch,
         filterStatus: (queryBuilder, status) => { return queryBuilder.whereIn('status', status); },
-        statusOnHold: (queryBuilder) => { queryBuilder.orWhere({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); }
+        statusOnHold: (queryBuilder) => { queryBuilder.orWhere({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); },
+        statusNew: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .orWhere({
+                    'order.isTender': false,
+                    'job.isReady': false,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'job.isComplete': false
+                });
+        }
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
