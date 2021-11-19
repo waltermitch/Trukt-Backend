@@ -362,7 +362,9 @@ class OrderJob extends BaseModel
         filterIsTender: this.filterIsTender,
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
-        globalSearch: this.globalSearch
+        globalSearch: this.globalSearch,
+        filterStatus: (queryBuilder, status) => { return queryBuilder.whereIn('status', status); },
+        statusOnHold: (queryBuilder) => { queryBuilder.orWhere({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); }
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
