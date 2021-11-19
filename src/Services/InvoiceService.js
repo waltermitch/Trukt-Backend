@@ -208,7 +208,7 @@ class InvoiceService
         // if attached throw error
         if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
         {
-            throw new Error('Cannot delete line becuase commodity is attached.');
+            throw new Error('Deleting a transport line attached to a commodity is forbidden.');
         }
 
         // returning updated bill
@@ -243,7 +243,7 @@ class InvoiceService
             // creating array of patch updates
             for (let i = 0; i < lineGuids.length; i++)
             {
-                patchArrays.push(InvoiceLine.query(trx).delete().where('guid', lineGuids[i]).where('invoiceGuid', invoiceGuid).whereNotNull('commodity_guid'));
+                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': invoiceGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
             }
 
             // executing all updates
