@@ -346,26 +346,30 @@ class OrderService
                 return cache;
             }, {});
 
-            // create promises for each contact that the stops will be using
-            const allStops = Order.allStops(orderObj).map(it => OrderStop.fromJson(it));
-            orderInfoPromises.push(Promise.all(allStops.map((stop) =>
+            /**
+             * create promises for each contact that the stops will be using.
+             * Creates an array of stopContacts that contains an array of contacts, were the first position is the first position of OrderStop.contactTypes
+             * The downside is that relie on Promise.all array order, but we can resolve all contacts at the same time
+             */
+            const stopContactsInOrder = orderObj.stops.map(stop =>
             {
                 const terminal = terminalsCache[stop.terminal];
+                const contactsForStopInOrder = [];
                 for (const contactType of OrderStop.contactTypes)
                 {
+                    let contactToCreate = null;
                     if (stop[contactType])
                     {
                         const contact = Contact.fromJson(stop[contactType]);
                         contact.linkTerminal(terminal);
                         contact.setCreatedBy(currentUser);
-                        return contact.findOrCreate(trx);
+                        contactToCreate = contact.findOrCreate(trx);
                     }
-                    else
-                    {
-                        return null;
-                    }
+                    contactsForStopInOrder.push(contactToCreate);
                 }
-            })));
+                return Promise.all(contactsForStopInOrder);
+            });
+            orderInfoPromises.push(Promise.all(stopContactsInOrder));
 
             // commodities are reused in the system
             const commodityCache = orderObj.commodities.reduce((cache, com, i) =>
@@ -386,21 +390,9 @@ class OrderService
                 return cache;
             }, {});
 
-            const [clientContact, stopContacts] = await Promise.all(orderInfoPromises);
+            const [clientContact, stopContactsCreated] = await Promise.all(orderInfoPromises);
 
             order.graphLink('clientContact', clientContact);
-
-            for (const stop of allStops)
-            {
-                for (const contactType of OrderStop.contactTypes)
-                {
-                    const contact = stopContacts.shift();
-                    if (contact)
-                    {
-                        stop.graphLink(contactType, contact);
-                    }
-                }
-            }
 
             // orders will have defined all the stops that are needed to be completed
             // for this order to be classified as completed as well
@@ -412,6 +404,12 @@ class OrderService
             {
                 const stop = OrderStop.fromJson(stopObj);
                 stop.setCreatedBy(currentUser);
+                const stopContacts = stopContactsCreated.shift();
+                for (const contactType of OrderStop.contactTypes)
+                {
+                    if (stopContacts)
+                        stop.graphLink(contactType, stopContacts.shift());
+                }
                 return stop;
             }));
 
