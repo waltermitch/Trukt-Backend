@@ -393,7 +393,8 @@ class OrderJob extends BaseModel
                     'job.isComplete': false
                 });
         },
-        statusComplete: (queryBuilder) => { queryBuilder.orWhere({ 'isCompleted': true }); }
+        statusComplete: (queryBuilder) => { queryBuilder.orWhere({ 'isCompleted': true }); },
+        statusCanceled: (queryBuilder) => { queryBuilder.orWhere({ 'isCanceled': true }); }
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
