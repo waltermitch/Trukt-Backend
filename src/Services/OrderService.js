@@ -22,7 +22,6 @@ const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
 const Terminal = require('../Models/Terminal');
-const Expense = require('../Models/Expense');
 const Vehicle = require('../Models/Vehicle');
 const Order = require('../Models/Order');
 const NodeCache = require('node-cache');
@@ -31,6 +30,8 @@ const { DateTime } = require('luxon');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+const Invoice = require('../Models/Invoice');
+const Bill = require('../Models/Bill');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -239,7 +240,7 @@ class OrderService
                 // these fields cannot be set by the user
                 status: 'new',
                 isDeleted: false,
-                isCompleted: false,
+                isComplete: false,
                 dateCompleted: null,
                 invoices: [],
 
@@ -685,9 +686,7 @@ class OrderService
     static async calculateTotalDistance(stops)
     {
         // go through every order stop
-        stops.sort(
-            (firstStop, secondStop) => firstStop.sequence - secondStop.sequence
-        );
+        stops.sort(OrderStop.sortBySequence);
 
         // converting terminals into address strings
         const terminalStrings = stops.map((stop) =>
@@ -697,6 +696,135 @@ class OrderService
 
         // send all terminals to the General Function app and recieve only the distance value
         return await GeneralFuncApi.calculateDistances(terminalStrings);
+    }
+
+    static async calculatedDistances(OrderGuid)
+    {
+        // relations obejct for none repetitive code
+        const stopRelationObj = {
+            $modify: ['distinct'],
+            terminal: true
+        };
+
+        // TODO:add functionality to push to error DB when transaction fails
+
+        // start transaction to update distances
+        await Order.transaction(async (trx) =>
+        {
+            // get OrderStops and JobStops from database Fancy smancy queries
+            const order = await Order.query(trx).withGraphJoined({
+                jobs: { stops: stopRelationObj },
+                stops: stopRelationObj
+            }).findById(OrderGuid);
+
+            // array for transaction promises
+            const patchPromises = [];
+
+            let orderCounted = false;
+            for (const orderjob of [order, ...order.jobs])
+            {
+                // logic to handle order vs jobs model
+                let model;
+                if (orderCounted)
+                {
+                    model = OrderJob;
+                }
+                else
+                {
+                    model = Order;
+                    orderCounted = true;
+                }
+
+                // pushing distance call and update into array
+                patchPromises.push(
+                    OrderService.calculateTotalDistance(orderjob.stops).then(async (distance) =>
+                    {
+                        await model.query(trx).patch({ distance }).findById(orderjob.guid);
+                    })
+                );
+            }
+
+            // execute all promises
+            await Promise.all(patchPromises);
+        });
+        return;
+    }
+
+    static async validateStopsBeforeUpdate(oldOrder, newOrder)
+    {
+        // get OrderStops and JobStops from database Fancy smancy queries
+        const updatedOrder = await Order.query().skipUndefined().withGraphJoined(Order.fetch.stopsPayload).findById(newOrder.guid);
+
+        // array to store promises
+        const patchArray = [];
+
+        // compate order stops
+        if (oldOrder.stops.length != updatedOrder.stops.length)
+        {
+            console.log('Updating Order Terminals');
+
+            // calculate distance
+            patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+            {
+                await Order.query().patch({ distance }).findById(updatedOrder.guid);
+            }));
+        }
+        else
+        {
+            for (let i = 0; i < updatedOrder.stops.length; i++)
+            {
+                // if terminals are not the same
+                if (!R.equals(updatedOrder.stops[i].terminal, oldOrder.stops[i].terminal))
+                {
+                    console.log('Updating Order Terminal');
+
+                    // calculate distance
+                    patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+                    {
+                        await Order.query().patch({ distance }).findById(updatedOrder.guid);
+                    }));
+                }
+            }
+        }
+
+        // loop through jobs array
+        for (let i = 0; i < updatedOrder.jobs.length; i++)
+        {
+            // if job stops length is different
+            if (updatedOrder.jobs[i].stops.length != oldOrder.jobs[i].stops.length)
+            {
+                console.log('Updateing Job terminals');
+
+                // calculate distance of jobs stops
+                patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+                {
+                    await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
+                }));
+            }
+            else
+            {
+                // loop through job stops terminals
+                for (let j = 0; j < updatedOrder.jobs[i].stops.length; j++)
+                {
+                    // if terminals are not the same
+                    if (!R.equals(updatedOrder.jobs[i].stops[j].terminal, oldOrder.jobs[i].stops[j].terminal))
+                    {
+                        console.log('Updating Job Stop!');
+
+                        // calculate distance
+                        patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+                        {
+                            await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
+                        }));
+                    }
+                }
+            }
+        }
+
+        if (patchArray.length != 0)
+        {
+            await Promise.all(patchArray);
+        }
     }
 
     /**
@@ -1205,7 +1333,8 @@ class OrderService
                             commType: true,
                             vehicle: true
                         }
-                    }
+                    },
+                    dispatcher: true
                 })
 
                 /**
@@ -1349,7 +1478,6 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
-            expenses = [],
             ...orderData
         } = orderInput;
 
@@ -1360,7 +1488,8 @@ class OrderService
                 clientFound,
                 commodityTypes,
                 jobTypes,
-                invoiceLineItems,
+                invoiceBills,
+                orderInvoices,
                 referencesChecked
             ] = await Promise.all([
                 clientContact
@@ -1373,7 +1502,8 @@ class OrderService
                     : undefined,
                 commodities.length > 0 ? CommodityType.query(trx) : null,
                 jobs.length > 0 ? OrderJobType.query(trx) : null,
-                expenses.length > 0 ? InvoiceLineItem.query(trx) : null,
+                OrderService.getInvoiceBills(jobs),
+                OrderService.getOrderInvoices(guid),
                 OrderService.validateReferencesBeforeUpdate(
                     clientContact,
                     guid,
@@ -1434,20 +1564,13 @@ class OrderService
                 trx
             );
 
-            const { orderInvoices, jobs: jobsWithExpensesGraph } =
-                OrderService.updateCreateExpenses(
-                    expenses,
-                    {
-                        dispatcher,
-                        referrer,
-                        salesperson,
-                        consignee
-                    },
-                    jobsToUpdate,
-                    invoiceLineItems,
-                    commoditiesMap,
-                    currentUser
-                );
+            const { jobsToUpdateWithExpenses, orderInvoicesToUpdate } = OrderService.updateExpensesGraph(
+                commoditiesMap,
+                invoiceBills,
+                orderInvoices,
+                jobsToUpdate,
+                currentUser
+            );
 
             const orderGraph = Order.fromJson({
                 guid,
@@ -1462,8 +1585,8 @@ class OrderService
                 instructions,
                 clientContactGuid: orderContactCreated,
                 stops: stopsToUpdate,
-                jobs: jobsWithExpensesGraph,
-                invoices: orderInvoices,
+                invoices: orderInvoicesToUpdate,
+                jobs: jobsToUpdateWithExpenses,
                 ...orderData
             });
             orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
@@ -1478,6 +1601,7 @@ class OrderService
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
+            // TODO: Events here
             // update loadboard postings (async)
             orderUpdated.jobs.map(async (job) =>
             {
@@ -1491,10 +1615,34 @@ class OrderService
         catch (error)
         {
             await trx.rollback();
-            throw {
-                message: error?.nativeError?.detail || error?.message || error
-            };
+            throw error;
         }
+    }
+
+    static async getInvoiceBills(jobs)
+    {
+        const jobsGuids = jobs.map(job => job.guid);
+        const allInvoiceBills = await InvoiceBill.query().select('*')
+            .whereIn(
+                'guid',
+                Bill.query().select('billGuid').whereIn('jobGuid', jobsGuids)
+            );
+
+        return InvoiceBill.fetchGraph(allInvoiceBills, '[lines.link, job]')
+            .modifyGraph('job', (builder) =>
+                builder.select('guid')
+            );
+    }
+
+    static async getOrderInvoices(orderGuid)
+    {
+        const allInvoices = await InvoiceBill.query().select('*')
+            .whereIn(
+                'guid',
+                Invoice.query().select('invoiceGuid').where('orderGuid', orderGuid)
+            );
+
+        return InvoiceBill.fetchGraph(allInvoices, '[lines.link]');
     }
 
     // If contactObject is null -> reference should be removed
@@ -2172,12 +2320,18 @@ class OrderService
             jobsInput?.map((job) =>
             {
                 // eslint-disable-next-line no-unused-vars
-                const { stops: stopsDataNotUseHere, ...newJobData } = job;
-                return OrderService.createSingleJobGraph(
+                const { stops: stopsDataNotUseHere, commodities, ...newJobData } = job;
+                const jobGraph = OrderService.createSingleJobGraph(
                     newJobData,
                     jobTypes,
                     currentUser
                 );
+
+                // Add commodities to be use in updateExpensesGraph cause they contain the revenue and expense
+                return {
+                    ...jobGraph,
+                    commodities
+                };
             }) || []
         );
     }
@@ -2364,105 +2518,104 @@ class OrderService
         );
     }
 
-    static updateCreateExpenses(
-        expenses,
-        orderContacts,
-        jobs,
-        invoiceLineItems,
-        commoditiesMap,
-        currentUser
-    )
+    /**
+     * For each commodity send in a job (Which contains the revenu and expense), we pull the invoice line from DB and find the invoice that has
+     * the same commodityGuid and itemId = 1, the we update the revenue and expese, if a line is not found it is because is for a new commmodity, so a
+     * new invoice line is created for the job and the order. The new jobsWithExpenses is return along with the orderInvoices
+     * @param {*} commoditiesMap Commodities obj with key the commodity index and value the commodity with guid
+     * @param {*} invoiceBillsFromDB Bills pull from DB for all jobs to update
+     * @param {*} orderInvoiceFromDB Invoices pull from DB for the order
+     * @param {*} jobsToUpdate Jobs with new new information to update, contains the commodities new expense and revenue
+     * @param {*} currentUser
+     * @returns {
+     *  jobsToUpdateWithExpenses: Jobs with the bills and lines to update or create
+     *  orderInvoicesToUpdate Order invoices with the lines to create
+     * }
+     */
+    static updateExpensesGraph(commoditiesMap, invoiceBillsFromDB, orderInvoiceFromDB, jobsToUpdate, currentUser)
     {
-        const { consignee, referrer, salesperson, dispatcher } = orderContacts;
-        const actors = {
-            client: consignee,
-            referrer: referrer,
-            salesperson: salesperson,
-            dispatcher: dispatcher
-        };
-
-        // there can be many vendors
-        for (const job of jobs)
+        const orderInvoiceListToCreate = [];
+        const jobsToUpdateWithExpenses = jobsToUpdate.map(job =>
         {
-            actors[job.index + 'vendor'] = job.vendor;
-        }
+            job.bills = [];
+            const jobBillsWithLinesToUpdate = new Map();
 
-        // going to use the actor role name as the key for quick storage
-        const invoices = {};
-
-        for (const expense of expenses)
-        {
-            let invoiceKey = expense.account;
-            if (expense.job)
+            job.commodities?.map(commoditieWithExpense =>
             {
-                // this is a job expense, there are many vendors so have to make unique key
-                invoiceKey = expense.job + expense.account;
-            }
+                let lineFound = false;
+                const commodity = commoditiesMap[commoditieWithExpense.index];
 
-            if (!(invoiceKey in invoices))
-            {
-                const invoiceBill = InvoiceBill.fromJson({
-                    // mark as invoice only if it is for the client, everyone else is a bill
-                    isInvoice: expense.account === 'client',
-                    lines: []
-                });
-                invoiceBill.consignee = actors[invoiceKey];
-                invoiceBill.setCreatedBy(currentUser);
-                invoices[invoiceKey] = invoiceBill;
-            }
-            const invoice = invoices[invoiceKey];
-            const lineItem = invoiceLineItems.find(
-                (lineItem) => expense.item === lineItem.name && expense.item
-            );
+                // If commodity is not found, must be a typo on the commodity index sended by the caller
+                if (commodity)
+                {
+                    for (const bill of invoiceBillsFromDB)
+                    {
+                        if (bill.job.guid === job.guid)
+                        {
+                            // Update only for line type transport
+                            const invocieLineFound = bill.lines?.find(line => line.itemId === 1 && line.commodityGuid === commodity.guid);
+                            if (invocieLineFound)
+                            {
+                                lineFound = true;
+                                invocieLineFound.amount = commoditieWithExpense.expense;
+                                invocieLineFound.setUpdatedBy(currentUser);
 
-            if (!lineItem)
-                throw new Error('Unknown expense item: ' + expense.item);
+                                invocieLineFound.link[0].amount = commoditieWithExpense.revenue;
+                                invocieLineFound.link[0].setUpdatedBy(currentUser);
 
-            const invoiceLine = InvoiceLine.fromJson({
-                amount: expense.amount
-            });
-            invoiceLine.graphLink('item', lineItem);
+                                // Add bill to jobToUpdate
+                                if (!jobBillsWithLinesToUpdate.has(bill.guid))
+                                    jobBillsWithLinesToUpdate.set(bill.guid, bill);
+                            }
+                        }
+                    }
+                }
 
-            if (expense.guid)
-            {
-                invoiceLine.setUpdatedBy(currentUser);
-                invoiceLine.guid = expense.guid;
-            }
-            else invoiceLine.setCreatedBy(currentUser);
+                // If line was not found is because it is for a new commodity so a new one has to be created
+                if (!lineFound && commodity)
+                {
+                    const itemId = 1;
+                    const commodityRevenue = commoditieWithExpense.revenue;
+                    const commodityExpense = commoditieWithExpense.expense;
 
-            if (expense.commodity)
-            {
-                const commodity = commoditiesMap[expense.commodity];
-                invoiceLine.commodityGuid = commodity.guid;
-            }
-
-            invoice.lines.push(invoiceLine);
-        }
-
-        const orderInvoices = [];
-        const jobInvoices = {};
-        Object.keys(invoices).map((it) =>
-        {
-            const match = it.match(/(.*?)vendor$/);
-            if (match)
-            {
-                if (match[1]) jobInvoices[match[1]] = invoices[it];
-                else
-                    throw new Error(
-                        'expense specifies vendor account but not linked to a job'
+                    const orderInvoiceLineToCreate = OrderService.createInvoiceLineGraph(
+                        commodityRevenue,
+                        itemId,
+                        currentUser
                     );
+                    orderInvoiceLineToCreate.graphLink('commodity', commodity);
+                    orderInvoiceListToCreate.push(orderInvoiceLineToCreate);
+
+                    const jobInvoiceLineToCreate = OrderService.createInvoiceLineGraph(
+                        commodityExpense,
+                        itemId,
+                        currentUser
+                    );
+                    jobInvoiceLineToCreate.graphLink('commodity', commodity);
+                    jobInvoiceLineToCreate.link = { '#ref': orderInvoiceLineToCreate['#id'] };
+
+                    const bill = invoiceBillsFromDB.find(bill => bill.job.guid === job.guid);
+                    bill.lines.push(jobInvoiceLineToCreate);
+                    if (!jobBillsWithLinesToUpdate.has(bill.guid))
+                        jobBillsWithLinesToUpdate.set(bill.guid, bill);
+                }
+            });
+
+            for (const bill of jobBillsWithLinesToUpdate.values())
+            {
+                // Delete the job.commodities that contains the expense and revenue and insert the bill with the lines to update inside the job
+                // eslint-disable-next-line no-unused-vars
+                const { job: commodityJobReference, ...billData } = bill;
+                delete job.commodities;
+                job.bills.push(billData);
             }
-            else orderInvoices.push(invoices[it]);
+            return job;
         });
 
-        for (const jobIndex of Object.keys(jobInvoices))
-        {
-            const job = jobs.find((job) => job['#id'] === jobIndex);
-            job.bills ? null : (job.bills = []);
-            job.bills.push(jobInvoices[jobIndex]);
-        }
+        if (orderInvoiceFromDB.length > 0)
+            orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
 
-        return { orderInvoices, jobs };
+        return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
     }
 
     static async findByVin(vin)

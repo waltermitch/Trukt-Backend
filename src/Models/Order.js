@@ -231,6 +231,18 @@ class Order extends BaseModel
                         lines: { item: true, link: true }
                     }
                 }
+            },
+            'stopsPayload': {
+                jobs: {
+                    stops: {
+                        $modify: ['distinct'],
+                        terminal: true
+                    }
+                },
+                stops: {
+                    $modify: ['distinct'],
+                    terminal: true
+                }
             }
         };
     }
