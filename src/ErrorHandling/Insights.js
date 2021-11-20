@@ -9,7 +9,7 @@ appInsights.setup(process.env.APPINSIGHTS_INSTRUMENTATIONKEY)
     .setAutoCollectConsole(true)
     .setUseDiskRetryCaching(true)
     .setSendLiveMetrics(true);
-
+appInsights.start();
 const client = appInsights.defaultClient;
 
 switch (process.env.ENV)
@@ -19,7 +19,6 @@ switch (process.env.ENV)
     case 'staging':
     case 'prod':
     case 'production':
-        appInsights.start();
         client.context.tags[appInsights.defaultClient.context.keys.cloudRole] = process.env.ENV;
         break;
     default:
