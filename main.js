@@ -1,7 +1,11 @@
 /* eslint-disable no-console */
+
+// Important: applicationinsights must be setup and started before you import anything else.
+// There may be resulting telemetry loss if other libraries are imported first.
 const openApiValidator = require('express-openapi-validator');
 
 require('./local.settings');
+const telemetryClient = require('./src/ErrorHandling/Insights');
 require('./src/HttpControllers/HttpRouteController');
 const express = require('express');
 const session = require('express-session');
@@ -11,7 +15,7 @@ const KnexSessionStore = require('connect-session-knex')(session);
 const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
 const PGListener = require('./src/EventManager/PGListener');
-const HttpErrorHandler = require('./src/HttpErrorHandler');
+const HttpErrorHandler = require('./src/ErrorHandling/HttpErrorHandler');
 const Mongo = require('./src/Mongo');
 const Auth = require('./src/Authorization/Auth');
 require('./src/CronJobs/Manager');
