@@ -28,6 +28,7 @@
         "@azure/web-pubsub": "^1.0.0-beta.3",
         "ajv": "^8.2.0",
         "ajv-keywords": "^5.0.0",
+        "applicationinsights": "^2.1.9",
         "axios": "^0.21.4",
         "connect-session-knex": "^2.1.0",
         "cors": "^2.8.5",
@@ -50,7 +51,8 @@
         "pg-connection-string": "^2.5.0",
         "ramda": "^0.27.1",
         "us-state-codes": "^1.1.2",
-        "uuid": "^8.3.2"
+        "uuid": "^8.3.2",
+        "winston": "^3.3.3"
     },
     "devDependencies": {
         "@redocly/openapi-cli": "^1.0.0-beta.55",
@@ -62,7 +64,7 @@
         "faker": "^5.5.3",
         "jest": "^26.6.3",
         "mock-knex": "^0.4.10",
-        "nodemon": "^2.0.13",
+        "nodemon": "^2.0.15",
         "yargs": "^17.1.0-candidate.0"
     }
 }
