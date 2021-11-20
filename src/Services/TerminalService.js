@@ -1,4 +1,5 @@
 const ArcgisClient = require('../ArcgisClient');
+const telemetryClient = require('../ErrorHandling/Insights');
 const Terminal = require('../Models/Terminal');
 
 const keywordFields = {
@@ -121,6 +122,7 @@ class TerminalService
     static async resolveTerminal(terminal)
     {
         const trx = await Terminal.startTransaction();
+        console.log(terminal);
         try
         {
             const terminalAddress = Terminal.createStringAddress(terminal);
@@ -136,7 +138,24 @@ class TerminalService
         catch (error)
         {
             const message = `Error, terminal ${terminal?.guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
+
             console.error(message);
+
+            telemetryClient.trackException({
+                exception: new Error(message),
+                properties: {
+                    guid: terminal.guid,
+                    name: terminal.name,
+                    street1: terminal.street1,
+                    street2: terminal.street2,
+                    city: terminal.city,
+                    state: terminal.state,
+                    postalCode: terminal.zipCode,
+                    latitude: terminal.latitude,
+                    longitude: terminal.longitude
+                },
+                severity: 2
+            });
             await trx.rollback();
             throw { message };
         }
