@@ -1,13 +1,14 @@
 const enabledModules = process.env['accounting.modules'].split(';');
 const QuickBooksService = require('./QuickBooksService');
 const LineLinks = require('../Models/InvoiceLineLink');
+const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceBill = require('../Models/InvoiceBill');
 const CoupaService = require('./CoupaService');
 const Line = require('../Models/InvoiceLine');
-const Order = require('../Models/Order');
-const InvoiceLine = require('../Models/InvoiceLine');
 const Invoice = require('../Models/Invoice');
+const Order = require('../Models/Order');
 const Bill = require('../Models/Bill');
+const { DateTime } = require('luxon');
 
 class InvoiceService
 {
@@ -348,7 +349,7 @@ class InvoiceService
         for (const order of orders)
             for (const invoice of order.invoices)
             {
-                if (invoice.isPaid)
+                if (invoice.dateInvoiced)
                     continue;
 
                 // add existing invoice externalSourceData to map
@@ -405,7 +406,7 @@ class InvoiceService
                 const trx = await InvoiceBill.transaction();
 
                 // update all invoices and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true })], InvoiceLine.query(trx).patch({ isPaid: true }).where('invoiceGuid', guid));
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateInvoiced: DateTime.utc().toString() }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
 
                 if (proms[0].status == 'fulfilled')
                 {
