@@ -187,7 +187,7 @@ class LoadboardService
             if (job.isDummy)
                 throw new Error('Cannot dispatch dummy job');
             
-            if(job.type.category != 'transport' && job.type.type != 'transport')
+            if(job.type.category != 'transport' && job.type.type != 'transport' && job.isTransport)
             {
                 throw new Error('Cannot dispatch non transport job');
             }
