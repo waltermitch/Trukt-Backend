@@ -72,7 +72,7 @@ class OrderStopService
                                     date_started = '${earliestStarted}'`;
 
         // append conditions
-        orderStopLinksQuery += ` WHERE order_guid = '${orderGuid}' AND stop_guid = '${stopGuid}' AND commodity_guid IN ('${commodities.join('\',\'')}')`;
+        orderStopLinksQuery += ` WHERE order_guid = '${orderGuid}' AND stop_guid = '${stopGuid}' AND commodity_guid IN ('${commodities.join('\',\'')}') AND job_guid IS NULL`;
 
         // calculate stop status
         let stopQuery = `UPDATE rcg_tms.order_stops
