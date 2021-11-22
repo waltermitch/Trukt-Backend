@@ -71,7 +71,7 @@ class OrderStop extends BaseModel
             distinct(builder)
             {
                 // use distinctOn because we are using pg
-                builder.distinctOn('guid').select('*');
+                builder.distinctOn('guid');
             }
         };
     }
