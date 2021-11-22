@@ -171,7 +171,7 @@ class LoadboardService
             // another loadboard, otherwise first create a posting record and dispatch
             if (!body.loadboard)
             {
-                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch)]');
+                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch), type]');
 
                 const stops = await this.getFirstAndLastStops(job.stops);
 
@@ -443,7 +443,7 @@ class LoadboardService
             loadboardPosts(getExistingFromList),
             equipmentType, 
             bills.lines(isNotDeleted, transportOnly).item,
-            dispatcher
+            dispatcher, type
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
