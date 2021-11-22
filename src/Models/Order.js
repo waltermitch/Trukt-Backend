@@ -289,9 +289,46 @@ class Order extends BaseModel
         return query;
     }
 
+    static getOrdersFields(builder)
+    {
+        return builder.select(
+            'guid',
+            'number',
+            'instructions',
+            'status',
+            'distance',
+            'estimatedExpense',
+            'estimatedRevenue',
+            'quotedRevenue',
+            'actualRevenue',
+            'actualExpense',
+            'dateExpectedCompleteBy',
+            'dateCompleted',
+            'dateCreated',
+            'dateUpdated',
+            'createdByGuid',
+            'updatedByGuid',
+            'referenceNumber',
+            'inspectionType',
+            'isTender',
+            'estimatedDistance',
+            'bol',
+            'bolUrl',
+            'estimatedIncome',
+            'actualIncome',
+            'isReady',
+            'isOnHold',
+            'isCanceled',
+            'isComplete',
+            'grossProfitMargin',
+            'clientNotes'
+        );
+    }
+
     static modifiers = {
         filterIsTender: this.filterIsTender,
-        filterJobCategories: this.filterJobCategories
+        filterJobCategories: this.filterJobCategories,
+        getOrdersFields: this.getOrdersFields
     };
 
     async $beforeInsert(queryContext)

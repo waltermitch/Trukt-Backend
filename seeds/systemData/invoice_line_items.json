@@ -1,7 +1,7 @@
 {
     "schema": "rcg_tms",
     "table": "invoice_bill_line_items",
-    "unique": "name",
+    "unique": "id",
     "data": [
         {
             "id": 1,

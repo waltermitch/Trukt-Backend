@@ -1,6 +1,3 @@
-const currency = require('currency.js');
-const { v4: uuid } = require('uuid');
-
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -23,15 +20,17 @@ const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
 const Terminal = require('../Models/Terminal');
 const Vehicle = require('../Models/Vehicle');
+const Invoice = require('../Models/Invoice');
 const Order = require('../Models/Order');
 const NodeCache = require('node-cache');
+const currency = require('currency.js');
 const User = require('../Models/User');
+const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
-const Invoice = require('../Models/Invoice');
-const Bill = require('../Models/Bill');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -76,7 +75,8 @@ class OrderService
             'dateCreated',
             'actualRevenue',
             'actualExpense',
-            'dateUpdated'
+            'dateUpdated',
+            'isDummy'
         ];
 
         const baseOrderQuery = OrderJob.query()
@@ -229,7 +229,6 @@ class OrderService
 
         try
         {
-
             // client is required and always should be checked.
             // vehicles are not checked and are created or found
             const dataCheck = { client: true, vehicles: false, terminals: false };
@@ -240,7 +239,7 @@ class OrderService
                 // these fields cannot be set by the user
                 status: 'new',
                 isDeleted: false,
-                isCompleted: false,
+                isComplete: false,
                 dateCompleted: null,
                 invoices: [],
 
@@ -346,26 +345,30 @@ class OrderService
                 return cache;
             }, {});
 
-            // create promises for each contact that the stops will be using
-            const allStops = Order.allStops(orderObj).map(it => OrderStop.fromJson(it));
-            orderInfoPromises.push(Promise.all(allStops.map((stop) =>
+            /**
+             * create promises for each contact that the stops will be using.
+             * Creates an array of stopContacts that contains an array of contacts, were the first position is the first position of OrderStop.contactTypes
+             * The downside is that relie on Promise.all array order, but we can resolve all contacts at the same time
+             */
+            const stopContactsInOrder = orderObj.stops.map(stop =>
             {
                 const terminal = terminalsCache[stop.terminal];
+                const contactsForStopInOrder = [];
                 for (const contactType of OrderStop.contactTypes)
                 {
+                    let contactToCreate = null;
                     if (stop[contactType])
                     {
                         const contact = Contact.fromJson(stop[contactType]);
                         contact.linkTerminal(terminal);
                         contact.setCreatedBy(currentUser);
-                        return contact.findOrCreate(trx);
+                        contactToCreate = contact.findOrCreate(trx);
                     }
-                    else
-                    {
-                        return null;
-                    }
+                    contactsForStopInOrder.push(contactToCreate);
                 }
-            })));
+                return Promise.all(contactsForStopInOrder);
+            });
+            orderInfoPromises.push(Promise.all(stopContactsInOrder));
 
             // commodities are reused in the system
             const commodityCache = orderObj.commodities.reduce((cache, com, i) =>
@@ -386,21 +389,9 @@ class OrderService
                 return cache;
             }, {});
 
-            const [clientContact, stopContacts] = await Promise.all(orderInfoPromises);
+            const [clientContact, stopContactsCreated] = await Promise.all(orderInfoPromises);
 
             order.graphLink('clientContact', clientContact);
-
-            for (const stop of allStops)
-            {
-                for (const contactType of OrderStop.contactTypes)
-                {
-                    const contact = stopContacts.shift();
-                    if (contact)
-                    {
-                        stop.graphLink(contactType, contact);
-                    }
-                }
-            }
 
             // orders will have defined all the stops that are needed to be completed
             // for this order to be classified as completed as well
@@ -412,6 +403,12 @@ class OrderService
             {
                 const stop = OrderStop.fromJson(stopObj);
                 stop.setCreatedBy(currentUser);
+                const stopContacts = stopContactsCreated.shift();
+                for (const contactType of OrderStop.contactTypes)
+                {
+                    if (stopContacts)
+                        stop.graphLink(contactType, stopContacts.shift());
+                }
                 return stop;
             }));
 
@@ -739,8 +736,6 @@ class OrderService
                 patchPromises.push(
                     OrderService.calculateTotalDistance(orderjob.stops).then(async (distance) =>
                     {
-                        console.log(orderjob.guid);
-                        console.log(distance);
                         await model.query(trx).patch({ distance }).findById(orderjob.guid);
                     })
                 );
@@ -970,7 +965,6 @@ class OrderService
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
-
         const responses = await this.handleLoadTenders('accept', orderGuids, null);
 
         await this.loadTendersHelper(responses, false, false, 8, currentUser);
@@ -985,7 +979,6 @@ class OrderService
      */
     static async rejectLoadTenders(orderGuids, reason, currentUser)
     {
-
         const responses = await this.handleLoadTenders('reject', orderGuids, reason);
 
         await this.loadTendersHelper(responses, true, true, 9, currentUser);
@@ -1145,18 +1138,14 @@ class OrderService
 
     static addFilterStatus(baseQuery, statusList)
     {
-        const doesStatusListHaveElements =
-            statusList?.length > 0 ? true : false;
-        return doesStatusListHaveElements
-            ? baseQuery.whereIn('status', statusList)
+        return statusList?.length
+            ? baseQuery.whereRaw('status ilike ANY(Array[?])', statusList)
             : baseQuery;
     }
 
     static addFilterCustomer(baseQuery, customerList)
     {
-        const doesCustomerListHaveElements =
-            customerList?.length > 0 ? true : false;
-        return doesCustomerListHaveElements
+        return customerList?.length
             ? baseQuery.whereIn(
                 'orderGuid',
                 Order.query()
@@ -1168,9 +1157,7 @@ class OrderService
 
     static addFilterDispatcher(baseQuery, dispatcherList)
     {
-        const doesDispatcherListHaveElements =
-            dispatcherList?.length > 0 ? true : false;
-        return doesDispatcherListHaveElements
+        return dispatcherList?.length
             ? baseQuery.whereIn(
                 'orderGuid',
                 Order.query()
@@ -1182,9 +1169,7 @@ class OrderService
 
     static addFilterSalesperson(baseQuery, salespersonList)
     {
-        const doesSalespersonListHaveElements =
-            salespersonList?.length > 0 ? true : false;
-        return doesSalespersonListHaveElements
+        return salespersonList?.length
             ? baseQuery.whereIn(
                 'orderGuid',
                 Order.query()
@@ -1343,6 +1328,7 @@ class OrderService
                  * Is necessary to use modifyGraph on stops and
                  * stops.commodities to avoid duplicate rows
                  */
+                .modifyGraph('order', 'getOrdersFields')
                 .modifyGraph('order.client', (builder) =>
                     builder.select('guid', 'name')
                 )

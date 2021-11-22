@@ -108,7 +108,7 @@ requestBody:
                               additionalProperties: false
                               $ref: ../../components/schemas/Common.yaml#/indexObject
                         required:
-                        - index
+                          - index
                   required:
                     - index
                     - stops

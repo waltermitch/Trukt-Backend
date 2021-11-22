@@ -171,7 +171,7 @@ class LoadboardService
             // another loadboard, otherwise first create a posting record and dispatch
             if (!body.loadboard)
             {
-                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch)]');
+                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch), type]');
 
                 const stops = await this.getFirstAndLastStops(job.stops);
 
@@ -186,6 +186,11 @@ class LoadboardService
 
             if (job.isDummy)
                 throw new Error('Cannot dispatch dummy job');
+            
+            if(job.type.category != 'transport' && job.type.type != 'transport' && job.isTransport)
+            {
+                throw new Error('Cannot dispatch non transport job');
+            }
 
             if (job.dispatches.length != 0)
                 throw new Error('Cannot dispatch with already active load offer');
@@ -443,7 +448,7 @@ class LoadboardService
             loadboardPosts(getExistingFromList),
             equipmentType, 
             bills.lines(isNotDeleted, transportOnly).item,
-            dispatcher
+            dispatcher, type
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
         });
