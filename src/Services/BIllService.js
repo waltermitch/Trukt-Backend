@@ -260,7 +260,7 @@ class BillService
                 const trx = await InvoiceBill.transaction();
 
                 // update all the bills and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, datePaid: DateTime.utc().toString() }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, datePaid: DateTime.utc().toString() }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.bill?.Id }).where('invoiceGuid', guid)]);
 
                 if (proms[0].status == 'fulfilled')
                 {
@@ -276,6 +276,10 @@ class BillService
             else
                 results.push(data.error);
         }));
+
+        // check length of results
+        if (results.length == 0)
+            return [{ success: true, message: 'All Bills Already Paid For This Job' }];
 
         return results;
     }
