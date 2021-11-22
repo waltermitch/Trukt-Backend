@@ -100,6 +100,86 @@ class BillService
         return newLine;
     }
 
+    static async deleteBillLine(billGuid, lineGuid)
+    {
+        // To make sure if bill has been passed
+        const bill = await Bill.query().findById(billGuid);
+
+        // if no bill throw error
+        if (!bill)
+        {
+            throw new Error('Bill does not exist.');
+        }
+
+        // to double check and see if commodity is attached
+        const checkLine = await InvoiceLine.query().findById(lineGuid);
+
+        // if attached throw error
+        if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
+        {
+            throw new Error('Deleting a transport line attached to a commodity is forbidden.');
+        }
+
+        // returning updated bill
+        const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
+
+        // if line doesn't exist
+        if (!newLine)
+        {
+            throw new Error('Line does not exist.');
+        }
+
+        return;
+    }
+
+    static async deleteBillLines(billGuid, lineGuids)
+    {
+        const result = await InvoiceLine.transaction(async trx =>
+        {
+            // To make sure if bill has been passed
+            const bill = await Bill.query(trx).findById(billGuid);
+
+            // if no bill throw error
+            if (!bill)
+            {
+                throw new Error('Bill does not exist.');
+            }
+
+            // to patch multiple lines at once
+            const patchArrays = [];
+
+            // creating array of patch updates
+            for (let i = 0; i < lineGuids.length; i++)
+            {
+                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': billGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
+            }
+
+            // executing all updates
+            const deletedLines = await Promise.all(patchArrays);
+
+            // if any failed will return guids that failed
+            if (deletedLines.includes(0))
+            {
+                const guids = [];
+                for (let i = 0; i < deletedLines.length; i++)
+                {
+                    if (deletedLines[i] == 0)
+                    {
+                        guids.push(lineGuids[i]);
+                    }
+                }
+
+                throw new Error(`Lines with guid(s): ${guids} cannot be deleted.`);
+            }
+
+            // if succeed then, returns nothing
+            return;
+        });
+
+        // returns result of transaction
+        return result;
+    }
+
     static async exportBills(arr)
     {
         // array for results

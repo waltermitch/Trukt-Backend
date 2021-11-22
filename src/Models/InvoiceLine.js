@@ -91,6 +91,10 @@ class InvoiceLine extends BaseModel
             isValid(builder)
             {
                 builder.where('isValid', true);
+            },
+            isNotPaid(builder)
+            {
+                builder.where('isPaid', false);
             }
         };
         Object.assign(modifiers, isNotDeleted(InvoiceLine.tableName));

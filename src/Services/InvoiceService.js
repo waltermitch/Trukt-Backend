@@ -191,6 +191,85 @@ class InvoiceService
         return newLine;
     }
 
+    static async deleteInvoiceLine(invoiceGuid, lineGuid)
+    {
+        // To make sure correct invoice was passed in
+        const invoice = await Invoice.query().findById(invoiceGuid);
+
+        // if no bill throw error
+        if (!invoice)
+        {
+            throw new Error('Invoice does not exist.');
+        }
+
+        // to double check and see if commodity is attached
+        const checkLine = await InvoiceLine.query().findById(lineGuid);
+
+        // if attached throw error
+        if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
+        {
+            throw new Error('Deleting a transport line attached to a commodity is forbidden.');
+        }
+
+        // returning updated bill
+        const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
+
+        // if line doesn't exist
+        if (!newLine)
+        {
+            throw new Error('Line does not exist.');
+        }
+
+        return;
+    }
+
+    static async deleteInvoiceLines(invoiceGuid, lineGuids)
+    {
+        // running transaction, because I want to undue updates because of failure
+        const result = await InvoiceLine.transaction(async trx =>
+        {
+            // To make sure correct invoice was passed in
+            const invoice = await Invoice.query(trx).findById(invoiceGuid);
+
+            // incorrect invoice
+            if (!invoice)
+            {
+                throw new Error('Invoice does not exist.');
+            }
+
+            // to patch multiple lines at once
+            const patchArrays = [];
+
+            // creating array of patch updates
+            for (let i = 0; i < lineGuids.length; i++)
+            {
+                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': invoiceGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
+            }
+
+            // executing all updates
+            const deletedLines = await Promise.all(patchArrays);
+
+            // if any failed will return guids that failed
+            if (deletedLines.includes(0))
+            {
+                const guids = [];
+                for (let i = 0; i < deletedLines.length; i++)
+                {
+                    if (deletedLines[i] == 0)
+                    {
+                        guids.push(lineGuids[i]);
+                    }
+                }
+
+                throw new Error(`Lines with guid(s): ${guids} cannot be deleted.`);
+            }
+
+            // if succeed then, returns nothing
+            return;
+        });
+        return result;
+    }
+
     static async LinkLines(line1Guid, line2Guid, trx = null)
     {
         const Lines = await Line.query(trx).findByIds([line1Guid, line2Guid]).withGraphFetched('[invoice, bill, invoiceBill.[job]]');
@@ -243,6 +322,9 @@ class InvoiceService
         }
     }
 
+    // This method will need to be redone, post Alpha launch
+    // very janky and inefficient, no time to fix
+    // TODO: refactor this method
     static async exportInvoices(arr)
     {
         // array for results
@@ -277,7 +359,7 @@ class InvoiceService
                 invoice.orderNumber = order.number;
 
                 if (enabledModules.includes('coupa') && ['LKQ Corporation', 'LKQ Self Service']?.includes(order?.client?.name))
-                    CoupaInvoices.push(order);
+                    CoupaInvoices.push(invoice);
                 else if (enabledModules.includes('quickbooks'))
                     QBInvoices.push(invoice);
             }
@@ -319,13 +401,30 @@ class InvoiceService
         {
             if (!data.error)
             {
-                const invoice = await InvoiceBill.query().patchAndFetchById(guid, { externalSourceData: data });
+                // start trx
+                const trx = await InvoiceBill.transaction();
 
-                results.push(invoice);
+                // update all invoices and their lines
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true })], InvoiceLine.query(trx).patch({ isPaid: true }).where('invoiceGuid', guid));
+
+                if (proms[0].status == 'fulfilled')
+                {
+                    await trx.commit();
+                    results.push(proms[0].value);
+                }
+                else
+                {
+                    await trx.rollback();
+                    results.push(proms[0].reason);
+                }
             }
             else
                 results.push(data.error);
         }));
+
+        // check length of results
+        if (results.length == 0)
+            return [{ success: true, message: 'All Invoices Already Paid For This Order' }];
 
         return results;
     }

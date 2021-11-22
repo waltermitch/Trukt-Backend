@@ -112,7 +112,7 @@ class TerminalService
      */
     static async getUnverifiedTerminals(limit = 100)
     {
-        return await Terminal.query().select()
+        return Terminal.query().select()
             .where('isResolved', false)
             .andWhere('resolvedTimes', '<', 3)
             .orderBy('dateCreated', 'resolvedTimes')
@@ -122,43 +122,64 @@ class TerminalService
     static async resolveTerminal(terminal)
     {
         const trx = await Terminal.startTransaction();
-        console.log(terminal);
+
+        const { guid } = terminal;
         try
         {
             const terminalAddress = Terminal.createStringAddress(terminal);
             const arcgisAddress = await ArcgisClient.findGeocode(terminalAddress);
             const terminalToUpdate = TerminalService.updateTerminalInformation(arcgisAddress, terminal, SYSTEM_USER);
 
-            await Terminal.query(trx)
-                .patch(terminalToUpdate)
-                .where('guid', terminalToUpdate.guid);
-
-            return await trx.commit();
+            return await TerminalService.updateTerminal(terminalToUpdate);
         }
         catch (error)
         {
-            const message = `Error, terminal ${terminal?.guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
+            /**
+             * Some terminals may return an error when inserting due to unique coordinates constraint,
+             * in those cases we mark those termianls as resolved = false (Which is the default) and resolved_times = 3
+             * so we stop checking that terminal but still know that is not resolved.
+             */
+            try
+            {
+                const message = `Error, terminal ${guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
+                console.error(message);
 
-            console.error(message);
-
-            telemetryClient.trackException({
-                exception: new Error(message),
-                properties: {
-                    guid: terminal.guid,
-                    name: terminal.name,
-                    street1: terminal.street1,
-                    street2: terminal.street2,
-                    city: terminal.city,
-                    state: terminal.state,
-                    postalCode: terminal.zipCode,
-                    latitude: terminal.latitude,
-                    longitude: terminal.longitude
-                },
-                severity: 2
-            });
-            await trx.rollback();
-            throw { message };
+                const unresolvedTerminalToUpdate = {
+                    guid,
+                    resolvedTimes: 3,
+                    updatedByGuid: SYSTEM_USER
+                };
+                return await TerminalService.updateTerminal(unresolvedTerminalToUpdate);
+            }
+            catch (err)
+            {
+                const message = `Error, terminal ${guid} could not be updated: ${err?.nativeError?.detail || err?.message || err}`;
+                console.error(message);
+                telemetryClient.trackException({
+                    exception: new Error(message),
+                    properties: {
+                        guid: terminal.guid,
+                        name: terminal.name,
+                        street1: terminal.street1,
+                        street2: terminal.street2,
+                        city: terminal.city,
+                        state: terminal.state,
+                        postalCode: terminal.zipCode,
+                        latitude: terminal.latitude,
+                        longitude: terminal.longitude
+                    },
+                    severity: 2
+                });
+                throw { message };
+            }
         }
+    }
+
+    static async updateTerminal(terminal)
+    {
+        return await Terminal.query()
+            .patch(terminal)
+            .where('guid', terminal.guid);
     }
 
     /**
@@ -166,8 +187,14 @@ class TerminalService
      * Longitude is arcgis.X
      * https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find-address-candidates.htm#ESRI_SECTION1_CF39B0C8FC2547C3A52156F509C555FC
      */
-    static updateTerminalInformation(arcgisAddress, termninalToUpdate, system_user)
+    static updateTerminalInformation(arcgisAddress, { guid, resolvedTimes }, system_user)
     {
+        const termninalToUpdate = {
+            guid,
+            updatedByGuid: system_user,
+            resolvedTimes
+        };
+
         if (ArcgisClient.isAddressFound(arcgisAddress))
         {
             termninalToUpdate.latitude = arcgisAddress.location.y;
@@ -178,7 +205,6 @@ class TerminalService
         else
             termninalToUpdate.resolvedTimes++;
 
-        termninalToUpdate.updatedByGuid = system_user;
         return termninalToUpdate;
     }
 }

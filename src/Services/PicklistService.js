@@ -106,6 +106,7 @@ class PicklistService
             }
         }
 
+        const vehicleWeightClasses = { options: (await knex('rcgTms.vehicleWeightClasses').select('*')).map(e => { return { label: e.class, value: e.id, minWeight: e.minWeight, maxWeight: e.maxWeight }; }) };
         const paymentTerms = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_terms').select('*'));
         const paymentMethods = PicklistService.createPicklistObject(await knex('rcgTms.invoice_bill_payment_methods').select('*'));
         const equipmentTypes = PicklistService.createPicklistObject(await knex('rcgTms.equipment_types').select('id', 'name').whereNot({ 'is_deprecated': true }));
@@ -135,7 +136,8 @@ class PicklistService
             loadboardData,
             commodityTypes,
             conditionTypes,
-            dateFilterTerms
+            dateFilterTerms,
+            vehicleWeightClasses
         });
         return picklists;
     }
@@ -239,7 +241,6 @@ class PicklistService
     static capWord(str)
     {
         return str.replace(/_/g, ' ').replace(/\b(\w)/g, letter => letter.toUpperCase());
-
     }
 
     static async createComparisonTypesPicklist()

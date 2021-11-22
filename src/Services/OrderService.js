@@ -1,6 +1,3 @@
-const currency = require('currency.js');
-const { v4: uuid } = require('uuid');
-
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -22,12 +19,15 @@ const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
 const Terminal = require('../Models/Terminal');
-const Expense = require('../Models/Expense');
 const Vehicle = require('../Models/Vehicle');
+const Invoice = require('../Models/Invoice');
 const Order = require('../Models/Order');
 const NodeCache = require('node-cache');
+const currency = require('currency.js');
 const User = require('../Models/User');
+const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
@@ -75,7 +75,8 @@ class OrderService
             'dateCreated',
             'actualRevenue',
             'actualExpense',
-            'dateUpdated'
+            'dateUpdated',
+            'isDummy'
         ];
 
         const baseOrderQuery = OrderJob.query()
@@ -228,167 +229,169 @@ class OrderService
 
         try
         {
-            // use trx (transaction) because none of the data should be left in the database if any of it fails
-            const contactRecordType = await SFRecordType.query(trx)
-                .modify('byType', 'contact')
-                .modify('byName', 'account contact');
-            const commTypes = await CommodityType.query(trx);
-            const jobTypes = await OrderJobType.query(trx);
-            const invoiceLineItems = await InvoiceLineItem.query(trx);
+            // client is required and always should be checked.
+            // vehicles are not checked and are created or found
+            const dataCheck = { client: true, vehicles: false, terminals: false };
+            const jobsDataCheck = [];
 
             // order object will be used to link OrderStopLink from the job
-            let order = Order.fromJson({});
+            const order = Order.fromJson({
+                // these fields cannot be set by the user
+                status: 'new',
+                isDeleted: false,
+                isComplete: false,
+                dateCompleted: null,
+                invoices: [],
+
+                // these fields maybe set by the user
+                instructions: orderObj.instructions || 'no instructions provided',
+                referenceNumber: orderObj.referenceNumber,
+                bol: orderObj.bol,
+                bolUrl: orderObj.bolUrl,
+                estimatedDistance: orderObj.estimatedDistance,
+                isDummy: orderObj.isDummy || false,
+                isTender: orderObj.isTender || false,
+                quotedRevenue: orderObj.quotedRevenue,
+                dateExpectedCompleteBy: orderObj.dateExpectedCompleteBy
+            });
+
             order.setCreatedBy(currentUser);
 
-            orderObj.client = await SFAccount.query(trx)
-                .modify('byType', 'client')
-                .findOne((builder) =>
-                {
-                    builder
-                        .orWhere('guid', orderObj.client.guid)
-                        .orWhere(
-                            'salesforce.accounts.sfId',
-                            orderObj.client.guid
-                        );
-                });
+            // DO NOT change the ordering of these promises, it will mess up _dataCheck and other destructured code
+            let orderInfoPromises = [];
+            orderInfoPromises.push(SFAccount.query(trx).modify('client', orderObj.client.guid));
+            orderInfoPromises.push(dataCheck.consignee = isUseful(orderObj.consignee) ? SFAccount.query(trx).modify('bySomeId', orderObj.consignee.guid) : null);
+            orderInfoPromises.push(dataCheck.dispatcher = isUseful(orderObj.dispatcher) ? User.query(trx).findById(orderObj.dispatcher.guid) : null);
+            orderInfoPromises.push(dataCheck.referrer = isUseful(orderObj.referrer) ? SFAccount.query(trx).findById(orderObj.referrer.guid) : null);
+            orderInfoPromises.push(dataCheck.salesperson = isUseful(orderObj.salesperson) ? SFAccount.query(trx).findById(orderObj.salesperson.guid) : null);
+            orderInfoPromises.push(Promise.all(orderObj.terminals.map(t =>
+            {
+                const term = Terminal.fromJson(t);
+                term.setCreatedBy(currentUser);
+                return term.findOrCreate(trx).then(term => { term['#id'] = t['#id']; return term; });
+            })));
+            orderInfoPromises.push(Promise.all(orderObj.commodities.map(com => isUseful(com.vehicle) ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
 
-            if (isUseful(orderObj?.consignee))
+            const jobInfoPromises = [];
+            for (const job of orderObj.jobs)
             {
-                orderObj.consignee = await SFAccount.query(trx).findOne(
-                    (builder) =>
-                    {
-                        builder
-                            .orWhere('guid', orderObj.consignee.guid)
-                            .orWhere(
-                                'salesforce.accounts.sfId',
-                                orderObj.consignee.guid
-                            );
-                    }
-                );
-            }
-            else
-            {
-                orderObj.consignee = orderObj.client;
+                const jobPromises = [];
+                const jobDataCheck = {};
+                jobPromises.push(jobDataCheck.vendor = isUseful(job.vendor) ? SFAccount.query(trx).modify('byType', 'carrier').findById(job.vendor.guid) : null);
             }
 
-            if (isUseful(orderObj?.referrer))
-            {
-                orderObj.referrer = await SFAccount.query(trx).findById(
-                    orderObj.referrer?.guid
-                );
-                order.graphLink('referrer', orderObj.referrer);
-            }
+            // use trx (transaction) because none of the data should be left in the database if any of it fails
+            const [
+                contactRecordType,
+                commTypes,
+                jobTypes,
+                invoiceLineItems,
+                orderInformation,
+                jobInformation
+            ] = await Promise.all([
+                SFRecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact'),
+                CommodityType.query(trx),
+                OrderJobType.query(trx),
+                InvoiceLineItem.query(trx),
+                Promise.all(orderInfoPromises),
+                Promise.all(jobInfoPromises)
+            ]);
 
-            // salesperson
-            if (isUseful(orderObj?.salesperson))
-            {
-                orderObj.salesperson = await SFAccount.query(trx).findById(
-                    orderObj.salesperson.guid
-                );
-                order.graphLink('salesperson', orderObj.salesperson);
-            }
+            // checks if the data that was provided in the payload was found in the database
+            // will throw an error if it wasn't found.
+            OrderService._dataCheck(dataCheck, orderInformation);
 
-            // dispatcher / manager responsible for the order
-            if (isUseful(orderObj?.dispatcher))
-            {
-                const dispatcher = await User.query(trx).findById(orderObj.dispatcher.guid);
-                if (!dispatcher)
-                {
-                    throw new Error(
-                        'dispatcher ' +
-                        JSON.stringify(orderObj.dispatcher) +
-                        ' doesn\'t exist'
-                    );
-                }
-                orderObj.dispatcher = dispatcher;
-                order.graphLink('dispatcher', orderObj.dispatcher);
-            }
+            // DO NOT change this ordering of models
+            const [
+                client,
+                consignee,
+                dispatcher,
+                referrer,
+                salesperson,
+                terminals,
+                vehicles
+            ] = orderInformation;
 
-            order.graphLink('consignee', orderObj.consignee);
-            order.graphLink('client', orderObj.client);
+            order.graphLink('client', client);
+            order.graphLink('consignee', consignee || client);
+            order.graphLink('referrer', referrer);
+            order.graphLink('salesperson', salesperson);
+            order.graphLink('dispatcher', dispatcher);
+
+            orderInfoPromises = [];
 
             if (isUseful(orderObj.clientContact))
             {
-                const clientContact = SFContact.fromJson(
-                    orderObj.clientContact
-                );
-
-                if (orderObj.client) clientContact.linkAccount(orderObj.client);
-
+                const clientContact = SFContact.fromJson(orderObj.clientContact);
+                clientContact.linkAccount(client);
                 clientContact.linkRecordType(contactRecordType);
-                const contact = await clientContact.findOrCreate(trx);
-                order.graphLink('clientContact', contact);
+                orderInfoPromises.push(clientContact.findOrCreate(trx));
+            }
+            else
+            {
+                orderInfoPromises.push(null);
             }
 
-            const commodities = {};
-            for (const commObj of orderObj.commodities || [])
+            // terminal cache will be used for linking stop contacts to terminals
+            // need to map all the terminals so that they are reuseable
+            const terminalsCache = terminals.reduce((cache, term, i) =>
             {
-                const commodity = Commodity.fromJson(commObj);
-                commodity.setCreatedBy(currentUser);
-                const commType = commTypes.find((it) =>
-                    CommodityType.compare(commodity, it)
-                );
-                if (!commType)
-                {
-                    throw new Error(
-                        `unknown commodity ${commodity.commType?.category} ${commodity.commType?.type}`
-                    );
-                }
-                commodity.graphLink('commType', commType);
-
-                if (commodity.isVehicle())
-                {
-                    const vehicle = await Vehicle.fromJson(
-                        commodity.vehicle
-                    ).findOrCreate(trx);
-                    commodity.graphLink('vehicle', vehicle);
-                }
-                commodities[commObj['#id']] = commodity;
-            }
-
-            const terminals = {};
-            for (const terminalObj of orderObj.terminals || [])
-            {
-                let terminal = Terminal.fromJson(terminalObj);
-                terminal.setCreatedBy(currentUser);
-                terminal = await terminal.findOrCreate(trx);
-                if (!terminal.isResolved)
-                {
-                    // TODO: check if the terminal is resolved and put it inside of the service-bus queue
-                }
-
-                const terminalIndex = terminalObj['#id'];
-                terminal.setIndex(terminalIndex);
+                // need to set the index because the terminals are pulled from the database
+                // the index will be used to tie them together to the OrderStops
+                const terminalIndex = term['#id'];
 
                 // store to use as a cache for later
-                terminals[terminalIndex] = terminal;
-            }
+                cache[terminalIndex] = terminals[i];
+                return cache;
+            }, {});
 
-            const terminalContacts = {};
-            const stopswithContacts = Order.allStops(orderObj).filter((it) =>
-                OrderStop.hasContact(it)
-            );
-
-            for (const stop of stopswithContacts)
+            /**
+             * create promises for each contact that the stops will be using.
+             * Creates an array of stopContacts that contains an array of contacts, were the first position is the first position of OrderStop.contactTypes
+             * The downside is that relie on Promise.all array order, but we can resolve all contacts at the same time
+             */
+            const stopContactsInOrder = orderObj.stops.map(stop =>
             {
-                const terminal = terminals[stop.terminal];
-                for (const contactType of ['primaryContact', 'alternativeContact'])
+                const terminal = terminalsCache[stop.terminal];
+                const contactsForStopInOrder = [];
+                for (const contactType of OrderStop.contactTypes)
                 {
+                    let contactToCreate = null;
                     if (stop[contactType])
                     {
-                        let contact = Contact.fromJson(stop[contactType]);
+                        const contact = Contact.fromJson(stop[contactType]);
                         contact.linkTerminal(terminal);
-                        const key = contact.uniqueKey();
-                        if (!(key in terminalContacts))
-                        {
-                            contact.setCreatedBy(currentUser);
-                            contact = await contact.findOrCreate(trx);
-                            terminalContacts[key] = { '#dbRef': contact.guid };
-                        }
-                        stop[contactType] = terminalContacts[key];
+                        contact.setCreatedBy(currentUser);
+                        contactToCreate = contact.findOrCreate(trx);
                     }
+                    contactsForStopInOrder.push(contactToCreate);
                 }
-            }
+                return Promise.all(contactsForStopInOrder);
+            });
+            orderInfoPromises.push(Promise.all(stopContactsInOrder));
+
+            // commodities are reused in the system
+            const commodityCache = orderObj.commodities.reduce((cache, com, i) =>
+            {
+                const commodity = Commodity.fromJson(com);
+                const commType = commTypes.find((it) => CommodityType.compare(commodity, it));
+                if (!commType)
+                {
+                    const commTypeStr = commodity.typeId ? commodity.typeId : `${commodity.commType?.category} ${commodity.commType?.type}`;
+                    throw new Error(`Unknown commodity type: ${commTypeStr}`);
+                }
+                commodity.graphLink('commType', commType);
+                commodity.setCreatedBy(currentUser);
+
+                // check to see if the commodity is a vehicle (it would have been created or found in the database)
+                vehicles[i] && commodity.graphLink('vehicle', vehicles[i]);
+                cache[com['#id']] = commodity;
+                return cache;
+            }, {});
+
+            const [clientContact, stopContactsCreated] = await Promise.all(orderInfoPromises);
+
+            order.graphLink('clientContact', clientContact);
 
             // orders will have defined all the stops that are needed to be completed
             // for this order to be classified as completed as well
@@ -396,18 +399,24 @@ class OrderService
             // not appear in the orders
             const stopsCache = {};
 
-            const orderStops = [];
-            for (const stopObj of orderObj.stops)
+            const orderStops = orderObj.stops.map((stopObj =>
             {
                 const stop = OrderStop.fromJson(stopObj);
                 stop.setCreatedBy(currentUser);
-                orderStops.push(stop);
-            }
+                const stopContacts = stopContactsCreated.shift();
+                for (const contactType of OrderStop.contactTypes)
+                {
+                    if (stopContacts)
+                        stop.graphLink(contactType, stopContacts.shift());
+                }
+                return stop;
+            }));
+
             order.stopLinks = OrderService.buildStopLinksGraph(
                 orderStops,
                 stopsCache,
-                terminals,
-                commodities
+                terminalsCache,
+                commodityCache
             );
 
             for (const stopLink of order.stopLinks)
@@ -431,73 +440,51 @@ class OrderService
                 // remove the stops so that they are not re-created in the graph insert
                 delete job.stops;
 
+                const [
+                    jobVendor,
+                    jobVendorContact,
+                    jobVendorAgent,
+                    jobDispatcher
+                ] = await Promise.all([
+                    isUseful(job.vendor) ? SFAccount.query(trx).modify('byType', 'carrier').findById(job.vendor.guid) : delete job.vendor,
+                    isUseful(job.vendorContact) ? SFContact.query(trx).findById(job.vendorContact.guid) : delete job.vendorContact,
+                    isUseful(job.vendorAgent) ? SFContact.query(trx).findById(job.vendorAgent.guid) : delete job.vendorAgent,
+                    isUseful(job.dispatcher) ? User.query(trx).findById(job.dispatcher.guid) : delete job.dispatcher
+                ]);
+
                 // vendor and driver are not always known when creating an order
                 // most orders created will not have a vendor attached, but on the offchance they might?
                 if (isUseful(job.vendor))
                 {
-                    const vendor = await SFAccount.query(trx)
-                        .modify('byType', 'carrier')
-                        .findById(job.vendor.guid);
-                    if (!vendor)
-                    {
-                        throw new Error('vendor doesnt exist');
-                    }
-                    job.graphLink('vendor', vendor);
-                }
-                else
-                {
-                    delete job.vendor;
+                    if (!jobVendor)
+                        throw new Error('Vendor doesnt exist');
+
+                    job.graphLink('vendor', jobVendor);
                 }
 
                 if (isUseful(job.vendorContact))
                 {
-                    const contact = await SFContact.query(trx).findById(
-                        job.vendorContact.guid
-                    );
-                    if (!contact)
-                    {
-                        throw new Error('vendor contact doesnt exist');
-                    }
-                    job.graphLink('vendorContact', contact);
-                }
-                else
-                {
-                    delete job.vendorContact;
+                    if (!jobVendorContact)
+                        throw new Error('Vendor contact doesnt exist');
+
+                    job.graphLink('vendorContact', jobVendorContact);
                 }
 
                 // this is the driver and what not
                 if (isUseful(job.vendorAgent))
                 {
-                    const contact = await SFContact.query(trx).findById(
-                        job.vendorAgent.guid
-                    );
-                    if (!contact)
-                    {
-                        throw new Error('vendor agent doesnt exist');
-                    }
-                    job.graphLink('vendorAgent', contact);
-                }
-                else
-                {
-                    delete job.vendorAgent;
+                    if (!jobVendorAgent)
+                        throw new Error('Vendor agent doesnt exist');
+
+                    job.graphLink('vendorAgent', jobVendorAgent);
                 }
 
                 if (isUseful(job.dispatcher))
                 {
-                    const dispatcher = await User.query(trx).findById(job.dispatcher.guid);
-                    if (!dispatcher)
-                    {
-                        throw new Error(
-                            'dispatcher ' +
-                            JSON.stringify(job.dispatcher) +
-                            ' doesnt exist'
-                        );
-                    }
-                    job.graphLink('dispatcher', dispatcher);
-                }
-                else
-                {
-                    delete job.dispatcher;
+                    if (!jobDispatcher)
+                        throw new Error(`Dispatcher ${job.dispatcher.guid} doesnt exist`);
+
+                    job.graphLink('dispatcher', jobDispatcher);
                 }
 
                 const jobType = jobTypes.find((it) =>
@@ -524,8 +511,8 @@ class OrderService
                 job.stopLinks = OrderService.buildStopLinksGraph(
                     jobStops,
                     stopsCache,
-                    terminals,
-                    commodities
+                    terminalsCache,
+                    commodityCache
                 );
                 for (const stopLink of job.stopLinks)
                 {
@@ -552,8 +539,8 @@ class OrderService
                 job.stopLinks = OrderService.buildStopLinksGraph(
                     orderStops,
                     stopsCache,
-                    terminals,
-                    commodities
+                    terminalsCache,
+                    commodityCache
                 );
 
                 for (const stopLink of job.stopLinks)
@@ -568,31 +555,6 @@ class OrderService
                 order.jobs.push(job);
             }
 
-            Object.assign(order, {
-                status: 'new',
-                instructions:
-                    orderObj.instructions || 'no instructions provided',
-                referenceNumber: orderObj.referenceNumber,
-                bol: orderObj.bol,
-                bolUrl: orderObj.bolUrl,
-                estimatedDistance: orderObj.estimatedDistance,
-                isDummy: orderObj.isDummy || false,
-
-                isTender: orderObj.isTender || false,
-
-                // this field cannot be set by the user
-                isDeleted: false,
-
-                // this field cannot be set by the user
-                isCompleted: false,
-                estimatedExpense: orderObj.estimatedExpense || null,
-                estimatedRevenue: orderObj.estimatedRevenue || null,
-                quotedRevenue: orderObj.quotedRevenue,
-                dateExpectedCompleteBy: order.dateExpectedCompleteBy,
-                dateCompleted: null,
-                invoices: []
-            });
-
             order.setClientNote(orderObj.clientNotes?.note, currentUser);
 
             // this part creates all the financial records for this order
@@ -601,20 +563,20 @@ class OrderService
 
             for (const job of order.jobs)
             {
-                let jobEstimatedExpense = currency(0);
-                let jobEstimatedRevenue = currency(0);
+                let expense = currency(0);
+                let revenue = currency(0);
 
                 // Take out commodities from jobs cause that elements can't be save as it comes
                 const { commodities: jobInputCommodities, ...jobData } = job;
                 const jobBillLines = jobInputCommodities?.map(commodity =>
                 {
                     const itemId = 1;
-                    const commodityReference = commodities[commodity['#id']];
+                    const commodityReference = commodityCache[commodity['#id']];
                     const commodityRevenue = commodity.revenue;
                     const commodityExpense = commodity.expense;
 
-                    jobEstimatedExpense = jobEstimatedExpense.add(currency(commodityExpense));
-                    jobEstimatedRevenue = jobEstimatedRevenue.add(currency(commodityRevenue));
+                    expense = expense.add(currency(commodityExpense));
+                    revenue = revenue.add(currency(commodityRevenue));
 
                     const orderInvoiceLine = OrderService.createInvoiceLineGraph(
                         commodityRevenue,
@@ -638,8 +600,14 @@ class OrderService
                 if (jobBillLines)
                     jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser);
 
-                jobData.estimatedExpense = jobEstimatedExpense.value;
-                jobData.estimatedRevenue = jobEstimatedRevenue.value;
+                /**
+                * For order creation. given that all invoices are "transport", the actual and estimated expense and revenue have the same values
+                */
+                jobData.estimatedExpense = expense.value;
+                jobData.actualExpense = expense.value;
+
+                jobData.estimatedRevenue = revenue.value;
+                jobData.actualRevenue = revenue.value;
 
                 orderJobs.push(jobData);
             }
@@ -647,13 +615,11 @@ class OrderService
             order.jobs = orderJobs;
             order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, order.consignee);
 
-            order.calculateEstimatedRevenueAndExpense();
-            order = await Order.query(trx).skipUndefined()
+            const orderCreated = await Order.query(trx).skipUndefined()
                 .insertGraph(order, { allowRefs: true });
 
             await trx.commit();
-
-            return order;
+            return orderCreated;
         }
         catch (err)
         {
@@ -689,12 +655,35 @@ class OrderService
         return bill;
     }
 
+    /**
+     * Checks the data that was returned form the database
+     * If the dataCheck object has a key and it is true, it will check for the dataRecs if it is not null
+     * @param {Object<string, boolean>} dataCheck object with names that can be alphabetically mapped
+     * @param {BaseModel[]} dataRecs list of model instances, must be in alphabetical order
+     */
+    static _dataCheck(dataCheck, dataRecs)
+    {
+        const keys = Object.keys(dataCheck);
+        keys.sort();
+        if (keys.length != dataRecs.length)
+        {
+            throw new Error('_dataCheck dataCheck keys length do not match the dataRecs length');
+        }
+
+        for (const [i, key] of keys.entries())
+        {
+            if (dataCheck[key] && !dataRecs[i])
+            {
+                throw new Error(`${key} record doesn't exist.`);
+            }
+        }
+
+    }
+
     static async calculateTotalDistance(stops)
     {
         // go through every order stop
-        stops.sort(
-            (firstStop, secondStop) => firstStop.sequence - secondStop.sequence
-        );
+        stops.sort(OrderStop.sortBySequence);
 
         // converting terminals into address strings
         const terminalStrings = stops.map((stop) =>
@@ -704,6 +693,135 @@ class OrderService
 
         // send all terminals to the General Function app and recieve only the distance value
         return await GeneralFuncApi.calculateDistances(terminalStrings);
+    }
+
+    static async calculatedDistances(OrderGuid)
+    {
+        // relations obejct for none repetitive code
+        const stopRelationObj = {
+            $modify: ['distinct'],
+            terminal: true
+        };
+
+        // TODO:add functionality to push to error DB when transaction fails
+
+        // start transaction to update distances
+        await Order.transaction(async (trx) =>
+        {
+            // get OrderStops and JobStops from database Fancy smancy queries
+            const order = await Order.query(trx).withGraphJoined({
+                jobs: { stops: stopRelationObj },
+                stops: stopRelationObj
+            }).findById(OrderGuid);
+
+            // array for transaction promises
+            const patchPromises = [];
+
+            let orderCounted = false;
+            for (const orderjob of [order, ...order.jobs])
+            {
+                // logic to handle order vs jobs model
+                let model;
+                if (orderCounted)
+                {
+                    model = OrderJob;
+                }
+                else
+                {
+                    model = Order;
+                    orderCounted = true;
+                }
+
+                // pushing distance call and update into array
+                patchPromises.push(
+                    OrderService.calculateTotalDistance(orderjob.stops).then(async (distance) =>
+                    {
+                        await model.query(trx).patch({ distance }).findById(orderjob.guid);
+                    })
+                );
+            }
+
+            // execute all promises
+            await Promise.all(patchPromises);
+        });
+        return;
+    }
+
+    static async validateStopsBeforeUpdate(oldOrder, newOrder)
+    {
+        // get OrderStops and JobStops from database Fancy smancy queries
+        const updatedOrder = await Order.query().skipUndefined().withGraphJoined(Order.fetch.stopsPayload).findById(newOrder.guid);
+
+        // array to store promises
+        const patchArray = [];
+
+        // compate order stops
+        if (oldOrder.stops.length != updatedOrder.stops.length)
+        {
+            console.log('Updating Order Terminals');
+
+            // calculate distance
+            patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+            {
+                await Order.query().patch({ distance }).findById(updatedOrder.guid);
+            }));
+        }
+        else
+        {
+            for (let i = 0; i < updatedOrder.stops.length; i++)
+            {
+                // if terminals are not the same
+                if (!R.equals(updatedOrder.stops[i].terminal, oldOrder.stops[i].terminal))
+                {
+                    console.log('Updating Order Terminal');
+
+                    // calculate distance
+                    patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+                    {
+                        await Order.query().patch({ distance }).findById(updatedOrder.guid);
+                    }));
+                }
+            }
+        }
+
+        // loop through jobs array
+        for (let i = 0; i < updatedOrder.jobs.length; i++)
+        {
+            // if job stops length is different
+            if (updatedOrder.jobs[i].stops.length != oldOrder.jobs[i].stops.length)
+            {
+                console.log('Updateing Job terminals');
+
+                // calculate distance of jobs stops
+                patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+                {
+                    await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
+                }));
+            }
+            else
+            {
+                // loop through job stops terminals
+                for (let j = 0; j < updatedOrder.jobs[i].stops.length; j++)
+                {
+                    // if terminals are not the same
+                    if (!R.equals(updatedOrder.jobs[i].stops[j].terminal, oldOrder.jobs[i].stops[j].terminal))
+                    {
+                        console.log('Updating Job Stop!');
+
+                        // calculate distance
+                        patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+                        {
+                            await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
+                        }));
+                    }
+                }
+            }
+        }
+
+        if (patchArray.length != 0)
+        {
+            await Promise.all(patchArray);
+        }
     }
 
     /**
@@ -847,7 +965,6 @@ class OrderService
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
-
         const responses = await this.handleLoadTenders('accept', orderGuids, null);
 
         await this.loadTendersHelper(responses, false, false, 8, currentUser);
@@ -862,7 +979,6 @@ class OrderService
      */
     static async rejectLoadTenders(orderGuids, reason, currentUser)
     {
-
         const responses = await this.handleLoadTenders('reject', orderGuids, reason);
 
         await this.loadTendersHelper(responses, true, true, 9, currentUser);
@@ -1022,18 +1138,14 @@ class OrderService
 
     static addFilterStatus(baseQuery, statusList)
     {
-        const doesStatusListHaveElements =
-            statusList?.length > 0 ? true : false;
-        return doesStatusListHaveElements
-            ? baseQuery.whereIn('status', statusList)
+        return statusList?.length
+            ? baseQuery.whereRaw('status ilike ANY(Array[?])', statusList)
             : baseQuery;
     }
 
     static addFilterCustomer(baseQuery, customerList)
     {
-        const doesCustomerListHaveElements =
-            customerList?.length > 0 ? true : false;
-        return doesCustomerListHaveElements
+        return customerList?.length
             ? baseQuery.whereIn(
                 'orderGuid',
                 Order.query()
@@ -1045,9 +1157,7 @@ class OrderService
 
     static addFilterDispatcher(baseQuery, dispatcherList)
     {
-        const doesDispatcherListHaveElements =
-            dispatcherList?.length > 0 ? true : false;
-        return doesDispatcherListHaveElements
+        return dispatcherList?.length
             ? baseQuery.whereIn(
                 'orderGuid',
                 Order.query()
@@ -1059,9 +1169,7 @@ class OrderService
 
     static addFilterSalesperson(baseQuery, salespersonList)
     {
-        const doesSalespersonListHaveElements =
-            salespersonList?.length > 0 ? true : false;
-        return doesSalespersonListHaveElements
+        return salespersonList?.length
             ? baseQuery.whereIn(
                 'orderGuid',
                 Order.query()
@@ -1212,13 +1320,15 @@ class OrderService
                             commType: true,
                             vehicle: true
                         }
-                    }
+                    },
+                    dispatcher: true
                 })
 
                 /**
                  * Is necessary to use modifyGraph on stops and
                  * stops.commodities to avoid duplicate rows
                  */
+                .modifyGraph('order', 'getOrdersFields')
                 .modifyGraph('order.client', (builder) =>
                     builder.select('guid', 'name')
                 )
@@ -1356,7 +1466,6 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
-            expenses = [],
             ...orderData
         } = orderInput;
 
@@ -1367,7 +1476,8 @@ class OrderService
                 clientFound,
                 commodityTypes,
                 jobTypes,
-                invoiceLineItems,
+                invoiceBills,
+                orderInvoices,
                 referencesChecked
             ] = await Promise.all([
                 clientContact
@@ -1380,7 +1490,8 @@ class OrderService
                     : undefined,
                 commodities.length > 0 ? CommodityType.query(trx) : null,
                 jobs.length > 0 ? OrderJobType.query(trx) : null,
-                expenses.length > 0 ? InvoiceLineItem.query(trx) : null,
+                OrderService.getInvoiceBills(jobs),
+                OrderService.getOrderInvoices(guid),
                 OrderService.validateReferencesBeforeUpdate(
                     clientContact,
                     guid,
@@ -1441,20 +1552,13 @@ class OrderService
                 trx
             );
 
-            const { orderInvoices, jobs: jobsWithExpensesGraph } =
-                OrderService.updateCreateExpenses(
-                    expenses,
-                    {
-                        dispatcher,
-                        referrer,
-                        salesperson,
-                        consignee
-                    },
-                    jobsToUpdate,
-                    invoiceLineItems,
-                    commoditiesMap,
-                    currentUser
-                );
+            const { jobsToUpdateWithExpenses, orderInvoicesToUpdate } = OrderService.updateExpensesGraph(
+                commoditiesMap,
+                invoiceBills,
+                orderInvoices,
+                jobsToUpdate,
+                currentUser
+            );
 
             const orderGraph = Order.fromJson({
                 guid,
@@ -1469,8 +1573,8 @@ class OrderService
                 instructions,
                 clientContactGuid: orderContactCreated,
                 stops: stopsToUpdate,
-                jobs: jobsWithExpensesGraph,
-                invoices: orderInvoices,
+                invoices: orderInvoicesToUpdate,
+                jobs: jobsToUpdateWithExpenses,
                 ...orderData
             });
             orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
@@ -1485,6 +1589,7 @@ class OrderService
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
+            // TODO: Events here
             // update loadboard postings (async)
             orderUpdated.jobs.map(async (job) =>
             {
@@ -1498,10 +1603,34 @@ class OrderService
         catch (error)
         {
             await trx.rollback();
-            throw {
-                message: error?.nativeError?.detail || error?.message || error
-            };
+            throw error;
         }
+    }
+
+    static async getInvoiceBills(jobs)
+    {
+        const jobsGuids = jobs.map(job => job.guid);
+        const allInvoiceBills = await InvoiceBill.query().select('*')
+            .whereIn(
+                'guid',
+                Bill.query().select('billGuid').whereIn('jobGuid', jobsGuids)
+            );
+
+        return InvoiceBill.fetchGraph(allInvoiceBills, '[lines.link, job]')
+            .modifyGraph('job', (builder) =>
+                builder.select('guid')
+            );
+    }
+
+    static async getOrderInvoices(orderGuid)
+    {
+        const allInvoices = await InvoiceBill.query().select('*')
+            .whereIn(
+                'guid',
+                Invoice.query().select('invoiceGuid').where('orderGuid', orderGuid)
+            );
+
+        return InvoiceBill.fetchGraph(allInvoices, '[lines.link]');
     }
 
     // If contactObject is null -> reference should be removed
@@ -2179,12 +2308,18 @@ class OrderService
             jobsInput?.map((job) =>
             {
                 // eslint-disable-next-line no-unused-vars
-                const { stops: stopsDataNotUseHere, ...newJobData } = job;
-                return OrderService.createSingleJobGraph(
+                const { stops: stopsDataNotUseHere, commodities, ...newJobData } = job;
+                const jobGraph = OrderService.createSingleJobGraph(
                     newJobData,
                     jobTypes,
                     currentUser
                 );
+
+                // Add commodities to be use in updateExpensesGraph cause they contain the revenue and expense
+                return {
+                    ...jobGraph,
+                    commodities
+                };
             }) || []
         );
     }
@@ -2371,105 +2506,104 @@ class OrderService
         );
     }
 
-    static updateCreateExpenses(
-        expenses,
-        orderContacts,
-        jobs,
-        invoiceLineItems,
-        commoditiesMap,
-        currentUser
-    )
+    /**
+     * For each commodity send in a job (Which contains the revenu and expense), we pull the invoice line from DB and find the invoice that has
+     * the same commodityGuid and itemId = 1, the we update the revenue and expese, if a line is not found it is because is for a new commmodity, so a
+     * new invoice line is created for the job and the order. The new jobsWithExpenses is return along with the orderInvoices
+     * @param {*} commoditiesMap Commodities obj with key the commodity index and value the commodity with guid
+     * @param {*} invoiceBillsFromDB Bills pull from DB for all jobs to update
+     * @param {*} orderInvoiceFromDB Invoices pull from DB for the order
+     * @param {*} jobsToUpdate Jobs with new new information to update, contains the commodities new expense and revenue
+     * @param {*} currentUser
+     * @returns {
+     *  jobsToUpdateWithExpenses: Jobs with the bills and lines to update or create
+     *  orderInvoicesToUpdate Order invoices with the lines to create
+     * }
+     */
+    static updateExpensesGraph(commoditiesMap, invoiceBillsFromDB, orderInvoiceFromDB, jobsToUpdate, currentUser)
     {
-        const { consignee, referrer, salesperson, dispatcher } = orderContacts;
-        const actors = {
-            client: consignee,
-            referrer: referrer,
-            salesperson: salesperson,
-            dispatcher: dispatcher
-        };
-
-        // there can be many vendors
-        for (const job of jobs)
+        const orderInvoiceListToCreate = [];
+        const jobsToUpdateWithExpenses = jobsToUpdate.map(job =>
         {
-            actors[job.index + 'vendor'] = job.vendor;
-        }
+            job.bills = [];
+            const jobBillsWithLinesToUpdate = new Map();
 
-        // going to use the actor role name as the key for quick storage
-        const invoices = {};
-
-        for (const expense of expenses)
-        {
-            let invoiceKey = expense.account;
-            if (expense.job)
+            job.commodities?.map(commoditieWithExpense =>
             {
-                // this is a job expense, there are many vendors so have to make unique key
-                invoiceKey = expense.job + expense.account;
-            }
+                let lineFound = false;
+                const commodity = commoditiesMap[commoditieWithExpense.index];
 
-            if (!(invoiceKey in invoices))
-            {
-                const invoiceBill = InvoiceBill.fromJson({
-                    // mark as invoice only if it is for the client, everyone else is a bill
-                    isInvoice: expense.account === 'client',
-                    lines: []
-                });
-                invoiceBill.consignee = actors[invoiceKey];
-                invoiceBill.setCreatedBy(currentUser);
-                invoices[invoiceKey] = invoiceBill;
-            }
-            const invoice = invoices[invoiceKey];
-            const lineItem = invoiceLineItems.find(
-                (lineItem) => expense.item === lineItem.name && expense.item
-            );
+                // If commodity is not found, must be a typo on the commodity index sended by the caller
+                if (commodity)
+                {
+                    for (const bill of invoiceBillsFromDB)
+                    {
+                        if (bill.job.guid === job.guid)
+                        {
+                            // Update only for line type transport
+                            const invocieLineFound = bill.lines?.find(line => line.itemId === 1 && line.commodityGuid === commodity.guid);
+                            if (invocieLineFound)
+                            {
+                                lineFound = true;
+                                invocieLineFound.amount = commoditieWithExpense.expense;
+                                invocieLineFound.setUpdatedBy(currentUser);
 
-            if (!lineItem)
-                throw new Error('Unknown expense item: ' + expense.item);
+                                invocieLineFound.link[0].amount = commoditieWithExpense.revenue;
+                                invocieLineFound.link[0].setUpdatedBy(currentUser);
 
-            const invoiceLine = InvoiceLine.fromJson({
-                amount: expense.amount
-            });
-            invoiceLine.graphLink('item', lineItem);
+                                // Add bill to jobToUpdate
+                                if (!jobBillsWithLinesToUpdate.has(bill.guid))
+                                    jobBillsWithLinesToUpdate.set(bill.guid, bill);
+                            }
+                        }
+                    }
+                }
 
-            if (expense.guid)
-            {
-                invoiceLine.setUpdatedBy(currentUser);
-                invoiceLine.guid = expense.guid;
-            }
-            else invoiceLine.setCreatedBy(currentUser);
+                // If line was not found is because it is for a new commodity so a new one has to be created
+                if (!lineFound && commodity)
+                {
+                    const itemId = 1;
+                    const commodityRevenue = commoditieWithExpense.revenue;
+                    const commodityExpense = commoditieWithExpense.expense;
 
-            if (expense.commodity)
-            {
-                const commodity = commoditiesMap[expense.commodity];
-                invoiceLine.commodityGuid = commodity.guid;
-            }
-
-            invoice.lines.push(invoiceLine);
-        }
-
-        const orderInvoices = [];
-        const jobInvoices = {};
-        Object.keys(invoices).map((it) =>
-        {
-            const match = it.match(/(.*?)vendor$/);
-            if (match)
-            {
-                if (match[1]) jobInvoices[match[1]] = invoices[it];
-                else
-                    throw new Error(
-                        'expense specifies vendor account but not linked to a job'
+                    const orderInvoiceLineToCreate = OrderService.createInvoiceLineGraph(
+                        commodityRevenue,
+                        itemId,
+                        currentUser
                     );
+                    orderInvoiceLineToCreate.graphLink('commodity', commodity);
+                    orderInvoiceListToCreate.push(orderInvoiceLineToCreate);
+
+                    const jobInvoiceLineToCreate = OrderService.createInvoiceLineGraph(
+                        commodityExpense,
+                        itemId,
+                        currentUser
+                    );
+                    jobInvoiceLineToCreate.graphLink('commodity', commodity);
+                    jobInvoiceLineToCreate.link = { '#ref': orderInvoiceLineToCreate['#id'] };
+
+                    const bill = invoiceBillsFromDB.find(bill => bill.job.guid === job.guid);
+                    bill.lines.push(jobInvoiceLineToCreate);
+                    if (!jobBillsWithLinesToUpdate.has(bill.guid))
+                        jobBillsWithLinesToUpdate.set(bill.guid, bill);
+                }
+            });
+
+            for (const bill of jobBillsWithLinesToUpdate.values())
+            {
+                // Delete the job.commodities that contains the expense and revenue and insert the bill with the lines to update inside the job
+                // eslint-disable-next-line no-unused-vars
+                const { job: commodityJobReference, ...billData } = bill;
+                delete job.commodities;
+                job.bills.push(billData);
             }
-            else orderInvoices.push(invoices[it]);
+            return job;
         });
 
-        for (const jobIndex of Object.keys(jobInvoices))
-        {
-            const job = jobs.find((job) => job['#id'] === jobIndex);
-            job.bills ? null : (job.bills = []);
-            job.bills.push(jobInvoices[jobIndex]);
-        }
+        if (orderInvoiceFromDB.length > 0)
+            orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
 
-        return { orderInvoices, jobs };
+        return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
     }
 
     static async findByVin(vin)
