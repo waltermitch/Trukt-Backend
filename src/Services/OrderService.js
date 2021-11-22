@@ -1470,7 +1470,6 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
-            delete: toDelete,
             ...orderData
         } = orderInput;
 
@@ -1584,8 +1583,6 @@ class OrderService
                 ...orderData
             });
 
-            console.log(orderGraph);
-
             orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
 
             const orderToUpdate = Order.query(trx)
@@ -1595,6 +1592,61 @@ class OrderService
                     noDelete: true,
                     allowRefs: true
                 });
+
+            if (jobs)
+            {
+                const delProms = [];
+                for (const job of jobs)
+                {
+
+                    const toDelete = job.delete;
+                    if (toDelete)
+                    {
+                        for (const key of Object.keys(toDelete))
+                        {
+                            switch (key)
+                            {
+                                case 'commodities':
+                                    delProms.push(OrderStopLink.query(trx)
+                                        .whereIn('commodityGuid', toDelete.commodities)
+                                        .delete()
+                                        .then((numDeletes) =>
+                                        {
+                                            // if the commodity only exists for the order, delete the commodity
+                                            return Promise.all([
+                                                Commodity.query(trx)
+                                                    .whereIn('guid', toDelete.commodities)
+                                                    .whereNotExists(
+                                                        OrderStopLink.query(trx)
+                                                            .whereIn('commodityGuid', toDelete.commodities)
+                                                            .where('orderGuid', guid)
+                                                            .whereNotNull('jobGuid'))
+                                                    .delete()
+                                                    .returning('guid')
+                                                    .then((commodities) =>
+                                                    {
+                                                        // if the there is a stop that is not attached to an order, delete the stop
+                                                        return OrderStop.query(trx)
+                                                            .leftJoinRelated('links')
+                                                            .whereNull('links.stopGuid').delete();
+
+                                                    })
+
+                                            ]);
+                                        }));
+                                    break;
+                                default:
+
+                                // do nothing
+                            }
+                        }
+
+                    }
+
+                }
+                await Promise.all(delProms);
+
+            }
 
             // handle deletions
             const deletions = [];

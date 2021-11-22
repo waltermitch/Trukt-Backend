@@ -52,6 +52,13 @@ class OrderStopLink extends BaseModel
         };
     }
 
+    static modifiers = {
+        orderOnly: (query) =>
+        {
+            query.whereNull('jobGuid');
+        }
+    }
+
     static toStops(stopLinks)
     {
         // not to have recursive requires

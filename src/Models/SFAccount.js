@@ -113,7 +113,7 @@ class SFAccount extends BaseModel
         // based on rtype
         if ('rtype' in json)
         {
-            json.rtype = json.rtype.toLowerCase();
+            json.rtype = json.rtype?.toLowerCase();
 
             switch (json.rtype)
             {

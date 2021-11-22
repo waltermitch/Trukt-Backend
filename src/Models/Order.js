@@ -192,6 +192,7 @@ class Order extends BaseModel
                 },
                 stopLinks:
                 {
+                    $modify: ['orderOnly'],
                     commodity: {
                         vehicle: true,
                         commType: true
