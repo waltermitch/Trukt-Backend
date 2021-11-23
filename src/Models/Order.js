@@ -235,12 +235,12 @@ class Order extends BaseModel
             'stopsPayload': {
                 jobs: {
                     stops: {
-                        $modify: ['distinct'],
+                        $modify: ['distinctAllData'],
                         terminal: true
                     }
                 },
                 stops: {
-                    $modify: ['distinct'],
+                    $modify: ['distinctAllData'],
                     terminal: true
                 }
             }
