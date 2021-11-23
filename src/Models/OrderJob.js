@@ -415,6 +415,19 @@ class OrderJob extends BaseModel
                     'isCanceled': false
                 })
                 .whereNotNull('vendorGuid');
+        },
+        statusPosted: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('loadboardPosts', { alias: 'post' })
+                .orWhere({
+                    'job.isReady': true,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'post.isPosted': true
+                })
+                .whereNull('vendorGuid');
         }
     };
 
