@@ -505,15 +505,24 @@ class LoadboardService
     static async getjobDataForUpdate(jobId)
     {
         const job = await Job.query().findById(jobId).withGraphFetched(`[
-            commodities(distinct).[vehicle, commType], order.[client, clientContact],
-            stops(distinct).[primaryContact, terminal], loadboardPosts(getExistingFromList),
-            equipmentType
+            commodities(distinct).[vehicle, commType], 
+            order.[client, clientContact, invoices.lines(transportOnly).item],
+            stops(distinct).[primaryContact, terminal], 
+            loadboardPosts(getExistingFromList),
+            equipmentType, 
+            bills.lines(isNotDeleted, transportOnly).item,
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getValid')
         });
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
         const stops = await this.getFirstAndLastStops(job.stops);
+
+        if (job.order.invoices.length != 0)
+            this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
+
+        if (job.bills.length != 0)
+            this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
 
         Object.assign(job, stops);
 
