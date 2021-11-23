@@ -441,6 +441,20 @@ class OrderJob extends BaseModel
                     'dispatch.isPending': true
                 })
                 .whereNull('job.vendorGuid');
+        },
+        statusDeclined: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('dispatches', { alias: 'dispatch' })
+                .orWhere({
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'dispatch.isDeclined': true
+                })
+                .whereNull('job.vendorGuid');
         }
     };
 
