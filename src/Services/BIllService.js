@@ -8,6 +8,7 @@ const currency = require('currency.js');
 const InvoiceService = require('./InvoiceService');
 const Invoice = require('../Models/Invoice');
 const Bill = require('../Models/Bill');
+const { DateTime } = require('luxon');
 
 let transportItem;
 
@@ -239,7 +240,7 @@ class BillService
                     if (e.Bill)
                     {
                         // merge existing externalSourceData with new data
-                        const mergedData = Object.assign({}, billMap.get(e.bId), { 'quickbooks': { 'Bill': { 'Id': e.Bill.Id } } });
+                        const mergedData = Object.assign({}, billMap.get(e.bId), { 'quickbooks': { 'bill': { 'Id': e.Bill.Id } } });
 
                         // update in map
                         billMap.set(e.bId, mergedData);
@@ -256,13 +257,29 @@ class BillService
         {
             if (!data.error)
             {
-                const bill = await InvoiceBill.query().patchAndFetchById(guid, { externalSourceData: data, isPaid: true });
+                const trx = await InvoiceBill.transaction();
 
-                results.push(bill);
+                // update all the bills and their lines
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, datePaid: DateTime.utc().toString() }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.bill?.Id }).where('invoiceGuid', guid)]);
+
+                if (proms[0].status == 'fulfilled')
+                {
+                    await trx.commit();
+                    results.push(proms[0].value);
+                }
+                else
+                {
+                    await trx.rollback();
+                    results.push(proms[0].reason);
+                }
             }
             else
                 results.push(data.error);
         }));
+
+        // check length of results
+        if (results.length == 0)
+            return [{ success: true, message: 'All Bills Already Paid For This Job' }];
 
         return results;
     }
