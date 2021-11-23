@@ -164,6 +164,15 @@ class OrderJob extends BaseModel
                     },
                     to: 'rcgTms.genericNotes.guid'
                 }
+            },
+            type:
+            {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./OrderJobType'),
+                join: {
+                    from: 'rcgTms.orderJobs.typeId',
+                    to: 'rcgTms.orderJobTypes.id'
+                }
             }
         };
     }

@@ -7,7 +7,7 @@ const QBO = require('../QuickBooks/API');
 
 class QuickBooksService
 {
-    static async createInvoices(invoices)
+    static async createInvoices(invoices = [])
     {
         // array of results
         const results = [];
@@ -17,7 +17,7 @@ class QuickBooksService
         for (const invoice of invoices)
         {
             // check if invoice already invoiced
-            if (invoice?.externalSourceData?.quickbooks.invoice)
+            if (invoice?.externalSourceData?.quickbooks?.invoice)
             {
                 results.push({
                     error: `Invoice ${invoice.guid} already invoiced`,

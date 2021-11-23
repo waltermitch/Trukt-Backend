@@ -8,6 +8,7 @@ const currency = require('currency.js');
 const InvoiceService = require('./InvoiceService');
 const Invoice = require('../Models/Invoice');
 const Bill = require('../Models/Bill');
+const { DateTime } = require('luxon');
 
 let transportItem;
 
@@ -111,6 +112,15 @@ class BillService
             throw new Error('Bill does not exist.');
         }
 
+        // to double check and see if commodity is attached
+        const checkLine = await InvoiceLine.query().findById(lineGuid);
+
+        // if attached throw error
+        if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
+        {
+            throw new Error('Deleting a transport line attached to a commodity is forbidden.');
+        }
+
         // returning updated bill
         const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
 
@@ -142,12 +152,11 @@ class BillService
             // creating array of patch updates
             for (let i = 0; i < lineGuids.length; i++)
             {
-                patchArrays.push(InvoiceLine.query(trx).delete().where('guid', lineGuids[i]).where('invoiceGuid', billGuid));
+                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': billGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
             }
 
             // executing all updates
             const deletedLines = await Promise.all(patchArrays);
-            console.log(deletedLines);
 
             // if any failed will return guids that failed
             if (deletedLines.includes(0))
@@ -161,7 +170,7 @@ class BillService
                     }
                 }
 
-                throw new Error(`Lines with guid(s): ${guids} :do not exist.`);
+                throw new Error(`Lines with guid(s): ${guids} cannot be deleted.`);
             }
 
             // if succeed then, returns nothing
@@ -231,7 +240,7 @@ class BillService
                     if (e.Bill)
                     {
                         // merge existing externalSourceData with new data
-                        const mergedData = Object.assign({}, billMap.get(e.bId), { 'quickbooks': { 'Bill': { 'Id': e.Bill.Id } } });
+                        const mergedData = Object.assign({}, billMap.get(e.bId), { 'quickbooks': { 'bill': { 'Id': e.Bill.Id } } });
 
                         // update in map
                         billMap.set(e.bId, mergedData);
@@ -248,13 +257,29 @@ class BillService
         {
             if (!data.error)
             {
-                const bill = await InvoiceBill.query().patchAndFetchById(guid, { externalSourceData: data, isPaid: true });
+                const trx = await InvoiceBill.transaction();
 
-                results.push(bill);
+                // update all the bills and their lines
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, datePaid: DateTime.utc().toString() }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.bill?.Id }).where('invoiceGuid', guid)]);
+
+                if (proms[0].status == 'fulfilled')
+                {
+                    await trx.commit();
+                    results.push(proms[0].value);
+                }
+                else
+                {
+                    await trx.rollback();
+                    results.push(proms[0].reason);
+                }
             }
             else
                 results.push(data.error);
         }));
+
+        // check length of results
+        if (results.length == 0)
+            return [{ success: true, message: 'All Bills Already Paid For This Job' }];
 
         return results;
     }

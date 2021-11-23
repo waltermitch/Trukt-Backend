@@ -1,13 +1,14 @@
 const enabledModules = process.env['accounting.modules'].split(';');
 const QuickBooksService = require('./QuickBooksService');
 const LineLinks = require('../Models/InvoiceLineLink');
+const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceBill = require('../Models/InvoiceBill');
 const CoupaService = require('./CoupaService');
 const Line = require('../Models/InvoiceLine');
-const Order = require('../Models/Order');
-const InvoiceLine = require('../Models/InvoiceLine');
 const Invoice = require('../Models/Invoice');
+const Order = require('../Models/Order');
 const Bill = require('../Models/Bill');
+const { DateTime } = require('luxon');
 
 class InvoiceService
 {
@@ -202,6 +203,15 @@ class InvoiceService
             throw new Error('Invoice does not exist.');
         }
 
+        // to double check and see if commodity is attached
+        const checkLine = await InvoiceLine.query().findById(lineGuid);
+
+        // if attached throw error
+        if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
+        {
+            throw new Error('Deleting a transport line attached to a commodity is forbidden.');
+        }
+
         // returning updated bill
         const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
 
@@ -234,7 +244,7 @@ class InvoiceService
             // creating array of patch updates
             for (let i = 0; i < lineGuids.length; i++)
             {
-                patchArrays.push(InvoiceLine.query(trx).delete().where('guid', lineGuids[i]).where('invoiceGuid', invoiceGuid));
+                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': invoiceGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
             }
 
             // executing all updates
@@ -252,7 +262,7 @@ class InvoiceService
                     }
                 }
 
-                throw new Error(`Lines with guid(s): ${guids} :do not exist.`);
+                throw new Error(`Lines with guid(s): ${guids} cannot be deleted.`);
             }
 
             // if succeed then, returns nothing
@@ -339,7 +349,7 @@ class InvoiceService
         for (const order of orders)
             for (const invoice of order.invoices)
             {
-                if (invoice.isPaid)
+                if (invoice.dateInvoiced)
                     continue;
 
                 // add existing invoice externalSourceData to map
@@ -396,7 +406,7 @@ class InvoiceService
                 const trx = await InvoiceBill.transaction();
 
                 // update all invoices and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true })], InvoiceLine.query(trx).patch({ isPaid: true }).where('invoiceGuid', guid));
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateInvoiced: DateTime.utc().toString() }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
 
                 if (proms[0].status == 'fulfilled')
                 {
