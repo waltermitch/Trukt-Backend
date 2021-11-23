@@ -699,7 +699,7 @@ class OrderService
     {
         // relations obejct for none repetitive code
         const stopRelationObj = {
-            $modify: ['distinct'],
+            $modify: ['distinctAllData'],
             terminal: true
         };
 
