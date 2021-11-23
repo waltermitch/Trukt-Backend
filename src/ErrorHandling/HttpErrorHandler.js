@@ -3,7 +3,7 @@ const validatorErrors = require('express-openapi-validator').error;
 /* eslint-disable */
 module.exports = (err, request, response, next) =>
 {
-    let status = 404;
+    let status;
     let data;
 
     // handle openapi validator errors
