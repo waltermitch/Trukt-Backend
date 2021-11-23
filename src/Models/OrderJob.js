@@ -173,6 +173,20 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.typeId',
                     to: 'rcgTms.orderJobTypes.id'
                 }
+            },
+            requests:
+            {
+                relation: BaseModel.HasOneThroughRelation,
+                modelClass: require('./LoadboardRequest'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    through: {
+                        modelClass: require('./LoadboardPost'),
+                        from: 'rcgTms.loadboardPosts.jobGuid',
+                        to: 'rcgTms.loadboardPosts.guid'
+                    },
+                    to: 'rcgTms.loadboardRequests.loadboardPostGuid'
+                }
             }
         };
     }
@@ -453,6 +467,24 @@ class OrderJob extends BaseModel
                     'job.isDeleted': false,
                     'job.isCanceled': false,
                     'dispatch.isDeclined': true
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusRequests: (queryBuilder) =>
+        {
+            const loadboardRequest = require('./LoadboardRequest');
+            queryBuilder
+                .alias('job')
+                .whereExists(loadboardRequest.query().joinRelated('posting').alias('req')
+                    .where({
+                        'posting.isPosted': true,
+                        'req.isValid': true
+                    })
+                    .whereRaw('"posting"."job_guid" = "job"."guid"'))
+                .where({
+                    'job.isReady': true,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
                 })
                 .whereNull('job.vendorGuid');
         }
