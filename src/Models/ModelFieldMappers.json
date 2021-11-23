@@ -229,7 +229,8 @@
                     "createdByGuid",
                     "updatedByGuid",
                     "primaryContactGuid",
-                    "alternativeContactGuid"
+                    "alternativeContactGuid",
+                    "resolvedTimes"
                 ]
             }
         }
@@ -287,7 +288,11 @@
     "User": {
         "hide": {
             "external": {
-                "into": ["dateCreated", "dateUpdated", "dateDeleted"]
+                "into": [
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted"
+                ]
             }
         }
     },
@@ -328,14 +333,84 @@
     "Attachment": {
         "hide": {
             "external": {
-                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid"
+                ]
+            }
+        }
+    },
+    "Notes": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid",
+                    "updatedByGuid",
+                    "dateUpdated"
+                ]
+            }
+        }
+    },
+    "InvoiceBill": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isInvoice",
+                    "isDeleted",
+                    "deletedByGuid",
+                    "dateDeleted",
+                    "isGenerated",
+                    "isValid",
+                    "isSyncedExternalSource",
+                    "dateSyncedExternalSource",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "consigneeGuid",
+                    "externalSource",
+                    "externalSourceGuid",
+                    "externalSourceData",
+                    "paymentMethodId",
+                    "paymentTermId"
+                ]
             }
         }
     },
     "InvoiceLine": {
         "hide": {
             "external": {
-                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "dateUpdated",
+                    "commodityGuid",
+                    "invoiceGuid"
+                ]
+            }
+        }
+    },
+    "InvoicePaymentMethod": {
+        "hide": {
+            "external": {
+                "into": [
+                    "externalId",
+                    "externalSource"
+                ]
+            }
+        }
+    },
+    "InvoicePaymentTerm": {
+        "hide": {
+            "external": {
+                "into": [
+                    "externalId",
+                    "externalSource"
+                ]
             }
         }
     }

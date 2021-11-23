@@ -1,0 +1,29 @@
+summary: Export Order Invoices
+operationId: exportInvoices
+description: Export all the invoices on this order
+tags:
+  - Invoice
+  - Order
+parameters:
+  - in: path
+    name: orderGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/Finances.yaml#/Invoice
+  404:
+    description: Order Not Found
+    content:
+      application/json: {}
+  400:
+    description: Bad Request
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/Finances.yaml#/Error

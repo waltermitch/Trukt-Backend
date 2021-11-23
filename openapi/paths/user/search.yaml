@@ -1,0 +1,36 @@
+summary: Search for User by Role
+operationId: searchUsers
+description: Searches for TMS User by name with specified Role.
+tags:
+  - User
+parameters:
+  - in: path
+    name: userRole
+    schema:
+      $ref: '../../components/schemas/User.yaml#/UserRoles'
+    required: true
+  - in: query
+    name: pg
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/page'
+  - in: query
+    name: rc
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/rowCount'
+  - in: query
+    name: search
+    schema:
+      type: string
+    required: true
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          type: array
+          description: List of Users that match the search criteria and role.
+          items:
+            $ref: ../../components/schemas/User.yaml#/TMSUser
+  400:
+    $ref: ../../components/schemas/HttpResponses.yaml#/ValidationErrorResponse

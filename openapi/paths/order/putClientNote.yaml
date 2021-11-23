@@ -1,0 +1,53 @@
+summary: Update Client Note
+operationId: updateClientNote
+description: Updates the note on the order that is shared with the Client
+tags:
+  - Order
+parameters:
+  - in: path
+    name: orderGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          note:
+            type: string
+            maxLength: 3000
+            nullable: true
+            description: The note text that is to be stored on the order and shared with the client
+            example: Your order has been shipped and is on its way
+
+responses:
+  202:
+    description: Orders
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            clientNotes:
+              type: object
+              properties:
+                note:
+                  type: string
+                  example: Your order has been shipped and is on its way
+                updatedByGuid:
+                  $ref: ../../components/schemas/Common.yaml#/guid
+                dateUpdated:
+                  $ref: ../../components/schemas/Common.yaml#/dateUpdated
+  404:
+    description: Orders
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: Order not found

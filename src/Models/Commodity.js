@@ -175,11 +175,7 @@ class Commodity extends BaseModel
             }
         }
 
-        if ('index' in json)
-        {
-            json['#id'] = json.index;
-            delete json.index;
-        }
+        this.mapIndex(json);
 
         return json;
     }
@@ -216,7 +212,6 @@ class Commodity extends BaseModel
         json = super.$formatDatabaseJson(json);
 
         delete json.commType;
-        delete json.lotNumber;
         delete json.stopGuid;
         return json;
     }

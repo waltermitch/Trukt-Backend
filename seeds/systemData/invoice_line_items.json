@@ -1,11 +1,46 @@
 {
     "schema": "rcg_tms",
     "table": "invoice_bill_line_items",
-    "unique": "name",
+    "unique": "id",
     "data": [
         {
             "id": 1,
             "name": "transport",
+            "type": "revenue",
+            "is_accessorial": false,
+            "is_deprecated": false
+        },
+        {
+            "id": 2,
+            "name": "keys",
+            "type": "revenue",
+            "is_accessorial": false,
+            "is_deprecated": false
+        },
+        {
+            "id": 3,
+            "name": "storage",
+            "type": "revenue",
+            "is_accessorial": false,
+            "is_deprecated": false
+        },
+        {
+            "id": 4,
+            "name": "fuel surcharge",
+            "type": "revenue",
+            "is_accessorial": false,
+            "is_deprecated": false
+        },
+        {
+            "id": 5,
+            "name": "repossession fee",
+            "type": "revenue",
+            "is_accessorial": false,
+            "is_deprecated": false
+        },
+        {
+            "id": 6,
+            "name": "impound fee",
             "type": "revenue",
             "is_accessorial": false,
             "is_deprecated": false

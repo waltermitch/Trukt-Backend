@@ -2,109 +2,166 @@ const Invoice = require('../QuickBooks/Invoice');
 const OrderStop = require('../Models/OrderStop');
 const Client = require('../QuickBooks/Client');
 const Vendor = require('../QuickBooks/Vendor');
+const Bill = require('../QuickBooks/Bill');
 const QBO = require('../QuickBooks/API');
 
 class QuickBooksService
 {
-    static async createInvoices(array)
+    static async createInvoices(invoices = [])
     {
-        // this way we take in arrays and singular objects
-        if (!Array.isArray(array))
-            array = [array];
+        // array of results
+        const results = [];
 
-        const invoices = [];
-
-        for (const order of array)
-            for (const invoice of order.invoices)
+        // array to send batch
+        const batch = [];
+        for (const invoice of invoices)
+        {
+            // check if invoice already invoiced
+            if (invoice?.externalSourceData?.quickbooks?.invoice)
             {
-                // if no consignee use client
-                const client = invoice?.cosignee || order?.client;
+                results.push({
+                    error: `Invoice ${invoice.guid} already invoiced`,
+                    system: 'QuickBooks',
+                    guid: invoice.guid,
+                    externalSourceData: invoice.externalSourceData
+                });
 
-                invoice.clientId = client?.qbId;
-                invoice.orderNumber = order.number;
+                continue;
+            }
+            else if (invoice?.lines?.length == 0)
+            {
+                results.push({
+                    error: `Invoice ${invoice.guid} has no lines`,
+                    system: 'QuickBooks',
+                    guid: invoice.guid
+                });
 
-                for (const lineItem of invoice.lines)
-                {
-                    if (!lineItem.isPaid)
-                    {
-                        const commodity = lineItem.commodity;
-
-                        if (commodity)
-                        {
-                            const stops = OrderStop.firstAndLast(commodity?.stops);
-
-                            const pTerminal = stops[0]?.terminal;
-                            const dTerminal = stops[1]?.terminal;
-
-                            lineItem.description = QuickBooksService.composeDescription(pTerminal, dTerminal, lineItem);
-                        }
-                        else
-                            lineItem.description = lineItem.notes || '';
-                    }
-                }
-
-                const payload =
-                {
-                    'bId': invoice.guid,
-                    'operation': 'create',
-                    'Invoice': new Invoice(invoice)
-                };
-
-                invoices.push(payload);
+                continue;
             }
 
-        const res = await QBO.batch(invoices);
+            // if no consignee use client
+            const client = invoice?.consignee || invoice?.client;
+            invoice.clientId = client?.qbId;
 
-        return res;
+            // for each line item map out description, and commodity details
+            for (const lineItem of invoice.lines)
+            {
+                if (!lineItem.isPaid)
+                {
+                    const commodity = lineItem.commodity;
+
+                    if (commodity)
+                    {
+                        const stops = OrderStop.firstAndLast(commodity?.stops);
+
+                        const pTerminal = stops[0]?.terminal;
+                        const dTerminal = stops[1]?.terminal;
+
+                        lineItem.description = QuickBooksService.composeDescription(pTerminal, dTerminal, lineItem);
+                    }
+                    else
+                        lineItem.description = lineItem.notes || '';
+                }
+            }
+
+            const payload =
+            {
+                'bId': invoice.guid,
+                'operation': 'create',
+                'Invoice': new Invoice(invoice)
+            };
+
+            batch.push(payload);
+        }
+
+        const res = await QBO.batch(batch);
+
+        results.push(...res);
+
+        return results;
     }
 
-    static async createBills(jobs)
+    static async createBills(bills)
     {
-        const bills = [];
+        // array of results
+        const results = [];
 
-        for (const job of jobs)
-            for (const bill of job.bills)
+        // array to send batch
+        const batch = [];
+
+        for (const bill of bills)
+        {
+            if (bill?.externalSourceData?.quickbooks.bill)
             {
-                if (!bill.vendor)
-                    throw { 'data': 'No Vendor Assigned To Job' };
+                results.push({
+                    error: `Bill ${bill.guid} already billed`,
+                    system: 'QuickBooks',
+                    guid: bill.guid,
+                    externalSourceData: bill.externalSourceData
+                });
 
-                bill.vendorId = bill.vendor.qbId;
-                bill.orderNumber = job.number;
+                continue;
+            }
+            else if (!bill?.vendor?.qbId)
+            {
+                results.push({
+                    error: `Bill ${bill.guid} has no vendor or vendor doesn't have qbId`,
+                    system: 'QuickBooks',
+                    guid: bill.guid
+                });
 
-                for (const lineItem of bill.lines)
-                {
-                    if (!lineItem.isPaid)
-                    {
-                        const commodity = lineItem.commodity;
+                continue;
+            }
+            else if (bill?.lines?.length == 0)
+            {
+                results.push({
+                    error: `Bill ${bill.guid} has no lines`,
+                    system: 'QuickBooks',
+                    guid: bill.guid
+                });
 
-                        if (commodity)
-                        {
-
-                            const stops = OrderStop.firstAndLast(commodity?.stops);
-
-                            const pTerminal = stops[0]?.terminal;
-                            const dTerminal = stops[1]?.terminal;
-
-                            lineItem.description = QuickBooksService.composeDescription(pTerminal, dTerminal, lineItem);
-                        }
-                        else
-                            lineItem.description = lineItem.notes || '';
-                    }
-                }
-
-                const payload =
-                {
-                    'bId': bill.guid,
-                    'operation': 'create',
-                    'Bill': new Invoice(bill)
-                };
-
-                bills.push(payload);
+                continue;
             }
 
-        const res = await QBO.batch(bills);
+            bill.vendorId = bill.vendor.qbId;
+            bill.orderNumber = bill.jobNumber;
 
-        return res;
+            for (const lineItem of bill.lines)
+            {
+                if (!lineItem.isPaid)
+                {
+                    const commodity = lineItem.commodity;
+
+                    if (commodity)
+                    {
+
+                        const stops = OrderStop.firstAndLast(commodity?.stops);
+
+                        const pTerminal = stops[0]?.terminal;
+                        const dTerminal = stops[1]?.terminal;
+
+                        lineItem.description = QuickBooksService.composeDescription(pTerminal, dTerminal, lineItem);
+                    }
+                    else
+                        lineItem.description = lineItem.notes || '';
+                }
+            }
+
+            const payload =
+            {
+                'bId': bill.guid,
+                'operation': 'create',
+                'Bill': new Bill(bill)
+            };
+
+            batch.push(payload);
+        }
+
+        const res = await QBO.batch(batch);
+
+        results.push(...res);
+
+        return results;
     }
 
     static async upsertClient(data)

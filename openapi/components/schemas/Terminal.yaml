@@ -1,31 +1,85 @@
-type: object
-required:
+TerminalBase:
+  type: object
+  properties:
+    name:
+      description: A name for this terminal that will be displayed to the users.
+      type: string
+      maxLength: 255
+    locationType:
+      description: The type of phyiscal location that the terminal is.
+      type: string
+      enum:
+        - dealer
+        - private
+        - auction
+        - repo yard
+        - port
+        - business
+        - null
+      nullable: true
+    street1:
+      description: The street address of this terminal.
+      example: '1234 Fake Street'
+      type: string
+      maxLength: 64
+    street2:
+      description: The additional street address of this terminal.
+      example: 'Suite 555'
+      type: string
+      maxLength: 64
+      nullable: true
+    state:
+      description: The country's State in which this terminal is located.
+      type: string
+      maxLength: 100
+    city:
+      description: The city in which this terminal is located.
+      type: string
+      maxLength: 64
+    country:
+      description: The country in which this terminal is located.
+      type: string
+      maxLength: 64
+    zipCode:
+      allOf:
+        - type: string
+          description: The zip code in which this terminal is located.
+        - $ref: './Common.yaml#/zipCode'
+    latitude:
+      $ref: './Common.yaml#/latitude'
+    longitude:
+      $ref: './Common.yaml#/longitude'
+
+# All of the required properties for a Terminal
+RequiredProps:
   - name
   - zipCode
-properties:
-  name:
-    description: A non-unique name for this terminal that will be displayed to the users.
-    type: string
-    maxLength: 255
-  street1:
-    type: string
-    maxLength: 64
-  street2:
-    type: string
-    maxLength: 64
-    nullable: true
-  state:
-    type: string
-    maxLength: 100
-  city:
-    type: string
-    maxLength: 64
-  country:
-    type: string
-    maxLength: 64
-  zipCode:
-    $ref: '.\Common.yaml#/zipCode'
-  latitude:
-    $ref: '.\Common.yaml#/latitude'
-  longitude:
-    $ref: '.\Common.yaml#/longitude'
+
+# Terminal that will be sent out of our system.
+# This is the Terminal in its pure form without any required fields.
+TerminalOutbound:
+  allOf:
+    - type: object
+      properties:
+        guid:
+          $ref: './Common.yaml#/guid'
+    - $ref: '#/TerminalBase'
+
+TerminalInboundIndex:
+  allOf:
+    - $ref: './Common.yaml#/indexObject'
+    - $ref: '#/TerminalBase'
+  required:
+    $ref: '#/RequiredProps'
+
+TerminalInboundGuid:
+  allOf:
+    - $ref: './Common.yaml#/guidObject'
+    - $ref: '#/TerminalBase'
+  required:
+    $ref: '#/RequiredProps'
+
+TerminalInbound:
+  allOf:
+    - $ref: '#/TerminalInboundIndex'
+    - $ref: '#/TerminalOutbound'

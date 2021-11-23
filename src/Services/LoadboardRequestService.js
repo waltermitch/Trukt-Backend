@@ -1,9 +1,9 @@
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardRequest = require('../Models/LoadboardRequest');
 const LoadboardPost = require('../Models/LoadboardPost');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const { ref } = require('objection');
 const axios = require('axios');
 const https = require('https');
-const { ref } = require('objection');
 
 const lbInstance = axios.create({
     baseURL: process.env['azure.loadboard.baseurl'],
@@ -30,7 +30,7 @@ class LoadboardRequestService
         const [lbRequest, lbPosting] = await Promise.all([
             LoadboardRequest
                 .query()
-                .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true })
+                .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isValid': true })
                 .where(ref('extraExternalData:carrierInfo.guid').castText(), payload.extraExternalData.carrierInfo.guid),
             LoadboardPost
                 .query()
@@ -44,10 +44,10 @@ class LoadboardRequestService
             throw new Error('Posting Doesn\'t Exist');
         }
 
-        // if requrest by carrier exist update it to inactive
+        // if requrest by carrier exist update it to invalid
         if (lbRequest)
         {
-            await LoadboardRequest.query().findById(lbRequest.guid).patch({ isActive: false, isCanceled: true, status: 'Canceled' });
+            await LoadboardRequest.query().findById(lbRequest.guid).patch({ isValid: false, isCanceled: true, status: 'Canceled' });
 
             await StatusManagerHandler.registerStatus({
                 orderGuid: lbPosting.orderGuid,
@@ -100,7 +100,7 @@ class LoadboardRequestService
         const [lbRequest, lbPosting] = await Promise.all([
             LoadboardRequest
                 .query()
-                .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isActive': true })
+                .findOne({ 'externalPostGuid': payload.externalPostGuid, 'isValid': true })
                 .where(ref('extraExternalData:carrierInfo.guid').castText(), payload.extraExternalData.carrierInfo.guid),
             LoadboardPost
                 .query()
@@ -112,7 +112,7 @@ class LoadboardRequestService
         // search data base by the (RCG) guid and update to canceled
         const response = await LoadboardRequest.query().findById(lbRequest.guid).patch({
             status: 'Canceled',
-            isActive: false,
+            isValid: false,
             isCanceled: true,
             isSynced: true,
             updatedByGuid: currentUser,

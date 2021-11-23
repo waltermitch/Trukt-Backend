@@ -1,0 +1,29 @@
+summary: Export Order Bills
+operationId: exportBills
+description: Export all the bills for all the jobs on this order
+tags:
+  - Bill
+  - Order
+parameters:
+  - in: path
+    name: orderGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/Finances.yaml#/Bill
+  404:
+    description: Order Not Found
+    content:
+      application/json: {}
+  400:
+    description: Bad Request
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/Finances.yaml#/Error

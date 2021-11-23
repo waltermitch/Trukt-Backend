@@ -12,7 +12,7 @@ exports.up = function (knex)
 exports.down = function (knex)
 {
     return knex.schema.withSchema(SCHEMA_NAME)
-        .table('orders', table =>
+        .table(TABLE_NAME, table =>
         {
             table.foreign('dispatcher_guid')
                 .references('guid')

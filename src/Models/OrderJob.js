@@ -1,7 +1,6 @@
-const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
-const IncomeCalcs = require('./Mixins/IncomeCalcs');
 const OrderJobType = require('./OrderJobType');
+const BaseModel = require('./BaseModel');
 
 const jobTypeFields = ['category', 'type'];
 
@@ -20,9 +19,11 @@ class OrderJob extends BaseModel
     static get relationMappings()
     {
         const OrderStopLink = require('./OrderStopLink');
-        const Order = require('./Order');
         const SFAccount = require('./SFAccount');
         const SFContact = require('./SFContact');
+        const Order = require('./Order');
+        const User = require('./User');
+
         return {
             vendor: {
                 relation: BaseModel.BelongsToOneRelation,
@@ -78,7 +79,7 @@ class OrderJob extends BaseModel
                         modelClass: OrderStopLink,
                         from: 'rcgTms.orderStopLinks.jobGuid',
                         to: 'rcgTms.orderStopLinks.commodityGuid',
-                        extra: ['lotNumber', 'stopGuid']
+                        extra: ['stopGuid']
                     },
                     to: 'rcgTms.commodities.guid'
                 }
@@ -117,10 +118,10 @@ class OrderJob extends BaseModel
             },
             dispatcher: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
+                modelClass: User,
                 join: {
                     from: 'rcgTms.orderJobs.dispatcherGuid',
-                    to: 'salesforce.accounts.guid'
+                    to: 'rcgTms.tmsUsers.guid'
                 }
             },
             equipmentType: {
@@ -150,15 +151,30 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.guid',
                     to: 'rcgTms.orderJobDispatches.jobGuid'
                 }
+            },
+            notes:
+            {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./Notes'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    through: {
+                        from: 'rcgTms.orderJobNotes.jobGuid',
+                        to: 'rcgTms.orderJobNotes.noteGuid'
+                    },
+                    to: 'rcgTms.genericNotes.guid'
+                }
+            },
+            type:
+            {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./OrderJobType'),
+                join: {
+                    from: 'rcgTms.orderJobs.typeId',
+                    to: 'rcgTms.orderJobTypes.id'
+                }
             }
         };
-    }
-
-    $parseDatabaseJson(json)
-    {
-        json = super.$parseDatabaseJson(json);
-        json.netProfitMargin = this.calculateNetProfitMargin(json.actualRevenue, json.actualExpense);
-        return json;
     }
 
     $parseJson(json)
@@ -204,7 +220,6 @@ class OrderJob extends BaseModel
             delete json.jobType.id;
             Object.assign(json, json.jobType);
             delete json.jobType;
-            delete json.typeId;
         }
 
         return json;
@@ -214,18 +229,6 @@ class OrderJob extends BaseModel
     {
         const newIndex = 'job_' + Date.now() + index;
         super.setIndex(newIndex);
-    }
-
-    async $beforeInsert(context)
-    {
-        await super.$beforeInsert(context);
-        this.calculateEstimatedIncome();
-    }
-
-    async $beforeUpdate(opt, context)
-    {
-        await super.$beforeUpdate(opt, context);
-        this.calculateEstimatedIncome();
     }
 
     /**
@@ -253,16 +256,134 @@ class OrderJob extends BaseModel
 
     static sorted(query, sortField = {})
     {
-        return query.orderBy(sortField.field || 'number', sortField.order || 'ASC');
+        const { field, order } = sortField;
+        const sortFieldQuery = OrderJob.customSort(field);
+
+        return query.orderBy(sortFieldQuery, order || 'ASC');
+    }
+
+    static customSort(sortField = 'number')
+    {
+        const SFAccount = require('./SFAccount');
+        const Order = require('./Order');
+        const Terminal = require('./Terminal');
+        const OrderStop = require('./OrderStop');
+        const OrderStopLink = require('./OrderStopLink');
+        const User = require('./User');
+
+        switch (sortField)
+        {
+            case 'clientName':
+                return SFAccount.query().select('name').where('guid',
+                    Order.query().select('clientGuid').whereRaw('guid = order_guid')
+                );
+            case 'dispatcherName':
+                return User.query().select('name').where('guid',
+                    Order.query().select('dispatcher_guid').whereRaw('guid = order_guid')
+                ).toKnexQuery();
+            case 'salespersonName':
+                return SFAccount.query().select('name').where('guid',
+                    Order.query().select('salespersonGuid').whereRaw('guid = order_guid')
+                );
+            case 'pickupTerminal':
+                return Terminal.query().select('name').where('guid',
+                    OrderStop.query().select('terminalGuid').whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'pickup').orderBy('dateRequestedStart').limit(1)
+                );
+            case 'deliveryTerminal':
+                return Terminal.query().select('name').where('guid',
+                    OrderStop.query().select('terminalGuid').whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'delivery').orderBy('dateRequestedStart', 'desc').limit(1)
+                );
+            case 'requestedPickupDate':
+                return OrderStop.query().min('dateRequestedStart')
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'pickup');
+            case 'requestedDeliveryDate':
+                return OrderStop.query().max('dateRequestedStart')
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'delivery');
+            case 'scheduledPickupDate':
+                return OrderStop.query().min('dateScheduledStart')
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'pickup');
+            case 'scheduledDeliveryDate':
+                return OrderStop.query().max('dateScheduledStart')
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                    ).andWhere('stopType', 'delivery');
+            default:
+                return sortField;
+        }
+    }
+
+    static globalSearch(query, keyword)
+    {
+        // requiring in here to avoid circular dependency
+        const OrderStopLink = require('./OrderStopLink');
+        const OrderStop = require('./OrderStop');
+        const SFAccount = require('./SFAccount');
+        const SFContact = require('./SFContact');
+        const Commodity = require('./Commodity');
+        const Terminal = require('./Terminal');
+        const Vehicle = require('./Vehicle');
+        const Order = require('./Order');
+
+        query
+
+            // search by job number
+            .orWhere('number', 'ilike', `%${keyword}%`)
+
+            // search stoplink
+            .orWhereIn('guid', OrderStopLink.query().select('jobGuid')
+
+                // search stop
+                .whereIn('stopGuid', OrderStop.query().select('guid')
+
+                    // search terminal
+                    .whereIn('terminalGuid', Terminal.query().select('guid')
+                        .where('city', 'ilike', `%${keyword}%`)
+                        .orWhere('state', 'ilike', `%${keyword}%`)
+                        .orWhere('zipCode', 'ilike', `%${keyword}%`)))
+
+                // search commodity and vehicle
+                .orWhereIn('commodityGuid', Commodity.query().select('guid')
+                    .where('identifier', 'ilike', `%${keyword}%`)
+                    .orWhereIn('vehicleId', Vehicle.query().select('id')
+                        .where('name', 'ilike', `%${keyword}%`))))
+
+            // search vendor attributes
+            .orWhereIn('vendorGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
+
+            // search client and client contact attributes
+            .orWhereIn('orderGuid', Order.query().select('guid')
+                .whereIn('clientContactGuid', SFContact.query().select('guid').where('email', 'ilike', `%${keyword}%`))
+                .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
+                .orWhere('referenceNumber', 'ilike', `%${keyword}%`));
     }
 
     static modifiers = {
         filterIsTender: this.filterIsTender,
         filterJobCategories: this.filterJobCategories,
-        sorted: this.sorted
+        sorted: this.sorted,
+        globalSearch: this.globalSearch
     };
+
+    findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
+    {
+        for (const bill of this.bills)
+        {
+            const lineFound = bill.lines?.find(line => line.commodityGuid === commodityGuid && line.itemId == lineTypeId);
+            if (lineFound) return lineFound;
+        }
+        return {};
+    }
 }
 
-Object.assign(OrderJob.prototype, IncomeCalcs);
 Object.assign(OrderJob.prototype, RecordAuthorMixin);
 module.exports = OrderJob;

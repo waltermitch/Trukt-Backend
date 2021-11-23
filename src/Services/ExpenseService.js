@@ -14,7 +14,9 @@ class ExpenseService
             itemId: data.itemId,
             isPaid: data?.isPaid,
             commodityGuid: data.commodityGuid,
-            updatedByGuid: user
+            updatedByGuid: user,
+            dateCharged: data.dateCharged,
+            transactionNumber: data.transactionNumber
         };
 
         const res = await Line.query().patch(payload).findOne({ 'guid': guid }).returning('*');
@@ -41,7 +43,9 @@ class ExpenseService
                     itemId: data.itemId,
                     isPaid: data?.isPaid,
                     commodityGuid: data.commodityGuid || undefined,
-                    createdByGuid: user
+                    createdByGuid: user,
+                    dateCharged: data.dateCharged,
+                    transactionNumber: data.transactionNumber
                 };
 
                 let res;
@@ -70,6 +74,9 @@ class ExpenseService
                 {
                     const bill = await Bill.query().findOne({ 'job_guid': data.jobGuid });
 
+                    if (!bill)
+                        throw { status: 400, data: `No bill found for Job: ${data.jobGuid}` };
+
                     payload.invoiceGuid = bill.billGuid;
 
                     res = await Line.query().insert(payload);
@@ -77,6 +84,9 @@ class ExpenseService
                 else if (data.orderGuid)
                 {
                     const invoice = await Invoice.query().findOne({ 'order_guid': data.orderGuid });
+
+                    if (!invoice)
+                        throw { status: 400, data: `No invoice found for Order: ${data.orderGuid}` };
 
                     payload.invoiceGuid = invoice.invoiceGuid;
 

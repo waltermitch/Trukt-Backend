@@ -72,6 +72,13 @@ class OrderStop extends BaseModel
             {
                 // use distinctOn because we are using pg
                 builder.distinctOn('guid');
+            },
+
+            // This modifier exists because it is needed for calculating stop distances.
+            // It is used as a builder object modifier. Use can be seen in Order model
+            distinctAllData(builder)
+            {
+                builder.distinctOn('guid').select('*');
             }
         };
     }
@@ -130,6 +137,16 @@ class OrderStop extends BaseModel
     setScheduledDates(dateType, startDate, endDate)
     {
         this.setDates('Scheduled', dateType, startDate, endDate);
+    }
+
+    static get contactTypes()
+    {
+        return ['primaryContact', 'alternativeContact'];
+    }
+
+    static get sortBySequence()
+    {
+        return (firstStop, secondStop) => firstStop.sequence - secondStop.sequence;
     }
 }
 

@@ -45,7 +45,7 @@ get:
                 allOf:
                   - description: The partner that wishes to update a load tender.
                   - oneOf:
-                      - $ref: ..\..\..\components\schemas\SFID.yaml
+                      - $ref: ../../../components/schemas/SFID.yaml
                       - type: string
                         format: uuid
               reference:
@@ -81,20 +81,20 @@ get:
                     type: string
                     maxLength: 64
                   latitude:
-                    $ref: '..\..\..\components\schemas\Common.yaml#/latitude'
+                    $ref: '../../../components/schemas/Common.yaml#/latitude'
                   longitude:
-                    $ref: '..\..\..\components\schemas\Common.yaml#/longitude'
+                    $ref: '../../../components/schemas/Common.yaml#/longitude'
               status:
                 oneOf:
-                  - $ref: ..\..\..\components\schemas\EDI214StopStatus.yaml
-                  - $ref: ..\..\..\components\schemas\EDI214Appointment.yaml
+                  - $ref: ../../../components/schemas/EDI214StopStatus.yaml
+                  - $ref: ../../../components/schemas/EDI214Appointment.yaml
                 description: Represents the status/appointment update for the load tender
                 type: object
                 discriminator:
                   propertyName: type
                   mapping:
-                    status: ..\..\..\components\schemas\EDI214StopStatus.yaml
-                    appointment: ..\..\..\components\schemas\EDI214Appointment.yaml
+                    status: ../../../components/schemas/EDI214StopStatus.yaml
+                    appointment: ../../../components/schemas/EDI214Appointment.yaml
               datetime:
                 type: string
                 format: date-time
@@ -103,4 +103,4 @@ get:
                 type: string
                 example: '8 days'
               edi:
-                $ref: ..\204\inbound.yaml#/post/requestBody/content/application~1json/schema/properties/edi
+                $ref: ../204/inbound.yaml#/post/requestBody/content/application~1json/schema/properties/edi

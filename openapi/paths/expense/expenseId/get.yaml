@@ -1,13 +1,14 @@
 summary: Get Expense by guid
 operationId: getExpense
 description: Get Expense
+deprecated: true
 tags:
   - Expense
 parameters:
   - in: path
     name: expenseId
     schema:
-      $ref: '..\..\..\components\schemas\Common.yaml#/guid'
+      $ref: '../../../components/schemas/Common.yaml#/guid'
     required: true
 responses:
   200:

@@ -1,5 +1,5 @@
-const Terminal = require('../Models/Terminal');
 const ArcgisClient = require('../ArcgisClient');
+const Terminal = require('../Models/Terminal');
 
 const keywordFields = {
     'name': ['name'],
@@ -9,7 +9,7 @@ const keywordFields = {
     'zip': ['zipCode'],
     'address': ['street1', 'street2']
 };
-const zipCodeNoDashRegex = /^[^-]*[^ -]\w+/;
+
 const { SYSTEM_USER } = process.env;
 
 class TerminalService
@@ -111,61 +111,57 @@ class TerminalService
      */
     static async getUnverifiedTerminals(limit = 100)
     {
-        return await Terminal.query().select()
+        return Terminal.query().select()
             .where('isResolved', false)
             .andWhere('resolvedTimes', '<', 3)
             .orderBy('dateCreated', 'resolvedTimes')
             .limit(limit) || [];
     }
 
-    /**
-     * If zipCode contains a dash, use the zipCode until the dash
-     * @param {*} terminal
-     * @returns
-     */
-    static createStringAddress(terminal)
-    {
-        const { street1, city, state, zipCode, country } = terminal;
-
-        const cityStr = city && `, ${city}` || '';
-        const stateStr = state && `, ${state}` || '';
-        const zipCodeStr = zipCode && `, ${zipCode.match(zipCodeNoDashRegex)}` || '';
-        const countryStr = country && `, ${country}` || '';
-
-        return `${street1}${cityStr}${stateStr}${zipCodeStr}${countryStr}`;
-    }
-
     static async resolveTerminal(terminal)
     {
-        const trx = await Terminal.startTransaction();
+        const { guid } = terminal;
         try
         {
-            const terminalAddress = TerminalService.createStringAddress(terminal);
+            const terminalAddress = Terminal.createStringAddress(terminal);
             const arcgisAddress = await ArcgisClient.findGeocode(terminalAddress);
-            const terminalToUpdate = TerminalService.updateTerminalInformation(arcgisAddress, terminal);
+            const terminalToUpdate = TerminalService.updateTerminalInformation(arcgisAddress, terminal, SYSTEM_USER);
 
-            await Terminal.query(trx)
-                .patch(terminalToUpdate)
-                .where('guid', terminalToUpdate.guid);
-
-            return await trx.commit();
+            return await TerminalService.updateTerminal(terminalToUpdate);
         }
         catch (error)
         {
-            const message = `Error, terminal ${terminal?.guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
-            console.error(message);
-            await trx.rollback();
-            throw { message };
+            /**
+             * Some terminals may return an error when inserting due to unique coordinates constraint,
+             * in those cases we mark those termianls as resolved = false (Which is the default) and resolved_times = 3
+             * so we stop checking that terminal but still know that is not resolved.
+             */
+            try
+            {
+                const message = `Error, terminal ${guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
+                console.error(message);
+
+                const unresolvedTerminalToUpdate = {
+                    guid,
+                    resolvedTimes: 3,
+                    updatedByGuid: SYSTEM_USER
+                };
+                return await TerminalService.updateTerminal(unresolvedTerminalToUpdate);
+            }
+            catch (err)
+            {
+                const message = `Error, terminal ${guid} could not be updated: ${err?.nativeError?.detail || err?.message || err}`;
+                console.error(message);
+                throw { message };
+            }
         }
     }
 
-    static isAddressFound(arcgisAddress)
+    static async updateTerminal(terminal)
     {
-        const { location } = arcgisAddress;
-
-        if (location?.x && location?.y)
-            return true;
-        return false;
+        return await Terminal.query()
+            .patch(terminal)
+            .where('guid', terminal.guid);
     }
 
     /**
@@ -173,10 +169,15 @@ class TerminalService
      * Longitude is arcgis.X
      * https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find-address-candidates.htm#ESRI_SECTION1_CF39B0C8FC2547C3A52156F509C555FC
      */
-    static updateTerminalInformation(arcgisAddress, terminal)
+    static updateTerminalInformation(arcgisAddress, { guid, resolvedTimes }, system_user)
     {
-        const termninalToUpdate = Terminal.fromJson(terminal);
-        if (TerminalService.isAddressFound(arcgisAddress))
+        const termninalToUpdate = {
+            guid,
+            updatedByGuid: system_user,
+            resolvedTimes
+        };
+
+        if (ArcgisClient.isAddressFound(arcgisAddress))
         {
             termninalToUpdate.latitude = arcgisAddress.location.y;
             termninalToUpdate.longitude = arcgisAddress.location.x;
@@ -186,10 +187,8 @@ class TerminalService
         else
             termninalToUpdate.resolvedTimes++;
 
-        termninalToUpdate.updatedByGuid = SYSTEM_USER;
         return termninalToUpdate;
     }
-
 }
 
 module.exports = TerminalService;

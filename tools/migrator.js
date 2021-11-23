@@ -677,33 +677,62 @@ async function seedHandler(argv)
                         {
                             const fileconts = source.data[filename];
                             const filedata = require('../' + fileconts.directory + '/' + fileconts.filename);
-                            for (const field of [
-                                'schema',
-                                'table',
-                                'unique',
-                                'data'
-                            ])
-                            {
-                                if (!(field in filedata))
-                                {
-                                    throw new Error(`${filename} missing ${field} field`);
-                                }
-                            }
 
-                            console.log(listStyle('data:  ' + filename));
-                            let builder = trx(filedata.table).withSchema(filedata.schema).insert(filedata.data);
-                            if (Array.isArray(filedata.unique))
+                            if (filedata.register)
                             {
-                                builder = builder.onConflict(...filedata.unique);
+                                let queryString = '';
+                                const outPut = [];
+                                for (const regObject of filedata.register)
+                                {
+                                    for (const tableName of regObject.tables)
+                                    {
+                                        queryString += `SELECT audit.audit_modification_register('${regObject.schema}.${tableName}');`;
+                                        outPut.push(listStyle('registered table:  ' + tableName));
+                                    }
+                                }
+                                for (const regObject of filedata.unregister)
+                                {
+                                    for (const tableName of regObject.tables)
+                                    {
+                                        queryString += `SELECT audit.audit_modification_unregister('${regObject.schema}.${tableName}');`;
+                                        outPut.push(listStyle('unregistered table:  ' + tableName));
+                                    }
+                                }
+                                await trx.raw(queryString);
+                                console.log(outPut.join('\n'));
+                                didAthing = true;
                             }
                             else
                             {
-                                builder = builder.onConflict(filedata.unique);
+
+                                for (const field of [
+                                    'schema',
+                                    'table',
+                                    'unique',
+                                    'data'
+                                ])
+                                {
+                                    if (!(field in filedata))
+                                    {
+                                        throw new Error(`${filename} missing ${field} field`);
+                                    }
+                                }
+
+                                console.log(listStyle('data:  ' + filename));
+
+                                let builder = trx(filedata.table).withSchema(filedata.schema).insert(filedata.data);
+                                if (Array.isArray(filedata.unique))
+                                {
+                                    builder = builder.onConflict(...filedata.unique);
+                                }
+                                else
+                                {
+                                    builder = builder.onConflict(filedata.unique);
+                                }
+
+                                await builder.merge();
+                                didAthing = true;
                             }
-
-                            await builder.merge();
-                            didAthing = true;
-
                         }
                     }
                 }

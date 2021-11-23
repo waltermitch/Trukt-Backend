@@ -1,0 +1,27 @@
+{
+    "schema": "rcg_tms",
+    "table": "invoice_bill_payment_terms",
+    "unique": "id",
+    "data": [
+        {
+            "id": 1,
+            "name": "same day pay (5%)"
+        },
+        {
+            "id": 2,
+            "name": "2-day quickpay (2%)"
+        },
+        {
+            "id": 3,
+            "name": "2-day quickpay (nc)"
+        },
+        {
+            "id": 4,
+            "name": "net 15"
+        },
+        {
+            "id": 5,
+            "name": "net 30"
+        }
+    ]
+}

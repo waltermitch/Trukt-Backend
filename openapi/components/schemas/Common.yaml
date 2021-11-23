@@ -1,27 +1,21 @@
 dateCreated:
-  allOf:
-    - $ref: '#/dateTime'
-    - type: string
-      description: The date this record was created.
-      readOnly: true
-      nullable: false
-      example: '2021-09-23T12:14:45.000Z'
+  type: string
+  format: date-time
+  description: The date this record was created.
+  readOnly: true
+  nullable: false
 dateUpdated:
-  allOf:
-    - $ref: '#/dateTime'
-    - type: string
-      format: date-time
-      description: The date this record was last updated.
-      readOnly: true
-      nullable: false
+  type: string
+  format: date-time
+  description: The date this record was last updated.
+  readOnly: true
+  nullable: false
 dateDeleted:
-  allOf:
-    - $ref: '#/dateTime'
-    - type: string
-      format: date-time
-      description: The date this record was deleted.
-      readOnly: true
-      nullable: false
+  type: string
+  format: date-time
+  description: The date this record was deleted.
+  readOnly: true
+  nullable: false
 createdByGuid:
   allOf:
     - $ref: '#/guid'
@@ -29,6 +23,22 @@ createdByGuid:
       description: The TMS User account that created this record.
       readOnly: true
       nullable: false
+createdBy:
+  type: object
+  description: The TMS User account that created this record.
+  readOnly: true
+  properties:
+    guid:
+      $ref: '#/guid'
+    name:
+      type: string
+      description: The name of the TMS User account that created this record.
+      readOnly: true
+      nullable: false
+    email:
+      type: string
+      description: The email address of the TMS User account that created this record.
+      readOnly: true
 updatedByGuid:
   allOf:
     - $ref: '#/guid'
@@ -46,7 +56,7 @@ deletedByGuid:
 currency:
   type: string
   format: currency
-  pattern: ^(?:[1-9][0-9]*|0)\.[0-9]{2}$
+  pattern: ^(?:[1-9][0-9]*|0)/.[0-9]{2}$
   example: '12345.67'
 date:
   type: string
@@ -77,6 +87,9 @@ rowCount:
   description: For pagination purposes, number of entries per page.
   type: integer
   default: 25
+  example: 25
+  minimum: 1
+  maximum: 100
 longitude:
   description: Number describing the longitude coordinate.
   example: 45.6208283
@@ -380,14 +393,14 @@ Enums:
       - Deleted
   Loadboard Name:
     type: string
-    enum: 
+    enum:
       - SUPERDISPATCH
       - CENTRALDISPATCH
       - SHIPCARS
       - CARDELIVERYNETWORK
   LoadBoard Request Status:
     type: string
-    enum: 
+    enum:
       - Accepted
       - Canceled
       - New
@@ -399,6 +412,27 @@ Enums:
       - reject
   noteObject:
     type: string
-    enum: 
+    enum:
       - job
       - order
+  Get Orders sort fields:
+    type: string
+    enum:
+      - status
+      - number
+      - dateCreated
+      - actualRevenue
+      - actualExpense
+      - estimatedExpense
+      - estimatedRevenue
+      - dateUpdated
+      - clientName
+      - dispatcherName
+      - salespersonName
+      - pickupTerminal
+      - deliveryTerminal
+      - requestedPickupDate
+      - requestedDeliveryDate
+      - scheduledPickupDate
+      - scheduledDeliveryDate
+    default: number

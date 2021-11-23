@@ -29,7 +29,7 @@ exports.seed = async function (knex)
             invoice.setCreatedBy(testUser);
             invoice.order.updatedByGuid = testUser.guid;
 
-            const transportItem = items.find(it => it.name === 'Keys');
+            const transportItem = items.find(it => it.name === 'transport');
             if (order.commodities.length > 0)
             {
                 const numComs = order.commodities.length;

@@ -85,6 +85,21 @@ class SFAccount extends BaseModel
             qb.select(raw('\'carrier\' as rtype'), 'salesforce.accounts.*');
             qb.where({ 'rectype.name': 'Carrier' });
             return qb;
+        },
+        client(query, id)
+        {
+            query.modify('byType', 'client')
+                .findOne((builder) =>
+                {
+                    builder.orWhere('guid', id).orWhere('salesforce.accounts.sfId', id);
+                });
+        },
+        bySomeId(query, id)
+        {
+            query.findOne((builder) =>
+            {
+                builder.orWhere('guid', id).orWhere('salesforce.accounts.sfId', id);
+            });
         }
     }
 
@@ -117,9 +132,21 @@ class SFAccount extends BaseModel
                 case 'employee':
                     delete json.referralAmount;
                 case 'referrer':
-                    delete json.preferred;
-                    delete json.blacklist;
-                    delete json.dotNumber;
+                    for (const field of [
+                        'preferred',
+                        'blacklist',
+                        'dotNumber',
+                        'qbId',
+                        'scId',
+                        'sdGuid',
+                        'status',
+                        'syncInSuper',
+                        'sfId'
+                    ])
+                    {
+                        delete json[field];
+                    }
+
                     for (const field of [
                         'Street',
                         'State',

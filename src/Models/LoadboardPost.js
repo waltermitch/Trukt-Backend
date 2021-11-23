@@ -74,6 +74,11 @@ class LoadboardPost extends BaseModel
 
         return json;
     }
+
+    posted()
+    {
+        return this.isPosted && this.isSynced && !this.hasError;
+    }
 }
 
 Object.assign(LoadboardPost.prototype, FindOrCreateMixin);
