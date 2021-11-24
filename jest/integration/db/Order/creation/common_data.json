@@ -1,0 +1,145 @@
+{
+    "orderInformation": {
+        "referenceNumber": "RC-10910293-TG5",
+        "inspectionType": "standard",
+        "instructions": "Praesent ac sapien quis velit molestie sodales",
+        "clientNotes": {
+            "notes": "Praesent ac sapien quis velit molestie sodales"
+        },
+        "isDummy": true,
+        "isTender": false,
+        "dateExpectedCompleteBy": "2021-08-15T00:00:00.000-07:00",
+        "bol": "123ABCD",
+        "bolUrl": "https://media.zenfs.com/en/insider_articles_922/c6ce8d0b9a7b28f9c2dee8171da98b8f",
+        "estimatedDistance": "100",
+        "clientContact": {
+            "name": "integrationTestUser",
+            "email": "integrationTestUser@test.com",
+            "phoneNumber": "111-222-4444",
+            "mobileNumber": "555-666-7777"
+        }
+    },
+    "jobInformation": {
+        "instructions": "Praesent ac sapien quis velit molestie sodales",
+        "loadboardInstructions": "Praesent ac sapien quis velit molestie sodales",
+        "estimatedDistance": "100",
+        "bolUrl": "https://media.zenfs.com/en/insider_articles_922/c6ce8d0b9a7b28f9c2dee8171da98b8f",
+        "typeId": 1,
+        "loadType": "full truck load",
+        "inspectionType": "standard",
+        "equipmentTypeId": 1
+    },
+    "stopInformation": {
+        "notes": "Praesent ac sapien quis velit molestie sodales",
+        "dateRequestedStart": "2021-08-10T02:00:00.000-07:00",
+        "dateRequestedEnd": "2021-08-11T02:00:00.000-07:00",
+        "dateRequestedType": "exactly",
+        "dateEstimatedStart": "2021-08-11T02:00:00.000-07:00",
+        "dateEstimatedEnd": "2021-08-12T02:00:00.000-07:00",
+        "dateEstimatedType": "estimated",
+        "dateScheduledStart": "2021-08-13T02:00:00.000-07:00",
+        "dateScheduledEnd": "2021-08-14T02:00:00.000-07:00",
+        "dateScheduledType": "no later than",
+        "primaryContact": {
+            "name": "IntegrationTestUser First",
+            "email": "integrationTestUserFirst@test.com",
+            "phoneNumber": "111-222-3333",
+            "mobileNumber": "444-555-6666"
+        },
+        "alternativeContact": {
+            "name": "IntegrationTestUser Second",
+            "email": "integrationTestUserSecond@test.com",
+            "phoneNumber": "777-888-9999",
+            "mobileNumber": "000-111-2222"
+        }
+    },
+    "terminals": [
+        {
+            "index": "ter_1",
+            "name": "white house",
+            "locationType": "private",
+            "street1": "1600 Pennsylvania Avenue",
+            "street2": "Apartment 101",
+            "state": "Washington",
+            "city": "Washington",
+            "country": "USA",
+            "zipCode": "20500",
+            "latitude": 38.8979570,
+            "longitude": -77.0365600
+        },
+        {
+            "index": "ter_2",
+            "name": "beaver island",
+            "locationType": "auction",
+            "street1": "1600 Pennsylvania Avenue",
+            "street2": "Apartment 101",
+            "state": "Michigan",
+            "city": "beaver island",
+            "country": "USA",
+            "zipCode": "49782",
+            "latitude": 45.6595510,
+            "longitude": -85.5258570
+        },
+        {
+            "index": "ter_3",
+            "name": "fremont island",
+            "locationType": "private",
+            "street1": "4528 W 1700 S",
+            "street2": "Apartment 101",
+            "state": "UT",
+            "city": "hooper",
+            "country": "USA",
+            "zipCode": "84315",
+            "latitude": 41.1668330,
+            "longitude": -112.3381250
+        },
+        {
+            "index": "ter_4",
+            "name": "isabella",
+            "locationType": "auction",
+            "street1": "2241 State Hwy 1",
+            "street2": "Apartment 101",
+            "state": "Minnesota",
+            "city": "isabella",
+            "country": "USA",
+            "zipCode": "55607",
+            "latitude": 47.6173750,
+            "longitude": -91.3562880
+        }
+    ],
+    "commodities": [
+        {
+            "index": "com_1",
+            "capacity": "partial truck load",
+            "damaged": "no",
+            "inoperable": "yes",
+            "length": 15,
+            "weight": 2587,
+            "quantity": 1,
+            "description": "Praesent ac sapien quis velit molestie sodales",
+            "identifier": "M1A4LHCW6MB145909",
+            "extraExternalData": {
+                "data": "Praesent ac sapien quis velit molestie sodales"
+            },
+            "year": "2013",
+            "make": "Mini",
+            "model": "Impala",
+            "category": "vehicle",
+            "lotNumber": "100ABC200DEF",
+            "type": "trailer (gooseneck)"
+        },
+        {
+            "index": "com_2",
+            "category": "freight",
+            "type": "other",
+            "identifier": "9WY2K6ESU9N381536",
+            "description": "Praesent ac sapien quis velit molestie sodales",
+            "quantity": 1,
+            "length": 14,
+            "weight": 3075,
+            "extraExternalData": {
+                "data": "Praesent ac sapien quis velit molestie sodales"
+            }
+        }
+    ]
+}
