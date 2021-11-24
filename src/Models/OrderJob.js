@@ -373,13 +373,13 @@ class OrderJob extends BaseModel
         sorted: this.sorted,
         globalSearch: this.globalSearch,
         filterStatus: (queryBuilder, status) => { return queryBuilder.whereIn('status', status); },
-        statusOnHold: (queryBuilder) => { queryBuilder.orWhere({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); },
+        statusOnHold: (queryBuilder) => { queryBuilder.where({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); },
         statusNew: (queryBuilder) =>
         {
             queryBuilder
                 .alias('job')
                 .joinRelated('order', { alias: 'order' })
-                .orWhere({
+                .where({
                     'order.isTender': false,
                     'job.isReady': false,
                     'job.isOnHold': false,
@@ -393,7 +393,7 @@ class OrderJob extends BaseModel
             queryBuilder
                 .alias('job')
                 .joinRelated('order', { alias: 'order' })
-                .orWhere({
+                .where({
                     'order.isTender': true,
                     'job.isReady': false,
                     'job.isOnHold': false,
@@ -402,13 +402,13 @@ class OrderJob extends BaseModel
                     'job.isComplete': false
                 });
         },
-        statusComplete: (queryBuilder) => { queryBuilder.orWhere({ 'isCompleted': true }); },
-        statusCanceled: (queryBuilder) => { queryBuilder.orWhere({ 'isCanceled': true }); },
-        statusDeleted: (queryBuilder) => { queryBuilder.orWhere({ 'isDeleted': true }); },
+        statusComplete: (queryBuilder) => { queryBuilder.where({ 'isCompleted': true }); },
+        statusCanceled: (queryBuilder) => { queryBuilder.where({ 'isCanceled': true }); },
+        statusDeleted: (queryBuilder) => { queryBuilder.where({ 'isDeleted': true }); },
         statusDispatched: (queryBuilder) =>
         {
             queryBuilder
-                .orWhere({
+                .where({
                     'isReady': true,
                     'isOnHold': false,
                     'isDeleted': false,
@@ -421,7 +421,7 @@ class OrderJob extends BaseModel
             queryBuilder
                 .alias('job')
                 .joinRelated('loadboardPosts', { alias: 'post' })
-                .orWhere({
+                .where({
                     'job.isReady': true,
                     'job.isDeleted': false,
                     'job.isCanceled': false,
@@ -434,7 +434,7 @@ class OrderJob extends BaseModel
             queryBuilder
                 .alias('job')
                 .joinRelated('dispatches', { alias: 'dispatch' })
-                .orWhere({
+                .where({
                     'job.isReady': true,
                     'job.isDeleted': false,
                     'job.isCanceled': false,
@@ -447,7 +447,7 @@ class OrderJob extends BaseModel
             queryBuilder
                 .alias('job')
                 .joinRelated('dispatches', { alias: 'dispatch' })
-                .orWhere({
+                .where({
                     'job.isReady': true,
                     'job.isOnHold': false,
                     'job.isDeleted': false,
