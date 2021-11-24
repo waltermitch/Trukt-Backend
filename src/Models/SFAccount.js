@@ -111,7 +111,7 @@ class SFAccount extends BaseModel
         json = super.$formatJson(json);
 
         // based on rtype
-        if ('rtype' in json)
+        if (json.rtype)
         {
             json.rtype = json.rtype.toLowerCase();
 
