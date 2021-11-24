@@ -118,41 +118,35 @@ class OrderService
             delivery
         );
 
-        if (status.length > 1)
-        {
-            baseOrderQuery.modify('filterStatus', status);
-        }
-        else
-        {
-            for (const s of status)
-            {
-                if (s in OrderService.statusMap)
-                {
-                    baseOrderQuery.modify(OrderService.statusMap[s]);
-                }
-            }
-        }
+        for (const s of status)
+            if (s in OrderService.statusMap)
+                baseOrderQuery.modify(OrderService.statusMap[s]);
 
         const queryFilterCustomer = OrderService.addFilterCustomer(
             baseOrderQuery,
             customer
         );
+
         const queryFilterDispatcher = OrderService.addFilterDispatcher(
             queryFilterCustomer,
             dispatcher
         );
+
         const queryFilterSalesperson = OrderService.addFilterSalesperson(
             queryFilterDispatcher,
             salesperson
         );
+
         const queryFilterCarrier = OrderService.addFilterCarrier(
             queryFilterSalesperson,
             carrier
         );
+
         const queryFilterDates = OrderService.addFilterDates(
             queryFilterCarrier,
             dates
         );
+
         const queryAllFilters = OrderService.addFilterModifiers(
             queryFilterDates,
             { jobCategory, sort }
