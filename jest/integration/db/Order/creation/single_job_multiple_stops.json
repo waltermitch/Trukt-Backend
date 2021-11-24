@@ -1,0 +1,754 @@
+{
+    "testName": "Should create 1 job with multiple pickups and deliveries",
+    "input": {
+        "jobs": [
+            {
+                "index": "job_1",
+                "bol": "123ABCD",
+                "commodities": [
+                    {
+                        "index": "com_1",
+                        "expense": "1.00",
+                        "revenue": "2.00"
+                    },
+                    {
+                        "index": "com_2",
+                        "expense": "3.00",
+                        "revenue": "4.00"
+                    }
+                ],
+                "stops": [
+                    {
+                        "index": "stop_1",
+                        "terminal": "ter_1",
+                        "commodities": [
+                            {
+                                "index": "com_1"
+                            }
+                        ]
+                    },
+                    {
+                        "index": "stop_2",
+                        "terminal": "ter_2",
+                        "commodities": [
+                            {
+                                "index": "com_2"
+                            }
+                        ]
+                    },
+                    {
+                        "index": "stop_3",
+                        "terminal": "ter_3",
+                        "commodities": [
+                            {
+                                "index": "com_2"
+                            }
+                        ]
+                    },
+                    {
+                        "index": "stop_4",
+                        "terminal": "ter_4",
+                        "commodities": [
+                            {
+                                "index": "com_1"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "stops": [
+            {
+                "index": "stop_1",
+                "sequence": 1,
+                "stopType": "pickup",
+                "terminal": "ter_1",
+                "commodities": [
+                    {
+                        "index": "com_1"
+                    }
+                ]
+            },
+            {
+                "index": "stop_2",
+                "sequence": 2,
+                "stopType": "pickup",
+                "terminal": "ter_2",
+                "commodities": [
+                    {
+                        "index": "com_2"
+                    }
+                ]
+            },
+            {
+                "index": "stop_3",
+                "sequence": 3,
+                "stopType": "delivery",
+                "terminal": "ter_3",
+                "commodities": [
+                    {
+                        "index": "com_2"
+                    }
+                ]
+            },
+            {
+                "index": "stop_4",
+                "sequence": 4,
+                "stopType": "delivery",
+                "terminal": "ter_4",
+                "commodities": [
+                    {
+                        "index": "com_1"
+                    }
+                ]
+            }
+        ],
+        "terminals": [
+            {
+                "index": "ter_1"
+            },
+            {
+                "index": "ter_2"
+            },
+            {
+                "index": "ter_3"
+            },
+            {
+                "index": "ter_4"
+            }
+        ],
+        "commodities": [
+            {
+                "index": "com_1"
+            },
+            {
+                "index": "com_2"
+            }
+        ]
+    },
+    "expectedOutputGraph": {
+        "instructions": "Praesent ac sapien quis velit molestie sodales",
+        "isDummy": true,
+        "estimatedExpense": "4.00",
+        "estimatedRevenue": "6.00",
+        "actualRevenue": "6.00",
+        "actualExpense": "4.00",
+        "referenceNumber": "RC-10910293-TG5",
+        "inspectionType": "standard",
+        "isTender": false,
+        "estimatedDistance": "100.0",
+        "bol": "123ABCD",
+        "bolUrl": "https://media.zenfs.com/en/insider_articles_922/c6ce8d0b9a7b28f9c2dee8171da98b8f",
+        "estimatedIncome": "2.00",
+        "actualIncome": "2.00",
+        "isReady": false,
+        "isOnHold": false,
+        "isCanceled": false,
+        "isComplete": false,
+        "jobs": [
+            {
+                "isDummy": false,
+                "isTransport": true,
+                "estimatedExpense": "4.00",
+                "estimatedRevenue": "6.00",
+                "actualRevenue": "6.00",
+                "actualExpense": "4.00",
+                "typeId": 1,
+                "loadType": "full truck load",
+                "instructions": "Praesent ac sapien quis velit molestie sodales",
+                "inspectionType": "standard",
+                "loadboardInstructions": "Praesent ac sapien quis velit molestie sodales",
+                "estimatedDistance": "100.0",
+                "bol": "123ABCD",
+                "bolUrl": "https://media.zenfs.com/en/insider_articles_922/c6ce8d0b9a7b28f9c2dee8171da98b8f",
+                "equipmentTypeId": 1,
+                "estimatedIncome": "2.00",
+                "actualIncome": "2.00",
+                "isReady": false,
+                "isOnHold": false,
+                "isCanceled": false,
+                "isComplete": false,
+                "stops": [
+                    {
+                        "stopType": "pickup",
+                        "sequence": 1,
+                        "notes": "Praesent ac sapien quis velit molestie sodales",
+                        "dateScheduledType": "no later than",
+                        "dateEstimatedType": "estimated",
+                        "dateRequestedType": "exactly",
+                        "isStarted": false,
+                        "isCompleted": false,
+                        "terminal": {
+                            "name": "white house",
+                            "locationType": "private",
+                            "street1": "1600 Pennsylvania Avenue",
+                            "street2": "Apartment 101",
+                            "state": "Washington",
+                            "city": "Washington",
+                            "country": "USA",
+                            "zipCode": "20500",
+                            "latitude": 38.897957,
+                            "longitude": -77.03656
+                        },
+                        "primaryContact": {
+                            "phoneNumber": "111-222-3333",
+                            "mobileNumber": "444-555-6666",
+                            "email": "integrationTestUserFirst@test.com",
+                            "name": "integrationtestuser first"
+                        },
+                        "alternativeContact": {
+                            "phoneNumber": "777-888-9999",
+                            "mobileNumber": "000-111-2222",
+                            "email": "integrationTestUserSecond@test.com",
+                            "name": "integrationtestuser second"
+                        },
+                        "commodities": [
+                            {
+                                "capacity": "partial truck load",
+                                "damaged": "no",
+                                "inoperable": "yes",
+                                "deliveryStatus": "none",
+                                "length": 15,
+                                "weight": 2587,
+                                "quantity": 1,
+                                "description": "Praesent ac sapien quis velit molestie sodales",
+                                "identifier": "M1A4LHCW6MB145909",
+                                "extraExternalData": {
+                                    "data": "Praesent ac sapien quis velit molestie sodales"
+                                },
+                                "lotNumber": "100ABC200DEF",
+                                "expense": "1.00",
+                                "revenue": "2.00",
+                                "year": "2013",
+                                "make": "Mini",
+                                "model": "Impala",
+                                "typeId": 15,
+                                "category": "vehicle",
+                                "type": "trailer (gooseneck)"
+                            }
+                        ]
+                    },
+                    {
+                        "stopType": "pickup",
+                        "sequence": 2,
+                        "notes": "Praesent ac sapien quis velit molestie sodales",
+                        "dateScheduledType": "no later than",
+                        "dateEstimatedType": "estimated",
+                        "dateRequestedType": "exactly",
+                        "isStarted": false,
+                        "isCompleted": false,
+                        "terminal": {
+                            "name": "beaver island",
+                            "locationType": "auction",
+                            "street1": "1600 Pennsylvania Avenue",
+                            "street2": "Apartment 101",
+                            "state": "Michigan",
+                            "city": "beaver island",
+                            "country": "USA",
+                            "zipCode": "49782",
+                            "latitude": 45.659551,
+                            "longitude": -85.525857
+                        },
+                        "primaryContact": {
+                            "phoneNumber": "111-222-3333",
+                            "mobileNumber": "444-555-6666",
+                            "email": "integrationTestUserFirst@test.com",
+                            "name": "integrationtestuser first"
+                        },
+                        "alternativeContact": {
+                            "phoneNumber": "777-888-9999",
+                            "mobileNumber": "000-111-2222",
+                            "email": "integrationTestUserSecond@test.com",
+                            "name": "integrationtestuser second"
+                        },
+                        "commodities": [
+                            {
+                                "capacity": null,
+                                "damaged": "unknown",
+                                "inoperable": "unknown",
+                                "deliveryStatus": "none",
+                                "length": 14,
+                                "weight": 3075,
+                                "quantity": 1,
+                                "description": "Praesent ac sapien quis velit molestie sodales",
+                                "identifier": "9WY2K6ESU9N381536",
+                                "extraExternalData": {
+                                    "data": "Praesent ac sapien quis velit molestie sodales"
+                                },
+                                "lotNumber": null,
+                                "expense": "3.00",
+                                "revenue": "4.00",
+                                "typeId": 23,
+                                "category": "freight",
+                                "type": "other"
+                            }
+                        ]
+                    },
+                    {
+                        "stopType": "delivery",
+                        "sequence": 3,
+                        "notes": "Praesent ac sapien quis velit molestie sodales",
+                        "dateScheduledType": "no later than",
+                        "dateEstimatedType": "estimated",
+                        "dateRequestedType": "exactly",
+                        "isStarted": false,
+                        "isCompleted": false,
+                        "terminal": {
+                            "name": "fremont island",
+                            "locationType": "private",
+                            "street1": "4528 W 1700 S",
+                            "street2": "Apartment 101",
+                            "state": "UT",
+                            "city": "hooper",
+                            "country": "USA",
+                            "zipCode": "84315",
+                            "latitude": 41.166833,
+                            "longitude": -112.338125
+                        },
+                        "primaryContact": {
+                            "phoneNumber": "111-222-3333",
+                            "mobileNumber": "444-555-6666",
+                            "email": "integrationTestUserFirst@test.com",
+                            "name": "integrationtestuser first"
+                        },
+                        "alternativeContact": {
+                            "phoneNumber": "777-888-9999",
+                            "mobileNumber": "000-111-2222",
+                            "email": "integrationTestUserSecond@test.com",
+                            "name": "integrationtestuser second"
+                        },
+                        "commodities": [
+                            {
+                                "capacity": null,
+                                "damaged": "unknown",
+                                "inoperable": "unknown",
+                                "deliveryStatus": "none",
+                                "length": 14,
+                                "weight": 3075,
+                                "quantity": 1,
+                                "description": "Praesent ac sapien quis velit molestie sodales",
+                                "identifier": "9WY2K6ESU9N381536",
+                                "extraExternalData": {
+                                    "data": "Praesent ac sapien quis velit molestie sodales"
+                                },
+                                "lotNumber": null,
+                                "expense": "3.00",
+                                "revenue": "4.00",
+                                "typeId": 23,
+                                "category": "freight",
+                                "type": "other"
+                            }
+                        ]
+                    },
+                    {
+                        "stopType": "delivery",
+                        "sequence": 4,
+                        "notes": "Praesent ac sapien quis velit molestie sodales",
+                        "dateScheduledType": "no later than",
+                        "dateEstimatedType": "estimated",
+                        "dateRequestedType": "exactly",
+                        "isStarted": false,
+                        "isCompleted": false,
+                        "terminal": {
+                            "name": "isabella",
+                            "locationType": "auction",
+                            "street1": "2241 State Hwy 1",
+                            "street2": "Apartment 101",
+                            "state": "Minnesota",
+                            "city": "isabella",
+                            "country": "USA",
+                            "zipCode": "55607",
+                            "latitude": 47.617375,
+                            "longitude": -91.356288
+                        },
+                        "primaryContact": {
+                            "phoneNumber": "111-222-3333",
+                            "mobileNumber": "444-555-6666",
+                            "email": "integrationTestUserFirst@test.com",
+                            "name": "integrationtestuser first"
+                        },
+                        "alternativeContact": {
+                            "phoneNumber": "777-888-9999",
+                            "mobileNumber": "000-111-2222",
+                            "email": "integrationTestUserSecond@test.com",
+                            "name": "integrationtestuser second"
+                        },
+                        "commodities": [
+                            {
+                                "capacity": "partial truck load",
+                                "damaged": "no",
+                                "inoperable": "yes",
+                                "deliveryStatus": "none",
+                                "length": 15,
+                                "weight": 2587,
+                                "quantity": 1,
+                                "description": "Praesent ac sapien quis velit molestie sodales",
+                                "identifier": "M1A4LHCW6MB145909",
+                                "extraExternalData": {
+                                    "data": "Praesent ac sapien quis velit molestie sodales"
+                                },
+                                "lotNumber": "100ABC200DEF",
+                                "expense": "1.00",
+                                "revenue": "2.00",
+                                "year": "2013",
+                                "make": "Mini",
+                                "model": "Impala",
+                                "typeId": 15,
+                                "category": "vehicle",
+                                "type": "trailer (gooseneck)"
+                            }
+                        ]
+                    }
+                ],
+                "category": "transport",
+                "type": "transport"
+            }
+        ],
+        "stops": [
+            {
+                "stopType": "pickup",
+                "sequence": 1,
+                "notes": "Praesent ac sapien quis velit molestie sodales",
+                "dateScheduledType": "no later than",
+                "dateEstimatedType": "estimated",
+                "dateRequestedType": "exactly",
+                "isStarted": false,
+                "isCompleted": false,
+                "terminal": {
+                    "name": "white house",
+                    "locationType": "private",
+                    "street1": "1600 Pennsylvania Avenue",
+                    "street2": "Apartment 101",
+                    "state": "Washington",
+                    "city": "Washington",
+                    "country": "USA",
+                    "zipCode": "20500",
+                    "latitude": 38.897957,
+                    "longitude": -77.03656
+                },
+                "primaryContact": {
+                    "phoneNumber": "111-222-3333",
+                    "mobileNumber": "444-555-6666",
+                    "email": "integrationTestUserFirst@test.com",
+                    "name": "integrationtestuser first"
+                },
+                "alternativeContact": {
+                    "phoneNumber": "777-888-9999",
+                    "mobileNumber": "000-111-2222",
+                    "email": "integrationTestUserSecond@test.com",
+                    "name": "integrationtestuser second"
+                },
+                "commodities": [
+                    {
+                        "capacity": "partial truck load",
+                        "damaged": "no",
+                        "inoperable": "yes",
+                        "deliveryStatus": "none",
+                        "length": 15,
+                        "weight": 2587,
+                        "quantity": 1,
+                        "description": "Praesent ac sapien quis velit molestie sodales",
+                        "identifier": "M1A4LHCW6MB145909",
+                        "extraExternalData": {
+                            "data": "Praesent ac sapien quis velit molestie sodales"
+                        },
+                        "lotNumber": "100ABC200DEF",
+                        "year": "2013",
+                        "make": "Mini",
+                        "model": "Impala",
+                        "typeId": 15,
+                        "category": "vehicle",
+                        "type": "trailer (gooseneck)"
+                    }
+                ]
+            },
+            {
+                "stopType": "pickup",
+                "sequence": 2,
+                "notes": "Praesent ac sapien quis velit molestie sodales",
+                "dateScheduledType": "no later than",
+                "dateEstimatedType": "estimated",
+                "dateRequestedType": "exactly",
+                "isStarted": false,
+                "isCompleted": false,
+                "terminal": {
+                    "name": "beaver island",
+                    "locationType": "auction",
+                    "street1": "1600 Pennsylvania Avenue",
+                    "street2": "Apartment 101",
+                    "state": "Michigan",
+                    "city": "beaver island",
+                    "country": "USA",
+                    "zipCode": "49782",
+                    "latitude": 45.659551,
+                    "longitude": -85.525857
+                },
+                "primaryContact": {
+                    "phoneNumber": "111-222-3333",
+                    "mobileNumber": "444-555-6666",
+                    "email": "integrationTestUserFirst@test.com",
+                    "name": "integrationtestuser first"
+                },
+                "alternativeContact": {
+                    "phoneNumber": "777-888-9999",
+                    "mobileNumber": "000-111-2222",
+                    "email": "integrationTestUserSecond@test.com",
+                    "name": "integrationtestuser second"
+                },
+                "commodities": [
+                    {
+                        "capacity": null,
+                        "damaged": "unknown",
+                        "inoperable": "unknown",
+                        "deliveryStatus": "none",
+                        "length": 14,
+                        "weight": 3075,
+                        "quantity": 1,
+                        "description": "Praesent ac sapien quis velit molestie sodales",
+                        "identifier": "9WY2K6ESU9N381536",
+                        "extraExternalData": {
+                            "data": "Praesent ac sapien quis velit molestie sodales"
+                        },
+                        "lotNumber": null,
+                        "typeId": 23,
+                        "category": "freight",
+                        "type": "other"
+                    }
+                ]
+            },
+            {
+                "stopType": "delivery",
+                "sequence": 3,
+                "notes": "Praesent ac sapien quis velit molestie sodales",
+                "dateScheduledType": "no later than",
+                "dateEstimatedType": "estimated",
+                "dateRequestedType": "exactly",
+                "isStarted": false,
+                "isCompleted": false,
+                "terminal": {
+                    "name": "fremont island",
+                    "locationType": "private",
+                    "street1": "4528 W 1700 S",
+                    "street2": "Apartment 101",
+                    "state": "UT",
+                    "city": "hooper",
+                    "country": "USA",
+                    "zipCode": "84315",
+                    "latitude": 41.166833,
+                    "longitude": -112.338125
+                },
+                "primaryContact": {
+                    "phoneNumber": "111-222-3333",
+                    "mobileNumber": "444-555-6666",
+                    "email": "integrationTestUserFirst@test.com",
+                    "name": "integrationtestuser first"
+                },
+                "alternativeContact": {
+                    "phoneNumber": "777-888-9999",
+                    "mobileNumber": "000-111-2222",
+                    "email": "integrationTestUserSecond@test.com",
+                    "name": "integrationtestuser second"
+                },
+                "commodities": [
+                    {
+                        "capacity": null,
+                        "damaged": "unknown",
+                        "inoperable": "unknown",
+                        "deliveryStatus": "none",
+                        "length": 14,
+                        "weight": 3075,
+                        "quantity": 1,
+                        "description": "Praesent ac sapien quis velit molestie sodales",
+                        "identifier": "9WY2K6ESU9N381536",
+                        "extraExternalData": {
+                            "data": "Praesent ac sapien quis velit molestie sodales"
+                        },
+                        "lotNumber": null,
+                        "typeId": 23,
+                        "category": "freight",
+                        "type": "other"
+                    }
+                ]
+            },
+            {
+                "stopType": "delivery",
+                "sequence": 4,
+                "notes": "Praesent ac sapien quis velit molestie sodales",
+                "dateScheduledType": "no later than",
+                "dateEstimatedType": "estimated",
+                "dateRequestedType": "exactly",
+                "isStarted": false,
+                "isCompleted": false,
+                "terminal": {
+                    "name": "isabella",
+                    "locationType": "auction",
+                    "street1": "2241 State Hwy 1",
+                    "street2": "Apartment 101",
+                    "state": "Minnesota",
+                    "city": "isabella",
+                    "country": "USA",
+                    "zipCode": "55607",
+                    "latitude": 47.617375,
+                    "longitude": -91.356288
+                },
+                "primaryContact": {
+                    "phoneNumber": "111-222-3333",
+                    "mobileNumber": "444-555-6666",
+                    "email": "integrationTestUserFirst@test.com",
+                    "name": "integrationtestuser first"
+                },
+                "alternativeContact": {
+                    "phoneNumber": "777-888-9999",
+                    "mobileNumber": "000-111-2222",
+                    "email": "integrationTestUserSecond@test.com",
+                    "name": "integrationtestuser second"
+                },
+                "commodities": [
+                    {
+                        "capacity": "partial truck load",
+                        "damaged": "no",
+                        "inoperable": "yes",
+                        "deliveryStatus": "none",
+                        "length": 15,
+                        "weight": 2587,
+                        "quantity": 1,
+                        "description": "Praesent ac sapien quis velit molestie sodales",
+                        "identifier": "M1A4LHCW6MB145909",
+                        "extraExternalData": {
+                            "data": "Praesent ac sapien quis velit molestie sodales"
+                        },
+                        "lotNumber": "100ABC200DEF",
+                        "year": "2013",
+                        "make": "Mini",
+                        "model": "Impala",
+                        "typeId": 15,
+                        "category": "vehicle",
+                        "type": "trailer (gooseneck)"
+                    }
+                ]
+            }
+        ],
+        "terminals": [
+            {
+                "name": "beaver island",
+                "locationType": "auction",
+                "street1": "1600 Pennsylvania Avenue",
+                "street2": "Apartment 101",
+                "state": "Michigan",
+                "city": "beaver island",
+                "country": "USA",
+                "zipCode": "49782",
+                "latitude": 45.659551,
+                "longitude": -85.525857
+            },
+            {
+                "name": "fremont island",
+                "locationType": "private",
+                "street1": "4528 W 1700 S",
+                "street2": "Apartment 101",
+                "state": "UT",
+                "city": "hooper",
+                "country": "USA",
+                "zipCode": "84315",
+                "latitude": 41.166833,
+                "longitude": -112.338125
+            },
+            {
+                "name": "isabella",
+                "locationType": "auction",
+                "street1": "2241 State Hwy 1",
+                "street2": "Apartment 101",
+                "state": "Minnesota",
+                "city": "isabella",
+                "country": "USA",
+                "zipCode": "55607",
+                "latitude": 47.617375,
+                "longitude": -91.356288
+            },
+            {
+                "name": "white house",
+                "locationType": "private",
+                "street1": "1600 Pennsylvania Avenue",
+                "street2": "Apartment 101",
+                "state": "Washington",
+                "city": "Washington",
+                "country": "USA",
+                "zipCode": "20500",
+                "latitude": 38.897957,
+                "longitude": -77.03656
+            }
+        ]
+    },
+    "expectedOutputBills": {
+        "orderInvoices": [
+            {
+                "isPaid": false,
+                "lines": [
+                    {
+                        "notes": null,
+                        "amount": "2.00",
+                        "itemId": 1,
+                        "dateCharged": null,
+                        "transactionNumber": null,
+                        "link": [],
+                        "name": "transport",
+                        "isAccessorial": false
+                    },
+                    {
+                        "notes": null,
+                        "amount": "4.00",
+                        "itemId": 1,
+                        "dateCharged": null,
+                        "transactionNumber": null,
+                        "link": [],
+                        "name": "transport",
+                        "isAccessorial": false
+                    }
+                ]
+            }
+        ],
+        "jobsBills": [
+            {
+                "isPaid": false,
+                "lines": [
+                    {
+                        "notes": null,
+                        "amount": "1.00",
+                        "itemId": 1,
+                        "dateCharged": null,
+                        "transactionNumber": null,
+                        "link": [
+                            {
+                                "notes": null,
+                                "amount": "2.00",
+                                "itemId": 1,
+                                "dateCharged": null,
+                                "transactionNumber": null
+                            }
+                        ],
+                        "name": "transport",
+                        "isAccessorial": false
+                    },
+                    {
+                        "notes": null,
+                        "amount": "3.00",
+                        "itemId": 1,
+                        "dateCharged": null,
+                        "transactionNumber": null,
+                        "link": [
+                            {
+                                "notes": null,
+                                "amount": "4.00",
+                                "itemId": 1,
+                                "dateCharged": null,
+                                "transactionNumber": null
+                            }
+                        ],
+                        "name": "transport",
+                        "isAccessorial": false
+                    }
+                ]
+            }
+        ]
+    }
+}
