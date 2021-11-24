@@ -244,7 +244,7 @@ class InvoiceService
             // creating array of patch updates
             for (let i = 0; i < lineGuids.length; i++)
             {
-                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': invoiceGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
+                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': invoiceGuid }).whereNot('itemId', 1).whereNotNull('commodity_guid'));
             }
 
             // executing all updates
