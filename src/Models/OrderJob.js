@@ -239,14 +239,6 @@ class OrderJob extends BaseModel
         this.isTransport = (type.category === 'transport');
     }
 
-    static filterIsTender(query, isTender)
-    {
-        const Order = require('./Order');
-        return isTender !== undefined ?
-            query.whereIn('orderGuid', Order.query().select('guid').where('isTender', isTender))
-            : query;
-    }
-
     static filterJobCategories(query, jobCategories = [])
     {
         if (jobCategories.length > 0)
@@ -368,11 +360,9 @@ class OrderJob extends BaseModel
     }
 
     static modifiers = {
-        filterIsTender: this.filterIsTender,
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
         globalSearch: this.globalSearch,
-        filterStatus: (queryBuilder, status) => { return queryBuilder.whereIn('status', status); },
         statusOnHold: (queryBuilder) => { queryBuilder.where({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); },
         statusNew: (queryBuilder) =>
         {
