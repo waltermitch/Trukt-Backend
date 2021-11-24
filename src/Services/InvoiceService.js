@@ -33,18 +33,16 @@ class InvoiceService
             });
 
         // order was not found, return undefined
-        if (res == undefined)
-        {
-            return undefined;
-        }
+        if (res == undefined) return undefined;
 
-        // assigning orderId and Number to order invoice
-        Object.assign(res.invoices[0], {
-            order: {
-                guid: res.guid,
-                number: res.number
-            }
-        });
+        // assigning orderId and Number to all order invoices
+        for (const invoice of res.invoices)
+            Object.assign(invoice, {
+                order: {
+                    guid: res.guid,
+                    number: res.number
+                }
+            });
 
         // object to return array of bills and invoices
         const invoiceObject = {
