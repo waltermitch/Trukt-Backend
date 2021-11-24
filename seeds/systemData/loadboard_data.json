@@ -29,7 +29,7 @@
             "allows_bulk": true,
             "required_fields": {
                 "requiredFields": [
-                    "contact",
+                    "contactId",
                     "loadType",
                     "equipmentType",
                     "length",
@@ -46,7 +46,7 @@
             "allows_bulk": false,
             "required_fields": {
                 "requiredFields": [
-                    "contact",
+                    "contactId",
                     "loadType",
                     "equipmentType",
                     "length",
