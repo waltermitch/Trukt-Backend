@@ -511,6 +511,34 @@ class OrderJob extends BaseModel
                     'job.isCanceled': false
                 })
                 .whereNotNull('job.vendorGuid');
+        },
+        statusReady: (queryBuilder) =>
+        {
+            const loadboardPost = require('./LoadboardPost');
+            const orderJobDispatches = require('./OrderJobDispatch');
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .whereNotExists(loadboardPost.query().alias('post')
+                    .where({
+                        'post.isPosted': false
+                    })
+                    .whereRaw('"job"."guid" = "post"."job_guid"'))
+                .whereNotExists(orderJobDispatches.query().alias('ojd')
+                    .where({
+                        'ojd.isAccepted': false,
+                        'ojd.isPending': false
+                    })
+                    .whereRaw('"job"."guid" = "ojd"."job_guid"'))
+                .where({
+                    'order.isTender': false,
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'job.isComplete': false
+                })
+                .whereNull('job.vendorGuid');
         }
     };
 
