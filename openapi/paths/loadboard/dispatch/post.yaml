@@ -95,7 +95,6 @@ requestBody:
           - pickup
           - delivery
           - paymentTerm
-          - paymentMethod
 responses:
   200:
     description: loadboards
