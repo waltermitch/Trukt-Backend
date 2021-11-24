@@ -45,6 +45,24 @@ const logicAppInstance = axios.create({
 
 class OrderService
 {
+    // filter status map
+    static statusMap = {
+        'new': 'statusNew',
+        'on hold': 'statusOnHold',
+        'tender': 'statusTender',
+        'completed': 'statusComplete',
+        'canceled': 'statusCanceled',
+        'deleted': 'statusDeleted',
+        'dispatched': 'statusDispatched',
+        'posted': 'statusPosted',
+        'pending': 'statusPending',
+        'declined': 'statusDeclined',
+        'request': 'statusRequests',
+        'picked up': 'statusPickedUp',
+        'delivered': 'statusDelivered',
+        'ready': 'statusReady'
+    }
+
     static async getOrders(
         {
             pickup,
@@ -55,7 +73,6 @@ class OrderService
             dispatcher,
             salesperson,
             dates,
-            isTender,
             jobCategory
         },
         page,
@@ -66,20 +83,23 @@ class OrderService
     {
         dateFilterComparisonTypes =
             dates && (await OrderService.getComparisonTypesCached());
+
+        // fields that job will return
         const jobFieldsToReturn = [
-            'guid',
-            'number',
-            'estimatedExpense',
-            'estimatedRevenue',
-            'status',
-            'dateCreated',
-            'actualRevenue',
-            'actualExpense',
-            'dateUpdated',
-            'isDummy'
+            'job.guid',
+            'job.number',
+            'job.estimatedExpense',
+            'job.estimatedRevenue',
+            'job.status',
+            'job.dateCreated',
+            'job.actualRevenue',
+            'job.actualExpense',
+            'job.dateUpdated'
         ];
 
+        // beggining of base query for jobs with return of specific fields
         const baseOrderQuery = OrderJob.query()
+            .alias('job')
             .select(jobFieldsToReturn)
             .page(page, rowCount);
 
@@ -92,37 +112,44 @@ class OrderService
             baseOrderQuery,
             pickup
         );
-        const queryFilterDelivery = OrderService.addFilterDeliveries(
+
+        OrderService.addFilterDeliveries(
             queryFilterPickup,
             delivery
         );
-        const queryFilterStatus = OrderService.addFilterStatus(
-            queryFilterDelivery,
-            status
-        );
+
+        for (const s of status)
+            if (s in OrderService.statusMap)
+                baseOrderQuery.modify(OrderService.statusMap[s]);
+
         const queryFilterCustomer = OrderService.addFilterCustomer(
-            queryFilterStatus,
+            baseOrderQuery,
             customer
         );
+
         const queryFilterDispatcher = OrderService.addFilterDispatcher(
             queryFilterCustomer,
             dispatcher
         );
+
         const queryFilterSalesperson = OrderService.addFilterSalesperson(
             queryFilterDispatcher,
             salesperson
         );
+
         const queryFilterCarrier = OrderService.addFilterCarrier(
             queryFilterSalesperson,
             carrier
         );
+
         const queryFilterDates = OrderService.addFilterDates(
             queryFilterCarrier,
             dates
         );
+
         const queryAllFilters = OrderService.addFilterModifiers(
             queryFilterDates,
-            { isTender, jobCategory, sort }
+            { jobCategory, sort }
         );
 
         const queryWithGraphModifiers = OrderService.addGraphModifiers(
@@ -131,6 +158,7 @@ class OrderService
         );
 
         const { total, results } = await queryWithGraphModifiers;
+
         const ordersWithDeliveryAddress = {
             results: OrderService.addDeliveryAddress(results),
             page: page + 1,
@@ -1136,13 +1164,6 @@ class OrderService
         });
     }
 
-    static addFilterStatus(baseQuery, statusList)
-    {
-        return statusList?.length
-            ? baseQuery.whereRaw('status ilike ANY(Array[?])', statusList)
-            : baseQuery;
-    }
-
     static addFilterCustomer(baseQuery, customerList)
     {
         return customerList?.length
@@ -1399,9 +1420,8 @@ class OrderService
 
     static addFilterModifiers(baseQuery, filters)
     {
-        const { isTender, jobCategory, sort } = filters;
+        const { jobCategory, sort } = filters;
         return baseQuery
-            .modify('filterIsTender', isTender)
             .modify('filterJobCategories', jobCategory)
             .modify('sorted', sort);
     }
