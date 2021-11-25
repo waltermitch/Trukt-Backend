@@ -321,7 +321,7 @@ class LoadboardService
                 StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,
-                    statusId: 8,
+                    statusId: 10,
                     jobGuid: jobId,
                     extraAnnotations: {
                         dispatchedTo: 'internal',
@@ -414,7 +414,7 @@ class LoadboardService
                 StatusManagerHandler.registerStatus({
                     orderGuid: dispatch.job.orderGuid,
                     userGuid: currentUser,
-                    statusId: 10,
+                    statusId: 12,
                     jobGuid,
                     extraAnnotations: {
                         undispatchedFrom: 'internal',
