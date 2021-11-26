@@ -33,18 +33,16 @@ class InvoiceService
             });
 
         // order was not found, return undefined
-        if (res == undefined)
-        {
-            return undefined;
-        }
+        if (res == undefined) return undefined;
 
-        // assigning orderId and Number to order invoice
-        Object.assign(res.invoices[0], {
-            order: {
-                guid: res.guid,
-                number: res.number
-            }
-        });
+        // assigning orderId and Number to all order invoices
+        for (const invoice of res.invoices)
+            Object.assign(invoice, {
+                order: {
+                    guid: res.guid,
+                    number: res.number
+                }
+            });
 
         // object to return array of bills and invoices
         const invoiceObject = {
@@ -397,6 +395,9 @@ class InvoiceService
                         invoiceMap.set(e.guid, mergedData);
                     }
 
+        // set current timestamp
+        const now = DateTime.utc().toString();
+
         // update all invoices in db
         await Promise.allSettled(Array.from(invoiceMap.entries()).map(async ([guid, data]) =>
         {
@@ -406,7 +407,7 @@ class InvoiceService
                 const trx = await InvoiceBill.transaction();
 
                 // update all invoices and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateInvoiced: DateTime.utc().toString() }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateInvoiced: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
 
                 if (proms[0].status == 'fulfilled')
                 {

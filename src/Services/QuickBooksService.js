@@ -181,7 +181,7 @@ class QuickBooksService
             {
                 const res = await QBO.upsertClient(client);
 
-                return { qbId: res.data.Customer.Id };
+                return { qbId: res.Customer.Id };
             }
             catch (e)
             {
@@ -221,7 +221,7 @@ class QuickBooksService
             {
                 const res = await QBO.upsertVendor(vendor);
 
-                return { qbId: res.data.Vendor.Id };
+                return { qbId: res.Vendor.Id };
             }
             catch (e)
             {
