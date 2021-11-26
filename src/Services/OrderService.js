@@ -313,7 +313,6 @@ class OrderService
             ] = orderInformation;
 
             order.graphLink('client', client);
-            order.graphLink('consignee', consignee || client);
             order.graphLink('referrer', referrer);
             order.graphLink('salesperson', salesperson);
             order.graphLink('dispatcher', dispatcher);
@@ -598,7 +597,7 @@ class OrderService
                 });
 
                 if (jobBillLines)
-                    jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser);
+                    jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser, null);
 
                 /**
                 * For order creation. given that all invoices are "transport", the actual and estimated expense and revenue have the same values
@@ -613,7 +612,7 @@ class OrderService
             }
 
             order.jobs = orderJobs;
-            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, order.consignee);
+            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
 
             const orderCreated = await Order.query(trx).skipUndefined()
                 .insertGraph(order, { allowRefs: true });
@@ -647,7 +646,7 @@ class OrderService
         const bill = InvoiceBill.fromJson({
             isInvoice,
             lines: [],
-            consignee
+            consigneeGuid: consignee?.guid
         });
         bill.setCreatedBy(currentUser);
         bill.lines.push(...lines);
@@ -1453,6 +1452,7 @@ class OrderService
     static async patchOrder(orderInput, currentUser)
     {
         const trx = await Order.startTransaction();
+
         const {
             guid,
             dispatcher,
@@ -1557,6 +1557,7 @@ class OrderService
                 invoiceBills,
                 orderInvoices,
                 jobsToUpdate,
+                consignee,
                 currentUser
             );
 
@@ -1569,7 +1570,6 @@ class OrderService
                 salespersonGuid:
                     OrderService.getObjectContactReference(salesperson),
                 clientGuid: client?.guid,
-                consigneeGuid: consignee?.guid,
                 instructions,
                 clientContactGuid: orderContactCreated,
                 stops: stopsToUpdate,
@@ -1577,6 +1577,7 @@ class OrderService
                 jobs: jobsToUpdateWithExpenses,
                 ...orderData
             });
+
             orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
 
             const orderToUpdate = Order.query(trx)
@@ -1598,6 +1599,7 @@ class OrderService
             });
 
             await trx.commit();
+
             return orderUpdated;
         }
         catch (error)
@@ -2520,7 +2522,7 @@ class OrderService
      *  orderInvoicesToUpdate Order invoices with the lines to create
      * }
      */
-    static updateExpensesGraph(commoditiesMap, invoiceBillsFromDB, orderInvoiceFromDB, jobsToUpdate, currentUser)
+    static updateExpensesGraph(commoditiesMap, invoiceBillsFromDB, orderInvoiceFromDB, jobsToUpdate, consignee, currentUser)
     {
         const orderInvoiceListToCreate = [];
         const jobsToUpdateWithExpenses = jobsToUpdate.map(job =>
@@ -2533,7 +2535,7 @@ class OrderService
                 let lineFound = false;
                 const commodity = commoditiesMap[commoditieWithExpense.index];
 
-                // If commodity is not found, must be a typo on the commodity index sended by the caller
+                // If commodity is not found, must be a typo on the commodity index sent by the caller
                 if (commodity)
                 {
                     for (const bill of invoiceBillsFromDB)
@@ -2602,6 +2604,9 @@ class OrderService
 
         if (orderInvoiceFromDB.length > 0)
             orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
+
+        if (consignee?.guid)
+            orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
     }
