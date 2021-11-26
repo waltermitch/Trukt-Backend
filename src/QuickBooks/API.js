@@ -1,5 +1,4 @@
 const InvoicePaymentMethod = require('../Models/InvoicePaymentMethod');
-const InvoicePaymentTerm = require('../Models/InvoicePaymentTerm');
 const QBPaymentTerm = require('../Models/QBPaymentTerm');
 const QBAccount = require('../Models/QBAccount');
 const HTTPS = require('../AuthController');
