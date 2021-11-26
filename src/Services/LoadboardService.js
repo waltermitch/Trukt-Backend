@@ -352,18 +352,22 @@ class LoadboardService
 
         try
         {
-
-            const dispatch = await OrderJobDispatch.query(trx).withGraphJoined('[loadboardPost, job(justIds), vendor, vendorAgent]')
-                .where({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid }).andWhere(builder =>
-                {
-                    builder.where({ isAccepted: true }).orWhere({ isPending: true });
-                })
-                .modifiers({
-                    justIds(builder)
-                    {
-                        builder.select('guid', 'orderGuid');
-                    }
-                }).first();
+            const dispatch = await OrderJobDispatch.query()
+            .select('rcgTms.orderJobDispatches.guid',
+                    'rcgTms.orderJobDispatches.jobGuid',
+                    'isAccepted',
+                    'isPending',
+                    'isCanceled',
+                    'isDeclined')
+            .withGraphJoined('[loadboardPost, job, vendor, vendorAgent]')
+            .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
+            .andWhere(builder =>
+            {
+                builder.where({ isAccepted: true }).orWhere({ isPending: true });
+            })
+            .modifyGraph('job', builder => builder.select('rcgTms.orderJobs.guid', 'orderGuid'))
+            .modifyGraph('vendor', builder => builder.select('name', 'salesforce.accounts.guid'))
+            .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
 
             dispatch.setUpdatedBy(currentUser);
 
