@@ -192,7 +192,10 @@ class Order extends BaseModel
                     }
                 },
                 invoices: {
-                    lines: { item: true }
+                    lines: { item: true },
+                    consignee: {
+                        $modify: ['byType']
+                    }
                 },
                 bills: {
                     lines: { item: true }
