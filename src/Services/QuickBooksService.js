@@ -16,6 +16,9 @@ class QuickBooksService
         const batch = [];
         for (const invoice of invoices)
         {
+            // if no consignee use client
+            const client = invoice?.consignee || invoice?.client;
+
             // check if invoice already invoiced
             if (invoice?.externalSourceData?.quickbooks?.invoice)
             {
@@ -38,9 +41,17 @@ class QuickBooksService
 
                 continue;
             }
+            else if (!client?.qbId)
+            {
+                results.push({
+                    error: `Invoice ${invoice.guid} client/consignee missing QB ID`,
+                    system: 'QuickBooks',
+                    guid: invoice.guid
+                });
 
-            // if no consignee use client
-            const client = invoice?.consignee || invoice?.client;
+                continue;
+            }
+
             invoice.clientId = client?.qbId;
 
             // for each line item map out description, and commodity details
@@ -75,6 +86,8 @@ class QuickBooksService
         }
 
         const res = await QBO.batch(batch);
+
+        console.log(res);
 
         results.push(...res);
 

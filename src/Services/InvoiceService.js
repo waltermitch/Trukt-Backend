@@ -353,7 +353,7 @@ class InvoiceService
                 // add existing invoice externalSourceData to map
                 invoiceMap.set(invoice.guid, invoice.externalSourceData || {});
 
-                // map some order fiels to invoice
+                // map some order fields to invoice
                 invoice.client = order.client;
                 invoice.orderNumber = order.number;
 
@@ -367,10 +367,15 @@ class InvoiceService
 
         // for each successful invoice, update the invoice in the database
         for (const promise of promises)
+        {
             if (promise.reason)
+            {
                 console.log(promise.reason);
+            }
             else
+            {
                 for (const e of promise.value)
+                {
                     if (e?.Invoice)
                     {
                         // merge existing externalSourceData with new data
@@ -387,13 +392,16 @@ class InvoiceService
                         // update in map
                         invoiceMap.set(e.guid, mergedData);
                     }
-                    else if (e.error)
+                    else if (e.error || e.Fault)
                     {
                         const mergedData = Object.assign({}, invoiceMap.get(e.guid), { 'error': e });
 
                         // update in map
                         invoiceMap.set(e.guid, mergedData);
                     }
+                }
+            }
+        }
 
         // set current timestamp
         const now = DateTime.utc().toString();
