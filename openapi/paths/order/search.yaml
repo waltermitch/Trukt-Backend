@@ -62,10 +62,10 @@ requestBody:
                     - tender
                     - completed
                     - canceled
-                    - delete
+                    - deleted
                     - dispatched
                     - posted
-                    - pendin
+                    - pending
                     - declined
                     - request
                     - picked up
