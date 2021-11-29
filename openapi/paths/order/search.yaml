@@ -52,10 +52,25 @@ requestBody:
                     - longitude
                     - latitude
               status:
-                description: Filter for order status
+                description: Filters for order status
                 type: array
                 items:
                   type: string
+                  enum: 
+                    - new
+                    - on hold
+                    - tender
+                    - completed
+                    - canceled
+                    - deleted
+                    - dispatched
+                    - posted
+                    - pending
+                    - declined
+                    - request
+                    - picked up
+                    - delivered
+                    - ready
                   example: new
               customer:
                 description: Filter for order customer guid
@@ -124,9 +139,6 @@ requestBody:
                         - date1
                         - date2
                         - comparison
-              isTender:
-                description: Filter to select only orders that are marked as tender
-                type: boolean
               jobCategory:
                 description: Filter to select jobs that have one of the categories selected
                 type: array
