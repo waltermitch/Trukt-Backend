@@ -25,6 +25,7 @@ class TerminalContact extends BaseModel
     {
         return ['terminalGuid', 'name', 'phoneNumber'];
     }
+    static onConflictIgnore = true
 
     getColumnOp(colname, colvalue)
     {
