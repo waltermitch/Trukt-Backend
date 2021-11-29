@@ -196,6 +196,10 @@ class OrderService
                     }
                 }
 
+                // set consignee (this is temporart until we move consignee out of order in UI)
+                if (order?.invoices?.[0]?.consignee)
+                    order.consignee = order.invoices[0].consignee;
+
                 delete order.invoices;
                 delete order.bills;
 
