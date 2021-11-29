@@ -1,5 +1,4 @@
 const knex = require('../Models/BaseModel').knex();
-const Commodity = require('../Models/Commodity');
 const { DateTime } = require('luxon');
 
 class OrderStopService
@@ -100,35 +99,29 @@ class OrderStopService
         // update all the order links and the respective stop
         const [, stop] = await Promise.all([await knex.raw(orderStopLinksQuery).transacting(trx), await knex.raw(stopQuery).transacting(trx)]);
 
-        // at this point all the job and order stops are updated, we can check if the commodity is picked up or delivered
-        const commodityLinks = await knex.raw(`SELECT id, commodity_guid, is_completed, is_started, date_started, date_completed FROM rcg_tms.order_stop_links WHERE order_guid = '${orderGuid}' AND commodity_guid IN ('${commodities.join('\',\'')}')`).transacting(trx);
-
-        // check if all the commodities are completed or started
-        let allCommoditiesCompleted = true;
-        let allCommoditiesStarted = true;
-        for (const link of commodityLinks.rows)
-        {
-            if (!link.is_completed)
-                allCommoditiesCompleted = false;
-
-            if (!link.is_started)
-                allCommoditiesStarted = false;
-        }
-
-        // if all the commodity links are completed, we can update the commodity as delievered
-        let commodityQuery = `UPDATE rcg_tms.commodities
-                                    SET `;
-
-        if (allCommoditiesCompleted && allCommoditiesStarted)
-            commodityQuery += 'delivery_status = \'delivered\' ';
-        else
-            commodityQuery += 'delivery_status = \'picked up\' ';
-
-        // append conditions
-        commodityQuery += ` WHERE guid IN ('${commodities.join('\',\'')}')`;
-
-        // update all the commodities
-        await knex.raw(commodityQuery).transacting(trx);
+        // at this point all the job and order stops are updated, we can check if the commodities are picked up or delivered
+        // we select all the stopLinks that for that commodity from that order
+        // for each commodity we check if all the links are completed and if at least one of them is started
+        // if all of them are completed, we can update the commodity as delivered
+        // if any of them are started, we can update the commodity as picked up
+        await knex.raw(`
+        UPDATE rcg_tms.commodities
+            SET delivery_status =
+                CASE
+                    WHEN completed = count THEN 'delivered'::rcg_tms.delivery_status_types
+                    WHEN completed != count AND started > 0 THEN 'picked up'::rcg_tms.delivery_status_types
+                    ELSE 'none'::rcg_tms.delivery_status_types
+                END
+            FROM
+                (SELECT commodity_guid, COUNT(*) AS COUNT,
+                    SUM(CASE WHEN is_started = true THEN 1 ELSE 0 END) AS started,
+                    SUM(CASE WHEN is_completed = true THEN 1 ELSE 0 END) AS completed
+                    FROM rcg_tms.order_stop_links links
+                    WHERE links.commodity_guid IN
+                    ('${commodities.join('\',\'')}')
+                    AND links.order_guid = '${orderGuid}'
+                GROUP BY commodity_guid) as subquery
+            WHERE guid = subquery.commodity_guid`).transacting(trx);
 
         // commit transaction
         await trx.commit();
