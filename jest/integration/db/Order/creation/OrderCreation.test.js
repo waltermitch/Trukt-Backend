@@ -124,7 +124,6 @@ function customSort(paramPath)
 function expectOrderJobContactsToMatch(orderCreated)
 {
     expect(orderCreated?.client?.guid).toBe(DB_INFORMATION.client.guid);
-    expect(orderCreated?.consignee?.guid).toBe(DB_INFORMATION.client.guid);
     expect(orderCreated?.dispatcher?.guid).toBe(DB_INFORMATION.user.guid);
     expect(orderCreated?.referrer?.guid).toBe(DB_INFORMATION.client.guid);
     expect(orderCreated?.salesperson?.guid).toBe(DB_INFORMATION.client.guid);

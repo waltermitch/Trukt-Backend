@@ -88,14 +88,6 @@ class Order extends BaseModel
                     to: 'rcgTms.orderStopLinks.orderGuid'
                 }
             },
-            consignee: {
-                relation: BaseModel.BelongsToOneRelation,
-                modelClass: SFAccount,
-                join: {
-                    from: 'rcgTms.orders.consigneeGuid',
-                    to: 'salesforce.accounts.guid'
-                }
-            },
             invoices: {
                 relation: BaseModel.ManyToManyRelation,
                 modelClass: require('./InvoiceBill'),
@@ -177,9 +169,6 @@ class Order extends BaseModel
         return {
             'payload': {
                 client: {
-                    $modify: ['byType']
-                },
-                consignee: {
                     $modify: ['byType']
                 },
                 clientContact: true,
