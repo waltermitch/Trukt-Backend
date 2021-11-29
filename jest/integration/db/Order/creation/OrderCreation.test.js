@@ -21,12 +21,16 @@ const SINGLE_JOB_DATA = require('./single_job.json');
 const SINGLE_JOB_MULTIPLE_STOPS_DATA = require('./single_job_multiple_stops.json');
 const MULTIPLE_RELATED_JOBS_DATA = require('./multiple_related_jobs.json');
 const MULTIPLE_UNRELATED_JOBS_DATA = require('./multiple_unrelated_jobs.json');
+const MULTIPLE_JOBS_SAME_TERMINALS_DATA = require('./multiple_jobs_same_terminals.json');
+const MULTIPLE_JOBS_NO_STOP_CONTACTS_DATA = require('./multiple_jobs_no_stop_contacts.json');
 
 const TEST_CASES = [
     SINGLE_JOB_DATA,
     SINGLE_JOB_MULTIPLE_STOPS_DATA,
     MULTIPLE_RELATED_JOBS_DATA,
-    MULTIPLE_UNRELATED_JOBS_DATA
+    MULTIPLE_UNRELATED_JOBS_DATA,
+    MULTIPLE_JOBS_SAME_TERMINALS_DATA,
+    MULTIPLE_JOBS_NO_STOP_CONTACTS_DATA
 ];
 let DB_INFORMATION = {};
 
@@ -187,7 +191,7 @@ function completeInformationPayload(orderPayload)
         job = Object.assign(job, COMMON_DATA.jobInformation);
 
     for (let stop of completeOrder.stops)
-        stop = Object.assign(stop, COMMON_DATA.stopInformation);
+        stop = Object.assign(stop, { ...COMMON_DATA.stopInformation, ...stop });
 
     for (let terminal of completeOrder.terminals)
         terminal = Object.assign(terminal, COMMON_DATA.terminals.find(commonTerminal => commonTerminal.index === terminal.index));
