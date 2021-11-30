@@ -196,6 +196,10 @@ class OrderService
                     }
                 }
 
+                // set consignee (this is temporart until we move consignee out of order in UI)
+                if (order?.invoices?.[0]?.consignee)
+                    order.consignee = order.invoices[0].consignee;
+
                 delete order.invoices;
                 delete order.bills;
 
@@ -1679,7 +1683,7 @@ class OrderService
                 OrderService.getStopsWithInfoChecked(stop, orderGuid)
             );
 
-        // Return new terminals with info checkd if needs to be updated or created
+        // Return new terminals with info checked if needs to be updated or created
         const terminalsToChecked = [];
         for (const terminal of terminals)
             terminalsToChecked.push(
@@ -1724,7 +1728,7 @@ class OrderService
     }
 
     /**
-     * Base information: Fileds use to create the address; Street1, city, state, zipCode and Country
+     * Base information: Fields use to create the address; Street1, city, state, zipCode and Country
      * Extra information: Fields that are not use to create the address; Street2 and Name
      * Checks the action to performed for a terminal.
      * Rules:
@@ -1967,18 +1971,13 @@ class OrderService
                 let terminalCreated = {};
                 const addressStr = Terminal.createStringAddress(terminalData);
 
-                const arcgisTerminal =
-                    ArcgisClient.isSetuped() &&
+                const arcgisTerminal = ArcgisClient.isSetuped() &&
                     (await ArcgisClient.findGeocode(addressStr));
 
-                if (
-                    arcgisTerminal &&
-                    ArcgisClient.isAddressFound(arcgisTerminal)
-                )
+                if (arcgisTerminal && ArcgisClient.isAddressFound(arcgisTerminal))
                 {
-                    const { latitude, longitude } =
-                        ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
-                    const terminalToUpdate = await Terminal.query().findOne({
+                    const { latitude, longitude } = ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
+                    const terminalToUpdate = await Terminal.query(trx).findOne({
                         latitude,
                         longitude
                     });
@@ -2011,9 +2010,8 @@ class OrderService
                         });
                         terminalToCreate.setCreatedBy(currentUser);
 
-                        terminalCreated = await Terminal.query(
-                            trx
-                        ).insertAndFetch(terminalToCreate);
+                        terminalCreated = await Terminal.query(trx).insert(terminalToCreate)
+                            .onConflict(['latitude', 'longitude']).merge();
                     }
                 }
 
