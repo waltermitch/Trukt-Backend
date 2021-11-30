@@ -220,3 +220,6 @@ paths:
   /bulk/job/dates:
     put:
       $ref: paths/bulk/updateJobDates.yaml
+  /bulk/job/status:
+    put:
+      $ref: paths/bulk/updateJobStatus.yaml
