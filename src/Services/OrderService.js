@@ -783,34 +783,40 @@ class OrderService
         // get OrderStops and JobStops from database Fancy smancy queries
         const updatedOrder = await Order.query().skipUndefined().withGraphJoined(Order.fetch.stopsPayload).findById(newOrder.guid);
 
-        // array to store promises
+        // array to store promises for distnace update
         const patchArray = [];
 
-        // compate order stops
+        // check if new order stops have been added
         if (oldOrder.stops.length != updatedOrder.stops.length)
         {
-            console.log('Updating Order Terminals');
-
-            // calculate distance
-            patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+            // calculate distance and push update distance into an array
+            console.log('Updating Added stops');
+            patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
             {
                 await Order.query().patch({ distance }).findById(updatedOrder.guid);
             }));
         }
         else
         {
+            // when stop address has been updated
             for (let i = 0; i < updatedOrder.stops.length; i++)
             {
-                // if terminals are not the same
+                // removing fields that will trigger unnecessary work
+                delete updatedOrder.stops[i].terminal.dateUpdated;
+                delete oldOrder.stops[i].terminal.dateUpdated;
+
+                // if terminal objects are not the same calculate distance
                 if (!R.equals(updatedOrder.stops[i].terminal, oldOrder.stops[i].terminal))
                 {
-                    console.log('Updating Order Terminal');
-
-                    // calculate distance
-                    patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+                    // calculate distance of all stops and push update distance into an array
+                    console.log('Updating Order Addressess');
+                    patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
                     {
                         await Order.query().patch({ distance }).findById(updatedOrder.guid);
                     }));
+
+                    // break to not do repetitive work.
+                    break;
                 }
             }
         }
@@ -818,40 +824,46 @@ class OrderService
         // loop through jobs array
         for (let i = 0; i < updatedOrder.jobs.length; i++)
         {
-            // if job stops length is different
+            // if new terminals were added
             if (updatedOrder.jobs[i].stops.length != oldOrder.jobs[i].stops.length)
             {
-                console.log('Updateing Job terminals');
-
-                // calculate distance of jobs stops
-                patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+                // calculate distance of all stops and push update distance into an array
+                console.log('Updating Added Terminals');
+                patchArray.push(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
                 {
                     await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
                 }));
             }
             else
             {
-                // loop through job stops terminals
+                // if addresses have been changed loop through job stops terminals
                 for (let j = 0; j < updatedOrder.jobs[i].stops.length; j++)
                 {
-                    // if terminals are not the same
+                    // removing fields that will trigger unnecessary work
+                    delete updatedOrder.jobs[i].stops[j].terminal.dateUpdated;
+                    delete oldOrder.jobs[i].stops[j].terminal.dateUpdated;
+
+                    // comparing terminal object to be the same as before if not trigger an update
                     if (!R.equals(updatedOrder.jobs[i].stops[j].terminal, oldOrder.jobs[i].stops[j].terminal))
                     {
-                        console.log('Updating Job Stop!');
-
-                        // calculate distance
-                        patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+                        // calculate distance of all stops and push update distance into an array
+                        console.log('Updating Address');
+                        patchArray.push(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
                         {
                             await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
                         }));
+
+                        // break to not do repetitive work.
+                        break;
                     }
                 }
             }
         }
 
+        // handle array of updates
         if (patchArray.length != 0)
         {
-            await Promise.all(patchArray);
+            await Promise.allSettled(patchArray);
         }
     }
 
