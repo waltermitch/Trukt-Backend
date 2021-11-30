@@ -87,8 +87,6 @@ class QuickBooksService
 
         const res = await QBO.batch(batch);
 
-        console.log(res);
-
         results.push(...res);
 
         return results;
