@@ -278,9 +278,7 @@ class OrderJob extends BaseModel
                     Order.query().select('clientGuid').whereRaw('guid = order_guid')
                 );
             case 'dispatcherName':
-                return User.query().select('name').where('guid',
-                    Order.query().select('dispatcher_guid').whereRaw('guid = order_guid')
-                ).toKnexQuery();
+                return User.query().select('name').whereRaw('guid = dispatcher_guid');
             case 'salespersonName':
                 return SFAccount.query().select('name').where('guid',
                     Order.query().select('salespersonGuid').whereRaw('guid = order_guid')
