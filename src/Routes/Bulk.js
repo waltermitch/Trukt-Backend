@@ -5,6 +5,7 @@ const prefix = '/bulk';
 
 router
     .put(`${prefix}/order/users`, (req, res) => http(req, res, controller.updateOrderUsers))
-    .put(`${prefix}/job/users`, (req, res) => http(req, res, controller.updateJobUsers));
+    .put(`${prefix}/job/users`, (req, res) => http(req, res, controller.updateJobUsers))
+    .put(`${prefix}/job/dates`, (req, res) => http(req, res, controller.updateJobDates));
 
 module.exports = router;
