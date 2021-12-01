@@ -16,21 +16,21 @@ exports.up = function (knex)
             new_is_ready_value boolean := false;
             new_is_canceled_value boolean := false;
             new_is_deleted_value boolean := false;
+            new_order_status text;
+            updated_by uuid;
         BEGIN
 
         IF (TG_OP = 'UPDATE' AND TG_WHEN = 'AFTER') THEN
-            SELECT order_guid FROM rcg_tms.order_jobs WHERE guid = NEW.guid INTO order_guid_found;
-
-            IF (NEW.is_on_hold = true) THEN
-                select bool_and(is_on_hold) from rcg_tms.order_jobs
+            SELECT order_guid, updated_by_guid FROM rcg_tms.order_jobs WHERE guid = NEW.guid INTO order_guid_found, updated_by;
+            
+            IF (NEW.is_ready = true) THEN
+                select bool_or(is_ready) from rcg_tms.order_jobs
                 where order_guid = order_guid_found
                 into should_update_order_to_same_status;
-
-                new_is_on_hold_value = true;
-            ELSIF (NEW.is_ready = true) THEN
-                select bool_and(is_ready) from rcg_tms.order_jobs
-                where order_guid = order_guid_found
-                into should_update_order_to_same_status;
+                
+                SELECT status from rcg_tms.orders 
+                WHERE guid = order_guid_found 
+                INTO new_order_status;
 
                 new_is_ready_value = true;
             ELSIF (NEW.is_canceled = true) THEN
@@ -39,12 +39,14 @@ exports.up = function (knex)
                 into should_update_order_to_same_status;
 
                 new_is_canceled_value = true;
+                new_order_status = NEW.status;
             ELSIF (NEW.is_deleted = true) THEN
                 select bool_and(is_deleted) from rcg_tms.order_jobs
                 where order_guid = order_guid_found
                 into should_update_order_to_same_status;
 
                 new_is_deleted_value = true;
+                new_order_status = NEW.status;
             END IF;
 
             IF (should_update_order_to_same_status = true) THEN
@@ -53,7 +55,8 @@ exports.up = function (knex)
                 is_ready = new_is_ready_value,
                 is_canceled = new_is_canceled_value,
                 is_deleted = new_is_deleted_value,
-				status = NEW.status
+				status = new_order_status,
+                updated_by_guid = updated_by
                 where guid = order_guid_found;
             END IF;
         END IF;
