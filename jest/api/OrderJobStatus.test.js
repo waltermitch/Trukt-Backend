@@ -426,4 +426,135 @@ describe('Status verification', () =>
         // assert
         expectFields(resJob, false, false, false, true, false, false);
     });
+
+    it('Job is Not Picked Up', async () =>
+    {
+        await insertStopsAndCommodities();
+
+        // set data
+        await OrderJob.query(trx).patch({
+            vendorGuid: context.client.guid,
+            isReady: true })
+            .findById(context.job.guid);
+        
+        // mark most pickups as completed except for the first link which should be a pickup link
+        await OrderStopLink.query(trx).patch({ isCompleted: true }).where({ stopGuid: context.stops[0].guid }).whereNot({ id: context.links[0].id });
+
+        // get data
+        const resJob = await getJob('PickedUp');
+
+        // assert
+        expect(resJob).toBeUndefined();
+    });
+
+    it('Job is Not Delivered', async () =>
+    {
+        await insertStopsAndCommodities();
+
+        // set data
+        await OrderJob.query(trx).patch({
+            vendorGuid: context.client.guid,
+            isReady: true })
+            .findById(context.job.guid);
+        
+        // mark most deliveries as completed except for the first link which should be a delivery link
+        await OrderStopLink.query(trx).patch({ isCompleted: true }).where({ stopGuid: context.stops[1].guid }).whereNot({ id: context.links[context.links.length - 1].id });
+
+        // get data
+        const resJob = await getJob('Delivered');
+
+        // assert
+        expect(resJob).toBeUndefined();
+    });
+
+});
+
+describe('Exception Handling', () =>
+{
+    beforeEach(async () =>
+    {
+        trx = await BaseModel.startTransaction();
+
+        const client = await SFAccount.query(trx).insertAndFetch({ name: 'Integration Test Client' });
+
+        const order = Order.fromJson({
+            clientGuid: client.guid,
+            referenceNumber: 'TEST',
+            status: 'new',
+            isTender: false
+        });
+        const job = OrderJob.fromJson({
+            isTransport: true,
+            typeId: 1
+        });
+        order.setCreatedBy(process.env.SYSTEM_USER);
+        job.setCreatedBy(process.env.SYSTEM_USER);
+        order.jobs = [job];
+        context.client = client;
+        context.order = await Order.query(trx).insertGraphAndFetch(order, { relate: true });
+        context.job = order.jobs[0];
+    });
+
+    afterEach(async () =>
+    {
+        await trx.rollback();
+    });
+
+    afterAll(async () =>
+    {
+        // close the connection to the database because it will hang otherwise
+        BaseModel.knex().destroy();
+    });
+
+    it('Job is Ready And Canceled', async () =>
+    {
+        try
+        {
+            await OrderJob.query(trx).patch({
+                vendorGuid: context.client.guid,
+                isReady: true,
+                isCanceled: true
+            }).findById(context.job.guid);
+        }
+        catch(e)
+        {
+            expect(e.toString()).toContain(data.orderJobsReadyConstraintError);
+        }
+    });
+
+    it('Job is Complete and Canceled', async () =>
+    {
+        try
+        {
+            await OrderJob.query(trx).patch({
+                vendorGuid: context.client.guid,
+                isComplete: true,
+                isOnHold: true,
+                isCanceled: true
+            }).findById(context.job.guid);
+        }
+        catch(e)
+        {
+            console.log(e.toString());
+            expect(e.toString()).toContain(data.orderJobsCancelConstraintError);
+        }
+    });
+
+    it('Job is Complete and On Hold', async () =>
+    {
+        try
+        {
+            await OrderJob.query(trx).patch({
+                vendorGuid: context.client.guid,
+                isComplete: true,
+                isOnHold: true
+            }).findById(context.job.guid);
+        }
+        catch(e)
+        {
+            console.log(e.toString());
+            expect(e.toString()).toContain(data.orderJobsCompleteContstraintError);
+        }
+    });
+
 });

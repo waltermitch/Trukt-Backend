@@ -62,5 +62,8 @@
             "longitude": -112.338125,
             "createdByGuid": "91c185fd-d33a-4664-95ee-0b7d244fcb4b"
         }
-    ]
+    ],
+    "orderJobsReadyConstraintError": "new row for relation \"order_jobs\" violates check constraint \"order_jobs_ready_constraint\"",
+    "orderJobsCancelConstraintError": "new row for relation \"order_jobs\" violates check constraint \"order_jobs_cancel_constraint\"",
+    "orderJobsCompleteContstraintError": "new row for relation \"order_jobs\" violates check constraint \"order_jobs_complete_constraint\""
 }
