@@ -1,0 +1,69 @@
+summary: Update Job dates
+operationId: updateJobDates
+description: Updates the scheduled dates fields in the jobs specified in the request.
+tags:
+  - Bulk
+requestBody:
+  content:
+    application/json:
+      schema:
+        properties:
+          jobs:
+            type: array
+            items:
+              type: string
+              description: Job Guid
+              $ref: '../../components/schemas/Common.yaml#/guid'
+            minItems: 1
+          pickupDateStart:
+            allOf:
+              - description: The date that this job pickup is expected to start.
+              - $ref: '../../components/schemas/Common.yaml#/dateTime'
+          pickupDateEnd:
+            allOf:
+              - description: The date that this job pickup is expected to end.
+              - $ref: '../../components/schemas/Common.yaml#/dateTime'
+          deliveryDateStart:
+            allOf:
+              - description: The date that this job delivery is expected to start.
+              - $ref: '../../components/schemas/Common.yaml#/dateTime'
+          deliveryDateEnd:
+            allOf:
+              - description: The date that this job delivery is expected to end.
+              - $ref: '../../components/schemas/Common.yaml#/dateTime'
+        required:
+          - jobs
+responses:
+  200:
+    description: Update Received Successfully (note that this does not mean every job was updated successfully)
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            jobGuid:
+              type: object
+              description: This is key value pair of jobGuid
+              properties:
+                error:
+                  type: string
+                  description: Error message, null if no error
+                  example: Job not found
+                  nullable: true
+                status:
+                  type: number
+                  description: Signifies the status of this specific job update
+                  enum:
+                    - 400
+                    - 200
+                    - 500
+  400:
+    description: Request does not provide the required parametters
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: Missing Values
