@@ -98,8 +98,11 @@ class InvoiceLine extends BaseModel
             },
             isNotTransport(builder)
             {
-                builder.whereNotNull('commodity_guid')
-                    .whereNot('itemId', 1);
+                builder.where(builder =>
+                {
+                    builder.whereNull('commodity_guid')
+                        .orWhere('itemId', '<>', 1);
+                });
             }
         };
         Object.assign(modifiers, isNotDeleted(InvoiceLine.tableName));
