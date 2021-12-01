@@ -361,6 +361,17 @@ class OrderJob extends BaseModel
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
         globalSearch: this.globalSearch,
+        statusActive: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .where({
+                    'order.isTender': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                });
+        },
         statusOnHold: (queryBuilder) => { queryBuilder.where({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); },
         statusNew: (queryBuilder) =>
         {

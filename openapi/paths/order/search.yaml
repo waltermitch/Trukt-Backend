@@ -71,6 +71,7 @@ requestBody:
                     - picked up
                     - delivered
                     - ready
+                    - active
                   example: new
               customer:
                 description: Filter for order customer guid
