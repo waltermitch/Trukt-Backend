@@ -467,6 +467,32 @@ describe('Status verification', () =>
         expect(resJob).toBeUndefined();
     });
 
+    it('Job is Active', async () =>
+    {
+        // get data
+        const resJob = await getJob('Active');
+
+        // assert
+        expectFields(resJob, false, false, false, true, false, false);
+    });
+
+    it('Job is Not Active', async () =>
+    {
+        // set data
+        await OrderJob.query(trx).patch({
+            vendorGuid: context.client.guid,
+            isCanceled: true })
+            .findById(context.job.guid);
+        
+        await Order.query(trx).patch({ isTender: true }).findById(context.order.guid);
+        
+        // get data
+        const resJob = await getJob('Active');
+
+        // assert
+        expect(resJob).toBeUndefined();
+    });
+
 });
 
 describe('Exception Handling', () =>
@@ -535,7 +561,6 @@ describe('Exception Handling', () =>
         }
         catch(e)
         {
-            console.log(e.toString());
             expect(e.toString()).toContain(data.orderJobsCancelConstraintError);
         }
     });
@@ -552,7 +577,6 @@ describe('Exception Handling', () =>
         }
         catch(e)
         {
-            console.log(e.toString());
             expect(e.toString()).toContain(data.orderJobsCompleteContstraintError);
         }
     });
