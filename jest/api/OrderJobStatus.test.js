@@ -1,15 +1,22 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 /* eslint-disable padding-line-between-statements */
-const OrderService = require('../../src/Services/OrderService');
+
+// Models
 const BaseModel = require('../../src/Models/BaseModel');
 const SFAccount = require('../../src/Models/SFAccount');
 const Order = require('../../src/Models/Order');
 const OrderJob = require('../../src/Models/OrderJob');
-const { expectation } = require('sinon');
 const LoadboardPost = require('../../src/Models/LoadboardPost');
 const LoadboardRequest = require('../../src/Models/LoadboardRequest');
 const OrderJobDispatch = require('../../src/Models/OrderJobDispatch');
+const Terminal = require('../../src/Models/Terminal');
+const OrderStopLink = require('../../src/Models/OrderStopLink');
+const OrderStop = require('../../src/Models/OrderStop');
+const Commodity = require('../../src/Models/Commodity');
+
+// Extra Data
+const data = require('./data.json');
 
 const context = {};
 let trx;
@@ -46,6 +53,73 @@ function expectFields(job, isTender, isReady, isOnHold, isDeleted, isCanceled, i
     expect(job.isDeleted).toBe(isDeleted);
     expect(job.isCanceled).toBe(isCanceled);
     expect(job.isComplete).toBe(isCompleted);
+}
+
+async function insertStopsAndCommodities()
+{
+    // insert terminals
+    context.terminals = await Terminal.query(trx).insertAndFetch(data.terminals);
+
+    // insert commodities
+    context.commodities = await Commodity.query(trx).insertAndFetch(data.commodities);
+
+    const stopPromises = [];
+    stopPromises.push(OrderStop.query(trx).insertAndFetch({
+        terminalGuid: context.terminals[0].guid,
+        stopType: 'pickup',
+        createdByGuid: '91c185fd-d33a-4664-95ee-0b7d244fcb4b'
+    }));
+    stopPromises.push(OrderStop.query(trx).insertAndFetch({
+        terminalGuid: context.terminals[1].guid,
+        stopType: 'delivery',
+        createdByGuid: '91c185fd-d33a-4664-95ee-0b7d244fcb4b'
+    }));
+
+    // insert stops
+    context.stops = await Promise.all(stopPromises);
+
+    // insert links
+    const links = [];
+    for(const commodity of context.commodities)
+    {
+        links.push(OrderStopLink.query(trx).insertAndFetch({
+            commodityGuid: commodity.guid,
+            orderGuid: context.order.guid,
+            jobGuid: null,
+            stopGuid: context.stops[0].guid,
+            isCompleted: false,
+            createdByGuid: '91c185fd-d33a-4664-95ee-0b7d244fcb4b'
+        }));
+
+        links.push(OrderStopLink.query(trx).insertAndFetch({
+            commodityGuid: commodity.guid,
+            orderGuid: context.order.guid,
+            jobGuid: context.job.guid,
+            stopGuid: context.stops[0].guid,
+            isCompleted: false,
+            createdByGuid: '91c185fd-d33a-4664-95ee-0b7d244fcb4b'
+        }));
+
+        links.push(OrderStopLink.query(trx).insertAndFetch({
+            commodityGuid: commodity.guid,
+            orderGuid: context.order.guid,
+            jobGuid: null,
+            stopGuid: context.stops[1].guid,
+            isCompleted: false,
+            createdByGuid: '91c185fd-d33a-4664-95ee-0b7d244fcb4b'
+        }));
+
+        links.push(OrderStopLink.query(trx).insertAndFetch({
+            commodityGuid: commodity.guid,
+            orderGuid: context.order.guid,
+            jobGuid: context.job.guid,
+            stopGuid: context.stops[1].guid,
+            isCompleted: false,
+            createdByGuid: '91c185fd-d33a-4664-95ee-0b7d244fcb4b'
+        }));
+    }
+
+    context.links = await Promise.all(links);
 }
 describe('Status verification', () =>
 {
@@ -205,5 +279,151 @@ describe('Status verification', () =>
         expectFields(resJob, false, true, false, false, false, false);
         expect(resJob.dispatches[0].isPending).toBe(true);
         expect(resJob.dispatches[0].vendorGuid).toBe(context.client.guid);
+        expect(resJob.vendorGuid).toBeNull();
+    });
+
+    it('Job is Declined', async () =>
+{
+        // set data
+        await OrderJob.query(trx).patch({ isReady: true }).findById(context.job.guid);
+        await OrderJobDispatch.query(trx).insert({
+            jobGuid: context.job.guid,
+
+            // making the client the vendor cause I don't care
+            vendorGuid: context.client.guid,
+            isPending: false,
+            isDeclined: true,
+            createdByGuid: process.env.SYSTEM_USER
+        });
+
+        // get data
+        const query = getJob('Declined').withGraphFetched('[dispatches]');
+        const resJob = await query;
+
+        // assert
+        expectFields(resJob, false, true, false, false, false, false);
+        expect(resJob.dispatches[0].isPending).toBe(false);
+        expect(resJob.dispatches[0].isDeclined).toBe(true);
+        expect(resJob.dispatches[0].vendorGuid).toBe(context.client.guid);
+        expect(resJob.vendorGuid).toBeNull();
+    });
+
+    it('Job is Dispatched', async () =>
+    {
+        // set data
+        await OrderJob.query(trx).patch({
+            vendorGuid: context.client.guid,
+            isReady: true })
+            .findById(context.job.guid);
+        await OrderJobDispatch.query(trx).insert({
+            jobGuid: context.job.guid,
+
+            // making the client the vendor cause I don't care
+            vendorGuid: context.client.guid,
+            isPending: false,
+            isDeclined: false,
+            isAccepted: true,
+            createdByGuid: process.env.SYSTEM_USER
+        });
+
+        // get data
+        const query = getJob('Dispatched').withGraphFetched('[dispatches]');
+        const resJob = await query;
+
+        // assert
+        expectFields(resJob, false, true, false, false, false, false);
+        expect(resJob.dispatches[0].isPending).toBe(false);
+        expect(resJob.dispatches[0].isDeclined).toBe(false);
+        expect(resJob.dispatches[0].vendorGuid).toBe(context.client.guid);
+        expect(resJob.vendorGuid).toBe(context.client.guid);
+    });
+
+    it('Job is Picked Up', async () =>
+    {
+        await insertStopsAndCommodities();
+
+        // set data
+        await OrderJob.query(trx).patch({
+            vendorGuid: context.client.guid,
+            isReady: true })
+            .findById(context.job.guid);
+        
+        // mark all pickups as completed
+        await OrderStopLink.query(trx).patch({ isCompleted: true }).where({ stopGuid: context.stops[0].guid });
+
+        // get data
+        const query = getJob('PickedUp').withGraphFetched('[commodities]');
+        const resJob = await query;
+
+        // assert
+        expectFields(resJob, false, true, false, false, false, false);
+        expect(resJob.vendorGuid).toBe(context.client.guid);
+    });
+
+    it('Job is Delivered', async () =>
+    {
+        await insertStopsAndCommodities();
+
+        // set data
+        await OrderJob.query(trx).patch({
+            vendorGuid: context.client.guid,
+            isReady: true })
+            .findById(context.job.guid);
+
+        // mark all deliveries as completed
+        await OrderStopLink.query(trx).patch({ isCompleted: true }).where({ stopGuid: context.stops[1].guid });
+
+        // get data
+        const query = getJob('Delivered').withGraphFetched('[commodities]');
+        const resJob = await query;
+
+        // assert
+        expectFields(resJob, false, true, false, false, false, false);
+        expect(resJob.vendorGuid).toBe(context.client.guid);
+    });
+
+    it('Job is Completed', async () =>
+    {
+        // set data
+        await OrderJob.query(trx).patch({
+            vendorGuid: context.client.guid,
+            isComplete: true })
+            .findById(context.job.guid);
+        
+        // get data
+        const resJob = await getJob('Complete');
+
+        // assert
+        expectFields(resJob, false, false, false, false, false, true);
+    });
+
+    it('Job is Canceled', async () =>
+    {
+        // set data
+        await OrderJob.query(trx).patch({
+            vendorGuid: context.client.guid,
+            isCanceled: true })
+            .findById(context.job.guid);
+
+        // get data
+        const resJob = await getJob('Canceled');
+
+        // assert
+        expectFields(resJob, false, false, false, false, true, false);
+    });
+
+    it('Job is Deleted', async () =>
+    {
+        // set data
+        await OrderJob.query(trx).patch({
+            vendorGuid: context.client.guid,
+            isDeleted: true })
+            .findById(context.job.guid);
+
+        // get data
+        const resJob = await getJob('Deleted');
+
+        // assert
+        expectFields(resJob, false, false, false, true, false, false);
     });
 });
