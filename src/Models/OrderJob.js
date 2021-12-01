@@ -173,6 +173,19 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.typeId',
                     to: 'rcgTms.orderJobTypes.id'
                 }
+            },
+            requests:
+            {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./LoadboardRequest'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    through: {
+                        from: 'rcgTms.LoadboardPosts.guid',
+                        to: 'rcgTms.LoadboardPosts.jobGuid'
+                    },
+                    to: 'rcgTms.loadboardRequests.guid'
+                }
             }
         };
     }

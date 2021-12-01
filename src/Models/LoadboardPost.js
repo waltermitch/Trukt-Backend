@@ -32,6 +32,14 @@ class LoadboardPost extends BaseModel
                     from: 'rcgTms.loadboardPosts.guid',
                     to: 'rcgTms.orderJobDispatches.loadboardPostGuid'
                 }
+            },
+            requests: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./LoadboardRequest'),
+                join: {
+                    from: 'rcgTms.loadboardPosts.guid',
+                    to: 'rcgTms.loadboardRequests.loadboardPostGuid'
+                }
             }
         };
         return relations;
