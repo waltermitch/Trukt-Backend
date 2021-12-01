@@ -164,6 +164,15 @@ class OrderJob extends BaseModel
                     },
                     to: 'rcgTms.genericNotes.guid'
                 }
+            },
+            type:
+            {
+                relation: BaseModel.BelongsToOneRelation,
+                modelClass: require('./OrderJobType'),
+                join: {
+                    from: 'rcgTms.orderJobs.typeId',
+                    to: 'rcgTms.orderJobTypes.id'
+                }
             }
         };
     }
@@ -230,14 +239,6 @@ class OrderJob extends BaseModel
         this.isTransport = (type.category === 'transport');
     }
 
-    static filterIsTender(query, isTender)
-    {
-        const Order = require('./Order');
-        return isTender !== undefined ?
-            query.whereIn('orderGuid', Order.query().select('guid').where('isTender', isTender))
-            : query;
-    }
-
     static filterJobCategories(query, jobCategories = [])
     {
         if (jobCategories.length > 0)
@@ -269,9 +270,7 @@ class OrderJob extends BaseModel
                     Order.query().select('clientGuid').whereRaw('guid = order_guid')
                 );
             case 'dispatcherName':
-                return User.query().select('name').where('guid',
-                    Order.query().select('dispatcher_guid').whereRaw('guid = order_guid')
-                ).toKnexQuery();
+                return User.query().select('name').whereRaw('guid = dispatcher_guid');
             case 'salespersonName':
                 return SFAccount.query().select('name').where('guid',
                     Order.query().select('salespersonGuid').whereRaw('guid = order_guid')
@@ -359,10 +358,187 @@ class OrderJob extends BaseModel
     }
 
     static modifiers = {
-        filterIsTender: this.filterIsTender,
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
-        globalSearch: this.globalSearch
+        globalSearch: this.globalSearch,
+        statusActive: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .where({
+                    'order.isTender': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                });
+        },
+        statusOnHold: (queryBuilder) => { queryBuilder.where({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); },
+        statusNew: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .where({
+                    'order.isTender': false,
+                    'job.isReady': false,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'job.isComplete': false
+                });
+        },
+        statusTender: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .where({
+                    'order.isTender': true,
+                    'job.isReady': false,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'job.isComplete': false
+                });
+        },
+        statusComplete: (queryBuilder) => { queryBuilder.where({ 'isCompleted': true }); },
+        statusCanceled: (queryBuilder) => { queryBuilder.where({ 'isCanceled': true }); },
+        statusDeleted: (queryBuilder) => { queryBuilder.where({ 'isDeleted': true }); },
+        statusDispatched: (queryBuilder) =>
+        {
+            queryBuilder
+                .where({
+                    'isReady': true,
+                    'isOnHold': false,
+                    'isDeleted': false,
+                    'isCanceled': false
+                })
+                .whereNotNull('vendorGuid');
+        },
+        statusPosted: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('loadboardPosts', { alias: 'post' })
+                .where({
+                    'job.isReady': true,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'post.isPosted': true
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusPending: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('dispatches', { alias: 'dispatch' })
+                .where({
+                    'job.isReady': true,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'dispatch.isPending': true
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusDeclined: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('dispatches', { alias: 'dispatch' })
+                .where({
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'dispatch.isDeclined': true
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusRequests: (queryBuilder) =>
+        {
+            const loadboardRequest = require('./LoadboardRequest');
+            queryBuilder
+                .alias('job')
+                .whereExists(loadboardRequest.query().joinRelated('posting').alias('req')
+                    .where({
+                        'posting.isPosted': true,
+                        'req.isValid': true
+                    })
+                    .whereRaw('"posting"."job_guid" = "job"."guid"'))
+                .where({
+                    'job.isReady': true,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusPickedUp: (queryBuilder) =>
+        {
+            const orderStopLinks = require('./OrderStopLink');
+            queryBuilder
+                .alias('job')
+                .whereNotExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'pickup',
+                        'links.isCompleted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .where({
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusDelivered: (queryBuilder) =>
+        {
+            const orderStopLinks = require('./OrderStopLink');
+            queryBuilder
+                .alias('job')
+                .whereNotExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'delivery',
+                        'links.isCompleted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .where({
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                })
+                .whereNotNull('job.vendorGuid');
+        },
+        statusReady: (queryBuilder) =>
+        {
+            const loadboardPost = require('./LoadboardPost');
+            const orderJobDispatches = require('./OrderJobDispatch');
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .whereNotExists(loadboardPost.query().alias('post')
+                    .where({
+                        'post.isPosted': false
+                    })
+                    .whereRaw('"job"."guid" = "post"."job_guid"'))
+                .whereNotExists(orderJobDispatches.query().alias('ojd')
+                    .where({
+                        'ojd.isAccepted': false,
+                        'ojd.isPending': false
+                    })
+                    .whereRaw('"job"."guid" = "ojd"."job_guid"'))
+                .where({
+                    'order.isTender': false,
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'job.isComplete': false
+                })
+                .whereNull('job.vendorGuid');
+        }
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)

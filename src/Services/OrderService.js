@@ -46,6 +46,25 @@ const logicAppInstance = axios.create({
 
 class OrderService
 {
+    // filter status map
+    static statusMap = {
+        'new': 'statusNew',
+        'on hold': 'statusOnHold',
+        'tender': 'statusTender',
+        'completed': 'statusComplete',
+        'canceled': 'statusCanceled',
+        'deleted': 'statusDeleted',
+        'dispatched': 'statusDispatched',
+        'posted': 'statusPosted',
+        'pending': 'statusPending',
+        'declined': 'statusDeclined',
+        'request': 'statusRequests',
+        'picked up': 'statusPickedUp',
+        'delivered': 'statusDelivered',
+        'ready': 'statusReady',
+        'active': 'statusActive'
+    }
+
     static async getOrders(
         {
             pickup,
@@ -56,7 +75,6 @@ class OrderService
             dispatcher,
             salesperson,
             dates,
-            isTender,
             jobCategory
         },
         page,
@@ -67,20 +85,23 @@ class OrderService
     {
         dateFilterComparisonTypes =
             dates && (await OrderService.getComparisonTypesCached());
+
+        // fields that job will return
         const jobFieldsToReturn = [
-            'guid',
-            'number',
-            'estimatedExpense',
-            'estimatedRevenue',
-            'status',
-            'dateCreated',
-            'actualRevenue',
-            'actualExpense',
-            'dateUpdated',
-            'isDummy'
+            'job.guid',
+            'job.number',
+            'job.estimatedExpense',
+            'job.estimatedRevenue',
+            'job.status',
+            'job.dateCreated',
+            'job.actualRevenue',
+            'job.actualExpense',
+            'job.dateUpdated'
         ];
 
+        // beggining of base query for jobs with return of specific fields
         const baseOrderQuery = OrderJob.query()
+            .alias('job')
             .select(jobFieldsToReturn)
             .page(page, rowCount);
 
@@ -93,37 +114,44 @@ class OrderService
             baseOrderQuery,
             pickup
         );
-        const queryFilterDelivery = OrderService.addFilterDeliveries(
+
+        OrderService.addFilterDeliveries(
             queryFilterPickup,
             delivery
         );
-        const queryFilterStatus = OrderService.addFilterStatus(
-            queryFilterDelivery,
-            status
-        );
+
+        for (const s of status)
+            if (s in OrderService.statusMap)
+                baseOrderQuery.modify(OrderService.statusMap[s]);
+
         const queryFilterCustomer = OrderService.addFilterCustomer(
-            queryFilterStatus,
+            baseOrderQuery,
             customer
         );
+
         const queryFilterDispatcher = OrderService.addFilterDispatcher(
             queryFilterCustomer,
             dispatcher
         );
+
         const queryFilterSalesperson = OrderService.addFilterSalesperson(
             queryFilterDispatcher,
             salesperson
         );
+
         const queryFilterCarrier = OrderService.addFilterCarrier(
             queryFilterSalesperson,
             carrier
         );
+
         const queryFilterDates = OrderService.addFilterDates(
             queryFilterCarrier,
             dates
         );
+
         const queryAllFilters = OrderService.addFilterModifiers(
             queryFilterDates,
-            { isTender, jobCategory, sort }
+            { jobCategory, sort }
         );
 
         const queryWithGraphModifiers = OrderService.addGraphModifiers(
@@ -132,6 +160,7 @@ class OrderService
         );
 
         const { total, results } = await queryWithGraphModifiers;
+
         const ordersWithDeliveryAddress = {
             results: OrderService.addDeliveryAddress(results),
             page: page + 1,
@@ -168,6 +197,10 @@ class OrderService
                         terminalCache[stop.terminal.guid] = stop.terminal;
                     }
                 }
+
+                // set consignee (this is temporart until we move consignee out of order in UI)
+                if (order?.invoices?.[0]?.consignee)
+                    order.consignee = order.invoices[0].consignee;
 
                 delete order.invoices;
                 delete order.bills;
@@ -314,7 +347,6 @@ class OrderService
             ] = orderInformation;
 
             order.graphLink('client', client);
-            order.graphLink('consignee', consignee || client);
             order.graphLink('referrer', referrer);
             order.graphLink('salesperson', salesperson);
             order.graphLink('dispatcher', dispatcher);
@@ -599,7 +631,7 @@ class OrderService
                 });
 
                 if (jobBillLines)
-                    jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser);
+                    jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser, null);
 
                 /**
                 * For order creation. given that all invoices are "transport", the actual and estimated expense and revenue have the same values
@@ -614,7 +646,7 @@ class OrderService
             }
 
             order.jobs = orderJobs;
-            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, order.consignee);
+            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
 
             const orderCreated = await Order.query(trx).skipUndefined()
                 .insertGraph(order, { allowRefs: true });
@@ -648,7 +680,7 @@ class OrderService
         const bill = InvoiceBill.fromJson({
             isInvoice,
             lines: [],
-            consignee
+            consigneeGuid: consignee?.guid
         });
         bill.setCreatedBy(currentUser);
         bill.lines.push(...lines);
@@ -700,7 +732,7 @@ class OrderService
     {
         // relations obejct for none repetitive code
         const stopRelationObj = {
-            $modify: ['distinct'],
+            $modify: ['distinctAllData'],
             terminal: true
         };
 
@@ -1137,13 +1169,6 @@ class OrderService
         });
     }
 
-    static addFilterStatus(baseQuery, statusList)
-    {
-        return statusList?.length
-            ? baseQuery.whereRaw('status ilike ANY(Array[?])', statusList)
-            : baseQuery;
-    }
-
     static addFilterCustomer(baseQuery, customerList)
     {
         return customerList?.length
@@ -1400,9 +1425,8 @@ class OrderService
 
     static addFilterModifiers(baseQuery, filters)
     {
-        const { isTender, jobCategory, sort } = filters;
+        const { jobCategory, sort } = filters;
         return baseQuery
-            .modify('filterIsTender', isTender)
             .modify('filterJobCategories', jobCategory)
             .modify('sorted', sort);
     }
@@ -1562,6 +1586,7 @@ class OrderService
                 invoiceBills,
                 orderInvoices,
                 jobsToUpdate,
+                consignee,
                 currentUser
             );
 
@@ -1574,7 +1599,6 @@ class OrderService
                 salespersonGuid:
                     OrderService.getObjectContactReference(salesperson),
                 clientGuid: client?.guid,
-                consigneeGuid: consignee?.guid,
                 instructions,
                 clientContactGuid: orderContactCreated,
                 stops: stopsToUpdate,
@@ -1677,6 +1701,7 @@ class OrderService
             });
 
             await trx.commit();
+
             return orderUpdated;
         }
         catch (error)
@@ -1737,7 +1762,7 @@ class OrderService
                 OrderService.getStopsWithInfoChecked(stop, orderGuid)
             );
 
-        // Return new terminals with info checkd if needs to be updated or created
+        // Return new terminals with info checked if needs to be updated or created
         const terminalsToChecked = [];
         for (const terminal of terminals)
             terminalsToChecked.push(
@@ -1782,7 +1807,7 @@ class OrderService
     }
 
     /**
-     * Base information: Fileds use to create the address; Street1, city, state, zipCode and Country
+     * Base information: Fields use to create the address; Street1, city, state, zipCode and Country
      * Extra information: Fields that are not use to create the address; Street2 and Name
      * Checks the action to performed for a terminal.
      * Rules:
@@ -2025,18 +2050,13 @@ class OrderService
                 let terminalCreated = {};
                 const addressStr = Terminal.createStringAddress(terminalData);
 
-                const arcgisTerminal =
-                    ArcgisClient.isSetuped() &&
+                const arcgisTerminal = ArcgisClient.isSetuped() &&
                     (await ArcgisClient.findGeocode(addressStr));
 
-                if (
-                    arcgisTerminal &&
-                    ArcgisClient.isAddressFound(arcgisTerminal)
-                )
+                if (arcgisTerminal && ArcgisClient.isAddressFound(arcgisTerminal))
                 {
-                    const { latitude, longitude } =
-                        ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
-                    const terminalToUpdate = await Terminal.query().findOne({
+                    const { latitude, longitude } = ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
+                    const terminalToUpdate = await Terminal.query(trx).findOne({
                         latitude,
                         longitude
                     });
@@ -2069,9 +2089,8 @@ class OrderService
                         });
                         terminalToCreate.setCreatedBy(currentUser);
 
-                        terminalCreated = await Terminal.query(
-                            trx
-                        ).insertAndFetch(terminalToCreate);
+                        terminalCreated = await Terminal.query(trx).insert(terminalToCreate)
+                            .onConflict(['latitude', 'longitude']).merge();
                     }
                 }
 
@@ -2600,7 +2619,7 @@ class OrderService
      *  orderInvoicesToUpdate Order invoices with the lines to create
      * }
      */
-    static updateExpensesGraph(commoditiesMap, invoiceBillsFromDB, orderInvoiceFromDB, jobsToUpdate, currentUser)
+    static updateExpensesGraph(commoditiesMap, invoiceBillsFromDB, orderInvoiceFromDB, jobsToUpdate, consignee, currentUser)
     {
         const orderInvoiceListToCreate = [];
         const jobsToUpdateWithExpenses = jobsToUpdate.map(job =>
@@ -2613,7 +2632,7 @@ class OrderService
                 let lineFound = false;
                 const commodity = commoditiesMap[commoditieWithExpense.index];
 
-                // If commodity is not found, must be a typo on the commodity index sended by the caller
+                // If commodity is not found, must be a typo on the commodity index sent by the caller
                 if (commodity)
                 {
                     for (const bill of invoiceBillsFromDB)
@@ -2682,6 +2701,9 @@ class OrderService
 
         if (orderInvoiceFromDB.length > 0)
             orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
+
+        if (consignee?.guid)
+            orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
     }

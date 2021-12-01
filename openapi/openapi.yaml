@@ -208,9 +208,15 @@ paths:
   /bill/order/{orderGuid}/export:
     put:
       $ref: paths/bill/export.yaml
+  /job/{jobGuid}/stop/{stopGuid}/status/{status}:
+    put:
+      $ref: paths/job/updateStopStatus.yaml
   /bulk/order/users:
     put:
       $ref: paths/bulk/updateOrderUsers.yaml
   /bulk/job/users:
     put:
       $ref: paths/bulk/updateJobUsers.yaml
+  /bulk/job/dates:
+    put:
+      $ref: paths/bulk/updateJobDates.yaml

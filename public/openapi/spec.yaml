@@ -684,10 +684,6 @@ paths:
                   $ref: '#/components/schemas/instructions'
                 clientNotes:
                   $ref: '#/components/schemas/clientNotes'
-                estimatedRevenue:
-                  $ref: '#/components/schemas/estimatedRevenue'
-                estimatedExpense:
-                  $ref: '#/components/schemas/estimatedExpense'
                 quotedRevenue:
                   $ref: '#/components/schemas/quotedRevenue'
                 estimatedDistance:
@@ -761,6 +757,24 @@ paths:
                               - description: >-
                                   The dispatcher who is responsible for managing
                                   this job.
+                          commodities:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                index:
+                                  type: string
+                                  description: >-
+                                    Unique index per commodity, this field can
+                                    be any string value
+                                expense:
+                                  $ref: '#/components/schemas/amount'
+                                revenue:
+                                  $ref: '#/components/schemas/amount'
+                              required:
+                                - index
+                                - expense
+                                - revenue
                           stops:
                             type: array
                             items:
@@ -790,10 +804,6 @@ paths:
                         required:
                           - index
                           - stops
-                expenses:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/orderExpense'
                 stops:
                   type: array
                   items:
@@ -847,10 +857,10 @@ paths:
                     type: boolean
                     default: false
                     example: false
-                  estimatedExpense:
-                    $ref: '#/components/schemas/estimatedExpense'
                   estimatedRevenue:
                     $ref: '#/components/schemas/estimatedRevenue'
+                  estimatedExpense:
+                    $ref: '#/components/schemas/estimatedExpense'
                   quotedRevenue:
                     $ref: '#/components/schemas/quotedRevenue'
                   estimatedIncome:
@@ -2602,6 +2612,197 @@ paths:
           description: Bill not found
           content:
             application/json: {}
+  '/bill/{billGuid}/line':
+    post:
+      summary: Add Bill Line
+      operationId: addBillLine
+      description: Add bill Line.
+      tags:
+        - Bill
+      parameters:
+        - in: path
+          name: billGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoiceGuid:
+                  $ref: '#/components/schemas/guid'
+                dateCharged:
+                  type: string
+                  format: date-time
+                  description: When the charge has occured.
+                  example: '2020-01-01T01:01:01.000Z'
+                transactionNumber:
+                  type: string
+                  description: Transaction Number.
+                  example: asdf1212
+                amount:
+                  type: string
+                  description: Amount charged.
+                  example: 334.8
+                itemId:
+                  type: number
+                  description: What line item will we charge for.
+                  example: 1
+                notes:
+                  type: string
+                  description: Notes about the invoice or bill line.
+                  example: >-
+                    The longest notes that you have ever seen. Alex don't peek
+                    into here... neither VLAD. BAD BAD BAD
+              required:
+                - itemId
+                - amount
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceBillLine'
+        '404':
+          description: Bill or Invoice not found
+          content:
+            application/json: {}
+        '406':
+          description: Cannot Link Lines
+          content:
+            application/json: {}
+  '/bill/{billGuid}/lines':
+    delete:
+      summary: Delete Bill Lines
+      operationId: deleteBillLines
+      description: Delete Bill Lines.
+      tags:
+        - Bill
+      parameters:
+        - in: path
+          name: billGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/guid'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json: {}
+        '404':
+          description: Bill or Line not found
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Bill not found.
+  '/bill/{billGuid}/line/{lineGuid}':
+    put:
+      summary: Update Bill Line
+      operationId: updateBillLine
+      description: Update Bill Line.
+      tags:
+        - Bill
+      parameters:
+        - in: path
+          name: billGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: lineGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dateCharged:
+                  type: string
+                  format: date-time
+                  description: When the charge has occured.
+                  example: '2020-01-01T01:01:01.000Z'
+                transactionNumber:
+                  type: string
+                  description: Transaction Number.
+                  example: asdf1212
+                amount:
+                  type: string
+                  description: Amount charged.
+                  example: 334.8
+                itemId:
+                  type: number
+                  description: What line item will we charge for.
+                  example: 1
+                notes:
+                  type: string
+                  description: Notes about the invoice or bill line.
+                  example: >-
+                    The longest notes that you have ever seen. Alex don't peek
+                    into here... neither VLAD. BAD BAD BAD
+              required:
+                - dateCharged
+                - transactionNumber
+                - itemId
+                - amount
+                - notes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceBillLine'
+        '404':
+          description: Bill or Line not found
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Bill does not exist.
+    delete:
+      summary: Delete Bill Line
+      operationId: deleteBillLine
+      description: Delete Bill Line.
+      tags:
+        - Bill
+      parameters:
+        - in: path
+          name: billGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: lineGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json: {}
+        '404':
+          description: Bill or Line not found
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Bill not found.
   '/invoice/order/{orderGuid}':
     get:
       summary: Get Invoices and Bills by Order
@@ -2654,6 +2855,174 @@ paths:
           description: Job not found
           content:
             application/json: {}
+  '/invoice/{invoiceGuid}/line':
+    post:
+      summary: Add Invoice Line
+      operationId: addInvoiceLine
+      description: Add Invoice Line.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: invoiceGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                billGuid:
+                  $ref: '#/components/schemas/guid'
+              required:
+                - itemId
+                - amount
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceBillLine'
+        '404':
+          description: Invoice or Bill not found
+          content:
+            application/json: {}
+        '406':
+          description: Cannot Link Lines
+          content:
+            application/json: {}
+  '/invoice/{invoiceGuid}/lines':
+    delete:
+      summary: Delete Invoice Lines
+      operationId: deleteInvoiceLines
+      description: Delete Invoice Lines.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: invoiceGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/guid'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json: {}
+        '404':
+          description: Invoice or Line not found
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Invoice not found.
+  '/invoice/{invoiceGuid}/line/{lineGuid}':
+    put:
+      summary: Update Invoice Line
+      operationId: updateInvoiceLine
+      description: Update Invoice Line.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: invoiceGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: lineGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dateCharged:
+                  type: string
+                  format: date-time
+                  description: When the charge has occured.
+                  example: '2020-01-01T01:01:01.000Z'
+                transactionNumber:
+                  type: string
+                  description: Transaction Number.
+                  example: asdf1212
+                amount:
+                  type: string
+                  description: Amount charged.
+                  example: 334.8
+                itemId:
+                  type: number
+                  description: What line item will we charge for.
+                  example: 1
+                notes:
+                  type: string
+                  description: Notes about the invoice or bill line.
+                  example: >-
+                    The longest notes that you have ever seen. Alex don't peek
+                    into here... neither VLAD. BAD BAD BAD
+              required:
+                - dateCharged
+                - transactionNumber
+                - itemId
+                - amount
+                - notes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceBillLine'
+        '404':
+          description: Invoice or Line not found
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Invoice does not exist.
+    delete:
+      summary: Delete Invoice Line
+      operationId: deleteInvoiceLine
+      description: Delete Invoice Line.
+      tags:
+        - Invoice
+      parameters:
+        - in: path
+          name: invoiceGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: lineGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json: {}
+        '404':
+          description: Invoice or Line not found
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Invoice not found.
   /index/order/number:
     get:
       summary: Get next order index number
@@ -3255,6 +3624,46 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Order Not Found
+          content:
+            application/json: {}
+  '/job/{jobGuid}/stop/{stopGuid}/status/{status}':
+    put:
+      summary: Update a Stop Status on a Job
+      operationId: updateStopStatus
+      description: Update the Status of a Stop on a job
+      tags:
+        - Job
+      parameters:
+        - in: path
+          name: jobGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: stopGuid
+          schema:
+            $ref: '#/components/schemas/guid'
+          required: true
+        - in: path
+          name: status
+          schema:
+            $ref: '#/components/schemas/stopStatus'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commodities:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/guid'
+                date:
+                  $ref: '#/components/schemas/dateTime'
+      responses:
+        '200':
+          description: Notes
           content:
             application/json: {}
   /bulk/order/users:
@@ -4047,15 +4456,6 @@ components:
           maxLength: 3000
           nullable: true
           example: Your order has been shipped and is on its way
-    estimatedRevenue:
-      type: string
-      format: currency
-      description: The amount owed by the client.
-    estimatedExpense:
-      type: string
-      format: currency
-      description: The amount owed to the vendors.
-      example: '99.00'
     quotedRevenue:
       type: string
       format: currency
@@ -4174,37 +4574,13 @@ components:
       oneOf:
         - $ref: '#/components/schemas/Job with Type ID'
         - $ref: '#/components/schemas/Job with Category and Type'
-    currency:
-      type: string
-      format: currency
-      pattern: '^(?:[1-9][0-9]*|0)/.[0-9]{2}$'
-      example: '12345.67'
-    orderExpense:
-      type: object
-      properties:
-        account:
-          type: string
-          enum:
-            - client
-            - vendor
-            - salesperson
-            - referrer
-            - dispatcher
-        amount:
-          allOf:
-            - $ref: '#/components/schemas/currency'
-            - description: The amount that is owed for this expense.
-              minimum: 0
-        item:
-          description: The invoice line item name that this expense references.
-          type: string
-        commodity:
-          description: The index field in the commodities array in this payload.
-          type: string
-      required:
-        - account
-        - amount
-        - item
+    amount:
+      description: New expense amount
+      oneOf:
+        - type: number
+        - type: string
+          format: currency
+          example: '99.99'
     TerminalOutbound:
       allOf:
         - type: object
@@ -4234,6 +4610,20 @@ components:
         - Delivered
         - Canceled
         - Deleted
+    estimatedRevenue:
+      type: string
+      format: currency
+      description: The amount owed by the client.
+    estimatedExpense:
+      type: string
+      format: currency
+      description: The amount owed to the vendors.
+      example: '99.00'
+    currency:
+      type: string
+      format: currency
+      pattern: '^(?:[1-9][0-9]*|0)/.[0-9]{2}$'
+      example: '12345.67'
     dateCreated:
       type: string
       format: date-time
@@ -4308,6 +4698,32 @@ components:
           type: string
         shippingStreet:
           type: string
+    orderExpense:
+      type: object
+      properties:
+        account:
+          type: string
+          enum:
+            - client
+            - vendor
+            - salesperson
+            - referrer
+            - dispatcher
+        amount:
+          allOf:
+            - $ref: '#/components/schemas/currency'
+            - description: The amount that is owed for this expense.
+              minimum: 0
+        item:
+          description: The invoice line item name that this expense references.
+          type: string
+        commodity:
+          description: The index field in the commodities array in this payload.
+          type: string
+      required:
+        - account
+        - amount
+        - item
     CommodityOutbound:
       allOf:
         - $ref: '#/components/schemas/guidObject'
@@ -4621,7 +5037,14 @@ components:
                   terminal:
                     $ref: '#/components/schemas/TerminalBase'
                   commodities:
-                    $ref: '#/components/schemas/Commodity'
+                    allOf:
+                      - type: object
+                        properties:
+                          expense:
+                            $ref: '#/components/schemas/amount'
+                          revenue:
+                            $ref: '#/components/schemas/amount'
+                      - $ref: '#/components/schemas/Commodity'
       allOf:
         - $ref: '#/components/schemas/Job With All Data'
         - type: object
@@ -5053,6 +5476,41 @@ components:
                   type: string
                   description: The TMS number of the job.
                   example: RC10000A
+    InvoiceBillLine:
+      type: object
+      properties:
+        dateCharged:
+          type: string
+          format: date-time
+          description: When the charge has occured.
+          example: '2020-01-01T01:01:01.000Z'
+        transactionNumber:
+          type: string
+          description: Transaction Number.
+          example: asdf1212
+        amount:
+          type: string
+          description: Amount charged.
+          example: 334.8
+        itemId:
+          type: number
+          description: What kind of line item will it be.
+          example: 1
+        notes:
+          type: string
+          description: Notes about the invoice or bill line.
+          example: >-
+            The longest notes that you have ever seen. Alex don't peek into
+            here... neither VLAD. BAD BAD BAD
+        paid:
+          type: boolean
+          example: true
+        dateCreated:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When the initial line was created.
+          example: '2020-01-01T01:01:01.000Z'
     InvoiceAndBillsOutbound:
       type: object
       properties:
@@ -5078,6 +5536,8 @@ components:
           oneOf:
             - type: number
             - type: string
+              format: currency
+              example: '99.99'
         itemId:
           description: New item id
           type: number
@@ -5390,6 +5850,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/guid'
             - description: The guid of the bill/invoice that the error occurred in.
+    stopStatus:
+      type: string
+      enum:
+        - completed
+        - started
   responses:
     ValidationErrorResponse:
       description: Bad Request

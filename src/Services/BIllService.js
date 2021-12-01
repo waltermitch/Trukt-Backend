@@ -8,6 +8,7 @@ const currency = require('currency.js');
 const InvoiceService = require('./InvoiceService');
 const Invoice = require('../Models/Invoice');
 const Bill = require('../Models/Bill');
+const { DateTime } = require('luxon');
 
 let transportItem;
 
@@ -145,31 +146,31 @@ class BillService
                 throw new Error('Bill does not exist.');
             }
 
-            // to patch multiple lines at once
-            const patchArrays = [];
+            // deleteing lines in bulk :: users are forbidden from deleting transport lines with commodity attached to it.
+            const deletedLines = await InvoiceLine.query(trx).delete().whereIn('guid', lineGuids).where('invoiceGuid', billGuid).modify('isNotTransport');
 
-            // creating array of patch updates
-            for (let i = 0; i < lineGuids.length; i++)
+            // checking if all have been deleted
+            if (deletedLines != lineGuids.length)
             {
-                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': billGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
-            }
+                // error array for uniquee messages
+                const errorArray = [];
 
-            // executing all updates
-            const deletedLines = await Promise.all(patchArrays);
+                // query all guids, and throw error for which return because they still exist.
+                const failedLines = await InvoiceLine.query(trx).findByIds([lineGuids]);
 
-            // if any failed will return guids that failed
-            if (deletedLines.includes(0))
-            {
-                const guids = [];
-                for (let i = 0; i < deletedLines.length; i++)
+                // looping through array to throw proper errors
+                for (const l of failedLines)
                 {
-                    if (deletedLines[i] == 0)
+                    if (l.itemId == 1 && l.commodityGuid != null)
                     {
-                        guids.push(lineGuids[i]);
+                        errorArray.push(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid} `);
+                    }
+                    if (l.invoiceGuid != billGuid)
+                    {
+                        errorArray.push(`Deleting a line the doesn't belong to the bill is forbidden. Guid: ${l.guid} `);
                     }
                 }
-
-                throw new Error(`Lines with guid(s): ${guids} cannot be deleted.`);
+                throw new Error(errorArray);
             }
 
             // if succeed then, returns nothing
@@ -239,7 +240,7 @@ class BillService
                     if (e.Bill)
                     {
                         // merge existing externalSourceData with new data
-                        const mergedData = Object.assign({}, billMap.get(e.bId), { 'quickbooks': { 'Bill': { 'Id': e.Bill.Id } } });
+                        const mergedData = Object.assign({}, billMap.get(e.bId), { 'quickbooks': { 'bill': { 'Id': e.Bill.Id } } });
 
                         // update in map
                         billMap.set(e.bId, mergedData);
@@ -251,18 +252,37 @@ class BillService
                         billMap.set(e.guid, mergedData);
                     }
 
+        // set current timestamp
+        const now = DateTime.utc().toString();
+
         // save all bills to db
         await Promise.allSettled(Array.from(billMap.entries()).map(async ([guid, data]) =>
         {
             if (!data.error)
             {
-                const bill = await InvoiceBill.query().patchAndFetchById(guid, { externalSourceData: data, isPaid: true });
+                const trx = await InvoiceBill.transaction();
 
-                results.push(bill);
+                // update all the bills and their lines
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, datePaid: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.bill?.Id }).where('invoiceGuid', guid)]);
+
+                if (proms[0].status == 'fulfilled')
+                {
+                    await trx.commit();
+                    results.push(proms[0].value);
+                }
+                else
+                {
+                    await trx.rollback();
+                    results.push(proms[0].reason);
+                }
             }
             else
                 results.push(data.error);
         }));
+
+        // check length of results
+        if (results.length == 0)
+            return [{ success: true, message: 'All Bills Already Paid For This Job' }];
 
         return results;
     }

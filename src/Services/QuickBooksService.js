@@ -7,7 +7,7 @@ const QBO = require('../QuickBooks/API');
 
 class QuickBooksService
 {
-    static async createInvoices(invoices)
+    static async createInvoices(invoices = [])
     {
         // array of results
         const results = [];
@@ -16,8 +16,11 @@ class QuickBooksService
         const batch = [];
         for (const invoice of invoices)
         {
+            // if no consignee use client
+            const client = invoice?.consignee || invoice?.client;
+
             // check if invoice already invoiced
-            if (invoice?.externalSourceData?.quickbooks.invoice)
+            if (invoice?.externalSourceData?.quickbooks?.invoice)
             {
                 results.push({
                     error: `Invoice ${invoice.guid} already invoiced`,
@@ -38,9 +41,17 @@ class QuickBooksService
 
                 continue;
             }
+            else if (!client?.qbId)
+            {
+                results.push({
+                    error: `Invoice ${invoice.guid} client/consignee missing QB ID`,
+                    system: 'QuickBooks',
+                    guid: invoice.guid
+                });
 
-            // if no consignee use client
-            const client = invoice?.consignee || invoice?.client;
+                continue;
+            }
+
             invoice.clientId = client?.qbId;
 
             // for each line item map out description, and commodity details
@@ -181,7 +192,7 @@ class QuickBooksService
             {
                 const res = await QBO.upsertClient(client);
 
-                return { qbId: res.data.Customer.Id };
+                return { qbId: res.Customer.Id };
             }
             catch (e)
             {
@@ -221,7 +232,7 @@ class QuickBooksService
             {
                 const res = await QBO.upsertVendor(vendor);
 
-                return { qbId: res.data.Vendor.Id };
+                return { qbId: res.Vendor.Id };
             }
             catch (e)
             {

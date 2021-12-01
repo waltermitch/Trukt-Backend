@@ -13,35 +13,35 @@
         {
             "id": 2,
             "name": "keys",
-            "type": "expense",
+            "type": "revenue",
             "is_accessorial": false,
             "is_deprecated": false
         },
         {
             "id": 3,
             "name": "storage",
-            "type": "expense",
+            "type": "revenue",
             "is_accessorial": false,
             "is_deprecated": false
         },
         {
             "id": 4,
             "name": "fuel surcharge",
-            "type": "expense",
+            "type": "revenue",
             "is_accessorial": false,
             "is_deprecated": false
         },
         {
             "id": 5,
             "name": "repossession fee",
-            "type": "expense",
+            "type": "revenue",
             "is_accessorial": false,
             "is_deprecated": false
         },
         {
             "id": 6,
-            "name": "impoud fee",
-            "type": "expense",
+            "name": "impound fee",
+            "type": "revenue",
             "is_accessorial": false,
             "is_deprecated": false
         }

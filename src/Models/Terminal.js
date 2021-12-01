@@ -61,6 +61,7 @@ class Terminal extends BaseModel
     }
 
     static uniqueColumns = ['latitude', 'longitude']
+    static onConflictIgnore = true
 
     $parseJson(json)
     {
