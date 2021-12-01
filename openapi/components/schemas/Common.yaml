@@ -443,3 +443,10 @@ Enums:
     enum:
       - completed
       - started
+  jobStatus:
+    type: string
+    enum:
+      - On Hold
+      - Ready
+      - Canceled
+      - Deleted
