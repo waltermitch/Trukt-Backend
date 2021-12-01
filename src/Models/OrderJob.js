@@ -503,7 +503,7 @@ class OrderJob extends BaseModel
                     'job.isDeleted': false,
                     'job.isCanceled': false
                 })
-                .whereNull('job.vendorGuid');
+                .whereNotNull('job.vendorGuid');
         },
         statusDelivered: (queryBuilder) =>
         {
@@ -513,7 +513,7 @@ class OrderJob extends BaseModel
                 .whereNotExists(orderStopLinks.query().joinRelated('stop').alias('links')
                     .where({
                         'stop.stopType': 'delivery',
-                        'links.isCompleted': false
+                        'links.isCompleted': true
                     })
                     .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
                 .where({
