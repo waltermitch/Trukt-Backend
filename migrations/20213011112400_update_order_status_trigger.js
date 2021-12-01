@@ -17,11 +17,10 @@ exports.up = function (knex)
             new_is_canceled_value boolean := false;
             new_is_deleted_value boolean := false;
             new_order_status text;
-            updated_by uuid;
         BEGIN
 
         IF (TG_OP = 'UPDATE' AND TG_WHEN = 'AFTER') THEN
-            SELECT order_guid, updated_by_guid FROM rcg_tms.order_jobs WHERE guid = NEW.guid INTO order_guid_found, updated_by;
+            SELECT order_guid FROM rcg_tms.order_jobs WHERE guid = NEW.guid INTO order_guid_found;
             
             IF (NEW.is_ready = true) THEN
                 select bool_or(is_ready) from rcg_tms.order_jobs
@@ -56,7 +55,7 @@ exports.up = function (knex)
                 is_canceled = new_is_canceled_value,
                 is_deleted = new_is_deleted_value,
 				status = new_order_status,
-                updated_by_guid = updated_by
+                updated_by_guid = NEW.updated_by_guid
                 where guid = order_guid_found;
             END IF;
         END IF;
