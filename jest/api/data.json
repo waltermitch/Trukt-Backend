@@ -1,0 +1,66 @@
+{
+    "commodities": [
+        {
+            "capacity": "partial truck load",
+            "damaged": "no",
+            "inoperable": "yes",
+            "deliveryStatus": "none",
+            "length": 15,
+            "weight": 2587,
+            "quantity": 1,
+            "description": "Praesent ac sapien quis velit molestie sodales",
+            "identifier": "1FMZU63K44ZA32877",
+            "extraExternalData": {
+                "data": "Praesent ac sapien quis velit molestie sodales"
+            },
+            "lotNumber": "yourmum",
+            "typeId": 15,
+            "createdByGuid": "91c185fd-d33a-4664-95ee-0b7d244fcb4b"
+        },
+        {
+            "capacity": "partial truck load",
+            "damaged": "no",
+            "inoperable": "yes",
+            "deliveryStatus": "none",
+            "length": 51,
+            "weight": 5652,
+            "quantity": 1,
+            "description": "lorem",
+            "identifier": "M1A4LHCW6MB145909",
+            "extraExternalData": {
+                "data": "Some other data"
+            },
+            "lotNumber": "100ABC200DEF",
+            "typeId": 15,
+            "createdByGuid": "91c185fd-d33a-4664-95ee-0b7d244fcb4b"
+        }
+    ],
+    "terminals": [
+        {
+            "name": "beaver island",
+            "locationType": "auction",
+            "street1": "1600 Pennsylvania Avenue",
+            "street2": "Apartment 101",
+            "state": "Michigan",
+            "city": "beaver island",
+            "country": "USA",
+            "zipCode": "49782",
+            "latitude": 45.659551,
+            "longitude": -85.525857,
+            "createdByGuid": "91c185fd-d33a-4664-95ee-0b7d244fcb4b"
+        },
+        {
+            "name": "fremont island",
+            "locationType": "private",
+            "street1": "4528 W 1700 S",
+            "street2": "Apartment 101",
+            "state": "UT",
+            "city": "hooper",
+            "country": "USA",
+            "zipCode": "84315",
+            "latitude": 41.166833,
+            "longitude": -112.338125,
+            "createdByGuid": "91c185fd-d33a-4664-95ee-0b7d244fcb4b"
+        }
+    ]
+}
