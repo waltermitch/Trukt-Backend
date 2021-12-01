@@ -1,5 +1,5 @@
-const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const BaseModel = require('./BaseModel');
 
 class OrderStop extends BaseModel
 {
