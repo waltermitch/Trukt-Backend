@@ -8,6 +8,7 @@
         "test": "jest --coverage --detectOpenHandles --env=node --verbose  --forceExit",
         "test:unit": "jest --testPathPattern=jest/unit --passWithNoTests",
         "test:integration:db": "jest --testPathPattern=jest/integration/db --passWithNoTests",
+        "test:api": "jest --testPathPattern=jest/api --passWithNoTests",
         "encrypt": "bash ./tools/encrypt.sh",
         "decrypt": "bash ./tools/decrypt.sh",
         "setup": "bash ./tools/git_setup.sh && bash ./tools/decrypt.sh './local.settings.enc' './local.settings.json'",
