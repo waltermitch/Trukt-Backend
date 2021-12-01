@@ -60,7 +60,8 @@ class OrderService
         'request': 'statusRequests',
         'picked up': 'statusPickedUp',
         'delivered': 'statusDelivered',
-        'ready': 'statusReady'
+        'ready': 'statusReady',
+        'active': 'statusActive'
     }
 
     static async getOrders(

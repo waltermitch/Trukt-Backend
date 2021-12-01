@@ -283,9 +283,7 @@ class OrderJob extends BaseModel
                     Order.query().select('clientGuid').whereRaw('guid = order_guid')
                 );
             case 'dispatcherName':
-                return User.query().select('name').where('guid',
-                    Order.query().select('dispatcher_guid').whereRaw('guid = order_guid')
-                ).toKnexQuery();
+                return User.query().select('name').whereRaw('guid = dispatcher_guid');
             case 'salespersonName':
                 return SFAccount.query().select('name').where('guid',
                     Order.query().select('salespersonGuid').whereRaw('guid = order_guid')
@@ -376,6 +374,17 @@ class OrderJob extends BaseModel
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
         globalSearch: this.globalSearch,
+        statusActive: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .where({
+                    'order.isTender': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                });
+        },
         statusOnHold: (queryBuilder) => { queryBuilder.where({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); },
         statusNew: (queryBuilder) =>
         {

@@ -146,31 +146,31 @@ class BillService
                 throw new Error('Bill does not exist.');
             }
 
-            // to patch multiple lines at once
-            const patchArrays = [];
+            // deleteing lines in bulk :: users are forbidden from deleting transport lines with commodity attached to it.
+            const deletedLines = await InvoiceLine.query(trx).delete().whereIn('guid', lineGuids).where('invoiceGuid', billGuid).modify('isNotTransport');
 
-            // creating array of patch updates
-            for (let i = 0; i < lineGuids.length; i++)
+            // checking if all have been deleted
+            if (deletedLines != lineGuids.length)
             {
-                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': billGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
-            }
+                // error array for uniquee messages
+                const errorArray = [];
 
-            // executing all updates
-            const deletedLines = await Promise.all(patchArrays);
+                // query all guids, and throw error for which return because they still exist.
+                const failedLines = await InvoiceLine.query(trx).findByIds([lineGuids]);
 
-            // if any failed will return guids that failed
-            if (deletedLines.includes(0))
-            {
-                const guids = [];
-                for (let i = 0; i < deletedLines.length; i++)
+                // looping through array to throw proper errors
+                for (const l of failedLines)
                 {
-                    if (deletedLines[i] == 0)
+                    if (l.itemId == 1 && l.commodityGuid != null)
                     {
-                        guids.push(lineGuids[i]);
+                        errorArray.push(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid} `);
+                    }
+                    if (l.invoiceGuid != billGuid)
+                    {
+                        errorArray.push(`Deleting a line the doesn't belong to the bill is forbidden. Guid: ${l.guid} `);
                     }
                 }
-
-                throw new Error(`Lines with guid(s): ${guids} cannot be deleted.`);
+                throw new Error(errorArray);
             }
 
             // if succeed then, returns nothing
