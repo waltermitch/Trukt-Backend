@@ -23,6 +23,10 @@ requestBody:
             allOf:
               - description: The date that this job pickup is expected to end.
               - $ref: '../../components/schemas/Common.yaml#/dateTime'
+          pickupDateType: 
+            allOf:
+              - description: Defines the type of scheduled date
+              - $ref: '../../components/schemas/Common.yaml#/Enums/stopDateType'
           deliveryDateStart:
             allOf:
               - description: The date that this job delivery is expected to start.
@@ -31,6 +35,10 @@ requestBody:
             allOf:
               - description: The date that this job delivery is expected to end.
               - $ref: '../../components/schemas/Common.yaml#/dateTime'
+          deliveryDateType:
+            allOf:
+              - description: Defines the type of scheduled date
+              - $ref: '../../components/schemas/Common.yaml#/Enums/stopDateType'
         required:
           - jobs
 responses:
