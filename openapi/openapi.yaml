@@ -226,3 +226,6 @@ paths:
   /bulk/job/status:
     put:
       $ref: paths/bulk/updateJobStatus.yaml
+  /bulk/job/prices:
+    put:
+      $ref: paths/bulk/updateJobPrices.yaml

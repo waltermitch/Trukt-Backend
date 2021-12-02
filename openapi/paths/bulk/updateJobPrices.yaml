@@ -1,0 +1,61 @@
+summary: Update Job prices
+operationId: updateJobPrices
+description: Updates the revenue and expense amount evenly across all transport commodities.
+tags:
+  - Bulk
+requestBody:
+  content:
+    application/json:
+      schema:
+        properties:
+          jobs:
+            type: array
+            items:
+              type: string
+              description: Job Guid
+              $ref: '../../components/schemas/Common.yaml#/guid'
+            minItems: 1
+          revenue:
+            type: string
+            format: currency
+            description: The new amount to be splited evenly across all transport commodities.
+          expense:
+            type: string
+            format: currency
+            description: The new amount to be splited evenly across all transport commodities.
+        required:
+          - jobs
+responses:
+  200:
+    description: Update Received Successfully (note that this does not mean every job was updated successfully)
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            jobGuid:
+              type: object
+              description: This is key value pair of jobGuid
+              properties:
+                error:
+                  type: string
+                  description: Error message, null if no error
+                  example: Job not found
+                  nullable: true
+                status:
+                  type: number
+                  description: Signifies the status of this specific job update
+                  enum:
+                    - 400
+                    - 200
+                    - 500
+  400:
+    description: Request does not provide the required parametters
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: Missing Values
