@@ -91,7 +91,7 @@ definitions:
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
           - node ./tools/migrator.js seed systemData --all
-          - node ./tools/migrator.js seed deploymentData --all --but qbo_account_mappings
+          - node ./tools/migrator.js seed deploymentData --all
           - npm run api-bundle
           - apt update && apt install zip
           - zip -r $ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js local.settings.js main.js package-lock.json package.json web.config openapi
