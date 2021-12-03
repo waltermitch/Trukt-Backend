@@ -118,19 +118,28 @@ class OrderJobService
         }
     }
 
-    static createUpdateDatesPayload({ pickupDateStart, pickupDateEnd, deliveryDateStart, deliveryDateEnd }, stopType, userGuid)
+    static createUpdateDatesPayload({
+        pickupDateStart,
+        pickupDateEnd,
+        deliveryDateStart,
+        deliveryDateEnd,
+        pickupDateType,
+        deliveryDateType
+    }, stopType, userGuid)
     {
-        if ((pickupDateStart || pickupDateEnd) && stopType === 'pickup')
+        if ((pickupDateStart || pickupDateEnd || pickupDateType) && stopType === 'pickup')
             return {
                 dateScheduledStart: pickupDateStart,
                 dateScheduledEnd: pickupDateEnd,
+                dateScheduledType: pickupDateType,
                 updatedByGuid: userGuid
             };
 
-        if ((deliveryDateStart || deliveryDateEnd) && stopType === 'delivery')
+        if ((deliveryDateStart || deliveryDateEnd || deliveryDateType) && stopType === 'delivery')
             return {
                 dateScheduledStart: deliveryDateStart,
                 dateScheduledEnd: deliveryDateEnd,
+                dateScheduledType: deliveryDateType,
                 updatedByGuid: userGuid
             };
 
