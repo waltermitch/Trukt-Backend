@@ -23,6 +23,14 @@ requestBody:
             type: string
             format: currency
             description: The new amount to be splited evenly across all transport commodities.
+          type:
+            allOf:
+              - description: Calculation methode to perform
+              - $ref: '../../components/schemas/Common.yaml#/Enums/bulkJobPriceType'
+          operation:
+            allOf:
+              - description: Type of operation to perform
+              - $ref: '../../components/schemas/Common.yaml#/Enums/bulkJobPriceOperation'
         required:
           - jobs
 responses:
