@@ -1,0 +1,38 @@
+summary: Update a Stop Status on a Job
+operationId: updateStopStatus
+description: Update the Status of a Stop on a job
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+  - in: path
+    name: stopGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+  - in: path
+    name: status
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/Enums/stopStatus'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          commodities:
+            type: array
+            items:
+              $ref: '../../components/schemas/Common.yaml#/guid'
+          date:
+            $ref: '../../components/schemas/Common.yaml#/dateTime'
+responses:
+  200:
+    description: Notes
+    content:
+      application/json: {}

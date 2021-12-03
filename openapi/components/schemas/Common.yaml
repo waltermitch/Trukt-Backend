@@ -97,6 +97,7 @@ longitude:
   format: float
   minimum: -180
   maximum: 180
+  nullable: true
 latitude:
   description: Number describing the latitude coordinate.
   example: 12.5372125
@@ -104,6 +105,7 @@ latitude:
   format: float
   minimum: -90
   maximum: 90
+  nullable: true
 guid:
   type: string
   format: uuid
@@ -436,3 +438,15 @@ Enums:
       - scheduledPickupDate
       - scheduledDeliveryDate
     default: number
+  stopStatus:
+    type: string
+    enum:
+      - completed
+      - started
+  jobStatus:
+    type: string
+    enum:
+      - On Hold
+      - Ready
+      - Canceled
+      - Deleted

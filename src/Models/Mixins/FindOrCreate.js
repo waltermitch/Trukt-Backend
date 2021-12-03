@@ -98,7 +98,29 @@ const mixin =
                 {
                     delete record[field];
                 }
-                found = await this.constructor.query(trx).insertAndFetch(this.constructor.fromJson(record));
+
+                if (this.constructor.onConflictIgnore)
+                {
+                    const { field } = this.findIdValue();
+                    found = await this.constructor.query(trx)
+                        .insertAndFetch(this.constructor.fromJson(record))
+                        .skipUndefined()
+                        .onConflict(uniqueCols)
+                        .ignore();
+
+                    if (!found[field])
+                    {
+                        const uniqueWhereArgs = {};
+                        for (const uniqueColumn of uniqueCols)
+                            uniqueWhereArgs[uniqueColumn] = record[uniqueColumn];
+
+                        found = await this.constructor.query(trx).findOne(uniqueWhereArgs);
+                    }
+
+                }
+                else
+                    found = await this.constructor.query(trx).insertAndFetch(this.constructor.fromJson(record));
+
             }
 
             return found;
