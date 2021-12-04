@@ -269,6 +269,10 @@ class OrderService
 
             // order object will be used to link OrderStopLink from the job
             const order = Order.fromJson({
+                // generate a uuid for the order to reduce the number of http requests to the database
+                // also the uuid is needed for linking the job's OrderStopLinks with the Order guid.
+                '#id': uuid(),
+                    
                 // these fields cannot be set by the user
                 status: 'new',
                 isDeleted: false,
@@ -549,6 +553,7 @@ class OrderService
                 for (const stopLink of job.stopLinks)
                 {
                     stopLink.setCreatedBy(currentUser);
+                    stopLink.order = { '#ref': order['#id'] };
                 }
                 order.jobs.push(job);
             }
@@ -578,6 +583,7 @@ class OrderService
                 for (const stopLink of job.stopLinks)
                 {
                     stopLink.setCreatedBy(currentUser);
+                    stopLink.order = { '#ref': order['#id'] };
                 }
 
                 if (isUseful(orderObj.dispatcher))
