@@ -212,3 +212,113 @@ Job With All Data:
       allOf:
         - $ref: './Contact.yaml'
         - description: The contact that works for the vendor that is fulfilling the job.
+
+Transport:
+  type: object
+  description: Stores Transport aggregate
+  properties: 
+    active:
+      type: integer
+      description: Transport jobs that are active.
+      example: 63
+    new:
+      type: integer
+      description: Transport jobs that are new.              
+      example: 37
+    tender:
+      type: integer
+      description: Tender Orders.              
+      example: 2
+    on hold:
+      type: integer
+      description: Transport jobs that are on hold.              
+      example: 1
+    ready:
+      type: integer
+      description: Transport jobs that are ready.              
+      example: 17
+    posted:
+      type: integer
+      description: Transport jobs that are posted.              
+      example: 3
+    request:
+      type: integer
+      description: Transport jobs that have requests.              
+      example: 1
+    pending:
+      type: integer
+      description: Transport jobs that are pending action.              
+      example: 1
+    declined:
+      type: integer
+      description: Transport jobs that were declined.              
+      example: 1
+    dispatched:
+      type: integer
+      description: Transport jobs that are dispatched.              
+      example: 11
+    picked up:
+      type: integer
+      description: Transport jobs that have commodities picked up.              
+      example: 1
+    completed:
+      type: integer
+      description: Transport jobs that are complete.              
+      example: 2
+    delivered:
+      type: integer
+      description: Transport jobs that are delivered.              
+      example: 10
+    canceled:
+      type: integer
+      description: Transport jobs that are canceled.              
+      example: 2
+    deleted:
+      type: integer
+      description: Transport jobs that are deleted.              
+      example: 6
+
+Service: 
+  type: object
+  description: Stores service aggregate
+  properties:             
+    active: 
+      type: integer
+      description: Service jobs that are active.
+      example: 9
+    new: 
+      type: integer
+      description: Service jobs that are new.
+      example: 3
+    on hold: 
+      type: integer
+      description: Service jobs that are on hold.
+      example: 2
+    ready: 
+      type: integer
+      description: Service jobs that are ready.
+      example: 1
+    pending: 
+      type: integer
+      description: Service jobs that are pending.
+      example: 0
+    declined:
+      type: integer
+      description:  Service jobs that were declined.
+      example: 2
+    dispatched: 
+      type: integer
+      description: Service jobs that were dispatched.
+      example: 0
+    completed:
+      type: integer
+      description: Service jobs that were completed.
+      example: 0
+    canceled:
+      type: integer
+      description: Service jobs that were canceled.
+      example: 0
+    deleted: 
+      type: integer
+      description: Service jobs that were deleted.
+      example: 0

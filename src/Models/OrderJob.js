@@ -374,6 +374,8 @@ class OrderJob extends BaseModel
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
         globalSearch: this.globalSearch,
+        transportJob: (queryBuilder) => { queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['transport'])); },
+        serviceJob: (queryBuilder) => { queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['service'])); },
         statusActive: (queryBuilder) =>
         {
             queryBuilder
@@ -414,7 +416,7 @@ class OrderJob extends BaseModel
                     'job.isComplete': false
                 });
         },
-        statusComplete: (queryBuilder) => { queryBuilder.where({ 'isCompleted': true }); },
+        statusComplete: (queryBuilder) => { queryBuilder.where({ 'isComplete': true }); },
         statusCanceled: (queryBuilder) => { queryBuilder.where({ 'isCanceled': true }); },
         statusDeleted: (queryBuilder) => { queryBuilder.where({ 'isDeleted': true }); },
         statusDispatched: (queryBuilder) =>
