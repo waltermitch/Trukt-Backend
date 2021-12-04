@@ -1,0 +1,23 @@
+summary: Get aggregate of Job Statuses
+operationId: getOrderJobStatuses
+description: Get aggregate of Job Statuses.
+tags:
+  - Job
+
+responses:
+  200:
+    description: OK
+    content:
+      application/json: 
+        schema:
+          type: object
+          properties:
+            transport:
+              $ref: ../../components/schemas/OrderJob.yaml#/Transport
+            service: 
+              $ref: ../../components/schemas/OrderJob.yaml#/Service  
+
+  400:
+    description: Failed to get Statuses
+    content:
+      application/json: {}

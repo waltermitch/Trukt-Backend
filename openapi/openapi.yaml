@@ -211,6 +211,9 @@ paths:
   /job/{jobGuid}/stop/{stopGuid}/status/{status}:
     put:
       $ref: paths/job/updateStopStatus.yaml
+  /job/statuses:
+    get:
+      $ref: paths/job/getStatuses.yaml    
   /bulk/order/users:
     put:
       $ref: paths/bulk/updateOrderUsers.yaml
