@@ -1,5 +1,6 @@
 const OrderStopService = require('../Services/OrderStopService');
 const NotesService = require('../Services/NotesService');
+const StatusCacheManager = require('../EventManager/StatusCacheManager');
 
 class OrderJobController
 {
@@ -19,6 +20,26 @@ class OrderJobController
 
         if (result)
             res.status(200).json(result);
+    }
+
+    static async getAllStatusCount(req, res)
+    {
+        try
+        {
+            const result = await StatusCacheManager.returnUpdatedCache();
+            if (result)
+            {
+                res.status(200);
+                res.json(result);
+            }
+        }
+        catch (error)
+        {
+            console.log(error);
+            res.status(400);
+            res.json(error);
+        }
+
     }
 }
 
