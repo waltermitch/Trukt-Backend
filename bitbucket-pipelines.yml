@@ -50,6 +50,22 @@ definitions:
           - node ./tools/migrator.js seed dev salesforce
           - node ./tools/migrator.js seed dep users,audit_register
           - npm run test:integration:db
+    - step: &api-test
+        name: Api test
+        services:
+          - postgres
+        caches:
+          - node
+        script:
+          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm install
+          - npm install --only=dev
+          - node ./tools/migrator.js init
+          - node ./tools/migrator.js up --all
+          - node ./tools/migrator.js seed sys -a
+          - node ./tools/migrator.js seed dev salesforce
+          - node ./tools/migrator.js seed dep users,audit_register
+          - npm run test:api
     - step: &db-migration
         name: DB Migration
         caches:
