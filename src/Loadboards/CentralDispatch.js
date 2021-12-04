@@ -24,7 +24,7 @@ class CentralDispatch extends Loadboard
         ${this.data.delivery.terminal.city},${this.data.delivery.terminal.state},${this.data.delivery.terminal.zipCode},
         ${this.data.actualExpense || 5.00},0.00,check,delivery,none,${this.setEquipmentType()},${this.getINOP()},
         ${pickupStartDate.toISODate()},${pickupStartDate.plus({ days: 30 }).toISODate()},
-        ${this.postObject.instructions},${this.setVehicles()}*`;
+        ${this.postObject.instructions || ''},${this.setVehicles()}*`;
 
         // one more check to remove \n
         while (string.includes('\n'))
