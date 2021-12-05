@@ -34,6 +34,12 @@ class FakeTelemetryClient
     clearTelemetryProcessors() {}
 
     getStatsbeat() {}
+
+    trackNodeHttpRequestSync() {}
+
+    trackNodeHttpRequest() {}
+
+    trackNodeHttpDependency() {}
 }
 
 module.exports = new FakeTelemetryClient();
