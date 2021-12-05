@@ -1,5 +1,5 @@
-const BaseModel = require('./BaseModel');
 const FindOrCreate = require('./Mixins/FindOrCreate');
+const BaseModel = require('./BaseModel');
 
 class SFContact extends BaseModel
 {

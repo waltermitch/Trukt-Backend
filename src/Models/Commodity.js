@@ -1,6 +1,6 @@
-const BaseModel = require('./BaseModel');
-const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin, AuthorRelationMappings, isNotDeleted } = require('./Mixins/RecordAuthors');
+const FindOrCreateMixin = require('./Mixins/FindOrCreate');
+const BaseModel = require('./BaseModel');
 
 // used for flattening the commodity in/out api
 const vehicleFields = [

@@ -1325,6 +1325,15 @@ paths:
                     allOf:
                       - $ref: '#/components/schemas/indexObject'
                       - $ref: '#/components/schemas/CommodityUpdate'
+                delete:
+                  description: 'Object of keys with guids, that need to be deleted'
+                  type: object
+                  nullable: true
+                  properties:
+                    commodities:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/guid'
               required:
                 - guid
       responses:

@@ -1,11 +1,11 @@
-const { Model } = require('objection');
-const knexPostgis = require('knex-postgis');
-const Knex = require('knex');
-const knexfile = require('../../knexfile');
-const fieldMappings = require('./ModelFieldMappers.json');
 const { uuidRegex, salesforceIdRegex } = require('../Utils/Regexes');
-const { types } = require('pg');
+const fieldMappings = require('./ModelFieldMappers.json');
+const knexPostgis = require('knex-postgis');
+const knexfile = require('../../knexfile');
 const { parseDate } = require('../Utils');
+const { Model } = require('objection');
+const { types } = require('pg');
+const Knex = require('knex');
 
 const knex = Knex(knexfile());
 

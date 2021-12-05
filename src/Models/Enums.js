@@ -1,5 +1,6 @@
 const cache = {};
 let knex = undefined;
+
 class Enums
 {
     constructor(_knex)
@@ -11,9 +12,8 @@ class Enums
     async select(enumName)
     {
         if (!knex)
-        {
             throw new Error('Enums class requires a knex instance or knex transaction instance');
-        }
+
         enumName = enumName.replace(/'/g, '\'\'');
         if (!(enumName in cache))
         {
