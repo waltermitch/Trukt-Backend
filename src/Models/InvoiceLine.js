@@ -95,6 +95,14 @@ class InvoiceLine extends BaseModel
             isNotPaid(builder)
             {
                 builder.where('isPaid', false);
+            },
+            isNotTransport(builder)
+            {
+                builder.where(builder =>
+                {
+                    builder.whereNull('commodity_guid')
+                        .orWhere('itemId', '<>', 1);
+                });
             }
         };
         Object.assign(modifiers, isNotDeleted(InvoiceLine.tableName));

@@ -1,9 +1,8 @@
-const { eqProps } = require('ramda');
-
-const BaseModel = require('./BaseModel');
-const Contact = require('./TerminalContact');
-const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const FindOrCreateMixin = require('./Mixins/FindOrCreate');
+const Contact = require('./TerminalContact');
+const BaseModel = require('./BaseModel');
+const { eqProps } = require('ramda');
 
 const geoCoordFields = ['latitude', 'longitude'];
 const zipCodeNoDashRegex = /^[^-]*[^ -]\w+/;
@@ -62,6 +61,7 @@ class Terminal extends BaseModel
     }
 
     static uniqueColumns = ['latitude', 'longitude']
+    static onConflictIgnore = true
 
     $parseJson(json)
     {

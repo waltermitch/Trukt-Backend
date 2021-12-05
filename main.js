@@ -18,6 +18,7 @@ const PGListener = require('./src/EventManager/PGListener');
 const HttpErrorHandler = require('./src/ErrorHandling/HttpErrorHandler');
 const Mongo = require('./src/Mongo');
 const Auth = require('./src/Authorization/Auth');
+require('./src/EventManager/StatusCacheManager').startCache();
 require('./src/CronJobs/Manager');
 
 run().catch((err) =>

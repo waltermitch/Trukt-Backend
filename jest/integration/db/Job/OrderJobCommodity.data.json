@@ -1,0 +1,9 @@
+{
+    "Order": {
+        "referenceNumber": "FAKE-123"
+    },
+    "Client": {
+        "name": "Fake Client"
+    },
+    "Commodities": [{}]
+}

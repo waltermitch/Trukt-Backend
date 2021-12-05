@@ -4,6 +4,7 @@ const https = require('https');
 
 const API_KEY = process.env['arcgis.apikey'];
 const BASE_URL = process.env['arcgis.baseUrl'];
+const NODE_ENV = process.env.NODE_ENV;
 
 class ArcgisClient
 {
@@ -14,7 +15,7 @@ class ArcgisClient
                 baseURL: BASE_URL,
                 httpsAgent: new https.Agent({ keepAlive })
             });
-        this.apikey = API_KEY;
+        this.tokenPath = NODE_ENV != 'local' ? `&token=${API_KEY}` : '';
         this.findAddressPath = '/findAddressCandidates';
         this.score = 95;
     }
@@ -31,7 +32,7 @@ class ArcgisClient
      */
     async findGeocode(address, { limit = 1, score = this.score } = {})
     {
-        const url = `${this.findAddressPath}?f=json&token=${this.apikey}&address=${address}`;
+        const url = `${this.findAddressPath}?f=json&address=${address}${this.tokenPath}`;
         try
         {
             const response = await this.client.get(url);

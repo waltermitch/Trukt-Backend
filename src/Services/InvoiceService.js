@@ -33,18 +33,16 @@ class InvoiceService
             });
 
         // order was not found, return undefined
-        if (res == undefined)
-        {
-            return undefined;
-        }
+        if (res == undefined) return undefined;
 
-        // assigning orderId and Number to order invoice
-        Object.assign(res.invoices[0], {
-            order: {
-                guid: res.guid,
-                number: res.number
-            }
-        });
+        // assigning orderId and Number to all order invoices
+        for (const invoice of res.invoices)
+            Object.assign(invoice, {
+                order: {
+                    guid: res.guid,
+                    number: res.number
+                }
+            });
 
         // object to return array of bills and invoices
         const invoiceObject = {
@@ -238,31 +236,31 @@ class InvoiceService
                 throw new Error('Invoice does not exist.');
             }
 
-            // to patch multiple lines at once
-            const patchArrays = [];
+            // deleteing lines in bulk :: users are forbidden from deleting transport lines with commodity attached to it.
+            const deletedLines = await InvoiceLine.query(trx).delete().whereIn('guid', lineGuids).where('invoiceGuid', invoiceGuid).modify('isNotTransport');
 
-            // creating array of patch updates
-            for (let i = 0; i < lineGuids.length; i++)
+            // checking if all have been deleted
+            if (deletedLines != lineGuids.length)
             {
-                patchArrays.push(InvoiceLine.query(trx).delete().where({ 'guid': lineGuids[i], 'invoiceGuid': invoiceGuid, 'itemId': 1 }).whereNotNull('commodity_guid'));
-            }
+                // error array for unique messages
+                const errorArray = [];
 
-            // executing all updates
-            const deletedLines = await Promise.all(patchArrays);
+                // query all guids, and throw error for which return because they still exist.
+                const failedLines = await InvoiceLine.query(trx).findByIds([lineGuids]);
 
-            // if any failed will return guids that failed
-            if (deletedLines.includes(0))
-            {
-                const guids = [];
-                for (let i = 0; i < deletedLines.length; i++)
+                // looping through array to throw proper errors
+                for (const l of failedLines)
                 {
-                    if (deletedLines[i] == 0)
+                    if (l.itemId == 1 && l.commodityGuid != null)
                     {
-                        guids.push(lineGuids[i]);
+                        errorArray.push(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid} `);
+                    }
+                    if (l.invoiceGuid != invoiceGuid)
+                    {
+                        errorArray.push(`Deleting a line the doesn't belong to the invoice is forbidden. Line guid: ${l.guid} `);
                     }
                 }
-
-                throw new Error(`Lines with guid(s): ${guids} cannot be deleted.`);
+                throw new Error(errorArray);
             }
 
             // if succeed then, returns nothing
@@ -355,7 +353,7 @@ class InvoiceService
                 // add existing invoice externalSourceData to map
                 invoiceMap.set(invoice.guid, invoice.externalSourceData || {});
 
-                // map some order fiels to invoice
+                // map some order fields to invoice
                 invoice.client = order.client;
                 invoice.orderNumber = order.number;
 
@@ -369,10 +367,15 @@ class InvoiceService
 
         // for each successful invoice, update the invoice in the database
         for (const promise of promises)
+        {
             if (promise.reason)
+            {
                 console.log(promise.reason);
+            }
             else
+            {
                 for (const e of promise.value)
+                {
                     if (e?.Invoice)
                     {
                         // merge existing externalSourceData with new data
@@ -389,13 +392,19 @@ class InvoiceService
                         // update in map
                         invoiceMap.set(e.guid, mergedData);
                     }
-                    else if (e.error)
+                    else if (e.error || e.Fault)
                     {
                         const mergedData = Object.assign({}, invoiceMap.get(e.guid), { 'error': e });
 
                         // update in map
                         invoiceMap.set(e.guid, mergedData);
                     }
+                }
+            }
+        }
+
+        // set current timestamp
+        const now = DateTime.utc().toString();
 
         // update all invoices in db
         await Promise.allSettled(Array.from(invoiceMap.entries()).map(async ([guid, data]) =>
@@ -406,7 +415,7 @@ class InvoiceService
                 const trx = await InvoiceBill.transaction();
 
                 // update all invoices and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateInvoiced: DateTime.utc().toString() }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateInvoiced: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
 
                 if (proms[0].status == 'fulfilled')
                 {

@@ -1,5 +1,5 @@
-const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const BaseModel = require('./BaseModel');
 const Commodity = require('./Commodity');
 
 class OrderStopLink extends BaseModel
@@ -50,6 +50,13 @@ class OrderStopLink extends BaseModel
                 }
             }
         };
+    }
+
+    static modifiers = {
+        orderOnly: (query) =>
+        {
+            query.whereNull('jobGuid');
+        }
     }
 
     static toStops(stopLinks)

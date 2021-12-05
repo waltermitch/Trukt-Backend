@@ -1,6 +1,6 @@
-const BaseModel = require('./BaseModel');
-let FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+let FindOrCreateMixin = require('./Mixins/FindOrCreate');
+const BaseModel = require('./BaseModel');
 
 class TerminalContact extends BaseModel
 {
@@ -25,6 +25,7 @@ class TerminalContact extends BaseModel
     {
         return ['terminalGuid', 'name', 'phoneNumber'];
     }
+    static onConflictIgnore = true
 
     getColumnOp(colname, colvalue)
     {

@@ -1,4 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const CommodityService = require('../Services/CommodityService');
 const LoadboardService = require('../Services/LoadboardService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
@@ -60,7 +61,8 @@ class OrderService
         'request': 'statusRequests',
         'picked up': 'statusPickedUp',
         'delivered': 'statusDelivered',
-        'ready': 'statusReady'
+        'ready': 'statusReady',
+        'active': 'statusActive'
     }
 
     static async getOrders(
@@ -196,6 +198,10 @@ class OrderService
                     }
                 }
 
+                // set consignee (this is temporart until we move consignee out of order in UI)
+                if (order?.invoices?.[0]?.consignee)
+                    order.consignee = order.invoices[0].consignee;
+
                 delete order.invoices;
                 delete order.bills;
 
@@ -264,6 +270,10 @@ class OrderService
 
             // order object will be used to link OrderStopLink from the job
             const order = Order.fromJson({
+                // generate a uuid for the order to reduce the number of http requests to the database
+                // also the uuid is needed for linking the job's OrderStopLinks with the Order guid.
+                '#id': uuid(),
+                    
                 // these fields cannot be set by the user
                 status: 'new',
                 isDeleted: false,
@@ -341,7 +351,6 @@ class OrderService
             ] = orderInformation;
 
             order.graphLink('client', client);
-            order.graphLink('consignee', consignee || client);
             order.graphLink('referrer', referrer);
             order.graphLink('salesperson', salesperson);
             order.graphLink('dispatcher', dispatcher);
@@ -545,6 +554,7 @@ class OrderService
                 for (const stopLink of job.stopLinks)
                 {
                     stopLink.setCreatedBy(currentUser);
+                    stopLink.order = { '#ref': order['#id'] };
                 }
                 order.jobs.push(job);
             }
@@ -574,6 +584,7 @@ class OrderService
                 for (const stopLink of job.stopLinks)
                 {
                     stopLink.setCreatedBy(currentUser);
+                    stopLink.order = { '#ref': order['#id'] };
                 }
 
                 if (isUseful(orderObj.dispatcher))
@@ -626,7 +637,7 @@ class OrderService
                 });
 
                 if (jobBillLines)
-                    jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser);
+                    jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser, null);
 
                 /**
                 * For order creation. given that all invoices are "transport", the actual and estimated expense and revenue have the same values
@@ -641,7 +652,7 @@ class OrderService
             }
 
             order.jobs = orderJobs;
-            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, order.consignee);
+            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
 
             const orderCreated = await Order.query(trx).skipUndefined()
                 .insertGraph(order, { allowRefs: true });
@@ -675,7 +686,7 @@ class OrderService
         const bill = InvoiceBill.fromJson({
             isInvoice,
             lines: [],
-            consignee
+            consigneeGuid: consignee?.guid
         });
         bill.setCreatedBy(currentUser);
         bill.lines.push(...lines);
@@ -780,34 +791,42 @@ class OrderService
         // get OrderStops and JobStops from database Fancy smancy queries
         const updatedOrder = await Order.query().skipUndefined().withGraphJoined(Order.fetch.stopsPayload).findById(newOrder.guid);
 
-        // array to store promises
+        // array to store promises for distnace update
         const patchArray = [];
 
-        // compate order stops
+        // check if new order stops have been added
         if (oldOrder.stops.length != updatedOrder.stops.length)
         {
-            console.log('Updating Order Terminals');
-
-            // calculate distance
-            patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+            // calculate distance and push update distance into an array
+            patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
             {
                 await Order.query().patch({ distance }).findById(updatedOrder.guid);
             }));
         }
         else
         {
+            // when stop address has been updated
             for (let i = 0; i < updatedOrder.stops.length; i++)
             {
-                // if terminals are not the same
-                if (!R.equals(updatedOrder.stops[i].terminal, oldOrder.stops[i].terminal))
-                {
-                    console.log('Updating Order Terminal');
+                // removing fields that will trigger unnecessary work
+                const oldTerminal = oldOrder.stops[i].terminal;
+                const newTerminal = updatedOrder.stops[i].terminal;
+                delete newTerminal.dateUpdated;
+                delete oldTerminal.dateUpdated;
+                delete newTerminal.updatedByGuid;
+                delete oldTerminal.updatedByGuid;
 
-                    // calculate distance
-                    patchArray(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+                // if terminal objects are not the same calculate distance
+                if (!R.equals(newTerminal, oldTerminal))
+                {
+                    // calculate distance of all stops and push update distance into an array
+                    patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
                     {
                         await Order.query().patch({ distance }).findById(updatedOrder.guid);
                     }));
+
+                    // break to not do repetitive work.
+                    break;
                 }
             }
         }
@@ -815,40 +834,52 @@ class OrderService
         // loop through jobs array
         for (let i = 0; i < updatedOrder.jobs.length; i++)
         {
-            // if job stops length is different
-            if (updatedOrder.jobs[i].stops.length != oldOrder.jobs[i].stops.length)
-            {
-                console.log('Updateing Job terminals');
+            // for sanity sake
+            const currentJob = updatedOrder.jobs[i];
+            const oldJob = oldOrder.jobs[i];
 
-                // calculate distance of jobs stops
-                patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+            // if new terminals were added
+            if (currentJob.stops.length != oldOrder.jobs[i].stops.length)
+            {
+                // calculate distance of all stops and push update distance into an array
+                patchArray.push(OrderService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
                 {
-                    await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
+                    await OrderJob.query().patch({ distance }).findById(currentJob.guid);
                 }));
             }
             else
             {
-                // loop through job stops terminals
-                for (let j = 0; j < updatedOrder.jobs[i].stops.length; j++)
+                // if addresses have been changed loop through job stops terminals
+                for (let j = 0; j < currentJob.stops.length; j++)
                 {
-                    // if terminals are not the same
-                    if (!R.equals(updatedOrder.jobs[i].stops[j].terminal, oldOrder.jobs[i].stops[j].terminal))
-                    {
-                        console.log('Updating Job Stop!');
+                    // removing fields that will trigger unnecessary work
+                    const newTerminal = currentJob.stops[j].terminal;
+                    const oldTerminal = oldJob.stops[j].terminal;
+                    delete newTerminal.dateUpdated;
+                    delete oldTerminal.dateUpdated;
+                    delete newTerminal.updatedByGuid;
+                    delete oldTerminal.updatedByGuid;
 
-                        // calculate distance
-                        patchArray(OrderService.calculateTotalDistance(updatedOrder.jobs[i].stops).then(async (distance) =>
+                    // comparing terminal object to be the same as before if not trigger an update
+                    if (!R.equals(newTerminal, oldTerminal))
+                    {
+                        // calculate distance of all stops and push update distance into an array
+                        patchArray.push(OrderService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
                         {
-                            await OrderJob.query().patch({ distance }).findById(updatedOrder.jobs[i].guid);
+                            await OrderJob.query().patch({ distance }).findById(currentJob.guid);
                         }));
+
+                        // break to not do repetitive work.
+                        break;
                     }
                 }
             }
         }
 
+        // handle array of updates
         if (patchArray.length != 0)
         {
-            await Promise.all(patchArray);
+            await Promise.allSettled(patchArray);
         }
     }
 
@@ -1472,7 +1503,10 @@ class OrderService
      */
     static async patchOrder(orderInput, currentUser)
     {
+        // init transaction
         const trx = await Order.startTransaction();
+
+        // extract payload fields
         const {
             guid,
             dispatcher,
@@ -1489,6 +1523,7 @@ class OrderService
             ...orderData
         } = orderInput;
 
+        // wrapping in try catch to roll back transaction
         try
         {
             const [
@@ -1577,6 +1612,7 @@ class OrderService
                 invoiceBills,
                 orderInvoices,
                 jobsToUpdate,
+                consignee,
                 currentUser
             );
 
@@ -1589,7 +1625,6 @@ class OrderService
                 salespersonGuid:
                     OrderService.getObjectContactReference(salesperson),
                 clientGuid: client?.guid,
-                consigneeGuid: consignee?.guid,
                 instructions,
                 clientContactGuid: orderContactCreated,
                 stops: stopsToUpdate,
@@ -1597,6 +1632,7 @@ class OrderService
                 jobs: jobsToUpdateWithExpenses,
                 ...orderData
             });
+
             orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
 
             const orderToUpdate = Order.query(trx)
@@ -1606,6 +1642,79 @@ class OrderService
                     noDelete: true,
                     allowRefs: true
                 });
+
+            if (jobs)
+            {
+                const delProms = [];
+                for (const job of jobs)
+                {
+
+                    const toDelete = job.delete;
+                    if (toDelete)
+                    {
+                        for (const key of Object.keys(toDelete))
+                        {
+                            switch (key)
+                            {
+                                case 'commodities':
+                                    delProms.push(OrderStopLink.query(trx)
+                                        .whereIn('commodityGuid', toDelete.commodities)
+                                        .delete()
+                                        .then((numDeletes) =>
+                                        {
+                                            // if the commodity only exists for the order, delete the commodity
+                                            return Promise.all([
+                                                Commodity.query(trx)
+                                                    .whereIn('guid', toDelete.commodities)
+                                                    .whereNotExists(
+                                                        OrderStopLink.query(trx)
+                                                            .whereIn('commodityGuid', toDelete.commodities)
+                                                            .where('orderGuid', guid)
+                                                            .whereNotNull('jobGuid'))
+                                                    .delete()
+                                                    .returning('guid')
+                                                    .then((commodities) =>
+                                                    {
+                                                        // if the there is a stop that is not attached to an order, delete the stop
+                                                        return OrderStop.query(trx)
+                                                            .leftJoinRelated('links')
+                                                            .whereNull('links.stopGuid').delete();
+
+                                                    })
+
+                                            ]);
+                                        }));
+                                    break;
+                                default:
+
+                                // do nothing
+                            }
+                        }
+
+                    }
+
+                }
+                await Promise.all(delProms);
+
+            }
+
+            // handle deletions
+            const deletions = [];
+            if (toDelete)
+            {
+                Object.keys(toDelete).forEach((e) =>
+                {
+                    switch (e)
+                    {
+                        case 'commodities':
+                            for (const guid of toDelete.commodities)
+                                deletions.push({ func: CommodityService.deleteCommodity, params: [guid, currentUser, trx] });
+                            break;
+                    }
+                });
+            }
+
+            await Promise.all(deletions.map(({ func, params }) => func(...params)));
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
@@ -1618,10 +1727,12 @@ class OrderService
             });
 
             await trx.commit();
+
             return orderUpdated;
         }
         catch (error)
         {
+            console.log(error);
             await trx.rollback();
             throw error;
         }
@@ -1677,7 +1788,7 @@ class OrderService
                 OrderService.getStopsWithInfoChecked(stop, orderGuid)
             );
 
-        // Return new terminals with info checkd if needs to be updated or created
+        // Return new terminals with info checked if needs to be updated or created
         const terminalsToChecked = [];
         for (const terminal of terminals)
             terminalsToChecked.push(
@@ -1722,7 +1833,7 @@ class OrderService
     }
 
     /**
-     * Base information: Fileds use to create the address; Street1, city, state, zipCode and Country
+     * Base information: Fields use to create the address; Street1, city, state, zipCode and Country
      * Extra information: Fields that are not use to create the address; Street2 and Name
      * Checks the action to performed for a terminal.
      * Rules:
@@ -1965,18 +2076,13 @@ class OrderService
                 let terminalCreated = {};
                 const addressStr = Terminal.createStringAddress(terminalData);
 
-                const arcgisTerminal =
-                    ArcgisClient.isSetuped() &&
+                const arcgisTerminal = ArcgisClient.isSetuped() &&
                     (await ArcgisClient.findGeocode(addressStr));
 
-                if (
-                    arcgisTerminal &&
-                    ArcgisClient.isAddressFound(arcgisTerminal)
-                )
+                if (arcgisTerminal && ArcgisClient.isAddressFound(arcgisTerminal))
                 {
-                    const { latitude, longitude } =
-                        ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
-                    const terminalToUpdate = await Terminal.query().findOne({
+                    const { latitude, longitude } = ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
+                    const terminalToUpdate = await Terminal.query(trx).findOne({
                         latitude,
                         longitude
                     });
@@ -2009,9 +2115,8 @@ class OrderService
                         });
                         terminalToCreate.setCreatedBy(currentUser);
 
-                        terminalCreated = await Terminal.query(
-                            trx
-                        ).insertAndFetch(terminalToCreate);
+                        terminalCreated = await Terminal.query(trx).insert(terminalToCreate)
+                            .onConflict(['latitude', 'longitude']).merge();
                     }
                 }
 
@@ -2540,7 +2645,7 @@ class OrderService
      *  orderInvoicesToUpdate Order invoices with the lines to create
      * }
      */
-    static updateExpensesGraph(commoditiesMap, invoiceBillsFromDB, orderInvoiceFromDB, jobsToUpdate, currentUser)
+    static updateExpensesGraph(commoditiesMap, invoiceBillsFromDB, orderInvoiceFromDB, jobsToUpdate, consignee, currentUser)
     {
         const orderInvoiceListToCreate = [];
         const jobsToUpdateWithExpenses = jobsToUpdate.map(job =>
@@ -2553,7 +2658,7 @@ class OrderService
                 let lineFound = false;
                 const commodity = commoditiesMap[commoditieWithExpense.index];
 
-                // If commodity is not found, must be a typo on the commodity index sended by the caller
+                // If commodity is not found, must be a typo on the commodity index sent by the caller
                 if (commodity)
                 {
                     for (const bill of invoiceBillsFromDB)
@@ -2622,6 +2727,9 @@ class OrderService
 
         if (orderInvoiceFromDB.length > 0)
             orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
+
+        if (consignee?.guid)
+            orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
     }

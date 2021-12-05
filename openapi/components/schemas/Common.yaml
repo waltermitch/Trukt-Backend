@@ -438,3 +438,15 @@ Enums:
       - scheduledPickupDate
       - scheduledDeliveryDate
     default: number
+  stopStatus:
+    type: string
+    enum:
+      - completed
+      - started
+  jobStatus:
+    type: string
+    enum:
+      - On Hold
+      - Ready
+      - Canceled
+      - Deleted
