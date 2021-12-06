@@ -229,7 +229,7 @@ Transport:
       type: integer
       description: Tender Orders.              
       example: 2
-    on hold:
+    onHold:
       type: integer
       description: Transport jobs that are on hold.              
       example: 1
@@ -257,7 +257,7 @@ Transport:
       type: integer
       description: Transport jobs that are dispatched.              
       example: 11
-    picked up:
+    pickedUp:
       type: integer
       description: Transport jobs that have commodities picked up.              
       example: 1
@@ -290,7 +290,7 @@ Service:
       type: integer
       description: Service jobs that are new.
       example: 3
-    on hold: 
+    onHold: 
       type: integer
       description: Service jobs that are on hold.
       example: 2
