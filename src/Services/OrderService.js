@@ -1520,6 +1520,7 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
+            toDelete,
             ...orderData
         } = orderInput;
 
