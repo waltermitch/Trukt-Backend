@@ -328,6 +328,7 @@ class OrderJobService
             {
                 const jobLinesQuery = InvoiceLine.query(trx).select('guid', 'amount')
                     .where('itemId', 1)
+                    .whereNotNull('commodityGuid')
                     .whereIn('invoiceGuid',
                         Bill.query(trx).select('billGuid').where('jobGuid', jobGuid)
                     );
@@ -336,7 +337,9 @@ class OrderJobService
 
             if (revenue)
             {
-                const orderLinesQuery = InvoiceLine.query(trx).select('guid', 'amount').where('itemId', 1)
+                const orderLinesQuery = InvoiceLine.query(trx).select('guid', 'amount')
+                    .where('itemId', 1)
+                    .whereNotNull('commodityGuid')
                     .whereIn('invoiceGuid',
                         Invoice.query(trx).select('invoiceGuid').where('orderGuid',
                             OrderJob.query(trx).select('orderGuid').where('guid', jobGuid)
@@ -393,7 +396,7 @@ class OrderJobService
         let amount;
         if (type === 'percent')
         {
-            const percentage = Currency(inputAmount).divide(100).value;
+            const percentage = inputAmount / 100;
             amount = Currency(oldLineAmount).multiply(percentage).value;
         }
         else
