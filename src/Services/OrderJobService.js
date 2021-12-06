@@ -295,6 +295,58 @@ class OrderJobService
 
         }
     }
+
+    /**
+     * Sets a job to On Hold by checking the boolean field isOnHold to true
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async putOnHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            let job = OrderJob.fromJson({
+                guid: jobGuid,
+                isOnHold: true
+            });
+            job.setUpdatedBy(currentUser);
+            job = await OrderJob.query(trx).patchAndFetchById(jobGuid, job);
+            return job;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+
+    /**
+     * Removes the job status from On Hold by setting the isOnHold field to false
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async unsetOnHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            let job = OrderJob.fromJson({
+                guid: jobGuid,
+                isOnHold: false
+            });
+            job.setUpdatedBy(currentUser);
+            job = await OrderJob.query(trx).patchAndFetchById(jobGuid, job);
+            return job;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
 }
 
 module.exports = OrderJobService;

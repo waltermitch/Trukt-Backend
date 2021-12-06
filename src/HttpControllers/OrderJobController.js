@@ -1,6 +1,8 @@
 const OrderStopService = require('../Services/OrderStopService');
 const NotesService = require('../Services/NotesService');
 const StatusCacheManager = require('../EventManager/StatusCacheManager');
+const OrderJobService = require('../Services/OrderJobService');
+const myEmitter = require('../Services/EventEmitter');
 
 class OrderJobController
 {
@@ -40,6 +42,51 @@ class OrderJobController
             res.json(error);
         }
 
+    }
+
+    static async setJobToOnHold(req, res, next)
+    {
+        const jobGuid = req.params.jobGuid;
+        try
+        {
+            const response = await OrderJobService.putOnHold(jobGuid, req.session.userGuid);
+            if(!response)
+            {
+                throw new Error('Job not Found');
+            }
+            myEmitter.emit('orderjob_hold_added', { guid: jobGuid });
+            res.status(202).json(response);
+        }
+        catch(error)
+        {
+            next({
+                status: 404,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
+    }
+
+    static async unsetJobOnHold(req, res, next)
+    {
+        const jobGuid = req.params.jobGuid;
+
+        try
+        {
+            const response = await OrderJobService.unsetOnHold(jobGuid, req.session.userGuid);
+            if(!response)
+            {
+                throw new Error('Job not Found');
+            }
+            myEmitter.emit('orderjob_hold_removed', { guid: jobGuid });
+            res.status(202).json(response);
+        }
+        catch(error)
+        {
+            next({
+                status: 404,
+                data: { message: error?.message || 'Internal server error' }
+            });
+        }
     }
 }
 
