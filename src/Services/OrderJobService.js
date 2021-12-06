@@ -98,8 +98,6 @@ class OrderJobService
                         Promise.all(deleteLooseOrderStopLinks)
                     ]).then((numDeletes) =>
                     {
-                        console.log('deleted commodities: ', numDeletes);
-
                         // if the there is a stop that is not attached to an order, delete the stop
                         return OrderStop.query(trx)
                             .whereIn('guid', stopGuids)
