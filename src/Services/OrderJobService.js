@@ -62,21 +62,25 @@ class OrderJobService
             .returning('stopGuid')
             .then((deletedStopLinks) =>
             {
-                const stopGuids = [... new Set(deletedStopLinks.map(it => it.stopGuid))];
-
                 if (deletedStopLinks.length > 0)
                 {
+                    const stopGuids = [... new Set(deletedStopLinks.map(it => it.stopGuid))];
+
                     // if the commodity only exists for the order, delete the commodity
                     const deleteLooseOrderStopLinks = [];
                     for (const stopGuid of stopGuids)
                     {
                         deleteLooseOrderStopLinks.push(
+
+                            // delete stopLinks that are not attached to a job, but are attached to the order
                             OrderStopLink.query(trx)
                                 .whereIn('commodityGuid', commodities)
                                 .where('orderGuid', orderGuid)
                                 .where('stopGuid', stopGuid)
                                 .whereNull('jobGuid')
                                 .whereNotExists(
+
+                                    // and where there are no other stopLinks that are attached to the same stop that are attached to a job
                                     OrderStopLink.query(trx)
                                         .whereIn('commodityGuid', commodities)
                                         .where('stopGuid', stopGuid)
@@ -87,23 +91,38 @@ class OrderJobService
                     }
 
                     return Promise.all([
+                        // delete the commodities that are not linked to a stopLink that is only attached to an Order
                         Commodity.query(trx)
                             .whereIn('guid', commodities)
                             .whereNotExists(
+
+                                // where a link between another job doesnt exist
                                 OrderStopLink.query(trx)
                                     .whereIn('commodityGuid', commodities)
                                     .where('orderGuid', orderGuid)
                                     .whereNotNull('jobGuid'))
-                            .delete(),
+                            .delete()
+                            .returning('guid'),
                         Promise.all(deleteLooseOrderStopLinks)
                     ]).then((numDeletes) =>
                     {
+                        const deletedComms = numDeletes[0].map(it => it.guid );
+
                         // if the there is a stop that is not attached to an order, delete the stop
                         return OrderStop.query(trx)
                             .whereIn('guid', stopGuids)
                             .whereNotIn('guid', OrderStopLink.query(trx).select('stopGuid'))
-                            .delete();
+                            .delete()
+                            .returning('guid')
+                            .then((deletedStops) =>
+                            {
+                                return { deleted: { commodities: deletedComms, stops: deletedStops.map(it => it.guid) }, modified: { stops: stopGuids, commodities: [] } };
+                            });
                     });
+                }
+                else
+                {
+                    return { deleted: { commodities: [], stops: [] }, modified: { commodities: [], stops: [] } };
                 }
             });
     }
