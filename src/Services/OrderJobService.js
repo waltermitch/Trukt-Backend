@@ -2,7 +2,11 @@ const OrderStopLink = require('../Models/OrderStopLink');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
+const InvoiceLine = require('../Models/InvoiceLine');
+const Invoice = require('../Models/Invoice');
+const Bill = require('../Models/Bill');
 const { pickBy } = require('ramda');
+const Currency = require('currency.js');
 
 class OrderJobService
 {
@@ -345,6 +349,119 @@ class OrderJobService
         {
             await trx.rollback();
             throw e;
+        }
+    }
+    
+    static async bulkUpdatePrices(jobInput, userGuid)
+    {
+        const { jobs, expense, revenue, type, operation } = jobInput;
+        const JobUpdatePricePromises = jobs.map(jobGuid =>
+            OrderJobService.updateJobPrice(jobGuid, expense, revenue, type, operation, userGuid)
+        );
+        const jobsUpdated = await Promise.allSettled(JobUpdatePricePromises);
+
+        return jobsUpdated.reduce((response, jobUpdated) =>
+        {
+            const jobGuid = jobUpdated.value?.jobGuid;
+            const status = jobUpdated.value?.status;
+            const error = jobUpdated.value?.error;
+            response[jobGuid] = { error, status };
+            return response;
+        }, {});
+    }
+
+    static async updateJobPrice(jobGuid, expense, revenue, type, operation, userGuid)
+    {
+        const trx = await OrderStop.startTransaction();
+        try
+        {
+            const updatePricesPromises = [];
+            if (expense)
+            {
+                const jobLinesQuery = InvoiceLine.query(trx).select('guid', 'amount')
+                    .where('itemId', 1)
+                    .whereNotNull('commodityGuid')
+                    .whereIn('invoiceGuid',
+                        Bill.query(trx).select('billGuid').where('jobGuid', jobGuid)
+                    );
+                updatePricesPromises.push(OrderJobService.updatePrices(jobLinesQuery, expense, type, operation, userGuid, trx));
+            }
+
+            if (revenue)
+            {
+                const orderLinesQuery = InvoiceLine.query(trx).select('guid', 'amount')
+                    .where('itemId', 1)
+                    .whereNotNull('commodityGuid')
+                    .whereIn('invoiceGuid',
+                        Invoice.query(trx).select('invoiceGuid').where('orderGuid',
+                            OrderJob.query(trx).select('orderGuid').where('guid', jobGuid)
+                        )
+                    );
+                updatePricesPromises.push(OrderJobService.updatePrices(orderLinesQuery, revenue, type, operation, userGuid, trx));
+            }
+
+            await Promise.all(updatePricesPromises);
+
+            await trx.commit();
+            return { jobGuid, error: null, status: 200 };
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            return { jobGuid, error: error?.message || error, status: error?.status || 400 };
+        }
+    }
+
+    static async updatePrices(query, expense, type, operation, userGuid, trx)
+    {
+        const lines = await query;
+
+        if (!lines.length)
+            throw { message: 'No transport lines found for job', status: 404 };
+
+        const linesToUpdate = OrderJobService.createLinesToUpdateArray(lines, expense, type, operation, userGuid);
+        return InvoiceLine.query(trx).upsertGraph(linesToUpdate, {
+            noDelete: true,
+            noInsert: true,
+            noRelate: true,
+            noUnrelate: true
+        });
+    }
+
+    static createLinesToUpdateArray(linesArray = [], inputAmount, type, operation, userGuid)
+    {
+        const numberOfLines = linesArray.length;
+        return linesArray.map(({ guid, amount: oldLineAmount }, lineIndex) =>
+        {
+            const newAmount = OrderJobService.calculateNewPriceAmount(oldLineAmount, inputAmount, operation, type, numberOfLines, lineIndex);
+            return InvoiceLine.fromJson({
+                guid,
+                amount: newAmount,
+                updatedByGuid: userGuid
+            });
+        }
+        );
+    }
+
+    static calculateNewPriceAmount(oldLineAmount, inputAmount, operation = 'set', type = 'flat', numberOfLines, lineIndex)
+    {
+        let amount;
+        if (type === 'percent')
+        {
+            const percentage = inputAmount / 100;
+            amount = Currency(oldLineAmount).multiply(percentage).value;
+        }
+        else
+            amount = (Currency(inputAmount).distribute(numberOfLines))[lineIndex].value;
+
+        switch (operation)
+        {
+            case 'increase':
+                return (Currency(oldLineAmount).add(amount)).value;
+            case 'decrease':
+                return (Currency(oldLineAmount).subtract(amount)).value;
+            default:
+                return amount;
         }
     }
 }
