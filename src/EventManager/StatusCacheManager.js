@@ -6,14 +6,14 @@ const cache = {
         'active': null,
         'new': null,
         'tender': null,
-        'on hold': null,
+        'onHold': null,
         'ready': null,
         'posted': null,
         'request': null,
         'pending': null,
         'declined': null,
         'dispatched': null,
-        'picked up': null,
+        'pickedUp': null,
         'completed': null,
         'delivered': null,
         'canceled': null,
@@ -22,7 +22,7 @@ const cache = {
     'service': {
         'active': null,
         'new': null,
-        'on hold': null,
+        'onHold': null,
         'ready': null,
         'pending': null,
         'declined': null,
@@ -41,7 +41,7 @@ class StatusCacheManager
     // maping of all status counters
     static statusMap = {
         'new': 'statusNew',
-        'on hold': 'statusOnHold',
+        'onHold': 'statusOnHold',
         'tender': 'statusTender',
         'completed': 'statusComplete',
         'canceled': 'statusCanceled',
@@ -51,7 +51,7 @@ class StatusCacheManager
         'pending': 'statusPending',
         'declined': 'statusDeclined',
         'request': 'statusRequests',
-        'picked up': 'statusPickedUp',
+        'pickedUp': 'statusPickedUp',
         'delivered': 'statusDelivered',
         'ready': 'statusReady',
         'active': 'statusActive'
