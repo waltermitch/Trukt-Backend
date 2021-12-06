@@ -340,10 +340,10 @@ class OrderJob extends BaseModel
         query
 
             // search by job number
-            .orWhere('number', 'ilike', `%${keyword}%`)
+            .orWhere('job.number', 'ilike', `%${keyword}%`)
 
             // search stoplink
-            .orWhereIn('guid', OrderStopLink.query().select('jobGuid')
+            .orWhereIn('job.guid', OrderStopLink.query().select('jobGuid')
 
                 // search stop
                 .whereIn('stopGuid', OrderStop.query().select('guid')
