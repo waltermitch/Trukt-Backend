@@ -56,7 +56,7 @@ requestBody:
                 type: array
                 items:
                   type: string
-                  enum: 
+                  enum:
                     - new
                     - on hold
                     - tender
@@ -72,6 +72,7 @@ requestBody:
                     - delivered
                     - ready
                     - active
+                    - in progress
                   example: new
               customer:
                 description: Filter for order customer guid
