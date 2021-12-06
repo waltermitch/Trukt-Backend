@@ -1,0 +1,29 @@
+summary: Remove Job Status from On Hold
+operationId: unsetJobOnHold
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  202:
+    description: Success
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/OrderJob.yaml#/Flat Job
+  404:
+    description: Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Error message
+              example: Job not Found
