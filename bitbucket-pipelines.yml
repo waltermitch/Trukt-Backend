@@ -154,6 +154,7 @@ pipelines:
     '**':
       - step: *unit-test
       - step: *integration-db-test
+      - step: *api-test
 
   branches:
     'dev':
