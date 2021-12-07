@@ -16,10 +16,19 @@ class OrderJobController
 
     static async updateStopStatus(req, res)
     {
-        const result = await OrderStopService.updateStopStatus(req.params, req.body);
-
-        if (result)
-            res.status(200).json(result);
+        try
+        {
+            const result = await OrderStopService.updateStopStatus(req.params, req.body);
+            if (result)
+            {
+                res.status(200).json(result);
+            }
+        }
+        catch (error)
+        {
+            res.status(404);
+            res.json(error.message);
+        }
     }
 
     static async getAllStatusCount(req, res)
