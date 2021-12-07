@@ -15,7 +15,21 @@ responses:
     content:
       application/json:
         schema:
-          $ref: ../../components/schemas/OrderJob.yaml#/Flat Job
+          type: object
+          properties:
+            jobGuid:
+              type: string
+              description: This is key value pair of jobGuid
+            error:
+              type: string
+              description: Error message, null if no error
+              example: Job not found
+              nullable: true
+            status:
+              type: number
+              description: Signifies the status of this specific job update
+              enum:
+                - 202
   404:
     description: Not Found
     content:
