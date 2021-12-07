@@ -1,6 +1,7 @@
 const OrderStopService = require('../Services/OrderStopService');
 const NotesService = require('../Services/NotesService');
 const StatusCacheManager = require('../EventManager/StatusCacheManager');
+const OrderJobService = require('../Services/OrderJobService');
 
 class OrderJobController
 {
@@ -40,6 +41,12 @@ class OrderJobController
             res.json(error);
         }
 
+    }
+
+    static async getCarrier(req, res)
+    {
+        const { status, data } = await OrderJobService.getJobCarrier(req.params.jobGuid);
+        res.status(status).json(data);
     }
 }
 
