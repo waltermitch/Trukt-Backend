@@ -102,7 +102,14 @@ async function fetchOrderGraph(orderCreatedGuid)
     const orderJson = JSON.parse(JSON.stringify(orderFetch));
 
     for (const job of orderJson.jobs)
+    {
+        for (let stop of job.stops)
+            stop = stop.commodities.sort(customSort(['identifier']));
         job.stops = job.stops.sort(customSort(['sequence']));
+    }
+
+    for (let stop of orderJson.stops)
+        stop = stop.commodities.sort(customSort(['identifier']));
 
     orderJson.jobs = orderJson.jobs.sort(customSort(['bol']));
     orderJson.stops = orderJson.stops.sort(customSort(['sequence']));
@@ -177,6 +184,9 @@ async function queryInvoiceAndBills(orderGuid, jobsGuid)
     const [orderInvoices, jobsBills] = await Promise.all([orderInvoicesGraphPromise, jobsBillsGraphPromise]);
 
     const jobsOrdered = jobsBills.sort(customSort(['job', 'bol']));
+    for (const invoice of orderInvoices)
+        invoice.lines = invoice.lines.sort(customSort(['amount']));
+
     return {
         orderInvoices: JSON.parse(JSON.stringify(orderInvoices)),
         jobsBills: JSON.parse(JSON.stringify(jobsOrdered))
