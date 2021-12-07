@@ -172,6 +172,26 @@
                         },
                         "commodities": [
                             {
+                                "capacity": null,
+                                "damaged": "unknown",
+                                "inoperable": "unknown",
+                                "deliveryStatus": "none",
+                                "length": 14,
+                                "weight": 3075,
+                                "quantity": 1,
+                                "description": "Praesent ac sapien quis velit molestie sodales",
+                                "identifier": "9WY2K6ESU9N381536",
+                                "extraExternalData": {
+                                    "data": "Praesent ac sapien quis velit molestie sodales"
+                                },
+                                "lotNumber": null,
+                                "expense": "3.00",
+                                "revenue": "4.00",
+                                "typeId": 23,
+                                "category": "freight",
+                                "type": "other"
+                            },
+                            {
                                 "capacity": "partial truck load",
                                 "damaged": "no",
                                 "inoperable": "yes",
@@ -193,26 +213,6 @@
                                 "typeId": 15,
                                 "category": "vehicle",
                                 "type": "trailer (gooseneck)"
-                            },
-                            {
-                                "capacity": null,
-                                "damaged": "unknown",
-                                "inoperable": "unknown",
-                                "deliveryStatus": "none",
-                                "length": 14,
-                                "weight": 3075,
-                                "quantity": 1,
-                                "description": "Praesent ac sapien quis velit molestie sodales",
-                                "identifier": "9WY2K6ESU9N381536",
-                                "extraExternalData": {
-                                    "data": "Praesent ac sapien quis velit molestie sodales"
-                                },
-                                "lotNumber": null,
-                                "expense": "3.00",
-                                "revenue": "4.00",
-                                "typeId": 23,
-                                "category": "freight",
-                                "type": "other"
                             }
                         ]
                     },
@@ -251,6 +251,26 @@
                         },
                         "commodities": [
                             {
+                                "capacity": null,
+                                "damaged": "unknown",
+                                "inoperable": "unknown",
+                                "deliveryStatus": "none",
+                                "length": 14,
+                                "weight": 3075,
+                                "quantity": 1,
+                                "description": "Praesent ac sapien quis velit molestie sodales",
+                                "identifier": "9WY2K6ESU9N381536",
+                                "extraExternalData": {
+                                    "data": "Praesent ac sapien quis velit molestie sodales"
+                                },
+                                "lotNumber": null,
+                                "expense": "3.00",
+                                "revenue": "4.00",
+                                "typeId": 23,
+                                "category": "freight",
+                                "type": "other"
+                            },
+                            {
                                 "capacity": "partial truck load",
                                 "damaged": "no",
                                 "inoperable": "yes",
@@ -272,26 +292,6 @@
                                 "typeId": 15,
                                 "category": "vehicle",
                                 "type": "trailer (gooseneck)"
-                            },
-                            {
-                                "capacity": null,
-                                "damaged": "unknown",
-                                "inoperable": "unknown",
-                                "deliveryStatus": "none",
-                                "length": 14,
-                                "weight": 3075,
-                                "quantity": 1,
-                                "description": "Praesent ac sapien quis velit molestie sodales",
-                                "identifier": "9WY2K6ESU9N381536",
-                                "extraExternalData": {
-                                    "data": "Praesent ac sapien quis velit molestie sodales"
-                                },
-                                "lotNumber": null,
-                                "expense": "3.00",
-                                "revenue": "4.00",
-                                "typeId": 23,
-                                "category": "freight",
-                                "type": "other"
                             }
                         ]
                     }
@@ -336,6 +336,24 @@
                 },
                 "commodities": [
                     {
+                        "capacity": null,
+                        "damaged": "unknown",
+                        "inoperable": "unknown",
+                        "deliveryStatus": "none",
+                        "length": 14,
+                        "weight": 3075,
+                        "quantity": 1,
+                        "description": "Praesent ac sapien quis velit molestie sodales",
+                        "identifier": "9WY2K6ESU9N381536",
+                        "extraExternalData": {
+                            "data": "Praesent ac sapien quis velit molestie sodales"
+                        },
+                        "lotNumber": null,
+                        "typeId": 23,
+                        "category": "freight",
+                        "type": "other"
+                    },
+                    {
                         "capacity": "partial truck load",
                         "damaged": "no",
                         "inoperable": "yes",
@@ -355,24 +373,6 @@
                         "typeId": 15,
                         "category": "vehicle",
                         "type": "trailer (gooseneck)"
-                    },
-                    {
-                        "capacity": null,
-                        "damaged": "unknown",
-                        "inoperable": "unknown",
-                        "deliveryStatus": "none",
-                        "length": 14,
-                        "weight": 3075,
-                        "quantity": 1,
-                        "description": "Praesent ac sapien quis velit molestie sodales",
-                        "identifier": "9WY2K6ESU9N381536",
-                        "extraExternalData": {
-                            "data": "Praesent ac sapien quis velit molestie sodales"
-                        },
-                        "lotNumber": null,
-                        "typeId": 23,
-                        "category": "freight",
-                        "type": "other"
                     }
                 ]
             },
@@ -411,6 +411,24 @@
                 },
                 "commodities": [
                     {
+                        "capacity": null,
+                        "damaged": "unknown",
+                        "inoperable": "unknown",
+                        "deliveryStatus": "none",
+                        "length": 14,
+                        "weight": 3075,
+                        "quantity": 1,
+                        "description": "Praesent ac sapien quis velit molestie sodales",
+                        "identifier": "9WY2K6ESU9N381536",
+                        "extraExternalData": {
+                            "data": "Praesent ac sapien quis velit molestie sodales"
+                        },
+                        "lotNumber": null,
+                        "typeId": 23,
+                        "category": "freight",
+                        "type": "other"
+                    },
+                    {
                         "capacity": "partial truck load",
                         "damaged": "no",
                         "inoperable": "yes",
@@ -430,24 +448,6 @@
                         "typeId": 15,
                         "category": "vehicle",
                         "type": "trailer (gooseneck)"
-                    },
-                    {
-                        "capacity": null,
-                        "damaged": "unknown",
-                        "inoperable": "unknown",
-                        "deliveryStatus": "none",
-                        "length": 14,
-                        "weight": 3075,
-                        "quantity": 1,
-                        "description": "Praesent ac sapien quis velit molestie sodales",
-                        "identifier": "9WY2K6ESU9N381536",
-                        "extraExternalData": {
-                            "data": "Praesent ac sapien quis velit molestie sodales"
-                        },
-                        "lotNumber": null,
-                        "typeId": 23,
-                        "category": "freight",
-                        "type": "other"
                     }
                 ]
             }
