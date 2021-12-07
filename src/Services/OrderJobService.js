@@ -258,11 +258,13 @@ class OrderJobService
     {
         if (statusToUpdate == 'Ready')
         {
-            const [job] = await OrderJob.query(trx).select('dispatcherGuid').where('guid', jobGuid);
+            const [job] = await OrderJob.query(trx).select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid').where('guid', jobGuid);
             if (!job)
                 return { jobGuid, error: 'Job Not Found', status: 400 };
             if (!job?.dispatcherGuid)
-                return { jobGuid, error: 'Job can not be mark as Ready without a dispatcher', status: 400 };
+                return { jobGuid, error: 'Job cannot be marked as Ready without a dispatcher', status: 400 };
+            if(job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
+                return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
 
         const payload = OrderJobService.createStatusPayload(statusToUpdate, userGuid);
@@ -311,13 +313,9 @@ class OrderJobService
         const trx = await OrderJob.startTransaction();
         try
         {
-            let job = OrderJob.fromJson({
-                guid: jobGuid,
-                isOnHold: true
-            });
-            job.setUpdatedBy(currentUser);
-            job = await OrderJob.query(trx).patchAndFetchById(jobGuid, job);
-            return job;
+            const res = await OrderJobService.updateJobStatus(jobGuid, 'On Hold', currentUser, trx);
+            await trx.commit();
+            return res;
         }
         catch (e)
         {
@@ -337,13 +335,9 @@ class OrderJobService
         const trx = await OrderJob.startTransaction();
         try
         {
-            let job = OrderJob.fromJson({
-                guid: jobGuid,
-                isOnHold: false
-            });
-            job.setUpdatedBy(currentUser);
-            job = await OrderJob.query(trx).patchAndFetchById(jobGuid, job);
-            return job;
+            const res = await OrderJobService.updateJobStatus(jobGuid, 'Ready', currentUser, trx);
+            await trx.commit();
+            return res;
         }
         catch (e)
         {

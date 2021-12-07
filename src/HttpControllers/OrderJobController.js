@@ -37,7 +37,6 @@ class OrderJobController
         }
         catch (error)
         {
-            console.log(error);
             res.status(400);
             res.json(error);
         }
@@ -50,17 +49,22 @@ class OrderJobController
         try
         {
             const response = await OrderJobService.putOnHold(jobGuid, req.session.userGuid);
-            if(!response)
+            if(response.status >= 400)
             {
-                throw new Error('Job not Found');
+                throw Error(response.error);
             }
             myEmitter.emit('orderjob_hold_added', { guid: jobGuid });
             res.status(202).json(response);
         }
         catch(error)
         {
+            let status = 400;
+            if(error.message == 'Job Not Found')
+            {
+                status = 404;
+            }
             next({
-                status: 404,
+                status,
                 data: { message: error?.message || 'Internal server error' }
             });
         }
@@ -73,17 +77,22 @@ class OrderJobController
         try
         {
             const response = await OrderJobService.unsetOnHold(jobGuid, req.session.userGuid);
-            if(!response)
+            if(response.status >= 400)
             {
-                throw new Error('Job not Found');
+                throw Error(response.error);
             }
             myEmitter.emit('orderjob_hold_removed', { guid: jobGuid });
             res.status(202).json(response);
         }
         catch(error)
         {
+            let status = 400;
+            if(error.message == 'Job Not Found')
+            {
+                status = 404;
+            }
             next({
-                status: 404,
+                status,
                 data: { message: error?.message || 'Internal server error' }
             });
         }
