@@ -559,6 +559,15 @@ class OrderJob extends BaseModel
                     'job.isComplete': false
                 })
                 .whereNull('job.vendorGuid');
+        },
+        statusInProgress: (queryBuilder) =>
+        {
+            queryBuilder.alias('job').whereNotNull('job.vendorGuid').where({
+                'job.isReady': true,
+                'job.isOnHold': false,
+                'job.isDeleted': false,
+                'job.isCanceled': false
+            });
         }
     };
 
