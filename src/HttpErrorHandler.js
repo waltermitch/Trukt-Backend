@@ -15,6 +15,21 @@ module.exports = (err, request, response, next) =>
         });
         return;
     }
+    // this is to catch weirdo errors everyone keep inventing.
+    if (err.status)
+    {
+        if (typeof err.error === 'string')
+        {
+            err.message = err.error;
+            delete err.error;
+        }
+        response.status(err.status);
+        delete err.status;
+        response.json({
+            errors: [err]
+        });
+        return;
+    }
     if (err?.response?.data)
     {
         status = err.response.status;

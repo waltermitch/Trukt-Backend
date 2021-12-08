@@ -66,21 +66,25 @@ class OrderJobService
             .returning('stopGuid')
             .then((deletedStopLinks) =>
             {
-                const stopGuids = [... new Set(deletedStopLinks.map(it => it.stopGuid))];
-
                 if (deletedStopLinks.length > 0)
                 {
+                    const stopGuids = [... new Set(deletedStopLinks.map(it => it.stopGuid))];
+
                     // if the commodity only exists for the order, delete the commodity
                     const deleteLooseOrderStopLinks = [];
                     for (const stopGuid of stopGuids)
                     {
                         deleteLooseOrderStopLinks.push(
+
+                            // delete stopLinks that are not attached to a job, but are attached to the order
                             OrderStopLink.query(trx)
                                 .whereIn('commodityGuid', commodities)
                                 .where('orderGuid', orderGuid)
                                 .where('stopGuid', stopGuid)
                                 .whereNull('jobGuid')
                                 .whereNotExists(
+
+                                    // and where there are no other stopLinks that are attached to the same stop that are attached to a job
                                     OrderStopLink.query(trx)
                                         .whereIn('commodityGuid', commodities)
                                         .where('stopGuid', stopGuid)
@@ -91,25 +95,38 @@ class OrderJobService
                     }
 
                     return Promise.all([
+                        // delete the commodities that are not linked to a stopLink that is only attached to an Order
                         Commodity.query(trx)
                             .whereIn('guid', commodities)
                             .whereNotExists(
+
+                                // where a link between another job doesnt exist
                                 OrderStopLink.query(trx)
                                     .whereIn('commodityGuid', commodities)
                                     .where('orderGuid', orderGuid)
                                     .whereNotNull('jobGuid'))
-                            .delete(),
+                            .delete()
+                            .returning('guid'),
                         Promise.all(deleteLooseOrderStopLinks)
                     ]).then((numDeletes) =>
                     {
-                        console.log('deleted commodities: ', numDeletes);
+                        const deletedComms = numDeletes[0].map(it => it.guid );
 
                         // if the there is a stop that is not attached to an order, delete the stop
                         return OrderStop.query(trx)
                             .whereIn('guid', stopGuids)
                             .whereNotIn('guid', OrderStopLink.query(trx).select('stopGuid'))
-                            .delete();
+                            .delete()
+                            .returning('guid')
+                            .then((deletedStops) =>
+                            {
+                                return { deleted: { commodities: deletedComms, stops: deletedStops.map(it => it.guid) }, modified: { stops: stopGuids, commodities: [] } };
+                            });
                     });
+                }
+                else
+                {
+                    return { deleted: { commodities: [], stops: [] }, modified: { commodities: [], stops: [] } };
                 }
             });
     }
@@ -258,11 +275,13 @@ class OrderJobService
     {
         if (statusToUpdate == 'Ready')
         {
-            const [job] = await OrderJob.query(trx).select('dispatcherGuid').where('guid', jobGuid);
+            const [job] = await OrderJob.query(trx).select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid').where('guid', jobGuid);
             if (!job)
                 return { jobGuid, error: 'Job Not Found', status: 400 };
             if (!job?.dispatcherGuid)
-                return { jobGuid, error: 'Job can not be mark as Ready without a dispatcher', status: 400 };
+                return { jobGuid, error: 'Job cannot be marked as Ready without a dispatcher', status: 400 };
+            if(job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
+                return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
 
         const payload = OrderJobService.createStatusPayload(statusToUpdate, userGuid);
@@ -300,6 +319,60 @@ class OrderJobService
         }
     }
 
+    /**
+     * Sets a job to On Hold by checking the boolean field isOnHold to true
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async addHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const res = await OrderJobService.updateJobStatus(jobGuid, 'On Hold', currentUser, trx);
+            await trx.commit();
+            return res;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+
+    /**
+     * Removes the job status from On Hold by setting the isOnHold field to false
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async removeHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const job = await OrderJob.query(trx).findById(jobGuid);
+            let res;
+            if (job.isOnHold)
+            {
+                res = await OrderJobService.updateJobStatus(jobGuid, 'Ready', currentUser, trx);
+            }
+            else
+            {
+                res = { status: 400, message: 'This Job does not have any holds.' };
+            }
+
+            await trx.commit();
+            return res;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+    
     static async bulkUpdatePrices(jobInput, userGuid)
     {
         const { jobs, expense, revenue, type, operation } = jobInput;
