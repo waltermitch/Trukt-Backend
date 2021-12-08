@@ -571,6 +571,25 @@ class OrderJob extends BaseModel
         }
         return {};
     }
+
+    static get fetch()
+    {
+        return {
+            // fields that job will return
+            getOrdersPayload: [
+                'job.guid',
+                'job.number',
+                'job.estimatedExpense',
+                'job.estimatedRevenue',
+                'job.status',
+                'job.dateCreated',
+                'job.actualRevenue',
+                'job.actualExpense',
+                'job.dateUpdated',
+                'job.grossProfitMargin'
+            ]
+        };
+    }
 }
 
 Object.assign(OrderJob.prototype, RecordAuthorMixin);

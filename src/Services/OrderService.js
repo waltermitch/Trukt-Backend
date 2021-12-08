@@ -89,23 +89,10 @@ class OrderService
         dateFilterComparisonTypes =
             dates && (await OrderService.getComparisonTypesCached());
 
-        // fields that job will return
-        const jobFieldsToReturn = [
-            'job.guid',
-            'job.number',
-            'job.estimatedExpense',
-            'job.estimatedRevenue',
-            'job.status',
-            'job.dateCreated',
-            'job.actualRevenue',
-            'job.actualExpense',
-            'job.dateUpdated'
-        ];
-
         // beggining of base query for jobs with return of specific fields
         const baseOrderQuery = OrderJob.query()
             .alias('job')
-            .select(jobFieldsToReturn)
+            .select(OrderJob.fetch.getOrdersPayload)
             .page(page, rowCount);
 
         // if global search is enabled
@@ -276,7 +263,7 @@ class OrderService
                 // generate a uuid for the order to reduce the number of http requests to the database
                 // also the uuid is needed for linking the job's OrderStopLinks with the Order guid.
                 '#id': uuid(),
-                    
+
                 // these fields cannot be set by the user
                 status: 'new',
                 isDeleted: false,
