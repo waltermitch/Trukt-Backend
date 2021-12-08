@@ -499,6 +499,12 @@ class OrderJob extends BaseModel
                         'links.isCompleted': false
                     })
                     .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .whereExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'delivery',
+                        'links.isCompleted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
                 .where({
                     'job.isReady': true,
                     'job.isOnHold': false,
@@ -515,7 +521,7 @@ class OrderJob extends BaseModel
                 .whereNotExists(orderStopLinks.query().joinRelated('stop').alias('links')
                     .where({
                         'stop.stopType': 'delivery',
-                        'links.isCompleted': true
+                        'links.isCompleted': false
                     })
                     .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
                 .where({
