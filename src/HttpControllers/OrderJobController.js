@@ -16,7 +16,7 @@ class OrderJobController
             res.status(200).json(result);
     }
 
-    static async updateStopStatus(req, res)
+    static async updateStopStatus(req, res, next)
     {
         try
         {
@@ -28,8 +28,7 @@ class OrderJobController
         }
         catch (error)
         {
-            res.status(404);
-            res.json(error.message);
+            next(error);
         }
     }
 
