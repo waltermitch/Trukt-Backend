@@ -3,6 +3,7 @@ const OrderStops = require('../Models/OrderStop');
 const OrderStopLinks = require('../Models/OrderStopLink');
 const { DateTime } = require('luxon');
 const { raw } = require('objection');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 
 class OrderStopService
 {
@@ -15,41 +16,55 @@ class OrderStopService
         const trx = await knex.transaction();
 
         // raw query to verify if provided guid exist in tables
-        const [job, jobStop, myCommodities] = await knex.raw(`
+        const [jobRes, jobStop, dbCommodities] = await knex.raw(`
             SELECT * FROM rcg_tms.order_jobs oj WHERE guid = '${jobGuid}';
             SELECT * FROM rcg_tms.order_stops os WHERE os.guid = '${stopGuid}';
             SELECT akeys(hstore('${hstoreValue.join(',')}') - hstore(array_agg(c.guid), array_agg(c.digit))) AS guid
             FROM(SELECT guid:: text, '1' AS digit FROM rcg_tms.commodities WHERE guid IN ('${commodities.join('\',\'')}') ) c;
         `);
 
+        // convert to a POJO unfortunately it is all snake_case
+        const job = jobRes.rows.shift();
+
         // if job doesn't exist
-        if (!job.rows[0])
+        if (!job)
         {
-            throw new Error('Job Does not exist');
+            throw new HttpError(404, 'Job does not exist');
         }
 
         // if stop doens't exist
         if (!jobStop.rows[0])
         {
-            throw new Error('Stop does not exist');
+            throw new HttpError(404, 'Stop does not exist');
         }
 
         // throw error on commodities that don't exist
-        if (myCommodities.rows[0]?.guid[0] !== undefined)
+        if (dbCommodities.rows[0].guid == null || dbCommodities.rows[0].guid.length > 0)
         {
-            throw new Error(`Commodity ${myCommodities.rows[0]?.guid} does not exist`);
+            let comms;
+            if (dbCommodities.rows[0].guid == null)
+            {
+                comms = commodities;
+            }
+            else
+            {
+                comms = dbCommodities.rows[0].guid;
+            }
+            const error = new HttpError(404, 'Commodities do not exist');
+            error.commodities = comms;
+            throw error;
         }
 
         // If the job is on hold, something is wrong with it and its stops should not be able to be updated
-        if(job.isOnHold)
+        if(job.is_on_hold)
         {
-            throw new Error('Please remove the hold on this job before updating pickup or delivery dates');
+            throw new HttpError(400, 'Please remove the hold on this job before updating pickup or delivery dates');
         }
 
         // first we want to update the the job stop links
         // validate date (can remove this if we will rely on openapi validation)
         if (!DateTime.fromISO(date).isValid)
-            throw new Error('Invalid date');
+            throw new HttpError(400, 'Invalid date');
 
         // first update the job stop links and the commodities
         const StopLinksQuery = OrderStopLinks.query(trx);
