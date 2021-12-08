@@ -473,7 +473,7 @@ describe('Status verification', () =>
         const resJob = await getJob('Active');
 
         // assert
-        expectFields(resJob, false, false, false, true, false, false);
+        expectFields(resJob, false, false, false, false, false, false);
     });
 
     it('Job is Not Active', async () =>
@@ -493,45 +493,6 @@ describe('Status verification', () =>
         expect(resJob).toBeUndefined();
     });
 
-});
-
-describe('Exception Handling', () =>
-{
-    beforeEach(async () =>
-    {
-        trx = await BaseModel.startTransaction();
-
-        const client = await SFAccount.query(trx).insertAndFetch({ name: 'Integration Test Client' });
-
-        const order = Order.fromJson({
-            clientGuid: client.guid,
-            referenceNumber: 'TEST',
-            status: 'new',
-            isTender: false
-        });
-        const job = OrderJob.fromJson({
-            isTransport: true,
-            typeId: 1
-        });
-        order.setCreatedBy(process.env.SYSTEM_USER);
-        job.setCreatedBy(process.env.SYSTEM_USER);
-        order.jobs = [job];
-        context.client = client;
-        context.order = await Order.query(trx).insertGraphAndFetch(order, { relate: true });
-        context.job = order.jobs[0];
-    });
-
-    afterEach(async () =>
-    {
-        await trx.rollback();
-    });
-
-    afterAll(async () =>
-    {
-        // close the connection to the database because it will hang otherwise
-        BaseModel.knex().destroy();
-    });
-
     it('Job is Ready And Canceled', async () =>
     {
         try
@@ -548,7 +509,7 @@ describe('Exception Handling', () =>
         }
     });
 
-    it('Job is Complete and Canceled', async () =>
+     it('Job is Complete and Canceled', async () =>
     {
         try
         {

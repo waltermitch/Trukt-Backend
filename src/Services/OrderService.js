@@ -1,6 +1,6 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
-const CommodityService = require('../Services/CommodityService');
 const LoadboardService = require('../Services/LoadboardService');
+const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
 const GeneralFuncApi = require('../Azure/GeneralFuncApi');
@@ -27,11 +27,14 @@ const NodeCache = require('node-cache');
 const currency = require('currency.js');
 const User = require('../Models/User');
 const Bill = require('../Models/Bill');
+const EventEmitter = require('events');
 const { DateTime } = require('luxon');
 const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+
+const emitter = new EventEmitter();
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -1520,13 +1523,15 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
-            toDelete,
             ...orderData
         } = orderInput;
 
         // wrapping in try catch to roll back transaction
         try
         {
+
+            await OrderService.handleDeletes(guid, jobs, commodities, stops, trx);
+
             const [
                 contactRecordType,
                 clientFound,
@@ -1594,6 +1599,7 @@ class OrderService
                 stopContactsGraphMap,
                 currentUser
             );
+
             const jobsToUpdate = OrderService.createJobsGraph(
                 jobs,
                 jobTypes,
@@ -1644,79 +1650,6 @@ class OrderService
                     allowRefs: true
                 });
 
-            if (jobs)
-            {
-                const delProms = [];
-                for (const job of jobs)
-                {
-
-                    const toDelete = job.delete;
-                    if (toDelete)
-                    {
-                        for (const key of Object.keys(toDelete))
-                        {
-                            switch (key)
-                            {
-                                case 'commodities':
-                                    delProms.push(OrderStopLink.query(trx)
-                                        .whereIn('commodityGuid', toDelete.commodities)
-                                        .delete()
-                                        .then((numDeletes) =>
-                                        {
-                                            // if the commodity only exists for the order, delete the commodity
-                                            return Promise.all([
-                                                Commodity.query(trx)
-                                                    .whereIn('guid', toDelete.commodities)
-                                                    .whereNotExists(
-                                                        OrderStopLink.query(trx)
-                                                            .whereIn('commodityGuid', toDelete.commodities)
-                                                            .where('orderGuid', guid)
-                                                            .whereNotNull('jobGuid'))
-                                                    .delete()
-                                                    .returning('guid')
-                                                    .then((commodities) =>
-                                                    {
-                                                        // if the there is a stop that is not attached to an order, delete the stop
-                                                        return OrderStop.query(trx)
-                                                            .leftJoinRelated('links')
-                                                            .whereNull('links.stopGuid').delete();
-
-                                                    })
-
-                                            ]);
-                                        }));
-                                    break;
-                                default:
-
-                                // do nothing
-                            }
-                        }
-
-                    }
-
-                }
-                await Promise.all(delProms);
-
-            }
-
-            // handle deletions
-            const deletions = [];
-            if (toDelete)
-            {
-                Object.keys(toDelete).forEach((e) =>
-                {
-                    switch (e)
-                    {
-                        case 'commodities':
-                            for (const guid of toDelete.commodities)
-                                deletions.push({ func: CommodityService.deleteCommodity, params: [guid, currentUser, trx] });
-                            break;
-                    }
-                });
-            }
-
-            await Promise.all(deletions.map(({ func, params }) => func(...params)));
-
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
             // TODO: Events here
@@ -1736,6 +1669,73 @@ class OrderService
             console.log(error);
             await trx.rollback();
             throw error;
+        }
+    }
+
+    static async handleDeletes(orderGuid, jobs, commodities, stops, trx )
+    {
+        const delProms = [];
+        for (const job of jobs || [])
+        {
+            const toDelete = job.delete;
+
+            // remove delete object from OrderJob as it will messup the upsert.
+            delete job.delete;
+            if (toDelete)
+            {
+                for (const key of Object.keys(toDelete))
+                {
+                    switch (key)
+                    {
+                        case 'commodities':
+                            // when a commodity is being deleted, remove it from the order.
+                            const deleteComsProm = OrderJobService.deleteCommodities(orderGuid, job.guid, toDelete.commodities, trx);
+                            deleteComsProm.then(({ deleted, modified }) =>
+                            {
+                                for (const stopGuid of deleted.stops || [])
+                                {
+                                    OrderService._removeByGuid(stopGuid, stops);
+                                    OrderService._removeByGuid(stopGuid, job.stops);
+                                }
+
+                                for (const commGuid of deleted.commodities || [])
+                                {
+                                    OrderService._removeByGuid(commGuid, commodities);
+                                    OrderService._removeByGuid(commGuid, job.commodities);
+
+                                    for (const stop of job.stops || [])
+                                    {
+                                        OrderService._removeByGuid(commGuid, stop.commodities);
+                                    }
+                                }
+                                
+                                if (modified.stops)
+                                {
+                                    emitter.emit('orderstop_status_update', modified.stops );
+                                }
+
+                            });
+                            delProms.push(deleteComsProm);
+                            break;
+                        default:
+
+                        // do nothing
+                    }
+                }
+            }
+        }
+        delProms && await Promise.all(delProms);
+    }
+
+    static _removeByGuid(someGuid, somelistGuids)
+    {
+        if (somelistGuids)
+        {
+            const index = somelistGuids.findIndex(it => it.guid === someGuid);
+            if (index != -1)
+            {
+                somelistGuids.splice(index, 1);
+            }
         }
     }
 
