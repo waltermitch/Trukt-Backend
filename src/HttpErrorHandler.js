@@ -1,4 +1,5 @@
 const validatorErrors = require('express-openapi-validator').error;
+const HttpError = require('./ErrorHandling/Exceptions/HttpError');
 
 /* eslint-disable */
 module.exports = (err, request, response, next) =>
@@ -13,6 +14,13 @@ module.exports = (err, request, response, next) =>
         response.json({
             errors: err.errors
         });
+        return;
+    } else if (err instanceof HttpError)
+    {
+        response.status(err.status)
+        response.json({
+            errors: [ err.toJson() ]
+        })
         return;
     }
     // this is to catch weirdo errors everyone keep inventing.
