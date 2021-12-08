@@ -1,15 +1,11 @@
-// get the reference of EventEmitter class of events module
 const EventEmitter = require('events');
 const OrderService = require('./OrderService');
+const OrderStopService = require('./OrderStopService');
+const OrderStopLinks = require('../Models/OrderStopLink');
 
-// my class that extencd the Emmitter class
-class MyEmitter extends EventEmitter { }
+const emitter = new EventEmitter();
 
-// my instance
-const myEmitter = new MyEmitter();
-
-// register event
-myEmitter.on('OrderCreate', (orderGuid) =>
+emitter.on('OrderCreate', (orderGuid) =>
 {
     // set Immediate make the call async
     setImmediate(() =>
@@ -18,8 +14,7 @@ myEmitter.on('OrderCreate', (orderGuid) =>
     });
 });
 
-// register event
-myEmitter.on('OrderUpdate', (Object) =>
+emitter.on('OrderUpdate', (Object) =>
 {
     // set Immediate make the call async
     setImmediate(() =>
@@ -28,5 +23,16 @@ myEmitter.on('OrderUpdate', (Object) =>
     });
 });
 
+emitter.on('orderstop_status_update', (stopGuids) =>
+{
+    // this will kick it off on the next loop iteration.
+    setImmediate(async () =>
+    {
+        const trx = await OrderStopLinks.startTransaction();
+        await OrderStopService.validateStopLinks(stopGuids, '', trx);
+        await trx.commit();
+    });
+});
+
 // export the event
-module.exports = myEmitter;
+module.exports = emitter;
