@@ -10,6 +10,12 @@ class CentralDispatch extends Loadboard
         this.loadboardName = 'CENTRALDISPATCH';
         this.postObject = data.postObjects[this.loadboardName];
         this.senderId = process.env['loadboards.CentralDispatch.Id'];
+
+        // attaching the node env onto the job number so different environments unpost each others loads
+        if(process.env.NODE_ENV != 'prod')
+        {
+            this.data.number += '-' + process.env.NODE_ENV.slice(0, 3).toUpperCase();
+        }
     }
 
     toJSON()
