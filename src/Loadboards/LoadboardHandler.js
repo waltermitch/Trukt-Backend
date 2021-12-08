@@ -71,7 +71,28 @@ const myMessageHandler = async (message) =>
             {
                 const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
 
-                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts } });
+                // this loops through all the posts and returns true as soon as
+                // it finds that one of the loadboards is marked as posted
+                const isPosted = R.any(post => post.posted())(Object.values(posts));
+                const status = isPosted ? 'posted' : 'ready';
+
+                // Objection returns the number of rows affected by a query
+                // so that means if this query really did change the status, then
+                // add the changed status to the pubsub message.
+                // If the job status is in pending, picked up, or delivered,
+                // then the status should not be updated and the message listener should
+                // not need a status update, otherwise the new status will be sent.
+                const numOfJobsAffected = await OrderJob.query()
+                .patch({ status })
+                .findById(jobGuid)
+                .whereNotIn('status', ['pending', 'picked up', 'delivered']);
+                const messagePayload = { posts };
+                if(numOfJobsAffected > 0)
+                {
+                    messagePayload.status = status;
+                }
+
+                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { messagePayload } });
             }
 
         }
