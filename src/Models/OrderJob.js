@@ -340,10 +340,10 @@ class OrderJob extends BaseModel
         query
 
             // search by job number
-            .orWhere('number', 'ilike', `%${keyword}%`)
+            .orWhere('job.number', 'ilike', `%${keyword}%`)
 
             // search stoplink
-            .orWhereIn('guid', OrderStopLink.query().select('jobGuid')
+            .orWhereIn('job.guid', OrderStopLink.query().select('jobGuid')
 
                 // search stop
                 .whereIn('stopGuid', OrderStop.query().select('guid')
@@ -499,6 +499,12 @@ class OrderJob extends BaseModel
                         'links.isCompleted': false
                     })
                     .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .whereExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'delivery',
+                        'links.isCompleted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
                 .where({
                     'job.isReady': true,
                     'job.isOnHold': false,
@@ -515,7 +521,7 @@ class OrderJob extends BaseModel
                 .whereNotExists(orderStopLinks.query().joinRelated('stop').alias('links')
                     .where({
                         'stop.stopType': 'delivery',
-                        'links.isCompleted': true
+                        'links.isCompleted': false
                     })
                     .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
                 .where({
@@ -553,6 +559,15 @@ class OrderJob extends BaseModel
                     'job.isComplete': false
                 })
                 .whereNull('job.vendorGuid');
+        },
+        statusInProgress: (queryBuilder) =>
+        {
+            queryBuilder.alias('job').whereNotNull('job.vendorGuid').where({
+                'job.isReady': true,
+                'job.isOnHold': false,
+                'job.isDeleted': false,
+                'job.isCanceled': false
+            });
         }
     };
 
@@ -564,6 +579,25 @@ class OrderJob extends BaseModel
             if (lineFound) return lineFound;
         }
         return {};
+    }
+
+    static get fetch()
+    {
+        return {
+            // fields that job will return
+            getOrdersPayload: [
+                'job.guid',
+                'job.number',
+                'job.estimatedExpense',
+                'job.estimatedRevenue',
+                'job.status',
+                'job.dateCreated',
+                'job.actualRevenue',
+                'job.actualExpense',
+                'job.dateUpdated',
+                'job.grossProfitMargin'
+            ]
+        };
     }
 }
 

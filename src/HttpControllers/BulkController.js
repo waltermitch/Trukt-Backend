@@ -30,6 +30,12 @@ class BulkController
         const results = await OrderJobSerivce.bulkUpdateStatus(req.body, req.session.userGuid);
         res.status(200).json(results);
     }
+
+    static async updateJobPrices(req, res)
+    {
+        const results = await OrderJobSerivce.bulkUpdatePrices(req.body, req.session.userGuid);
+        res.status(200).json(results);
+    }
 }
 
 module.exports = BulkController;

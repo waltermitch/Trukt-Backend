@@ -56,7 +56,7 @@ module.exports = () =>
                 const c = await Heroku.getConfig();
                 return Object.assign(base, urlParser(c.DATABASE_URL));
             };
-            conConfig.pool = { min: 1, max: 5 };
+            conConfig.pool = { min: 1, max: 25 };
             break;
         default:
             throw new Error('Unknown environment set : ' + env);

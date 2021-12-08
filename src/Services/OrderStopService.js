@@ -40,6 +40,12 @@ class OrderStopService
             throw new Error(`Commodity ${myCommodities.rows[0]?.guid} does not exist`);
         }
 
+        // If the job is on hold, something is wrong with it and its stops should not be able to be updated
+        if(job.isOnHold)
+        {
+            throw new Error('Please remove the hold on this job before updating pickup or delivery dates');
+        }
+
         // first we want to update the the job stop links
         // validate date (can remove this if we will rely on openapi validation)
         if (!DateTime.fromISO(date).isValid)
