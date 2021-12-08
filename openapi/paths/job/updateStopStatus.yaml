@@ -24,11 +24,15 @@ requestBody:
     application/json:
       schema:
         type: object
+        required: 
+          - commodities
+          - date
         properties:
           commodities:
             type: array
             items:
               $ref: '../../components/schemas/Common.yaml#/guid'
+            minItems: 1
           date:
             $ref: '../../components/schemas/Common.yaml#/dateTime'
 responses:
