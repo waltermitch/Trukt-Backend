@@ -386,7 +386,8 @@ class OrderJobService
             const jobGuid = jobUpdated.value?.jobGuid;
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
-            response[jobGuid] = { error, status };
+            const data = jobUpdated.value?.data;
+            response[jobGuid] = { error, status, data };
             return response;
         }, {});
     }
@@ -422,9 +423,15 @@ class OrderJobService
             }
 
             await Promise.all(updatePricesPromises);
+            const newExpenseValues = await OrderJob.query(trx).select('actualRevenue', 'actualExpense').findById(jobGuid);
 
             await trx.commit();
-            return { jobGuid, error: null, status: 200 };
+            return {
+                jobGuid,
+                error: null,
+                status: 200,
+                data: { ...newExpenseValues }
+            };
         }
         catch (error)
         {
