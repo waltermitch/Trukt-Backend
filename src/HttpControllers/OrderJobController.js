@@ -51,6 +51,12 @@ class OrderJobController
 
     }
 
+    static async getCarrier(req, res)
+    {
+        const { status, data } = await OrderJobService.getJobCarrier(req.params.jobGuid);
+        res.status(status).json(data);
+    }
+
     static async addHold(req, res, next)
     {
         await OrderJobController._toggleHold(true, req, res, next);

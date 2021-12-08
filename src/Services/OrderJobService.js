@@ -492,6 +492,46 @@ class OrderJobService
                 return amount;
         }
     }
+
+    static async getJobCarrier(jobGuid)
+    {
+        const jobFound = await OrderJob.query().findById(jobGuid);
+
+        if (!jobFound)
+            return {
+                status: 404,
+                data: {
+                    status: 404,
+                    error: 'Job not found'
+                }
+            };
+
+        const carrierInfo = await OrderJob.fetchGraph(jobFound)
+            .withGraphFetched({ vendor: true, vendorAgent: true, dispatcher: true, dispatches: { vendor: true, vendorAgent: true } })
+            .modifyGraph('vendor', builder =>
+                builder.select()
+                    .leftJoinRelated('rectype')
+                    .select('rectype.name as rtype', 'salesforce.accounts.*')
+            )
+            .modifyGraph('dispatches', (builder) =>
+                builder.select().where('isPending', true)
+                    .orderBy('dateCreated').limit(1)
+            )
+            .modifyGraph('dispatches.vendor', builder =>
+                builder.select()
+                    .leftJoinRelated('rectype')
+                    .select('rectype.name as rtype', 'salesforce.accounts.*')
+            );
+
+        return {
+            status: 200,
+            data: {
+                vendor: carrierInfo?.vendor || carrierInfo?.dispatches[0]?.vendor || {},
+                vendorAgent: carrierInfo?.vendorAgent || carrierInfo?.dispatches[0]?.vendorAgent || {},
+                dispatcher: carrierInfo?.dispatcher || {}
+            }
+        };
+    }
 }
 
 module.exports = OrderJobService;
