@@ -5,7 +5,7 @@ const OrderStopLinks = require('../Models/OrderStopLink');
 
 const emitter = new EventEmitter();
 
-emitter.on('OrderCreate', (orderGuid) =>
+emitter.on('order_created', (orderGuid) =>
 {
     // set Immediate make the call async
     setImmediate(() =>
