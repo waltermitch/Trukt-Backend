@@ -2,7 +2,7 @@ const OrderStopService = require('../Services/OrderStopService');
 const NotesService = require('../Services/NotesService');
 const StatusCacheManager = require('../EventManager/StatusCacheManager');
 const OrderJobService = require('../Services/OrderJobService');
-const myEmitter = require('../Services/EventEmitter');
+const emitter = require('../Services/EventEmitter');
 
 class OrderJobController
 {
@@ -43,58 +43,40 @@ class OrderJobController
 
     }
 
-    static async setJobToOnHold(req, res, next)
+    static async addHold(req, res, next)
     {
-        const jobGuid = req.params.jobGuid;
-        try
-        {
-            const response = await OrderJobService.putOnHold(jobGuid, req.session.userGuid);
-            if(response.status >= 400)
-            {
-                throw Error(response.error);
-            }
-            myEmitter.emit('orderjob_hold_added', { guid: jobGuid });
-            res.status(202).json(response);
-        }
-        catch(error)
-        {
-            let status = 400;
-            if(error.message == 'Job Not Found')
-            {
-                status = 404;
-            }
-            next({
-                status,
-                data: { message: error?.message || 'Internal server error' }
-            });
-        }
+        await OrderJobController._toggleHold(true, req, res, next);
     }
 
-    static async unsetJobOnHold(req, res, next)
+    static async removeHold(req, res, next)
+    {
+        await OrderJobController._toggleHold(false, req, res, next);
+    }
+
+    static async _toggleHold(value, req, res, next)
     {
         const jobGuid = req.params.jobGuid;
-
+        const func = value ? OrderJobService.addHold : OrderJobService.removeHold;
+        const eventEmitted = value ? 'orderjob_hold_added' : 'orderjob_hold_removed';
         try
         {
-            const response = await OrderJobService.unsetOnHold(jobGuid, req.session.userGuid);
+            const response = await func(jobGuid, req.session.userGuid);
+            
             if(response.status >= 400)
             {
-                throw Error(response.error);
+                next(response);
+                return;
             }
-            myEmitter.emit('orderjob_hold_removed', { guid: jobGuid });
-            res.status(202).json(response);
+            else
+            {
+                emitter.emit(eventEmitted, jobGuid);
+                res.status(200);
+                res.send();
+            }
         }
         catch(error)
         {
-            let status = 400;
-            if(error.message == 'Job Not Found')
-            {
-                status = 404;
-            }
-            next({
-                status,
-                data: { message: error?.message || 'Internal server error' }
-            });
+            next(error);
         }
     }
 }

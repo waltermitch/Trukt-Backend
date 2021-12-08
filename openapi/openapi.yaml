@@ -74,10 +74,9 @@ paths:
       $ref: paths/job/getBills.yaml
   /job/{jobGuid}/hold:
     post:
-      $ref: paths/job/setOnHold.yaml
-  /job/{jobGuid}/hold/remove:
+      $ref: paths/job/addHold.yaml
     delete:
-      $ref: paths/job/removeOnHold.yaml
+      $ref: paths/job/removeHold.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml

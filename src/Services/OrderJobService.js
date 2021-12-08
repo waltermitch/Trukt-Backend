@@ -308,7 +308,7 @@ class OrderJobService
      * @param {*} currentUser object or guid of current user
      * @returns the update job or nothing if no job found
      */
-    static async putOnHold(jobGuid, currentUser)
+    static async addHold(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
         try
@@ -330,12 +330,22 @@ class OrderJobService
      * @param {*} currentUser object or guid of current user
      * @returns the update job or nothing if no job found
      */
-    static async unsetOnHold(jobGuid, currentUser)
+    static async removeHold(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
         try
         {
-            const res = await OrderJobService.updateJobStatus(jobGuid, 'Ready', currentUser, trx);
+            const job = await OrderJob.query(trx).findById(jobGuid);
+            let res;
+            if (job.isOnHold)
+            {
+                res = await OrderJobService.updateJobStatus(jobGuid, 'Ready', currentUser, trx);
+            }
+            else
+            {
+                res = { status: 400, message: 'This Job does not have any holds.' };
+            }
+
             await trx.commit();
             return res;
         }
