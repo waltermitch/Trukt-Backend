@@ -374,6 +374,8 @@ class OrderJob extends BaseModel
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
         globalSearch: this.globalSearch,
+        transportJob: (queryBuilder) => { queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['transport'])); },
+        serviceJob: (queryBuilder) => { queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['service'])); },
         statusActive: (queryBuilder) =>
         {
             queryBuilder
@@ -414,7 +416,7 @@ class OrderJob extends BaseModel
                     'job.isComplete': false
                 });
         },
-        statusComplete: (queryBuilder) => { queryBuilder.where({ 'isCompleted': true }); },
+        statusComplete: (queryBuilder) => { queryBuilder.where({ 'isComplete': true }); },
         statusCanceled: (queryBuilder) => { queryBuilder.where({ 'isCanceled': true }); },
         statusDeleted: (queryBuilder) => { queryBuilder.where({ 'isDeleted': true }); },
         statusDispatched: (queryBuilder) =>
@@ -497,6 +499,12 @@ class OrderJob extends BaseModel
                         'links.isCompleted': false
                     })
                     .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .whereExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'delivery',
+                        'links.isCompleted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
                 .where({
                     'job.isReady': true,
                     'job.isOnHold': false,
@@ -513,7 +521,7 @@ class OrderJob extends BaseModel
                 .whereNotExists(orderStopLinks.query().joinRelated('stop').alias('links')
                     .where({
                         'stop.stopType': 'delivery',
-                        'links.isCompleted': true
+                        'links.isCompleted': false
                     })
                     .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
                 .where({
@@ -551,6 +559,15 @@ class OrderJob extends BaseModel
                     'job.isComplete': false
                 })
                 .whereNull('job.vendorGuid');
+        },
+        statusInProgress: (queryBuilder) =>
+        {
+            queryBuilder.alias('job').whereNotNull('job.vendorGuid').where({
+                'job.isReady': true,
+                'job.isOnHold': false,
+                'job.isDeleted': false,
+                'job.isCanceled': false
+            });
         }
     };
 
@@ -562,6 +579,25 @@ class OrderJob extends BaseModel
             if (lineFound) return lineFound;
         }
         return {};
+    }
+
+    static get fetch()
+    {
+        return {
+            // fields that job will return
+            getOrdersPayload: [
+                'job.guid',
+                'job.number',
+                'job.estimatedExpense',
+                'job.estimatedRevenue',
+                'job.status',
+                'job.dateCreated',
+                'job.actualRevenue',
+                'job.actualExpense',
+                'job.dateUpdated',
+                'job.grossProfitMargin'
+            ]
+        };
     }
 }
 

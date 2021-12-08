@@ -1,6 +1,6 @@
-const BaseModel = require('./BaseModel');
-let FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+let FindOrCreateMixin = require('./Mixins/FindOrCreate');
+const BaseModel = require('./BaseModel');
 
 class TerminalContact extends BaseModel
 {

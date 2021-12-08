@@ -450,3 +450,16 @@ Enums:
       - Ready
       - Canceled
       - Deleted
+  bulkJobPriceType:
+    type: string
+    enum:
+      - percent
+      - flat
+    default: flat
+  bulkJobPriceOperation:
+    type: string
+    enum:
+      - set
+      - increase
+      - decrease
+    default: set

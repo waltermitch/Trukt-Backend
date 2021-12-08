@@ -52,6 +52,16 @@ class OrderStopLink extends BaseModel
         };
     }
 
+    static modifiers = {
+        orderOnly: (query) =>
+        {
+            query.whereNull('jobGuid');
+        },
+        commoditiesIn: (queryBuilder, commodities) => { queryBuilder.whereIn('commodityGuid', commodities); },
+        orderStop: (queryBuilder, orderGuid, stopGuid) => { queryBuilder.where({ 'orderGuid': orderGuid, 'stopGuid': stopGuid }); },
+        jobStop: (queryBuilder, jobGuid, stopGuid) => { queryBuilder.where({ 'jobGuid': jobGuid, 'stopGuid': stopGuid }); }
+    }
+
     static toStops(stopLinks)
     {
         // not to have recursive requires

@@ -1,6 +1,6 @@
-const BaseModel = require('./BaseModel');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
-const { RecordAuthorMixin, AuthorRelationMappings, isNotDeleted } = require('./Mixins/RecordAuthors');
+const BaseModel = require('./BaseModel');
 
 class LoadboardPost extends BaseModel
 {

@@ -212,3 +212,233 @@ Job With All Data:
       allOf:
         - $ref: './Contact.yaml'
         - description: The contact that works for the vendor that is fulfilling the job.
+
+Transport:
+  type: object
+  description: Stores Transport aggregate
+  properties: 
+    active:
+      type: integer
+      description: Transport jobs that are active.
+      example: 63
+    new:
+      type: integer
+      description: Transport jobs that are new.              
+      example: 37
+    tender:
+      type: integer
+      description: Tender Orders.              
+      example: 2
+    onHold:
+      type: integer
+      description: Transport jobs that are on hold.              
+      example: 1
+    ready:
+      type: integer
+      description: Transport jobs that are ready.              
+      example: 17
+    posted:
+      type: integer
+      description: Transport jobs that are posted.              
+      example: 3
+    request:
+      type: integer
+      description: Transport jobs that have requests.              
+      example: 1
+    pending:
+      type: integer
+      description: Transport jobs that are pending action.              
+      example: 1
+    declined:
+      type: integer
+      description: Transport jobs that were declined.              
+      example: 1
+    dispatched:
+      type: integer
+      description: Transport jobs that are dispatched.              
+      example: 11
+    pickedUp:
+      type: integer
+      description: Transport jobs that have commodities picked up.              
+      example: 1
+    completed:
+      type: integer
+      description: Transport jobs that are complete.              
+      example: 2
+    delivered:
+      type: integer
+      description: Transport jobs that are delivered.              
+      example: 10
+    canceled:
+      type: integer
+      description: Transport jobs that are canceled.              
+      example: 2
+    deleted:
+      type: integer
+      description: Transport jobs that are deleted.              
+      example: 6
+
+Service: 
+  type: object
+  description: Stores service aggregate
+  properties:             
+    active: 
+      type: integer
+      description: Service jobs that are active.
+      example: 9
+    new: 
+      type: integer
+      description: Service jobs that are new.
+      example: 3
+    onHold: 
+      type: integer
+      description: Service jobs that are on hold.
+      example: 2
+    ready: 
+      type: integer
+      description: Service jobs that are ready.
+      example: 1
+    pending: 
+      type: integer
+      description: Service jobs that are pending.
+      example: 0
+    declined:
+      type: integer
+      description:  Service jobs that were declined.
+      example: 2
+    dispatched: 
+      type: integer
+      description: Service jobs that were dispatched.
+      example: 0
+    completed:
+      type: integer
+      description: Service jobs that were completed.
+      example: 0
+    canceled:
+      type: integer
+      description: Service jobs that were canceled.
+      example: 0
+    deleted: 
+      type: integer
+      description: Service jobs that were deleted.
+      example: 0
+
+Flat Job:
+  type: object
+  properties:
+    guid:
+      $ref: ./Common.yaml#/guid
+    number:
+      type: string
+      pattern: /[A-Z]{2}/d{5}/
+      example: RC10000
+    status:
+      $ref: ./Common.yaml#/Enums/orderStatus
+    distance:
+      type: number
+      description: The calculated distance required to travel to complete the full order in miles.
+      nullable: true
+      minimum: 0
+      maximum: 9999999.9
+    isDummy:
+      type: boolean
+      default: false
+      example: false
+    isCompleted:
+      type: boolean
+      default: false
+      example: false
+    estimatedRevenue:
+      type: string
+      format: currency
+      description: The amount owed by the client.
+    estimatedExpense:
+      type: string
+      format: currency
+      description: The amount owed to the vendors.
+      example: '99.00'
+    quotedRevenue:
+      type: string
+      format: currency
+      description: The amount quoted to the client for this order.
+      example: '99.00'
+    estimatedIncome:
+      allOf:
+        - $ref: ./Common.yaml#/currency
+        - description: The calculated total estimated income for this order.
+          readOnly: true
+          example: '99.00'
+    actualRevenue:
+      allOf:
+        - $ref: ./Common.yaml#/currency
+        - description: The calculated revenue for this order.
+          readOnly: true
+          example: '99.00'
+    actualExpense:
+      allOf:
+        - $ref: ./Common.yaml#/currency
+        - description: The calculated expense for this order.
+          readOnly: true
+          example: '99.00'
+    actualIncome:
+      allOf:
+        - $ref: ./Common.yaml#/currency
+        - description: The calculated total income for this order.
+          readOnly: true
+          example: '99.00'
+    dateStarted:
+      type: string
+      format: date-time
+      description: The date that this job was dispatched and assigned to a vendor.
+    dateCompleted:
+      type: string
+      format: date-time
+      description: The date that this job was completed by a vendor.
+    dateCreated:
+      $ref: ./Common.yaml#/dateCreated
+    dateUpdated:
+      $ref: ./Common.yaml#/dateUpdated
+    createdByGuid:
+      $ref: ./Common.yaml#/createdByGuid
+    updatedByGuid:
+      $ref: ./Common.yaml#/updatedByGuid
+    loadType:
+      type: string
+      enum:
+        - 'full truck load'
+        - 'partial truck load'
+    isStarted:
+      type: boolean
+    instructions:
+      type: string
+    inspectionType:
+      allOf:
+        - $ref: './Common.yaml#/Enums/inspectionType'
+        - description: This field currently has no use.
+    bol:
+      type: string
+      maxLength: 64
+      description: The Bill of Lading reference number for this job.
+    bolUrl:
+      type: string
+      maxLength: 1024
+      description: The URL to the Bill of Lading for this job.
+    equipmentTypeId:
+      type: integer
+      description: An RCG equipment type
+    grossProfitmargin:
+      type: string
+      description: The gross profit made on this job
+      example: '28.17'
+    netProfitmargin:
+      type: string
+      description: The gross margin made on this job
+      example: '17.28'
+    isReady:
+      type: boolean
+    isOnHold:
+      type: boolean
+    isCanceled:
+      type: boolean
+    isComplete:
+      type: boolean

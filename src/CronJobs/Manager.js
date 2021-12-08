@@ -7,6 +7,7 @@ const QBO = require('../QuickBooks/API');
 const Super = require('../Super/API');
 const Cron = require('node-cron');
 const TerminalsHandler = require('../EventManager/TerminalsHandler');
+const StatusCacheManager = require('../EventManager/StatusCacheManager');
 
 const expressions =
 {
@@ -29,6 +30,7 @@ Cron.schedule(expressions.second, async () =>
 // every 5 minutes
 Cron.schedule(expressions.fiveMinutes, async () =>
 {
+    await StatusCacheManager.updateStatus();
     await CoupaManager.checkCoupaQueue();
 });
 

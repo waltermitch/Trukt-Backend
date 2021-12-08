@@ -1,9 +1,9 @@
-const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
-const OrderJob = require('./OrderJob');
 const OrderJobType = require('./OrderJobType');
-const { DateTime } = require('luxon');
+const BaseModel = require('./BaseModel');
 const currency = require('currency.js');
+const OrderJob = require('./OrderJob');
+const { DateTime } = require('luxon');
 
 class Order extends BaseModel
 {
@@ -181,6 +181,7 @@ class Order extends BaseModel
                 },
                 stopLinks:
                 {
+                    $modify: ['orderOnly'],
                     commodity: {
                         vehicle: true,
                         commType: true

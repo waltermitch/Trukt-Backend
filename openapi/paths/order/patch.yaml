@@ -170,6 +170,16 @@ requestBody:
                                 - index
                         required:
                           - index
+                    delete:
+                      description: 'Records that should be removed from the Job.'
+                      type: object
+                      nullable: true
+                      properties:
+                        commodities:
+                          description: 'List of Commodity record guids to remove from the Job.'
+                          type: array
+                          items:
+                            $ref: '../../components/schemas/Common.yaml#/guid'
                   required:
                     - index
                     - guid
@@ -202,7 +212,6 @@ requestBody:
                   required:
                     - name
                     - zipCode
-
           commodities:
             type: array
             items:

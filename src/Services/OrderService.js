@@ -1,5 +1,6 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
+const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
 const GeneralFuncApi = require('../Azure/GeneralFuncApi');
@@ -26,11 +27,14 @@ const NodeCache = require('node-cache');
 const currency = require('currency.js');
 const User = require('../Models/User');
 const Bill = require('../Models/Bill');
+const EventEmitter = require('events');
 const { DateTime } = require('luxon');
 const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+
+const emitter = new EventEmitter();
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -61,7 +65,8 @@ class OrderService
         'picked up': 'statusPickedUp',
         'delivered': 'statusDelivered',
         'ready': 'statusReady',
-        'active': 'statusActive'
+        'active': 'statusActive',
+        'in progress': 'statusInProgress'
     }
 
     static async getOrders(
@@ -85,23 +90,10 @@ class OrderService
         dateFilterComparisonTypes =
             dates && (await OrderService.getComparisonTypesCached());
 
-        // fields that job will return
-        const jobFieldsToReturn = [
-            'job.guid',
-            'job.number',
-            'job.estimatedExpense',
-            'job.estimatedRevenue',
-            'job.status',
-            'job.dateCreated',
-            'job.actualRevenue',
-            'job.actualExpense',
-            'job.dateUpdated'
-        ];
-
         // beggining of base query for jobs with return of specific fields
         const baseOrderQuery = OrderJob.query()
             .alias('job')
-            .select(jobFieldsToReturn)
+            .select(OrderJob.fetch.getOrdersPayload)
             .page(page, rowCount);
 
         // if global search is enabled
@@ -269,6 +261,10 @@ class OrderService
 
             // order object will be used to link OrderStopLink from the job
             const order = Order.fromJson({
+                // generate a uuid for the order to reduce the number of http requests to the database
+                // also the uuid is needed for linking the job's OrderStopLinks with the Order guid.
+                '#id': uuid(),
+
                 // these fields cannot be set by the user
                 status: 'new',
                 isDeleted: false,
@@ -549,6 +545,7 @@ class OrderService
                 for (const stopLink of job.stopLinks)
                 {
                     stopLink.setCreatedBy(currentUser);
+                    stopLink.order = { '#ref': order['#id'] };
                 }
                 order.jobs.push(job);
             }
@@ -578,6 +575,7 @@ class OrderService
                 for (const stopLink of job.stopLinks)
                 {
                     stopLink.setCreatedBy(currentUser);
+                    stopLink.order = { '#ref': order['#id'] };
                 }
 
                 if (isUseful(orderObj.dispatcher))
@@ -1496,8 +1494,10 @@ class OrderService
      */
     static async patchOrder(orderInput, currentUser)
     {
+        // init transaction
         const trx = await Order.startTransaction();
 
+        // extract payload fields
         const {
             guid,
             dispatcher,
@@ -1514,8 +1514,12 @@ class OrderService
             ...orderData
         } = orderInput;
 
+        // wrapping in try catch to roll back transaction
         try
         {
+
+            await OrderService.handleDeletes(guid, jobs, commodities, stops, trx);
+
             const [
                 contactRecordType,
                 clientFound,
@@ -1583,6 +1587,7 @@ class OrderService
                 stopContactsGraphMap,
                 currentUser
             );
+
             const jobsToUpdate = OrderService.createJobsGraph(
                 jobs,
                 jobTypes,
@@ -1649,8 +1654,76 @@ class OrderService
         }
         catch (error)
         {
+            console.log(error);
             await trx.rollback();
             throw error;
+        }
+    }
+
+    static async handleDeletes(orderGuid, jobs, commodities, stops, trx )
+    {
+        const delProms = [];
+        for (const job of jobs || [])
+        {
+            const toDelete = job.delete;
+
+            // remove delete object from OrderJob as it will messup the upsert.
+            delete job.delete;
+            if (toDelete)
+            {
+                for (const key of Object.keys(toDelete))
+                {
+                    switch (key)
+                    {
+                        case 'commodities':
+                            // when a commodity is being deleted, remove it from the order.
+                            const deleteComsProm = OrderJobService.deleteCommodities(orderGuid, job.guid, toDelete.commodities, trx);
+                            deleteComsProm.then(({ deleted, modified }) =>
+                            {
+                                for (const stopGuid of deleted.stops || [])
+                                {
+                                    OrderService._removeByGuid(stopGuid, stops);
+                                    OrderService._removeByGuid(stopGuid, job.stops);
+                                }
+
+                                for (const commGuid of deleted.commodities || [])
+                                {
+                                    OrderService._removeByGuid(commGuid, commodities);
+                                    OrderService._removeByGuid(commGuid, job.commodities);
+
+                                    for (const stop of job.stops || [])
+                                    {
+                                        OrderService._removeByGuid(commGuid, stop.commodities);
+                                    }
+                                }
+                                
+                                if (modified.stops)
+                                {
+                                    emitter.emit('orderstop_status_update', modified.stops );
+                                }
+
+                            });
+                            delProms.push(deleteComsProm);
+                            break;
+                        default:
+
+                        // do nothing
+                    }
+                }
+            }
+        }
+        delProms && await Promise.all(delProms);
+    }
+
+    static _removeByGuid(someGuid, somelistGuids)
+    {
+        if (somelistGuids)
+        {
+            const index = somelistGuids.findIndex(it => it.guid === someGuid);
+            if (index != -1)
+            {
+                somelistGuids.splice(index, 1);
+            }
         }
     }
 

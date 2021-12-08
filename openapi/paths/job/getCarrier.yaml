@@ -1,0 +1,30 @@
+summary: Get carrier by Job
+operationId: getJobCarrier
+description: Get the dispatch carrier information of a Job, in case Vendor and Agent are not set on the job, the information will come from
+  from the most recent “pending” job dispatched
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            dispatcher:
+              $ref: ../../components/schemas/User.yaml#/TMSUser
+            vendor:
+              $ref: ../../components/schemas/Account.yaml#/client
+            vendorAgent:
+              $ref: ../../components/schemas/Contact.yaml
+  404:
+    description: Job not found
+    content:
+      application/json: {}
