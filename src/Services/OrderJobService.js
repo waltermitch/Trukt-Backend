@@ -275,11 +275,13 @@ class OrderJobService
     {
         if (statusToUpdate == 'Ready')
         {
-            const [job] = await OrderJob.query(trx).select('dispatcherGuid').where('guid', jobGuid);
+            const [job] = await OrderJob.query(trx).select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid').where('guid', jobGuid);
             if (!job)
                 return { jobGuid, error: 'Job Not Found', status: 400 };
             if (!job?.dispatcherGuid)
-                return { jobGuid, error: 'Job can not be mark as Ready without a dispatcher', status: 400 };
+                return { jobGuid, error: 'Job cannot be marked as Ready without a dispatcher', status: 400 };
+            if(job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
+                return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
 
         const payload = OrderJobService.createStatusPayload(statusToUpdate, userGuid);
@@ -317,6 +319,60 @@ class OrderJobService
         }
     }
 
+    /**
+     * Sets a job to On Hold by checking the boolean field isOnHold to true
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async addHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const res = await OrderJobService.updateJobStatus(jobGuid, 'On Hold', currentUser, trx);
+            await trx.commit();
+            return res;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+
+    /**
+     * Removes the job status from On Hold by setting the isOnHold field to false
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async removeHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const job = await OrderJob.query(trx).findById(jobGuid);
+            let res;
+            if (job.isOnHold)
+            {
+                res = await OrderJobService.updateJobStatus(jobGuid, 'Ready', currentUser, trx);
+            }
+            else
+            {
+                res = { status: 400, message: 'This Job does not have any holds.' };
+            }
+
+            await trx.commit();
+            return res;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+    
     static async bulkUpdatePrices(jobInput, userGuid)
     {
         const { jobs, expense, revenue, type, operation } = jobInput;
