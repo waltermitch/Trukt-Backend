@@ -2,15 +2,20 @@ const EventEmitter = require('events');
 const OrderService = require('./OrderService');
 const OrderStopService = require('./OrderStopService');
 const OrderStopLinks = require('../Models/OrderStopLink');
+const LoadboardService = require('../Services/LoadboardService');
 
 const emitter = new EventEmitter();
 
 emitter.on('order_created', (orderGuid) =>
 {
     // set Immediate make the call async
-    setImmediate(() =>
+    setImmediate(async () =>
     {
         OrderService.calculatedDistances(orderGuid);
+        const jobsToPost = await OrderService.getTransportJobsIds(orderGuid);
+        await Promise.allSettled(jobsToPost?.map(({ guid, createdByGuid }) =>
+            LoadboardService.createPostings(guid, [{ loadboard: 'SUPERDISPATCH' }], createdByGuid)
+        ));
     });
 });
 

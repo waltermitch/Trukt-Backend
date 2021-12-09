@@ -1660,7 +1660,7 @@ class OrderService
         }
     }
 
-    static async handleDeletes(orderGuid, jobs, commodities, stops, trx )
+    static async handleDeletes(orderGuid, jobs, commodities, stops, trx)
     {
         const delProms = [];
         for (const job of jobs || [])
@@ -1696,10 +1696,10 @@ class OrderService
                                         OrderService._removeByGuid(commGuid, stop.commodities);
                                     }
                                 }
-                                
+
                                 if (modified.stops)
                                 {
-                                    emitter.emit('orderstop_status_update', modified.stops );
+                                    emitter.emit('orderstop_status_update', modified.stops);
                                 }
 
                             });
@@ -2776,6 +2776,13 @@ class OrderService
         }
 
         return results;
+    }
+
+    static async getTransportJobsIds(orderGuid)
+    {
+        return await OrderJob.query().select('guid', 'createdByGuid')
+            .where('orderGuid', orderGuid)
+            .andWhere('isTransport', true);
     }
 }
 
