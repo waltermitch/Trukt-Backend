@@ -421,6 +421,7 @@ class OrderJob extends BaseModel
         statusDeleted: (queryBuilder) => { queryBuilder.where({ 'isDeleted': true }); },
         statusDispatched: (queryBuilder) =>
         {
+            const orderStopLinks = require('./OrderStopLink');
             queryBuilder
                 .where({
                     'isReady': true,
@@ -428,6 +429,18 @@ class OrderJob extends BaseModel
                     'isDeleted': false,
                     'isCanceled': false
                 })
+                .whereExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'pickup',
+                        'links.isStarted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .whereExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'delivery',
+                        'links.isStarted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
                 .whereNotNull('vendorGuid');
         },
         statusPosted: (queryBuilder) =>
