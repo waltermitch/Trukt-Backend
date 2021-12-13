@@ -1,10 +1,9 @@
-const AccountUpdateManager = require('./AccountUpdateManager');
 const Handler = require('./Handler');
 const PG = require('../PostGres');
 
 // list of channels to listen to
 const channels =
-    ['job_status_change', 'account_upserted'];
+    ['job_status_change'];
 
 let client;
 
@@ -34,9 +33,6 @@ class PGListener
                     {
                         case 'job_status_change':
                             await Handler.jobStatusChanged(jsonMsg);
-                            break;
-                        case 'account_upserted':
-                            await AccountUpdateManager.pushToQueue('accountupdated', jsonMsg);
                             break;
                         default:
                             break;
