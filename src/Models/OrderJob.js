@@ -283,7 +283,7 @@ class OrderJob extends BaseModel
                     Order.query().select('clientGuid').whereRaw('guid = order_guid')
                 );
             case 'dispatcherName':
-                return User.query().select('name').whereRaw('guid = dispatcher_guid');
+                return User.query().select('name').whereRaw('guid = "job".dispatcher_guid');
             case 'salespersonName':
                 return SFAccount.query().select('name').where('guid',
                     Order.query().select('salespersonGuid').whereRaw('guid = order_guid')
@@ -291,34 +291,34 @@ class OrderJob extends BaseModel
             case 'pickupTerminal':
                 return Terminal.query().select('name').where('guid',
                     OrderStop.query().select('terminalGuid').whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'pickup').orderBy('dateRequestedStart').limit(1)
                 );
             case 'deliveryTerminal':
                 return Terminal.query().select('name').where('guid',
                     OrderStop.query().select('terminalGuid').whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'delivery').orderBy('dateRequestedStart', 'desc').limit(1)
                 );
             case 'requestedPickupDate':
                 return OrderStop.query().min('dateRequestedStart')
                     .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'pickup');
             case 'requestedDeliveryDate':
                 return OrderStop.query().max('dateRequestedStart')
                     .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'delivery');
             case 'scheduledPickupDate':
                 return OrderStop.query().min('dateScheduledStart')
                     .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'pickup');
             case 'scheduledDeliveryDate':
                 return OrderStop.query().max('dateScheduledStart')
                     .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'delivery');
             default:
                 return sortField;
