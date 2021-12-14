@@ -192,6 +192,11 @@ class LoadboardService
                 throw new Error('Cannot dispatch non transport job');
             }
 
+            if(job.isOnHold)
+            {
+                throw new Error('Cannot dispatch job that is on hold');
+            }
+
             if (job.dispatches.length != 0)
                 throw new Error('Cannot dispatch with already active load offer');
 

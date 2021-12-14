@@ -191,7 +191,7 @@ class EDIController
             if (isUseful(orderObj.totalCost))
             {
                 // distribute the totalCost across all of the commodities
-                const commCosts = currency(orderObj.totalcost).distribute(orderObj.commodities?.length);
+                const commCosts = currency(orderObj.totalCost).distribute(orderObj.commodities?.length);
                 for (let i = 0; i < orderObj.commodities.length; i++)
                 {
                     orderObj.commodities[i].cost = commCosts[i].value;
@@ -238,19 +238,31 @@ class EDIController
                         return stop;
                     })
                 });
+                orderObj.jobs.push(job);
             }
 
             // clean up the commodity fields
             for (const comm of orderObj.commodities || [])
             {
                 delete comm.cost;
+
+                // Vehicle commodity type must have a Year Make Model, otherwise it is a freight.
+                if ((comm.typeId && comm.typeId <= 20) || comm.category === 'vehicle')
+                {
+                    if (!(comm.year && comm.make && comm.model))
+                    {
+                        comm.typeId = 23;
+                        delete comm.category;
+                        delete comm.type;
+                    }
+                }
             }
 
             // clear up the order fields
             delete orderObj.totalCost;
             delete orderObj.edi;
 
-            const order = await OrderService.create(req.body, req.session.userGuid);
+            const order = await OrderService.create(orderObj, req.session.userGuid);
 
             await EDIData.query().insert({
                 documentNumber: 200,

@@ -1,0 +1,29 @@
+summary: Remove a Hold
+description: | 
+  Removing a Hold from a Job restores functionality to the Job.
+operationId: removeJobHold
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: Success
+    content:
+      application/json: {}
+  404:
+    description: Job Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Error message
+              example: Job not Found

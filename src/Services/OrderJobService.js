@@ -275,11 +275,13 @@ class OrderJobService
     {
         if (statusToUpdate == 'Ready')
         {
-            const [job] = await OrderJob.query(trx).select('dispatcherGuid').where('guid', jobGuid);
+            const [job] = await OrderJob.query(trx).select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid').where('guid', jobGuid);
             if (!job)
                 return { jobGuid, error: 'Job Not Found', status: 400 };
             if (!job?.dispatcherGuid)
-                return { jobGuid, error: 'Job can not be mark as Ready without a dispatcher', status: 400 };
+                return { jobGuid, error: 'Job cannot be marked as Ready without a dispatcher', status: 400 };
+            if(job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
+                return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
 
         const payload = OrderJobService.createStatusPayload(statusToUpdate, userGuid);
@@ -317,6 +319,60 @@ class OrderJobService
         }
     }
 
+    /**
+     * Sets a job to On Hold by checking the boolean field isOnHold to true
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async addHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const res = await OrderJobService.updateJobStatus(jobGuid, 'On Hold', currentUser, trx);
+            await trx.commit();
+            return res;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+
+    /**
+     * Removes the job status from On Hold by setting the isOnHold field to false
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async removeHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const job = await OrderJob.query(trx).findById(jobGuid);
+            let res;
+            if (job.isOnHold)
+            {
+                res = await OrderJobService.updateJobStatus(jobGuid, 'Ready', currentUser, trx);
+            }
+            else
+            {
+                res = { status: 400, message: 'This Job does not have any holds.' };
+            }
+
+            await trx.commit();
+            return res;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+    
     static async bulkUpdatePrices(jobInput, userGuid)
     {
         const { jobs, expense, revenue, type, operation } = jobInput;
@@ -330,7 +386,8 @@ class OrderJobService
             const jobGuid = jobUpdated.value?.jobGuid;
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
-            response[jobGuid] = { error, status };
+            const data = jobUpdated.value?.data;
+            response[jobGuid] = { error, status, data };
             return response;
         }, {});
     }
@@ -366,9 +423,15 @@ class OrderJobService
             }
 
             await Promise.all(updatePricesPromises);
+            const newExpenseValues = await OrderJob.query(trx).select('actualRevenue', 'actualExpense').findById(jobGuid);
 
             await trx.commit();
-            return { jobGuid, error: null, status: 200 };
+            return {
+                jobGuid,
+                error: null,
+                status: 200,
+                data: { ...newExpenseValues }
+            };
         }
         catch (error)
         {
@@ -428,6 +491,46 @@ class OrderJobService
             default:
                 return amount;
         }
+    }
+
+    static async getJobCarrier(jobGuid)
+    {
+        const jobFound = await OrderJob.query().findById(jobGuid);
+
+        if (!jobFound)
+            return {
+                status: 404,
+                data: {
+                    status: 404,
+                    error: 'Job not found'
+                }
+            };
+
+        const carrierInfo = await OrderJob.fetchGraph(jobFound)
+            .withGraphFetched({ vendor: true, vendorAgent: true, dispatcher: true, dispatches: { vendor: true, vendorAgent: true } })
+            .modifyGraph('vendor', builder =>
+                builder.select()
+                    .leftJoinRelated('rectype')
+                    .select('rectype.name as rtype', 'salesforce.accounts.*')
+            )
+            .modifyGraph('dispatches', (builder) =>
+                builder.select().where('isPending', true)
+                    .orderBy('dateCreated').limit(1)
+            )
+            .modifyGraph('dispatches.vendor', builder =>
+                builder.select()
+                    .leftJoinRelated('rectype')
+                    .select('rectype.name as rtype', 'salesforce.accounts.*')
+            );
+
+        return {
+            status: 200,
+            data: {
+                vendor: carrierInfo?.vendor || carrierInfo?.dispatches[0]?.vendor || {},
+                vendorAgent: carrierInfo?.vendorAgent || carrierInfo?.dispatches[0]?.vendorAgent || {},
+                dispatcher: carrierInfo?.dispatcher || {}
+            }
+        };
     }
 }
 
