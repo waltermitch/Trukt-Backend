@@ -121,8 +121,6 @@ class TerminalService
 
     static async resolveTerminal(terminal)
     {
-        const trx = await Terminal.startTransaction();
-
         const { guid } = terminal;
         try
         {
@@ -200,7 +198,6 @@ class TerminalService
             termninalToUpdate.latitude = arcgisAddress.location.y;
             termninalToUpdate.longitude = arcgisAddress.location.x;
             termninalToUpdate.isResolved = true;
-            termninalToUpdate.resolvedTimes = 0;
         }
         else
             termninalToUpdate.resolvedTimes++;
