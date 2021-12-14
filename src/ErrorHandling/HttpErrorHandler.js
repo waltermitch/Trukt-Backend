@@ -67,7 +67,6 @@ module.exports = (err, request, response, next) =>
         status = err.status || 500;
         data = err.toString();
     }
-
     console.log(err);
     response.status(status);
     response.send(data);
