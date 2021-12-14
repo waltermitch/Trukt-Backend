@@ -1,0 +1,32 @@
+summary: Add a Hold
+description: |
+  Adding a Hold to Job restricts some functionality. 
+  
+  + The Hold will need to be removed before restoring full functionality to the Job.
+  + Jobs with a Hold cannot be dispatched.
+operationId: addJobHold
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: Success
+    content:
+      application/json: {}
+  404:
+    description: Job Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Error message
+              example: Job not Found
