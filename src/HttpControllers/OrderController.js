@@ -46,8 +46,8 @@ class OrderController
             order = await OrderService.getOrderByGuid(order.guid);
             console.log(order.guid);
 
-            // register this event
-            myEmitter.emit('OrderCreate', order.guid);
+            if (!order?.isTender)
+                myEmitter.emit('order_created', order.guid);
 
             // registering order to status manager
             OrderService.registerCreateOrderStatusManager(order, req.session.userGuid);
@@ -88,6 +88,13 @@ class OrderController
         if (req.params.action == 'accept')
         {
             responses = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+
+            for (const response of responses)
+            {
+                if (response.status === 200)
+                    myEmitter.emit('order_created', response.orderGuid);
+            }
+
         }
         else if (req.params.action == 'reject')
         {
