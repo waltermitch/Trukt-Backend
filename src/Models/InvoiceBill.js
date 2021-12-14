@@ -1,5 +1,5 @@
-const BaseModel = require('./BaseModel');
 const { RecordAuthorMixin, isNotDeleted } = require('./Mixins/RecordAuthors');
+const BaseModel = require('./BaseModel');
 
 /**
  * This class represents an invoice or a bill

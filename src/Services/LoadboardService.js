@@ -192,6 +192,11 @@ class LoadboardService
                 throw new Error('Cannot dispatch non transport job');
             }
 
+            if(job.isOnHold)
+            {
+                throw new Error('Cannot dispatch job that is on hold');
+            }
+
             if (job.dispatches.length != 0)
                 throw new Error('Cannot dispatch with already active load offer');
 
@@ -233,7 +238,7 @@ class LoadboardService
                 throw new Error('Job bill missing. Bill is required in order to set payment method and payment terms');
             }
             
-            await InvoiceBill.query(trx).patch({ paymentMethodId: body.paymentMethod, paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job?.bills[0]?.guid);
+            await InvoiceBill.query(trx).patch({ paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job?.bills[0]?.guid);
             const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
             for (const line of lines)
                 line.transacting(trx);
@@ -321,7 +326,7 @@ class LoadboardService
                 StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,
-                    statusId: 8,
+                    statusId: 10,
                     jobGuid: jobId,
                     extraAnnotations: {
                         dispatchedTo: 'internal',
@@ -352,18 +357,22 @@ class LoadboardService
 
         try
         {
-
-            const dispatch = await OrderJobDispatch.query(trx).withGraphJoined('[loadboardPost, job(justIds), vendor, vendorAgent]')
-                .where({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid }).andWhere(builder =>
-                {
-                    builder.where({ isAccepted: true }).orWhere({ isPending: true });
-                })
-                .modifiers({
-                    justIds(builder)
-                    {
-                        builder.select('guid', 'orderGuid');
-                    }
-                }).first();
+            const dispatch = await OrderJobDispatch.query()
+            .select('rcgTms.orderJobDispatches.guid',
+                    'rcgTms.orderJobDispatches.jobGuid',
+                    'isAccepted',
+                    'isPending',
+                    'isCanceled',
+                    'isDeclined')
+            .withGraphJoined('[loadboardPost, job, vendor, vendorAgent]')
+            .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
+            .andWhere(builder =>
+            {
+                builder.where({ isAccepted: true }).orWhere({ isPending: true });
+            })
+            .modifyGraph('job', builder => builder.select('rcgTms.orderJobs.guid', 'orderGuid'))
+            .modifyGraph('vendor', builder => builder.select('name', 'salesforce.accounts.guid'))
+            .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
 
             dispatch.setUpdatedBy(currentUser);
 
@@ -414,7 +423,7 @@ class LoadboardService
                 StatusManagerHandler.registerStatus({
                     orderGuid: dispatch.job.orderGuid,
                     userGuid: currentUser,
-                    statusId: 10,
+                    statusId: 12,
                     jobGuid,
                     extraAnnotations: {
                         undispatchedFrom: 'internal',

@@ -1,5 +1,5 @@
-const BaseModel = require('./BaseModel');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
+const BaseModel = require('./BaseModel');
 
 class Vehicle extends BaseModel
 {

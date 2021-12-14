@@ -1,6 +1,6 @@
-const BaseModel = require('./BaseModel');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
-const { RecordAuthorMixin, AuthorRelationMappings, isNotDeleted } = require('./Mixins/RecordAuthors');
+const BaseModel = require('./BaseModel');
 
 class LoadboardPost extends BaseModel
 {
@@ -31,6 +31,14 @@ class LoadboardPost extends BaseModel
                 join: {
                     from: 'rcgTms.loadboardPosts.guid',
                     to: 'rcgTms.orderJobDispatches.loadboardPostGuid'
+                }
+            },
+            requests: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./LoadboardRequest'),
+                join: {
+                    from: 'rcgTms.loadboardPosts.guid',
+                    to: 'rcgTms.loadboardRequests.loadboardPostGuid'
                 }
             }
         };

@@ -1,0 +1,134 @@
+summary: Update a Stop Status on a Job
+operationId: updateStopStatus
+description: Update the Status of a Stop on a job
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+  - in: path
+    name: stopGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+  - in: path
+    name: status
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/Enums/stopStatus'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        required: 
+          - commodities
+          - date
+        properties:
+          commodities:
+            type: array
+            items:
+              $ref: '../../components/schemas/Common.yaml#/guid'
+            minItems: 1
+          date:
+            $ref: '../../components/schemas/Common.yaml#/dateTime'
+responses:
+  200:
+    description: OK
+    content:
+      application/json: 
+        schema:
+          type: object
+          properties: 
+            guid: 
+              $ref: ../../components/schemas/Common.yaml#/guid
+            stopType: 
+              type: string
+              description: The type of stop it is.
+              example: pickup
+            dateStarted: 
+              type: string
+              format: date-time
+              description: When the pickup/delivery started.
+              example: "2021-12-05T14:07:40.704-08:00"
+            dateCompleted: 
+              type: string
+              format: date-time
+              description: When was the stop fully pickedUp/Delivered.
+              example: null
+              nullable: true
+            sequence: 
+              type: number  
+              description: Sequence of the stop.
+              example: 0
+            status: 
+              type: string
+              description: Status field
+              example: Picked Up
+            notes: 
+              type: string
+              description: Notes about the stop.
+              example: Eius dolores vel aperiam hic omnis sed eos sint qui.
+            dateScheduledStart: 
+              type: string
+              format: date-time
+              description: When to start pickup/delivery.
+              example: "2021-12-07T03:00:00.000-08:00"
+            dateScheduledEnd: 
+              type: string
+              format: date-time
+              description: When to end pickup/delivery. 
+              example: '2021-12-09T03:00:00.000-08:00'
+            dateScheduledType: 
+              type: string
+              description: Approximation type.
+              example: "no later than"
+            dateEstimatedStart: 
+              type: string
+              description: Approximate start date.
+              example: null
+              nullable: true
+            dateEstimatedEnd: 
+              type: string
+              description: Approximate completion date.
+              example: null
+              nullable: true
+            dateEstimatedType: 
+              type: string
+              description: Type of estimate.
+              example: null
+              nullable: true
+            dateRequestedStart: 
+              type: string
+              description: When is the desired pick up date.
+              example: null
+              nullable: true
+            dateRequestedEnd: 
+              type: string
+              description: Latest time you you want commodity pickup/delivered.
+              nullable: true
+              example: null
+            dateRequestedType: 
+              type: string
+              description: Type of request.
+              nullable: true 
+              example: null
+            isStarted: 
+              type: boolean
+              description: When all commodities have left the stop.
+              example: true
+            isCompleted: 
+              type: boolean
+              description: When the stop is considered as complete.
+              example: false
+  
+  404:
+    description: Not Found
+    content:
+      application/json:
+        schema: 
+          type: string
+          example: Job Does not exist 

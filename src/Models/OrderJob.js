@@ -173,6 +173,19 @@ class OrderJob extends BaseModel
                     from: 'rcgTms.orderJobs.typeId',
                     to: 'rcgTms.orderJobTypes.id'
                 }
+            },
+            requests:
+            {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./LoadboardRequest'),
+                join: {
+                    from: 'rcgTms.orderJobs.guid',
+                    through: {
+                        from: 'rcgTms.LoadboardPosts.guid',
+                        to: 'rcgTms.LoadboardPosts.jobGuid'
+                    },
+                    to: 'rcgTms.loadboardRequests.guid'
+                }
             }
         };
     }
@@ -239,14 +252,6 @@ class OrderJob extends BaseModel
         this.isTransport = (type.category === 'transport');
     }
 
-    static filterIsTender(query, isTender)
-    {
-        const Order = require('./Order');
-        return isTender !== undefined ?
-            query.whereIn('orderGuid', Order.query().select('guid').where('isTender', isTender))
-            : query;
-    }
-
     static filterJobCategories(query, jobCategories = [])
     {
         if (jobCategories.length > 0)
@@ -278,9 +283,7 @@ class OrderJob extends BaseModel
                     Order.query().select('clientGuid').whereRaw('guid = order_guid')
                 );
             case 'dispatcherName':
-                return User.query().select('name').where('guid',
-                    Order.query().select('dispatcher_guid').whereRaw('guid = order_guid')
-                ).toKnexQuery();
+                return User.query().select('name').whereRaw('guid = "job".dispatcher_guid');
             case 'salespersonName':
                 return SFAccount.query().select('name').where('guid',
                     Order.query().select('salespersonGuid').whereRaw('guid = order_guid')
@@ -288,34 +291,34 @@ class OrderJob extends BaseModel
             case 'pickupTerminal':
                 return Terminal.query().select('name').where('guid',
                     OrderStop.query().select('terminalGuid').whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'pickup').orderBy('dateRequestedStart').limit(1)
                 );
             case 'deliveryTerminal':
                 return Terminal.query().select('name').where('guid',
                     OrderStop.query().select('terminalGuid').whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'delivery').orderBy('dateRequestedStart', 'desc').limit(1)
                 );
             case 'requestedPickupDate':
                 return OrderStop.query().min('dateRequestedStart')
                     .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'pickup');
             case 'requestedDeliveryDate':
                 return OrderStop.query().max('dateRequestedStart')
                     .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'delivery');
             case 'scheduledPickupDate':
                 return OrderStop.query().min('dateScheduledStart')
                     .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'pickup');
             case 'scheduledDeliveryDate':
                 return OrderStop.query().max('dateScheduledStart')
                     .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "rcg_tms"."order_jobs"."guid"')
+                        OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'delivery');
             default:
                 return sortField;
@@ -337,10 +340,10 @@ class OrderJob extends BaseModel
         query
 
             // search by job number
-            .orWhere('number', 'ilike', `%${keyword}%`)
+            .orWhere('job.number', 'ilike', `%${keyword}%`)
 
             // search stoplink
-            .orWhereIn('guid', OrderStopLink.query().select('jobGuid')
+            .orWhereIn('job.guid', OrderStopLink.query().select('jobGuid')
 
                 // search stop
                 .whereIn('stopGuid', OrderStop.query().select('guid')
@@ -368,10 +371,217 @@ class OrderJob extends BaseModel
     }
 
     static modifiers = {
-        filterIsTender: this.filterIsTender,
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
-        globalSearch: this.globalSearch
+        globalSearch: this.globalSearch,
+        transportJob: (queryBuilder) => { queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['transport'])); },
+        serviceJob: (queryBuilder) => { queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['service'])); },
+        statusActive: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .where({
+                    'order.isTender': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                });
+        },
+        statusOnHold: (queryBuilder) => { queryBuilder.where({ 'isOnHold': true, 'isDeleted': false, 'isCanceled': false }); },
+        statusNew: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .where({
+                    'order.isTender': false,
+                    'job.isReady': false,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'job.isComplete': false
+                });
+        },
+        statusTender: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .where({
+                    'order.isTender': true,
+                    'job.isReady': false,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'job.isComplete': false
+                });
+        },
+        statusComplete: (queryBuilder) => { queryBuilder.where({ 'isComplete': true }); },
+        statusCanceled: (queryBuilder) => { queryBuilder.where({ 'isCanceled': true }); },
+        statusDeleted: (queryBuilder) => { queryBuilder.where({ 'isDeleted': true }); },
+        statusDispatched: (queryBuilder) =>
+        {
+            const orderStopLinks = require('./OrderStopLink');
+            queryBuilder
+                .where({
+                    'isReady': true,
+                    'isOnHold': false,
+                    'isDeleted': false,
+                    'isCanceled': false
+                })
+                .whereExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'pickup',
+                        'links.isStarted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .whereExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'delivery',
+                        'links.isStarted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .whereNotNull('vendorGuid');
+        },
+        statusPosted: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('loadboardPosts', { alias: 'post' })
+                .where({
+                    'job.isReady': true,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'post.isPosted': true
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusPending: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('dispatches', { alias: 'dispatch' })
+                .where({
+                    'job.isReady': true,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'dispatch.isPending': true
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusDeclined: (queryBuilder) =>
+        {
+            queryBuilder
+                .alias('job')
+                .joinRelated('dispatches', { alias: 'dispatch' })
+                .where({
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'dispatch.isDeclined': true
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusRequests: (queryBuilder) =>
+        {
+            const loadboardRequest = require('./LoadboardRequest');
+            queryBuilder
+                .alias('job')
+                .whereExists(loadboardRequest.query().joinRelated('posting').alias('req')
+                    .where({
+                        'posting.isPosted': true,
+                        'req.isValid': true
+                    })
+                    .whereRaw('"posting"."job_guid" = "job"."guid"'))
+                .where({
+                    'job.isReady': true,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusPickedUp: (queryBuilder) =>
+        {
+            const orderStopLinks = require('./OrderStopLink');
+            queryBuilder
+                .alias('job')
+                .whereNotExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'pickup',
+                        'links.isCompleted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .whereExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'delivery',
+                        'links.isCompleted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .where({
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                })
+                .whereNotNull('job.vendorGuid');
+        },
+        statusDelivered: (queryBuilder) =>
+        {
+            const orderStopLinks = require('./OrderStopLink');
+            queryBuilder
+                .alias('job')
+                .whereNotExists(orderStopLinks.query().joinRelated('stop').alias('links')
+                    .where({
+                        'stop.stopType': 'delivery',
+                        'links.isCompleted': false
+                    })
+                    .whereRaw('"links"."stop_guid" = "stop"."guid" AND "links"."job_guid" = "job"."guid"'))
+                .where({
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false
+                })
+                .whereNotNull('job.vendorGuid');
+        },
+        statusReady: (queryBuilder) =>
+        {
+            const loadboardPost = require('./LoadboardPost');
+            const orderJobDispatches = require('./OrderJobDispatch');
+            queryBuilder
+                .alias('job')
+                .joinRelated('order', { alias: 'order' })
+                .whereNotExists(loadboardPost.query().alias('post')
+                    .where({
+                        'post.isPosted': false
+                    })
+                    .whereRaw('"job"."guid" = "post"."job_guid"'))
+                .whereNotExists(orderJobDispatches.query().alias('ojd')
+                    .where({
+                        'ojd.isAccepted': false,
+                        'ojd.isPending': false
+                    })
+                    .whereRaw('"job"."guid" = "ojd"."job_guid"'))
+                .where({
+                    'order.isTender': false,
+                    'job.isReady': true,
+                    'job.isOnHold': false,
+                    'job.isDeleted': false,
+                    'job.isCanceled': false,
+                    'job.isComplete': false
+                })
+                .whereNull('job.vendorGuid');
+        },
+        statusInProgress: (queryBuilder) =>
+        {
+            queryBuilder.alias('job').whereNotNull('job.vendorGuid').where({
+                'job.isReady': true,
+                'job.isOnHold': false,
+                'job.isDeleted': false,
+                'job.isCanceled': false
+            });
+        }
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
@@ -382,6 +592,25 @@ class OrderJob extends BaseModel
             if (lineFound) return lineFound;
         }
         return {};
+    }
+
+    static get fetch()
+    {
+        return {
+            // fields that job will return
+            getOrdersPayload: [
+                'job.guid',
+                'job.number',
+                'job.estimatedExpense',
+                'job.estimatedRevenue',
+                'job.status',
+                'job.dateCreated',
+                'job.actualRevenue',
+                'job.actualExpense',
+                'job.dateUpdated',
+                'job.grossProfitMargin'
+            ]
+        };
     }
 }
 
