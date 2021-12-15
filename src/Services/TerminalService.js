@@ -1,4 +1,5 @@
 const ArcgisClient = require('../ArcgisClient');
+const telemetryClient = require('../ErrorHandling/Insights');
 const Terminal = require('../Models/Terminal');
 
 const keywordFields = {
@@ -152,6 +153,21 @@ class TerminalService
             {
                 const message = `Error, terminal ${guid} could not be updated: ${err?.nativeError?.detail || err?.message || err}`;
                 console.error(message);
+                telemetryClient.trackException({
+                    exception: new Error(message),
+                    properties: {
+                        guid: terminal.guid,
+                        name: terminal.name,
+                        street1: terminal.street1,
+                        street2: terminal.street2,
+                        city: terminal.city,
+                        state: terminal.state,
+                        postalCode: terminal.zipCode,
+                        latitude: terminal.latitude,
+                        longitude: terminal.longitude
+                    },
+                    severity: 2
+                });
                 throw { message };
             }
         }
@@ -182,7 +198,6 @@ class TerminalService
             termninalToUpdate.latitude = arcgisAddress.location.y;
             termninalToUpdate.longitude = arcgisAddress.location.x;
             termninalToUpdate.isResolved = true;
-            termninalToUpdate.resolvedTimes = 0;
         }
         else
             termninalToUpdate.resolvedTimes++;
