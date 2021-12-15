@@ -93,6 +93,19 @@ class OrderJobController
             next(error);
         }
     }
+    
+    static async setJobToReady(req, res, next)
+    {
+        try
+        {
+            await OrderJobService.setToReady(req.params.jobGuid, req.session.userGuid);
+            res.status(204).send();
+        }
+        catch(e)
+        {
+            next(e);
+        }
+    }
 }
 
 module.exports = OrderJobController;
