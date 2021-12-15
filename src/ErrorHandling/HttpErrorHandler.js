@@ -1,5 +1,5 @@
 const validatorErrors = require('express-openapi-validator').error;
-const HttpError = require('./ErrorHandling/Exceptions/HttpError');
+const HttpError = require('./Exceptions/HttpError');
 
 /* eslint-disable */
 module.exports = (err, request, response, next) =>
