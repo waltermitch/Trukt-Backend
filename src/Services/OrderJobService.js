@@ -5,7 +5,7 @@ const OrderJob = require('../Models/OrderJob');
 const InvoiceLine = require('../Models/InvoiceLine');
 const Invoice = require('../Models/Invoice');
 const Bill = require('../Models/Bill');
-const { pickBy } = require('ramda');
+const R = require('ramda');
 const Currency = require('currency.js');
 
 class OrderJobService
@@ -21,7 +21,7 @@ class OrderJobService
         };
 
         // remove and check for undefineds
-        const cleaned = pickBy((it) => it !== undefined, payload);
+        const cleaned = R.pickBy((it) => it !== undefined, payload);
 
         if (Object.keys(cleaned).length === 0)
             throw { 'status': 400, 'data': 'Missing Update Values' };
