@@ -107,7 +107,7 @@ class OrderStop extends BaseModel
 
     static firstAndLast(stops = [])
     {
-        stops.sort((a, b) => (a.sequence < b.sequence));
+        stops.sort(OrderStop.sortBySequence);
 
         return [stops[0], stops[stops.length - 1]];
     }
