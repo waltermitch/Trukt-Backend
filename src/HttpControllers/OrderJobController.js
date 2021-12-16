@@ -98,7 +98,8 @@ class OrderJobController
     {
         try
         {
-            await OrderJobService.setToReady(req.params.jobGuid, req.session.userGuid);
+            const job = await OrderJobService.setToReady(req.params.jobGuid, req.session.userGuid);
+            emitter.emit('orderjob_status', job.orderGuid);
             res.status(204).send();
         }
         catch(e)
