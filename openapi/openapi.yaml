@@ -77,6 +77,9 @@ paths:
       $ref: paths/job/addHold.yaml
     delete:
       $ref: paths/job/removeHold.yaml
+  /job/{jobGuid}/ready:
+    put:
+      $ref: paths/job/setToReady.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml
@@ -218,7 +221,7 @@ paths:
       $ref: paths/job/updateStopStatus.yaml
   /job/statuses:
     get:
-      $ref: paths/job/getStatuses.yaml    
+      $ref: paths/job/getStatuses.yaml
   /bulk/order/users:
     put:
       $ref: paths/bulk/updateOrderUsers.yaml

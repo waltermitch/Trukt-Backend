@@ -1,0 +1,43 @@
+summary: Set Job To Ready
+operationId: setJobToReady
+description:
+  Attempts to set a job to 'Ready' status. Meant to be used when transitioning the job from new to ready.
+  To go to ready the job must - 1. Have its status boolean fields be false.
+  2. Have a dispatcher.
+  3. Not be assigned a vendor.
+  4. Have commodities for its stops.
+  5. Have all terminals be resolved.
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  204:
+    description: No Content
+
+  404:
+    description: Job not found
+    content:
+      application/json: {}
+
+  409:
+    description: Conflict
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: the conflict with the job
+                    example: The job is already verified
