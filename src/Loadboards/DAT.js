@@ -1,7 +1,7 @@
-const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
-const DateTime = require('luxon').DateTime;
+const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
+const { DateTime } = require('luxon');
 
 class DAT extends Loadboard
 {

@@ -1,8 +1,8 @@
+const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJob = require('../Models/OrderJob');
 const R = require('ramda');
-const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const topicName = 'loadboard_incoming';
@@ -83,11 +83,11 @@ const myMessageHandler = async (message) =>
                 // then the status should not be updated and the message listener should
                 // not need a status update, otherwise the new status will be sent.
                 const numOfJobsAffected = await OrderJob.query()
-                .patch({ status })
-                .findById(jobGuid)
-                .whereNotIn('status', ['pending', 'picked up', 'delivered']);
+                    .patch({ status })
+                    .findById(jobGuid)
+                    .whereNotIn('status', ['pending', 'picked up', 'delivered']);
                 const messagePayload = { posts };
-                if(numOfJobsAffected > 0)
+                if (numOfJobsAffected > 0)
                 {
                     messagePayload.status = status;
                 }
@@ -102,6 +102,7 @@ const myMessageHandler = async (message) =>
         await receiver.completeMessage(message);
     }
 };
+
 const myErrorHandler = async (args) =>
 {
 

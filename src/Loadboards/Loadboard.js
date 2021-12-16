@@ -3,9 +3,7 @@ const DateTime = require('luxon').DateTime;
 const states = require('us-state-codes');
 const R = require('ramda');
 
-const anonUser = '00000000-0000-0000-0000-000000000000';
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
-const loadboardName = '';
 
 class Loadboard
 {
@@ -24,7 +22,7 @@ class Loadboard
         this.data.pickup.dateScheduledStart = DateTime.fromISO(this.data.pickup.dateScheduledStart).toUTC();
         this.data.pickup.dateScheduledEnd = this.data.pickup.dateScheduledType == 'estimated' ? DateTime.fromISO(this.data.pickup.dateScheduledEnd).toUTC() : this.data.pickup.dateScheduledStart;
         this.data.pickup.terminal.state = this.getStateCode(this.data.pickup.terminal.state);
-        if(this.data.pickup.primaryContact)
+        if (this.data.pickup.primaryContact)
         {
             this.data.pickup.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.phoneNumber);
             this.data.pickup.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.mobileNumber);
@@ -35,7 +33,7 @@ class Loadboard
         this.data.delivery.dateScheduledStart = DateTime.fromISO(this.data.delivery.dateScheduledStart).toUTC();
         this.data.delivery.dateScheduledEnd = this.data.delivery.dateScheduledType == 'estimated' ? DateTime.fromISO(this.data.delivery.dateScheduledEnd).toUTC() : this.data.delivery.dateScheduledStart;
         this.data.delivery.terminal.state = this.getStateCode(this.data.delivery.terminal.state);
-        if(this.data.delivery.primaryContact)
+        if (this.data.delivery.primaryContact)
         {
             this.data.delivery.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.phoneNumber);
             this.data.delivery.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.mobileNumber);
@@ -119,7 +117,7 @@ class Loadboard
     toStringDate(input)
     {
         const date = DateTime.fromISO(input).c;
-        
+
         return input ? date.year + '-' + date.month + '-' + date.day : null;
     }
 
@@ -144,7 +142,7 @@ class Loadboard
         return date ? DateTime.fromISO(date).plus({ [`${type}`]: amount }).toString() : null;
     }
 
-    adjustDates(payload){ return payload; }
+    adjustDates(payload) { return payload; }
 
     getDifferencefromToday(date)
     {
@@ -195,7 +193,7 @@ class Loadboard
         return phone;
     }
 
-    static async handleCreate(post, response)
+    static async handleCreate(post)
     {
         return LoadboardPost.fromJson(post);
     }
