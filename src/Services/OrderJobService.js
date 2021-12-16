@@ -596,7 +596,8 @@ class OrderJobService
             'job.dispatcherGuid',
             'job.vendorGuid',
             'job.VendorContactGuid',
-            'job.vendorAgentGuid'
+            'job.vendorAgentGuid',
+            'job.orderGuid'
             )
             .withGraphFetched('[vendor, requests(accepted),type, stopLinks.[commodity, stop.terminal]]')
             .findById(jobGuid)
@@ -623,6 +624,7 @@ class OrderJobService
         
         checkJob.stops = OrderStopLink.toStops(checkJob.stopLinks);
         delete checkJob.stopLinks;
+
         if(checkJob.isReady)
         {
             throw new HttpError(409, 'This job has already been verified');
@@ -678,7 +680,8 @@ class OrderJobService
         checkJob.status = 'ready';
         checkJob.setUpdatedBy(currentUser);
 
-        await OrderJob.query().patch(checkJob).findById(jobGuid);
+        await OrderJob.query().patchAndFetchById(jobGuid, checkJob);
+        return checkJob.orderGuid;
     }
 }
 
