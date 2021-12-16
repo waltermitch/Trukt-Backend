@@ -47,7 +47,7 @@ class Super extends Loadboard
             number: this.data.number,
             purchase_order_number: this.data.order.referenceNumber,
             dispatcher_name: this.data.dispatcher?.name || 'Brad Marinov',
-            instructions: this.data.order?.instructions.substring(0, 9998),
+            instructions: this.data.job?.instructions?.substring(0, 9998) || this.data.order?.instructions?.substring(0, 9998),
             loadboard_instructions: this.postObject.instructions || this.data.loadboardInstructions,
             transport_type: this.setEquipmentType(this.data.equipmentType?.name),
             inspection_type: this.data.order.inspectionType,
