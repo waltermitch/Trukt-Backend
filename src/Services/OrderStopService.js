@@ -6,7 +6,6 @@ const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 class OrderStopService
 {
     /**
-     *
      * @param {Object} param0 Payload that will be modified.
      * @param {uuid} param0.jobGuid - UUID of the job.
      * @param {uuid} param0.stopGuid - UUID of the stop that is being updated.
