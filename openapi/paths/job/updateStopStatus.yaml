@@ -35,6 +35,7 @@ requestBody:
             minItems: 1
           date:
             $ref: '../../components/schemas/Common.yaml#/dateTime'
+            nullable: true
 responses:
   200:
     description: OK
@@ -125,6 +126,14 @@ responses:
               description: When the stop is considered as complete.
               example: false
   
+  400:
+    description: Cannot Modify
+    content:
+      application/json:
+        schema:
+          type: string
+          example: 'Please remove the hold on this job before updating pickup or delivery dates'
+
   404:
     description: Not Found
     content:
