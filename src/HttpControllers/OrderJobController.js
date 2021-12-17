@@ -1,7 +1,7 @@
-const OrderStopService = require('../Services/OrderStopService');
-const NotesService = require('../Services/NotesService');
 const StatusCacheManager = require('../EventManager/StatusCacheManager');
+const OrderStopService = require('../Services/OrderStopService');
 const OrderJobService = require('../Services/OrderJobService');
+const NotesService = require('../Services/NotesService');
 const emitter = require('../Services/EventEmitter');
 
 class OrderJobController
@@ -75,8 +75,8 @@ class OrderJobController
         try
         {
             const response = await func(jobGuid, req.session.userGuid);
-            
-            if(response.status >= 400)
+
+            if (response.status >= 400)
             {
                 next(response);
                 return;
@@ -88,7 +88,7 @@ class OrderJobController
                 res.send();
             }
         }
-        catch(error)
+        catch (error)
         {
             next(error);
         }

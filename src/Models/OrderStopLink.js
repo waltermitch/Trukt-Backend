@@ -57,8 +57,6 @@ class OrderStopLink extends BaseModel
         {
             query.whereNull('jobGuid');
         },
-        commoditiesIn: (queryBuilder, commodities) => { queryBuilder.whereIn('commodityGuid', commodities); },
-        orderStop: (queryBuilder, orderGuid, stopGuid) => { queryBuilder.where({ 'orderGuid': orderGuid, 'stopGuid': stopGuid }); },
         jobStop: (queryBuilder, jobGuid, stopGuid) => { queryBuilder.where({ 'jobGuid': jobGuid, 'stopGuid': stopGuid }); }
     }
 
