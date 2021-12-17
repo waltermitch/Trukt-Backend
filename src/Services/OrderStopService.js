@@ -119,10 +119,12 @@ class OrderStopService
             // updating or clearing job stop links depending on status
             if (status === 'started' && date == null)
                 StopLinksQuery.patch({ 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
-            if (status === 'started' && date != null)
+            else if (status === 'started' && date != null)
                 StopLinksQuery.patch({ 'isStarted': true, 'dateStarted': date });
-            else if (status === 'completed')
-                StopLinksQuery.patch({ 'isCompleted': date == null ? false : true, 'dateCompleted': date });
+            else if (status === 'completed' && date == null)
+                StopLinksQuery.patch({ 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
+            else if (status === 'completed' && date != null)
+                StopLinksQuery.patch({ 'isStarted': true, 'dateStarted': date, 'isCompleted': true, 'dateCompleted': date });
 
             // updating job stop link
             await StopLinksQuery.modify('jobStop', jobGuid, stopGuid).whereIn('commodityGuid', commodities);
