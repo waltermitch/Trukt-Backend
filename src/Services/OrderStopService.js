@@ -111,30 +111,37 @@ class OrderStopService
          * if the status is started we clear both the started and completed feilds
          * if the status is completed, then we only update the completed date and flags.
          */
-        // stopLink query builder
-        const StopLinksQuery = OrderStopLinks.query(trx);
+        try
+        {
+            // stopLink query builder
+            const StopLinksQuery = OrderStopLinks.query(trx);
 
-        // updateing or clearing job stop links depending on status
-        if (status === 'started' && date == null)
-            StopLinksQuery.patch({ 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
-        if (status === 'started' && date != null)
-            StopLinksQuery.patch({ 'isStarted': true, 'dateStarted': date });
-        else if (status === 'completed')
-            StopLinksQuery.patch({ 'isCompleted': date == null ? false : true, 'dateCompleted': date });
+            // updating or clearing job stop links depending on status
+            if (status === 'started' && date == null)
+                StopLinksQuery.patch({ 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
+            if (status === 'started' && date != null)
+                StopLinksQuery.patch({ 'isStarted': true, 'dateStarted': date });
+            else if (status === 'completed')
+                StopLinksQuery.patch({ 'isCompleted': date == null ? false : true, 'dateCompleted': date });
 
-        // updating job stop link
-        await StopLinksQuery.modify('jobStop', jobGuid, stopGuid).whereIn('commodityGuid', commodities).debug(true);
+            // updating job stop link
+            await StopLinksQuery.modify('jobStop', jobGuid, stopGuid).whereIn('commodityGuid', commodities);
 
-        // validate order stop links and stop that has been updated
-        await OrderStopService.validatestopLinksandStop([stopGuid], jobGuid, commodities, trx);
+            // validate order stop links and stop that has been updated
+            await OrderStopService.validatestopLinksandStop([stopGuid], jobGuid, commodities, trx);
 
-        // TODO: Change query to be much better eliminate redundancy
-        // TODO: Make this en event? I think yes
-        // update all commodities to pick up or delivered
-        await OrderStopService.updateCommoditiesStatus(orderGuid, commodities, trx);
+            // TODO: make it an event
+            // update all commodities to pick up or delivered
+            await OrderStopService.updateCommoditiesStatus(orderGuid, commodities, trx);
 
-        // commit transaction
-        await trx.commit();
+            // commit transaction
+            await trx.commit();
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw new HttpError(400, error);
+        }
 
         // query for the stop and return to the front end
         const stop = await OrderStops.query().findById(stopGuid);
@@ -166,7 +173,6 @@ class OrderStopService
             promiseArrays.push(knex.raw(updateQuery).transacting(trx));
         }
 
-        // TODO: maybe return array?
         // execute all promises
         await Promise.all(promiseArrays);
 
