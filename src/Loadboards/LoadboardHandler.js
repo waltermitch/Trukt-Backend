@@ -1,8 +1,8 @@
+const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJob = require('../Models/OrderJob');
 const R = require('ramda');
-const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const topicName = 'loadboard_incoming';
@@ -77,16 +77,16 @@ const myMessageHandler = async (message) =>
                 let status = isPosted ? 'posted' : 'ready';
 
                 const job = await OrderJob.query()
-                .patch(OrderJob.fromJson({ status }))
-                .findById(jobGuid)
-                .whereNotIn('status', [
-                    'on hold',
-                    'pending',
-                    'picked up',
-                    'delivered'
+                    .patch(OrderJob.fromJson({ status }))
+                    .findById(jobGuid)
+                    .whereNotIn('status', [
+                        'on hold',
+                        'pending',
+                        'picked up',
+                        'delivered'
                     ]).returning('status');
 
-                if(!job)
+                if (!job)
                 {
                     status = (await OrderJob.query().select('status').findById(jobGuid)).status;
                 }
@@ -101,6 +101,7 @@ const myMessageHandler = async (message) =>
         await receiver.completeMessage(message);
     }
 };
+
 const myErrorHandler = async (args) =>
 {
 
