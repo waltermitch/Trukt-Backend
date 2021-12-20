@@ -552,14 +552,14 @@ class OrderJobService
         // all we need to update the job to ready.
         for(const job of jobs)
         {
-            const v = OrderJobService.checkJobIsReady(job);
-            if(typeof v == 'string')
+            const readyResult = OrderJobService.checkJobIsReady(job);
+            if(typeof readyResult == 'string')
             {
-                res.acceptedGuids.push(v);
+                res.acceptedGuids.push(readyResult);
             }
-            else if(v instanceof HttpError)
+            else if(readyResult instanceof HttpError)
             {
-                res.exceptions.push(v);
+                res.exceptions.push(readyResult);
             }
         }
 
