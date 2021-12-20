@@ -1,7 +1,7 @@
+const LoadboardPost = require('../Models/LoadboardPost');
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
-const DateTime = require('luxon').DateTime;
-const LoadboardPost = require('../Models/LoadboardPost');
+const { DateTime } = require('luxon');
 
 class Truckstop extends Loadboard
 {
@@ -37,6 +37,10 @@ class Truckstop extends Loadboard
 
     toJSON()
     {
+        if(this.data.pickup.notes.length > 250 || this.data.delivery.notes.length > 250)
+        {
+            throw new Error('First pickup and last delivery stop notes must be less than 250 characters');
+        }
         const payload = {
             postAsUserId: this.postObject.values.contact.externalId,
             equipmentAttributes:
