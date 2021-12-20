@@ -114,6 +114,16 @@ class Loadboard
         return { payload, payloadMetadata };
     }
 
+    remove(userGuid)
+    {
+        const payload = { guid: this.postObject.externalGuid };
+        const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, userGuid };
+        payloadMetadata.action = 'remove';
+        payloadMetadata.user = returnTo;
+
+        return { payload, payloadMetadata };
+    }
+
     toStringDate(input)
     {
         const date = DateTime.fromISO(input).c;

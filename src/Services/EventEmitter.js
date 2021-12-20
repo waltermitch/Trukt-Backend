@@ -5,6 +5,7 @@ const OrderService = require('./OrderService');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const EventEmitter = require('events');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const emitter = new EventEmitter();
 
@@ -72,6 +73,68 @@ emitter.on('orderjob_status', (orderGuid) =>
         }
 
     });
+});
+
+emitter.on('orderjob_deleted', async ({ orderGuid, userGuid, jobGuid }) =>
+{
+    try
+    {
+        // Register job deleted first
+        await StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 17
+        });
+
+        const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
+        if (jobsOrder?.areallorderjobsdeleted)
+        {
+            const deleteStatusPayload = Order.createStatusPayload(userGuid).deleted;
+            await Promise.allSettled([
+                Order.query().patch(deleteStatusPayload).findById(orderGuid),
+
+                // Register order deleted
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    jobGuid,
+                    userGuid,
+                    statusId: 19
+                })
+            ]);
+        }
+    }
+    catch (error)
+    {
+        console.error(`Error: Order ${orderGuid} could not be marked as deleted!!. ${error?.message || error}`);
+    }
+
+});
+
+emitter.on('orderjob_undeleted', async ({ orderGuid, userGuid, jobGuid }) =>
+{
+    try
+    {
+        // Register job undeleted first
+        await StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 18
+        });
+
+        // Register order undeleted
+        StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 20
+        });
+    }
+    catch (error)
+    {
+        console.error(`Error: Order ${orderGuid} could not be marked as undeleted!!. ${error?.message || error}`);
+    }
 });
 
 // export the event

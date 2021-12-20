@@ -8,6 +8,11 @@ const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
 const Invoice = require('../Models/Invoice');
 const Currency = require('currency.js');
+const LoadboardService = require('../Services/LoadboardService');
+const Loadboard = require('../Models/Loadboard');
+const LoadboardPost = require('../Models/LoadboardPost');
+const LoadboardRequest = require('../Models/LoadboardRequest');
+const EventEmitter = require('./EventEmitter');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const Emitter = require('events');
@@ -290,21 +295,53 @@ class OrderJobService
             if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
                 return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
+        else if (statusToUpdate === 'deleted')
+        {
+            return await OrderJobService.deleteJob(jobGuid, userGuid)
+                .then(deleteResult =>
+                {
+                    const status = deleteResult.status;
+                    return { jobGuid, error: null, status };
+                })
+                .catch(error =>
+                {
+                    const status = error?.status || 500;
+                    const errorMessage = error?.message || 'Internal server error';
+                    return { jobGuid, error: errorMessage, status };
+                });
+        }
+        else if (statusToUpdate === 'undeleted')
+        {
+            return await OrderJobService.undeleteJob(jobGuid, userGuid)
+                .then(deleteResult =>
+                {
+                    const status = deleteResult.status;
+                    return { jobGuid, error: null, status };
+                })
+                .catch(error =>
+                {
+                    const status = error?.status || 500;
+                    const errorMessage = error?.message || 'Internal server error';
+                    return { jobGuid, error: errorMessage, status };
+                });
+        }
+        else
+        {
+            const payload = OrderJobService.createStatusPayload(statusToUpdate, userGuid);
+            const jobUpdateResponse = await OrderJob.query(trx).patch(payload).findById(jobGuid)
+                .then(patchResult =>
+                {
+                    const status = patchResult ? 200 : 404;
+                    const error = patchResult ? null : 'Job Not Found';
+                    return { jobGuid, error, status };
+                })
+                .catch(error =>
+                {
+                    return { jobGuid, error: error?.message, status: 400 };
+                });
 
-        const payload = OrderJobService.createStatusPayload(statusToUpdate, userGuid);
-        const jobUpdateResponse = await OrderJob.query(trx).patch(payload).findById(jobGuid)
-            .then(patchResult =>
-            {
-                const status = patchResult ? 200 : 404;
-                const error = patchResult ? null : 'Job Not Found';
-                return { jobGuid, error, status };
-            })
-            .catch(error =>
-            {
-                return { jobGuid, error: error?.message, status: 400 };
-            });
-
-        return jobUpdateResponse;
+            return jobUpdateResponse;
+        }
     }
 
     static createStatusPayload(status, userGuid)
@@ -321,8 +358,7 @@ class OrderJobService
             case 'canceled':
                 return { ...statusProperties, isCanceled: true, status };
             case 'deleted':
-                return { ...statusProperties, isDeleted: true, status };
-
+                return { ...statusProperties, isDeleted: true, status, deletedByGuid: userGuid };
         }
     }
 
@@ -870,6 +906,94 @@ class OrderJobService
         emitter.emit('orderjob_uncompleted', jobGuid);
 
         return 200;
+    }
+
+    static async deleteJob(jobGuid, userGuid)
+    {
+        const trx = await OrderJob.startTransaction();
+
+        try
+        {
+            const jobStatus = [
+                OrderJob.query(trx)
+                    .select('orderGuid').findOne('guid', jobGuid),
+                OrderJob.query(trx).alias('job')
+                    .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
+            ];
+            const [job, jobIsDispatched] = await Promise.all(jobStatus);
+
+            if (!job)
+                throw new HttpError(400, 'Job does not exist');
+
+            if (job && jobIsDispatched)
+                throw new HttpError(400, 'Please un-dispatch the Order before deleting');
+
+            const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
+            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, userGuid);
+
+            // Mark Job as deleted
+            const payload = OrderJobService.createStatusPayload('deleted', userGuid);
+
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).deleted;
+
+            // Mark loadborad as deleted first
+            await Promise.all([
+                OrderJob.query(trx).patch(payload).findById(jobGuid),
+                LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
+                    LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
+            ]);
+
+            await trx.commit();
+
+            EventEmitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            return { status: 200 };
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
+    /**
+     * Order is mark as ready in rcg_update_order_job_status_trigger in DB
+     * @param {*} jobGuid
+     * @param {*} userGuid
+     * @returns
+     */
+    static async undeleteJob(jobGuid, userGuid)
+    {
+        const trx = await OrderJob.startTransaction();
+
+        try
+        {
+            const job = await OrderJob.query(trx).select('orderGuid', 'isDeleted').findOne('guid', jobGuid);
+
+            if (!job)
+                throw new HttpError(404, 'Job does not exist');
+
+            if (!job?.isDeleted)
+                return { status: 200 };
+
+            const payload = OrderJobService.createStatusPayload('ready', userGuid);
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).unposted;
+
+            await Promise.all([
+                OrderJob.query(trx).patch(payload).findById(jobGuid),
+                LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
+                    LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
+            ]);
+
+            await trx.commit();
+
+            EventEmitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            return { status: 200 };
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
     }
 }
 

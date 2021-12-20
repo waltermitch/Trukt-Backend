@@ -98,6 +98,36 @@
             "category": "job",
             "name": "Set To Ready",
             "order_filter_label": "Set To Ready On"
+        },
+        {
+            "id": 17,
+            "category": "job",
+            "name": "Job Deleted",
+            "order_filter_label": "Job deleted on"
+        },
+        {
+            "id": 18,
+            "category": "job",
+            "name": "Job Undeleted",
+            "order_filter_label": "Job undeleted on"
+        },
+        {
+            "id": 19,
+            "category": "order",
+            "name": "Order Deleted",
+            "order_filter_label": "Order deleted on"
+        },
+        {
+            "id": 20,
+            "category": "Order",
+            "name": "Order Undeleted",
+            "order_filter_label": "Order undeleted on"
+        },
+        {
+            "id": 21,
+            "category": "Order",
+            "name": "Removed from",
+            "order_filter_label": "Removed on"
         }
     ]
 }

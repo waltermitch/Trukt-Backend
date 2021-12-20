@@ -229,6 +229,7 @@ class ShipCars extends Loadboard
                 objectionPost.status = 'created';
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id));
@@ -273,6 +274,7 @@ class ShipCars extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
@@ -663,6 +665,32 @@ class ShipCars extends Loadboard
             commodityPromises.push(Commodity.query().patch(com).findById(com.guid));
         }
         return commodityPromises;
+    }
+
+    static async handleRemove(payloadMetadata, response)
+    {
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+        if (response.hasErrors)
+        {
+            objectionPost.isSynced = false;
+            objectionPost.isPosted = false;
+            objectionPost.hasError = true;
+            objectionPost.apiError = response.errors;
+            objectionPost.updatedByGuid = payloadMetadata.userGuid;
+        }
+        else
+        {
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'removed';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = false;
+            objectionPost.isCreated = false;
+            objectionPost.isDeleted = true;
+            objectionPost.deletedByGuid = payloadMetadata.userGuid;
+        }
+
+        await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
+        return;
     }
 }
 
