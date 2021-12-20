@@ -1640,14 +1640,6 @@ class OrderService
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
-            // TODO: Events here
-            // update loadboard postings (async)
-            orderUpdated.jobs.map(async (job) =>
-            {
-                await LoadboardService.updatePostings(job.guid)
-                    .catch(err => console.log(err));
-            });
-
             await trx.commit();
 
             return orderUpdated;
