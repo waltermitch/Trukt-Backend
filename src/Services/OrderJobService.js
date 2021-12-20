@@ -10,6 +10,7 @@ const Currency = require('currency.js');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const knex = require('../Models/BaseModel').knex();
 const { DateTime } = require('luxon');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 class OrderJobService
 {
@@ -563,7 +564,7 @@ class OrderJobService
             }
         }
 
-        await OrderJob.query().patch({
+        res.acceptedJobs = await OrderJob.query().patch({
             status: 'ready',
             isReady: true,
             dateVerified: DateTime.utc().toString(),
@@ -571,6 +572,13 @@ class OrderJobService
             updatedByGuid: currentUser
         }).findByIds(res.acceptedGuids).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
 
+        await Promise.allSettled(res.acceptedJobs.map(item =>
+            StatusManagerHandler.registerStatus({
+                orderGuid: item.orderGuid,
+                jobGuid: item.jobGuid,
+                userGuid: currentUser,
+                statusId: 16
+            })));
         return res;
     }
 
