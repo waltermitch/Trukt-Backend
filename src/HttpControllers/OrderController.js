@@ -1,5 +1,6 @@
 const OrderService = require('../Services/OrderService');
 const NotesService = require('../Services/NotesService');
+const orderEvents = require('../EventListeners/Order');
 const myEmitter = require('../Services/EventEmitter');
 const Order = require('../Models/Order');
 
@@ -114,7 +115,9 @@ class OrderController
             const order = await OrderService.patchOrder(body, req.session.userGuid);
 
             // register this event
+            // OrderUpdate will be deprecated, use order_updated instead
             myEmitter.emit('OrderUpdate', { old: oldOrder, new: order });
+            orderEvents.emit('order_updated', { oldOrder: oldOrder, newOrder: order });
 
             res.status(200);
             res.json(order);
@@ -192,15 +195,18 @@ class OrderController
         try
         {
             const order = await OrderService.updateClientNote(req.params.orderGuid, req.body, req.session.userGuid);
+
+            // emit event order_updated
+            orderEvents.emit('order_client_notes_updated', req.params.orderGuid);
+
             res.status(202).json(order);
         }
         catch (error)
         {
             let status;
             if (error?.message == 'No order found')
-            {
                 status = 404;
-            }
+
             next({
                 status,
                 data: { message: error?.message || 'Internal server error' }

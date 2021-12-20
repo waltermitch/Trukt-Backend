@@ -9,9 +9,9 @@ listener.on('orderjob_stop_update', () =>
     {
         const proms = await Promise.allSettled([OrderJobService.calcJobStatus(jobGuid)]);
 
-        for (const p of proms)
-            if (p.status === 'rejected')
-                console.log(p.reason?.response?.data || p.reason);
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
     });
 });
 
