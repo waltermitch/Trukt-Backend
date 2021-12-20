@@ -94,13 +94,32 @@ class OrderJobController
         }
     }
     
-    static async setJobToReady(req, res, next)
+    static async setJobToReadySingle(req, res, next)
     {
         try
         {
-            const job = await OrderJobService.setToReady(req.params.jobGuid, req.session.userGuid);
-            emitter.emit('orderjob_status', job.orderGuid);
-            res.status(204).send();
+            const results = await OrderJobService.setJobToReady(req.params.jobGuid, req.session.userGuid);
+
+            // check if there are any successfull status changes. If there are none,
+            // throw all the exceptions in the exceptions list
+            // otherwise convert all the exceptions into readable json formats
+            // so the client can have both the successes and the failures
+            if(results.acceptedJobs.length == 0)
+            {
+                throw results.exceptions;
+            }
+            else
+            {
+                results.exceptions = results.exceptions.map(error =>
+                {
+                    return error.toJson();
+                });
+            }
+            for(const job of results.acceptedJobs)
+            {
+                emitter.emit('orderjob_status', job.orderGuid);
+            }
+            res.status(202).json(results);
         }
         catch(e)
         {
