@@ -536,12 +536,12 @@ class OrderJobService
         };
     }
 
-    static async setJobReadySingleForReal(jobGuid, currentUser)
+    static async setJobToReady(jobGuid, currentUser)
     {
         return await OrderJobService.setJobsReadyBulk([jobGuid], currentUser);
     }
 
-    static async setJobsReadyBulk(jobGuids, currentUser)
+    static async setJobsToReadyBulk(jobGuids, currentUser)
     {
         const { jobs, exceptions } = await OrderJobService.getJobForReadyCheck(jobGuids);
         const res = { acceptedJobs: [], exceptions: [...exceptions] };
