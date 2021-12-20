@@ -184,22 +184,8 @@ class LoadboardService
                 job.dispatches = await OrderJobDispatch.query(trx).where({ jobGuid: jobId }).where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
             }
 
-            if (job.isDummy)
-                throw new Error('Cannot dispatch dummy job');
+            job.validateJobForDispatch();
             
-            if(job.type.category != 'transport' && job.type.type != 'transport' && job.isTransport)
-            {
-                throw new Error('Cannot dispatch non transport job');
-            }
-
-            if(job.isOnHold)
-            {
-                throw new Error('Cannot dispatch job that is on hold');
-            }
-
-            if (job.dispatches.length != 0)
-                throw new Error('Cannot dispatch with already active load offer');
-
             const carrier = await SFAccount.query(trx).modify('byId', body.carrier.guid).modify('carrier').first();
             const driver = body.driver;
 
@@ -230,14 +216,6 @@ class LoadboardService
                     throw new Error('Please pass in valid driver for carrier');
             }
 
-            job.vendorGuid = carrier.guid;
-            job.vendorAgentGuid = carrierContact.guid;
-
-            if(job.bills.length == 0)
-            {
-                throw new Error('Job bill missing. Bill is required in order to set payment method and payment terms');
-            }
-            
             await InvoiceBill.query(trx).patch({ paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job?.bills[0]?.guid);
             const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
             for (const line of lines)
@@ -260,15 +238,11 @@ class LoadboardService
             }
 
             const jobForUpdate = Job.fromJson({
-                vendorGuid: carrier.guid,
-                vendorAgentGuid: carrierContact.guid,
                 dateStarted: DateTime.utc(),
-                status: 'pending'
+                status: Job.STATUS.PENDING
             });
 
             jobForUpdate.setUpdatedBy(currentUser);
-            job.vendor = carrier;
-            job.vendorAgent = driver;
 
             allPromises.push(Job.query(trx).patch(jobForUpdate).findById(job.guid));
 
@@ -288,8 +262,10 @@ class LoadboardService
                 vendorGuid: carrier.guid,
                 vendorAgentGuid: carrierContact.guid,
                 externalGuid: null,
+                isValid: true,
                 isPending: true,
                 isAccepted: false,
+                isDeclined: false,
                 isCanceled: false,
                 paymentTermId: body.paymentTerm,
                 paymentMethodId: body.paymentMethod,
