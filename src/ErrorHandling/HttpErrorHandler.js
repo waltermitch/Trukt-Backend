@@ -5,7 +5,6 @@ const telemetryClient = require('./Insights');
 /* eslint-disable */
 module.exports = (errors, request, response, next) =>
 {
-    console.log(errors);
     if(!Array.isArray(errors))
     {
         errors = [errors];
