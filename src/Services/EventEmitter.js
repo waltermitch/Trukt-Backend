@@ -5,7 +5,6 @@ const OrderStopLinks = require('../Models/OrderStopLink');
 const LoadboardService = require('../Services/LoadboardService');
 const Order = require('../Models/Order');
 const OrderJob = require('../Models/OrderJob');
-const Knex = require('../Models/BaseModel').knex();
 
 const emitter = new EventEmitter();
 
