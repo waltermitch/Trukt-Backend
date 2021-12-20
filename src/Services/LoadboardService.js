@@ -12,12 +12,14 @@ const SFContact = require('../Models/SFContact');
 const OrderStop = require('../Models/OrderStop');
 const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
+const EventEmitter = require('events');
 const { DateTime } = require('luxon');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
+const emitter = new EventEmitter();
 
 const dispatchableLoadboards = ['SUPERDISPATCH', 'SHIPCARS'];
 let dbLoadboardNames;
@@ -171,7 +173,7 @@ class LoadboardService
             // another loadboard, otherwise first create a posting record and dispatch
             if (!body.loadboard)
             {
-                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch), type]');
+                job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch), type, order]');
 
                 const stops = await this.getFirstAndLastStops(job.stops);
 
@@ -317,6 +319,11 @@ class LoadboardService
 
             await Promise.all(allPromises);
             await trx.commit();
+
+            emitter.emit('orderjob_dispatch_offer_sent', {
+                jobGuid: job.guid,
+                dispatchGuid: job.dispatch.guid
+            });
 
             return dispatch;
         }
