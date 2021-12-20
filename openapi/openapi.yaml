@@ -237,6 +237,9 @@ paths:
   /bulk/job/prices:
     put:
       $ref: paths/bulk/updateJobPrices.yaml
+  /bulk/job/status/ready:
+    put:
+      $ref: paths/bulk/setJobReady.yaml
   /job/{jobGuid}/dispatch/carrier:
     get:
       $ref: paths/job/getCarrier.yaml
