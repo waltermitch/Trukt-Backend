@@ -92,6 +92,12 @@
             "category": "jobDispatch",
             "name": "Self Assigned",
             "order_filter_label": "Self Assigned On"
+        },
+        {
+            "id": 16,
+            "category": "job",
+            "name": "Set To Ready",
+            "order_filter_label": "Set To Ready On"
         }
     ]
 }

@@ -8,6 +8,7 @@ router
     .put(`${prefix}/job/users`, (req, res) => http(req, res, controller.updateJobUsers))
     .put(`${prefix}/job/dates`, (req, res) => http(req, res, controller.updateJobDates))
     .put(`${prefix}/job/status`, (req, res) => http(req, res, controller.updateJobStatus))
-    .put(`${prefix}/job/prices`, (req, res) => http(req, res, controller.updateJobPrices));
+    .put(`${prefix}/job/prices`, (req, res) => http(req, res, controller.updateJobPrices))
+    .put(`${prefix}/job/status/ready`, controller.setJobsReadyBulk);
 
 module.exports = router;

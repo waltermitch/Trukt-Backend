@@ -1,12 +1,16 @@
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderStopLink = require('../Models/OrderStopLink');
 const InvoiceLine = require('../Models/InvoiceLine');
+const knex = require('../Models/BaseModel').knex();
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
 const Invoice = require('../Models/Invoice');
 const Currency = require('currency.js');
 const Bill = require('../Models/Bill');
-const { pickBy } = require('ramda');
+const { DateTime } = require('luxon');
+const R = require('ramda');
 
 class OrderJobService
 {
@@ -21,7 +25,7 @@ class OrderJobService
         };
 
         // remove and check for undefineds
-        const cleaned = pickBy((it) => it !== undefined, payload);
+        const cleaned = R.pickBy((it) => it !== undefined, payload);
 
         if (Object.keys(cleaned).length === 0)
             throw { 'status': 400, 'data': 'Missing Update Values' };
@@ -531,6 +535,237 @@ class OrderJobService
                 dispatcher: carrierInfo?.dispatcher || {}
             }
         };
+    }
+
+    static async setJobToReady(jobGuid, currentUser)
+    {
+        return await OrderJobService.setJobsReadyBulk([jobGuid], currentUser);
+    }
+
+    static async setJobsToReadyBulk(jobGuids, currentUser)
+    {
+        const { jobs, exceptions } = await OrderJobService.getJobForReadyCheck(jobGuids);
+        const res = { acceptedJobs: [], exceptions: [...exceptions] };
+
+        // for every job that has passed the initial query and given us data
+        // loop through every job, and check if it passes more tests.
+        // if it does, it returns the valid job guid because that is
+        // all we need to update the job to ready.
+        for (const job of jobs)
+        {
+            const readyResult = OrderJobService.checkJobIsReady(job);
+            if (typeof readyResult == 'string')
+            {
+                res.acceptedGuids.push(readyResult);
+            }
+            else if (readyResult instanceof HttpError)
+            {
+                res.exceptions.push(readyResult);
+            }
+        }
+
+        res.acceptedJobs = await OrderJob.query().patch({
+            status: 'ready',
+            isReady: true,
+            dateVerified: DateTime.utc().toString(),
+            verifiedByGuid: currentUser,
+            updatedByGuid: currentUser
+        }).findByIds(res.acceptedGuids).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
+
+        await Promise.allSettled(res.acceptedJobs.map(item =>
+            StatusManagerHandler.registerStatus({
+                orderGuid: item.orderGuid,
+                jobGuid: item.jobGuid,
+                userGuid: currentUser,
+                statusId: 16
+            })));
+        return res;
+    }
+
+    static async getJobForReadyCheck(jobGuids)
+    {
+        // this array of question marks is meant to be used for the prepared
+        // statement in the following raw query. Because Knex does not support
+        // passing in an array of strings as a parameter, you must supply it
+        // the raw list with a question mark for every item in the list you
+        // are passing in.
+        const questionMarks = [];
+        for (let i = 0; i < jobGuids.length; i++)
+        {
+            questionMarks.push('?');
+        }
+
+        // This query returns data for jobs with
+        // pickups and deliveries in proper sequence, with stops
+        // having matching commodities, and stops that at least
+        // have a requested start date
+        const rows = (await knex.raw(`
+            select distinct os.guid "stopGuid", 
+                    osl.commodity_guid "commodityGuid", 
+                    os.stop_type first_stop_type, 
+                    os2.stop_type second_stop_type, 
+                    os."sequence" pickup_sequence, 
+                    os2."sequence" delivery_sequence, 
+                    os.date_requested_start, 
+                    os2.date_requested_start,
+                    osl.job_guid 
+            from rcg_tms.order_stop_links osl
+            left join rcg_tms.order_stops os 
+            on osl.stop_guid = os.guid ,
+            rcg_tms.order_stop_links osl2 
+            left join rcg_tms.order_stops os2
+            on osl2.stop_guid = os2.guid 
+            where os.stop_type = 'pickup'
+            and os2.stop_type = 'delivery'
+            and osl.commodity_guid = osl2.commodity_guid
+            and os."sequence" < os2."sequence"
+            and os.date_requested_start is not null
+            and os2.date_requested_start is not null
+            and osl.order_guid = osl2.order_guid
+            and osl.job_guid in (${questionMarks})
+            group by os.guid,
+                osl.commodity_guid,
+                os.stop_type,
+                os2.stop_type,
+                os."sequence", 
+                os2."sequence", 
+                os.date_requested_start, 
+                os2.date_requested_start,
+                osl.job_guid
+            order by pickup_sequence`, jobGuids)).rows;
+
+        // Since the previous query only returns some data, we need to know which guids
+        // passed the query and which ones did not so we can tell the client which guids
+        // did not pass the first test.
+        const setGoodGuids = new Set(rows.map(row => row.job_guid));
+        const exceptions = [];
+        if (jobGuids.length != setGoodGuids.size)
+        {
+            for (const guid of jobGuids)
+            {
+                if (!setGoodGuids.has(jobGuids))
+                {
+                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, is missing requested dates, or cannot be found`));
+                }
+            }
+        }
+        const jobs = await OrderJob
+            .query()
+            .alias('job')
+            .select(
+                'job.isReady',
+                'job.isOnHold',
+                'job.isDeleted',
+                'job.isCanceled',
+                'job.isComplete',
+                'job.dispatcherGuid',
+                'job.vendorGuid',
+                'job.vendorContactGuid',
+                'job.vendorAgentGuid',
+                'job.orderGuid',
+                'job.guid',
+                'job.number',
+                'order.isTender',
+                'vendor.name as vendorName',
+                'type.category as typeCategory',
+                'type.type as jobType'
+            )
+            .leftJoinRelated('order')
+            .leftJoinRelated('vendor')
+            .leftJoinRelated('type')
+            .withGraphFetched('[requests(accepted), stops]')
+            .findByIds(Array.from(setGoodGuids))
+            .modifyGraph('requests', builder =>
+            {
+                builder.select('isValid', 'isAccepted');
+            })
+            .modifyGraph('stops', builder =>
+            {
+                builder.select('sequence', 'stopType', 'dateRequestedStart',
+                    'terminal.isResolved as resolvedTerminal', 'terminal.name as terminalName')
+                    .leftJoinRelated('terminal').where({ 'terminal.isResolved': false })
+                    .distinctOn('terminal.name');
+            });
+
+        return { jobs, exceptions };
+    }
+
+    /**
+     * @description This function takes an orderjob and checks if it's data is sufficient to allow
+     * it to transition to the ready state. It can be used to verify both transport and service jobs
+     * @param {OrderJob} job
+     * @returns If the job passes all the checks, it returns the job itself,
+     * otherwise it returns an http exception
+     */
+    static checkJobIsReady(job)
+    {
+        const booleanFields = [
+            'job.isReady',
+            'job.isOnHold',
+            'job.isDeleted',
+            'job.isCanceled',
+            'job.isComplete'
+        ];
+
+        let res = job.guid;
+
+        // A job must belong to a real order(not a tender) before moving to ready
+        if (job.isTender)
+        {
+            res = new HttpError(400, `Job ${job.number} belongs to tender, you must accept tender before moving to ready.`);
+        }
+
+        // Job cannot be verified again
+        if (job.isReady)
+        {
+            res = new HttpError(409, `Job ${job.number} has already been verified.`);
+        }
+
+        // depending on the job type, we throw a specific message if there is a vendor assigned
+        if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
+        {
+            if (job.typeCategory == 'transport' && job.jobType == 'transport')
+            {
+                res = new HttpError(409, `Carrier ${job.vendorName} for ${job.number} must be undispatched before it can transition to ready.`);
+            }
+            else if (job.typeCategory == 'service')
+            {
+                res = new HttpError(409, `Vendor ${job.vendorName} for ${job.number} must be unassigned before it can transition to ready.`);
+            }
+        }
+
+        // The job cannot have any active loadboard requests
+        if (job.requests.length != 0)
+        {
+            res = new HttpError(409, `Please cancel the loadboard request for ${job.number} for it to go to ready.`);
+        }
+
+        // A dispatcher must be assigned
+        if (!job.dispatcherGuid)
+        {
+            res = new HttpError(409, `Please assign a dispatcher to job ${job.number} first.`);
+        }
+
+        for (const bool of booleanFields)
+        {
+            const field = bool.substring(4, bool.length);
+            if (job[field])
+            {
+                res = new HttpError(400, `${field} must be false before ${job.number} can be changed to ready.`);
+            }
+        }
+
+        // the query should have returned any stops with unverified terminals
+        // if there are any stops with unresoled terminals, return an exception
+        // telling the client which terminal is unresolved.
+        if (job.stops.length != 0)
+        {
+            for (const stop of job.stops)
+            {
+                res = new HttpError(400, `Address for ${stop.terminalName} for job ${job.number} cannot be mapped to a real location, please verify the address before verifying this job.`);
+            }
+        }
+        return res;
     }
 }
 
