@@ -1,12 +1,12 @@
 const OrderStopLink = require('../Models/OrderStopLink');
+const InvoiceLine = require('../Models/InvoiceLine');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
-const InvoiceLine = require('../Models/InvoiceLine');
 const Invoice = require('../Models/Invoice');
+const Currency = require('currency.js');
 const Bill = require('../Models/Bill');
 const { pickBy } = require('ramda');
-const Currency = require('currency.js');
 
 class OrderJobService
 {
@@ -110,7 +110,7 @@ class OrderJobService
                         Promise.all(deleteLooseOrderStopLinks)
                     ]).then((numDeletes) =>
                     {
-                        const deletedComms = numDeletes[0].map(it => it.guid );
+                        const deletedComms = numDeletes[0].map(it => it.guid);
 
                         // if the there is a stop that is not attached to an order, delete the stop
                         return OrderStop.query(trx)
@@ -280,7 +280,7 @@ class OrderJobService
                 return { jobGuid, error: 'Job Not Found', status: 400 };
             if (!job?.dispatcherGuid)
                 return { jobGuid, error: 'Job cannot be marked as Ready without a dispatcher', status: 400 };
-            if(job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
+            if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
                 return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
 
@@ -372,7 +372,7 @@ class OrderJobService
             throw e;
         }
     }
-    
+
     static async bulkUpdatePrices(jobInput, userGuid)
     {
         const { jobs, expense, revenue, type, operation } = jobInput;

@@ -1,8 +1,8 @@
-const EventEmitter = require('events');
-const OrderService = require('./OrderService');
-const OrderStopService = require('./OrderStopService');
-const OrderStopLinks = require('../Models/OrderStopLink');
 const LoadboardService = require('../Services/LoadboardService');
+const OrderStopLinks = require('../Models/OrderStopLink');
+const OrderStopService = require('./OrderStopService');
+const OrderService = require('./OrderService');
+const EventEmitter = require('events');
 
 const emitter = new EventEmitter();
 
