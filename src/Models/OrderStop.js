@@ -48,8 +48,7 @@ class OrderStop extends BaseModel
                     through: {
                         modelClass: require('./OrderStopLink'),
                         from: 'rcgTms.orderStopLinks.stopGuid',
-                        to: 'rcgTms.orderStopLinks.commodityGuid',
-                        extra: ['lotNumber']
+                        to: 'rcgTms.orderStopLinks.commodityGuid'
                     },
                     to: 'rcgTms.commodities.guid'
                 }
@@ -108,7 +107,7 @@ class OrderStop extends BaseModel
 
     static firstAndLast(stops = [])
     {
-        stops.sort((a, b) => (a.sequence < b.sequence));
+        stops.sort(OrderStop.sortBySequence);
 
         return [stops[0], stops[stops.length - 1]];
     }

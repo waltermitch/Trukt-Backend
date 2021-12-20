@@ -28,6 +28,16 @@ class LoadboardRequest extends BaseModel
         return relations;
     }
 
+    static get modifiers()
+    {
+        return {
+            accepted(builder)
+            {
+                builder.where({ isValid: true, isAccepted: true });
+            }
+        };
+    }
+
 }
 Object.assign(LoadboardRequest.prototype, RecordAuthorMixin);
 module.exports = LoadboardRequest;

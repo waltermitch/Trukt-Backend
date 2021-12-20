@@ -10,6 +10,7 @@ router
     .get(`${prefix}/:jobGuid(${uuidRegexStr})/dispatch/carrier`, (req, res) => http(req, res, controller.getCarrier))
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/stop/:stopGuid(${uuidRegexStr})/status/:status`, controller.updateStopStatus)
     .post(`${prefix}/:jobGuid(${uuidRegexStr})/hold`, controller.addHold)
-    .delete(`${prefix}/:jobGuid(${uuidRegexStr})/hold`, controller.removeHold);
+    .delete(`${prefix}/:jobGuid(${uuidRegexStr})/hold`, controller.removeHold)
+    .put(`${prefix}/:jobGuid(${uuidRegexStr})/ready`, controller.setJobToReadySingle);
 
 module.exports = router;
