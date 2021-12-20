@@ -110,7 +110,7 @@ class OrderJobService
                         Promise.all(deleteLooseOrderStopLinks)
                     ]).then((numDeletes) =>
                     {
-                        const deletedComms = numDeletes[0].map(it => it.guid );
+                        const deletedComms = numDeletes[0].map(it => it.guid);
 
                         // if the there is a stop that is not attached to an order, delete the stop
                         return OrderStop.query(trx)
@@ -273,14 +273,14 @@ class OrderJobService
 
     static async updateJobStatus(jobGuid, statusToUpdate, userGuid, trx)
     {
-        if (statusToUpdate == 'Ready')
+        if (statusToUpdate == 'ready')
         {
             const [job] = await OrderJob.query(trx).select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid').where('guid', jobGuid);
             if (!job)
                 return { jobGuid, error: 'Job Not Found', status: 400 };
             if (!job?.dispatcherGuid)
                 return { jobGuid, error: 'Job cannot be marked as Ready without a dispatcher', status: 400 };
-            if(job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
+            if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
                 return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
 
@@ -307,13 +307,13 @@ class OrderJobService
         };
         switch (status)
         {
-            case 'On Hold':
+            case 'on hold':
                 return { ...statusProperties, isOnHold: true, status };
-            case 'Ready':
+            case 'ready':
                 return { ...statusProperties, isReady: true, status };
-            case 'Canceled':
+            case 'canceled':
                 return { ...statusProperties, isCanceled: true, status };
-            case 'Deleted':
+            case 'deleted':
                 return { ...statusProperties, isDeleted: true, status };
 
         }
@@ -330,7 +330,7 @@ class OrderJobService
         const trx = await OrderJob.startTransaction();
         try
         {
-            const res = await OrderJobService.updateJobStatus(jobGuid, 'On Hold', currentUser, trx);
+            const res = await OrderJobService.updateJobStatus(jobGuid, 'on hold', currentUser, trx);
             await trx.commit();
             return res;
         }
@@ -356,7 +356,7 @@ class OrderJobService
             let res;
             if (job.isOnHold)
             {
-                res = await OrderJobService.updateJobStatus(jobGuid, 'Ready', currentUser, trx);
+                res = await OrderJobService.updateJobStatus(jobGuid, 'ready', currentUser, trx);
             }
             else
             {
@@ -372,7 +372,7 @@ class OrderJobService
             throw e;
         }
     }
-    
+
     static async bulkUpdatePrices(jobInput, userGuid)
     {
         const { jobs, expense, revenue, type, operation } = jobInput;
