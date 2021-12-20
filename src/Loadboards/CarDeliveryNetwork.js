@@ -1,5 +1,5 @@
-const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
+const Loadboard = require('./Loadboard');
 
 class CarDeliveryNetwork extends Loadboard
 {

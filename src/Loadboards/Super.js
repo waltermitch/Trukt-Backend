@@ -1,18 +1,16 @@
-const Loadboard = require('./Loadboard');
-const currency = require('currency.js');
-const LoadboardPost = require('../Models/LoadboardPost');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
-const OrderStop = require('../Models/OrderStop');
+const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
-const Job = require('../Models/OrderJob');
+const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
-const DateTime = require('luxon').DateTime;
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const Job = require('../Models/OrderJob');
+const Loadboard = require('./Loadboard');
+const currency = require('currency.js');
 
 class Super extends Loadboard
 {
-
     constructor(data)
     {
         super(data);
@@ -31,10 +29,10 @@ class Super extends Loadboard
                 state: this.data.order.client.billingState,
                 zip: this.data.order.client.billingPostalCode,
 
-                contact_name: this.data.order.clientContact?.name,
-                contact_phone: this.data.order.clientContact?.phoneNumber,
-                contact_mobile_phone: this.data.order.clientContact?.mobileNumber,
-                contact_email: this.data.order.clientContact?.email,
+                contact_name: this.data.order.clientContact?.name || null,
+                contact_phone: this.data.order.clientContact?.phoneNumber || null,
+                contact_mobile_phone: this.data.order.clientContact?.mobileNumber || null,
+                contact_email: this.data.order.clientContact?.email || null,
                 name: this.data.order.client.name,
                 business_type: this.setBusinessType(this.data.order.client.type),
                 email: this.data.order.client?.email,
@@ -49,7 +47,7 @@ class Super extends Loadboard
             number: this.data.number,
             purchase_order_number: this.data.order.referenceNumber,
             dispatcher_name: this.data.dispatcher?.name || 'Brad Marinov',
-            instructions: this.data.order?.instructions.substring(0, 9998),
+            instructions: this.data?.instructions?.substring(0, 9998) || this.data.order?.instructions?.substring(0, 9998),
             loadboard_instructions: this.postObject.instructions || this.data.loadboardInstructions,
             transport_type: this.setEquipmentType(this.data.equipmentType?.name),
             inspection_type: this.data.order.inspectionType,

@@ -1,8 +1,8 @@
+const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJob = require('../Models/OrderJob');
 const R = require('ramda');
-const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const topicName = 'loadboard_incoming';
@@ -74,25 +74,24 @@ const myMessageHandler = async (message) =>
                 // this loops through all the posts and returns true as soon as
                 // it finds that one of the loadboards is marked as posted
                 const isPosted = R.any(post => post.posted())(Object.values(posts));
-                const status = isPosted ? 'posted' : 'ready';
+                let status = isPosted ? 'posted' : 'ready';
 
-                // Objection returns the number of rows affected by a query
-                // so that means if this query really did change the status, then
-                // add the changed status to the pubsub message.
-                // If the job status is in pending, picked up, or delivered,
-                // then the status should not be updated and the message listener should
-                // not need a status update, otherwise the new status will be sent.
-                const numOfJobsAffected = await OrderJob.query()
-                .patch({ status })
-                .findById(jobGuid)
-                .whereNotIn('status', ['pending', 'picked up', 'delivered']);
-                const messagePayload = { posts };
-                if(numOfJobsAffected > 0)
+                const job = await OrderJob.query()
+                    .patch(OrderJob.fromJson({ status }))
+                    .findById(jobGuid)
+                    .whereNotIn('status', [
+                        'on hold',
+                        'pending',
+                        'picked up',
+                        'delivered'
+                    ]).returning('status');
+
+                if (!job)
                 {
-                    messagePayload.status = status;
+                    status = (await OrderJob.query().select('status').findById(jobGuid)).status;
                 }
 
-                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { messagePayload } });
+                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts, status } });
             }
 
         }
@@ -102,6 +101,7 @@ const myMessageHandler = async (message) =>
         await receiver.completeMessage(message);
     }
 };
+
 const myErrorHandler = async (args) =>
 {
 
