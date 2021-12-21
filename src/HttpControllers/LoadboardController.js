@@ -46,7 +46,7 @@ class LoadboardController
             }
             next({
                 status,
-                data: { message: e.toString() || 'Internal server error' }
+                data: { message: e.message || 'Internal server error' }
             });
         }
 
