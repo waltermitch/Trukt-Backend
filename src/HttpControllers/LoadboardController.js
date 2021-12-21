@@ -143,6 +143,31 @@ class LoadboardController
             });
         }
     }
+
+    static async acceptDispatch(req, res, next)
+    {
+        try
+        {
+            const acceptedJob = await LoadboardService.acceptDispatch(req.params.jobId, req.body.dispatchGuid, req.session.userGuid);
+            res.json({ message: 'Job dispatch accepted', job: acceptedJob });
+            res.status(200);
+        }
+        catch (err)
+        {
+            let status = 500;
+            const message = err.toString();
+
+            if (message === 'Error: Job not found')
+                status = 404;
+            else if (message === 'Error: No active offers to accept')
+                status = 400;
+
+            next({
+                status,
+                data: { message }
+            });
+        }
+    }
 }
 
 const controller = new LoadboardController();

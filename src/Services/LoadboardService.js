@@ -428,6 +428,11 @@ class LoadboardService
         }
     }
 
+    static async acceptDispatch(jobGuid, dispatchGuid, currentUser)
+    {
+        return { jobGuid, dispatchGuid, currentUser };
+    }
+
     // This method gets all the job information and creates new post records based on the posts
     // list that is sent in if needed
     static async getAllPostingData(jobId, posts, currentUser)
