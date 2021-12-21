@@ -862,7 +862,7 @@ class OrderJobService
         await OrderJob.query(trx).where(
             {
                 'guid': jobGuid
-            }).patch({ 'isComplete': false, 'updatedByGuid': currentUser }).first();
+            }).patch({ 'isComplete': false, 'updatedByGuid': currentUser, 'status': 'delivered' }).first();
 
         await trx.commit();
 
