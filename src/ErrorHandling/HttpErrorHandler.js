@@ -9,7 +9,7 @@ module.exports = (errors, request, response, next) =>
     {
         errors = [errors];
     }
-    let status;
+    let status = 500;
     let data = {
         errors: []
     };
