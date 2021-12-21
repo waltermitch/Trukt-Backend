@@ -3,9 +3,9 @@ const Listener = require('events');
 
 const listener = new Listener();
 
-listener.on('orderjob_stop_update', () =>
+listener.on('orderjob_stop_update', (jobGuid) =>
 {
-    setImmediate(async (jobGuid) =>
+    setImmediate(async () =>
     {
         const proms = await Promise.allSettled([OrderJobService.calcJobStatus(jobGuid)]);
 
