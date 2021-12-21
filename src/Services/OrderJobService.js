@@ -767,6 +767,44 @@ class OrderJobService
         }
         return res;
     }
+
+    static async calcJobStatus(jobGuid)
+    {
+        // start transaction
+        const trx = await OrderStop.startTransaction();
+
+        // we are not accounting for the case where delivered is true, true but picked_up is false, false. (in respect to is_complete and is_started)
+        const q = `UPDATE rcg_tms.order_jobs
+                    SET status =
+                    CASE
+                        WHEN stops.is_completed = stops.count AND stops.is_started = stops.count THEN 'delivered'
+                        WHEN stops.is_started > 0 AND stops.is_completed != stops.count THEN 'picked_up'
+                        ELSE status
+                    END
+                    FROM
+                        (SELECT count(*),
+                        SUM(case when stops.is_completed = true then 1 else 0 end) AS is_completed,
+                        SUM(case when stops.is_started = true then 1 else 0 end) AS is_started
+                        FROM rcg_tms.order_stops stops 
+                        INNER JOIN
+                            (SELECT distinct links.stop_guid, links.job_guid
+                             FROM rcg_tms.order_stop_links links 
+                             WHERE links.job_guid = '${jobGuid}') AS links
+                        ON stops.guid = links.stop_guid) AS stops
+                    WHERE guid = '${jobGuid}'`;
+
+        try
+        {
+            await knex.raw(q).transacting(trx);
+
+            await trx.commit();
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
 }
 
 module.exports = OrderJobService;
