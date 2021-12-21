@@ -2751,7 +2751,7 @@ class OrderService
         const cleaned = R.pickBy((it) => it !== undefined, payload);
 
         if (Object.keys(cleaned).length === 0)
-            throw { 'status': 400, 'data': 'Missing Update Values' };
+            throw new HttpError(400, 'Missing Update Values');
 
         const promises = await Promise.allSettled(orders.map(async (order) =>
         {
