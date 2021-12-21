@@ -10,7 +10,10 @@ const Invoice = require('../Models/Invoice');
 const Currency = require('currency.js');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const Emitter = require('events');
 const R = require('ramda');
+
+const emitter = new Emitter();
 
 class OrderJobService
 {
@@ -804,6 +807,69 @@ class OrderJobService
             await trx.rollback();
             throw error;
         }
+    }
+
+    static async markJobAsComplete(jobGuid, currentUser)
+    {
+        // start transaction
+        const trx = await OrderStop.startTransaction();
+
+        const job = await OrderJob.query(trx).where(
+            {
+                'orderJobs.guid': jobGuid
+            })
+            .withGraphJoined('order')
+            .withGraphJoined('stopLinks').first();
+
+        if (!job)
+            throw { 'status': 400, 'data': 'Job Doesn\'t Match Criteria To Move To Complete State' };
+        else if (!job.isReady)
+            throw { 'status': 400, 'data': 'Job Is Not Ready' };
+        else if (job.isOnHold)
+            throw { 'status': 400, 'data': 'Job Is On Hold' };
+        else if (job.isDeleted)
+            throw { 'status': 400, 'data': 'Job Is Deleted' };
+        else if (job.isCanceled)
+            throw { 'status': 400, 'data': 'Job Is Canceled' };
+        else if (!job.vendorGuid)
+            throw { 'status': 400, 'data': 'Job Has No Vendor' };
+        else if (!job.dispatcherGuid)
+            throw { 'status': 400, 'data': 'Job Has No Dispatcher' };
+        else if (job.order.isTender)
+            throw { 'status': 400, 'data': 'Job Is Part Of Tender Order' };
+        else if (job.isComplete)
+            return 200;
+
+        const allCompleted = job.stopLinks.every(stop => stop.isStarted && stop.isCompleted);
+
+        if (!allCompleted)
+            throw { 'status': 400, 'data': 'All stops must be completed before job can be marked as complete.' };
+
+        await OrderJob.query(trx).patch({ 'isComplete': true, 'updatedByGuid': currentUser, 'status': 'completed' }).where('guid', jobGuid);
+
+        await trx.commit();
+
+        // emit event
+        emitter.emit('orderjob_completed', jobGuid);
+
+        return 200;
+    }
+
+    static async markJobAsUncomplete(jobGuid, currentUser)
+    {
+        const trx = await OrderStop.startTransaction();
+
+        await OrderJob.query(trx).where(
+            {
+                'guid': jobGuid
+            }).patch({ 'isComplete': false, 'updatedByGuid': currentUser }).first();
+
+        await trx.commit();
+
+        // emit event
+        emitter.emit('orderjob_uncompleted', jobGuid);
+
+        return 200;
     }
 }
 
