@@ -2776,6 +2776,55 @@ class OrderService
             .where('orderGuid', orderGuid)
             .andWhere('isTransport', true);
     }
+
+    static async markOrderOnHold(orderGuid, currentUser)
+    {
+        const trx = await Order.startTransaction();
+
+        const order = await Order.query(trx).where({
+            'orders.guid': orderGuid
+        })
+            .withGraphJoined('jobs').first();
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            throw { 'status': 400, 'data': 'Order is Deleted' };
+        else if (order.isCanceled)
+            throw { 'status': 400, 'data': 'Order is Canceled' };
+
+        // check that there are no vendors on any of the jobs
+        for (const job of order.jobs)
+            if (job.vendorGuid)
+                throw { 'status': 400, 'data': `Related Job ${job.number} shouldn't have a vendor` };
+
+        // if we got here mark all jobs on hold and the order on hold
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        await OrderJob.query(trx).patch(job.guid, {
+                            'isOnHold': true,
+                            'updatedByGuid': currentUser
+                        });
+                    }),
+                    Order.query(trx).patchAndFetchById(order.guid, {
+                        'isOnHold': true,
+                        'updatedByGuid': currentUser
+                    })
+                ]
+            );
+
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
 }
 
 module.exports = OrderService;

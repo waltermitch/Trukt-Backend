@@ -86,6 +86,9 @@ paths:
   /job/{jobGuid}/uncomplete:
     put:
       $ref: paths/job/setToUncomplete.yaml
+  /order/{orderGuid}/hold:
+    put:
+      $ref: paths/order/markOnHold.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml

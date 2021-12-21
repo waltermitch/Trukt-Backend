@@ -214,6 +214,14 @@ class OrderController
         }
     }
 
+    static async putOrderOnHold(req, res)
+    {
+        const result = await OrderService.markOrderOnHold(req.params.orderGuid, req.session.userGuid);
+
+        if (result)
+            res.status(200).json(result);
+    }
+
 }
 
 const controller = new OrderController();

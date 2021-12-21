@@ -13,6 +13,7 @@ router
     .patch(`${prefix}`, controller.constructor.patchOrder)
     .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes`, controller.constructor.getOrderNotes)
     .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes/all`, controller.constructor.getAllNotes)
-    .put(`${prefix}/:orderGuid(${uuidRegexStr})/clientNote`, controller.constructor.updateClientNote);
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/clientNote`, controller.constructor.updateClientNote)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/hold`, (req, res) => http(req, res, controller.constructor.putOrderOnHold));
 
 module.exports = router;
