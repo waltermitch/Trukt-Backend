@@ -34,6 +34,10 @@ class LoadboardRequest extends BaseModel
             accepted(builder)
             {
                 builder.where({ isValid: true, isAccepted: true });
+            },
+            validActive(builder)
+            {
+                builder.where({ 'loadboardRequests.isValid': true, 'loadboardRequests.isSynced': true, 'loadboardRequests.isDeleted': false });
             }
         };
     }
