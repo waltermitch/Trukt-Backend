@@ -13,6 +13,7 @@ const OrderStop = require('../Models/OrderStop');
 const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
+const { HttpError } = require('express-openapi-validator/dist/framework/types');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -464,6 +465,11 @@ class LoadboardService
 
         if (!job)
             throw new Error('Job not found');
+
+        if(job.isOnHold)
+        {
+            throw new Error('Cannot get posting data for job that is on hold');
+        }
 
         await this.createPostRecords(job, posts, currentUser);
 
