@@ -1,0 +1,39 @@
+summary: Mark As Uncomplete
+description: Marks Job As UNcompleted
+operationId: jobUncompleted
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: Success
+    content:
+      application/json: {}
+  404:
+    description: Job Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Error message
+              example: Job not Found
+  400:
+    description: Bad Request
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Error message
+              example: Job Can't Be Marked As Uncomplete When It Is Not Complete

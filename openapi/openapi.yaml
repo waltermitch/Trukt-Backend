@@ -80,6 +80,12 @@ paths:
   /job/{jobGuid}/ready:
     put:
       $ref: paths/job/setToReady.yaml
+  /job/{jobGuid}/complete:
+    put:
+      $ref: paths/job/setToComplete.yaml
+  /job/{jobGuid}/uncomplete:
+    put:
+      $ref: paths/job/setToUncomplete.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml
