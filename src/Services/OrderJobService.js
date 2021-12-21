@@ -280,7 +280,7 @@ class OrderJobService
 
     static async updateJobStatus(jobGuid, statusToUpdate, userGuid, trx)
     {
-        if (statusToUpdate == 'Ready')
+        if (statusToUpdate == 'ready')
         {
             const [job] = await OrderJob.query(trx).select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid').where('guid', jobGuid);
             if (!job)
@@ -314,13 +314,13 @@ class OrderJobService
         };
         switch (status)
         {
-            case 'On Hold':
+            case 'on hold':
                 return { ...statusProperties, isOnHold: true, status };
-            case 'Ready':
+            case 'ready':
                 return { ...statusProperties, isReady: true, status };
-            case 'Canceled':
+            case 'canceled':
                 return { ...statusProperties, isCanceled: true, status };
-            case 'Deleted':
+            case 'deleted':
                 return { ...statusProperties, isDeleted: true, status };
 
         }
@@ -337,7 +337,7 @@ class OrderJobService
         const trx = await OrderJob.startTransaction();
         try
         {
-            const res = await OrderJobService.updateJobStatus(jobGuid, 'On Hold', currentUser, trx);
+            const res = await OrderJobService.updateJobStatus(jobGuid, 'on hold', currentUser, trx);
             await trx.commit();
             return res;
         }
@@ -363,7 +363,7 @@ class OrderJobService
             let res;
             if (job.isOnHold)
             {
-                res = await OrderJobService.updateJobStatus(jobGuid, 'Ready', currentUser, trx);
+                res = await OrderJobService.updateJobStatus(jobGuid, 'ready', currentUser, trx);
             }
             else
             {
@@ -862,7 +862,7 @@ class OrderJobService
         await OrderJob.query(trx).where(
             {
                 'guid': jobGuid
-            }).patch({ 'isComplete': false, 'updatedByGuid': currentUser }).first();
+            }).patch({ 'isComplete': false, 'updatedByGuid': currentUser, 'status': 'delivered' }).first();
 
         await trx.commit();
 
