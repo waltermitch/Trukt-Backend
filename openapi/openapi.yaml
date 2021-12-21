@@ -45,6 +45,8 @@ paths:
   /order/{guid}:
     get:
       $ref: paths/order/get.yaml
+    delete:
+      $ref: paths/order/deleteOrder.yaml
   /order/find_by_vin/{vin}:
     get:
       $ref: paths/order/findByVin.yaml
@@ -98,6 +100,9 @@ paths:
   /order/{orderGuid}/uncomplete:
     put:
       $ref: paths/order/markUncomplete.yaml
+  /order/{orderGuid}/undelete:
+    put:
+      $ref: paths/order/undeleteOrder.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml
