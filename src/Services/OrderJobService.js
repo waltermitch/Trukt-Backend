@@ -1,16 +1,16 @@
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderStopLink = require('../Models/OrderStopLink');
+const InvoiceLine = require('../Models/InvoiceLine');
+const knex = require('../Models/BaseModel').knex();
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
-const InvoiceLine = require('../Models/InvoiceLine');
 const Invoice = require('../Models/Invoice');
-const Bill = require('../Models/Bill');
-const R = require('ramda');
 const Currency = require('currency.js');
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
-const knex = require('../Models/BaseModel').knex();
+const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const R = require('ramda');
 
 class OrderJobService
 {
@@ -114,7 +114,7 @@ class OrderJobService
                         Promise.all(deleteLooseOrderStopLinks)
                     ]).then((numDeletes) =>
                     {
-                        const deletedComms = numDeletes[0].map(it => it.guid );
+                        const deletedComms = numDeletes[0].map(it => it.guid);
 
                         // if the there is a stop that is not attached to an order, delete the stop
                         return OrderStop.query(trx)
@@ -284,7 +284,7 @@ class OrderJobService
                 return { jobGuid, error: 'Job Not Found', status: 400 };
             if (!job?.dispatcherGuid)
                 return { jobGuid, error: 'Job cannot be marked as Ready without a dispatcher', status: 400 };
-            if(job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
+            if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
                 return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
 
@@ -376,7 +376,7 @@ class OrderJobService
             throw e;
         }
     }
-    
+
     static async bulkUpdatePrices(jobInput, userGuid)
     {
         const { jobs, expense, revenue, type, operation } = jobInput;
@@ -551,14 +551,14 @@ class OrderJobService
         // loop through every job, and check if it passes more tests.
         // if it does, it returns the valid job guid because that is
         // all we need to update the job to ready.
-        for(const job of jobs)
+        for (const job of jobs)
         {
             const readyResult = OrderJobService.checkJobIsReady(job);
-            if(typeof readyResult == 'string')
+            if (typeof readyResult == 'string')
             {
                 res.acceptedGuids.push(readyResult);
             }
-            else if(readyResult instanceof HttpError)
+            else if (readyResult instanceof HttpError)
             {
                 res.exceptions.push(readyResult);
             }
@@ -590,7 +590,7 @@ class OrderJobService
         // the raw list with a question mark for every item in the list you
         // are passing in.
         const questionMarks = [];
-        for(let i = 0; i < jobGuids.length; i++)
+        for (let i = 0; i < jobGuids.length; i++)
         {
             questionMarks.push('?');
         }
@@ -633,59 +633,59 @@ class OrderJobService
                 os2.date_requested_start,
                 osl.job_guid
             order by pickup_sequence`, jobGuids)).rows;
-        
+
         // Since the previous query only returns some data, we need to know which guids
         // passed the query and which ones did not so we can tell the client which guids
         // did not pass the first test.
         const setGoodGuids = new Set(rows.map(row => row.job_guid));
         const exceptions = [];
-        if(jobGuids.length != setGoodGuids.size)
+        if (jobGuids.length != setGoodGuids.size)
         {
-            for(const guid of jobGuids)
+            for (const guid of jobGuids)
             {
-                if(!setGoodGuids.has(jobGuids))
+                if (!setGoodGuids.has(jobGuids))
                 {
                     exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, is missing requested dates, or cannot be found`));
                 }
             }
         }
         const jobs = await OrderJob
-        .query()
-        .alias('job')
-        .select(
-            'job.isReady',
-            'job.isOnHold',
-            'job.isDeleted',
-            'job.isCanceled',
-            'job.isComplete',
-            'job.dispatcherGuid',
-            'job.vendorGuid',
-            'job.vendorContactGuid',
-            'job.vendorAgentGuid',
-            'job.orderGuid',
-            'job.guid',
-            'job.number',
-            'order.isTender',
-            'vendor.name as vendorName',
-            'type.category as typeCategory',
-            'type.type as jobType'
+            .query()
+            .alias('job')
+            .select(
+                'job.isReady',
+                'job.isOnHold',
+                'job.isDeleted',
+                'job.isCanceled',
+                'job.isComplete',
+                'job.dispatcherGuid',
+                'job.vendorGuid',
+                'job.vendorContactGuid',
+                'job.vendorAgentGuid',
+                'job.orderGuid',
+                'job.guid',
+                'job.number',
+                'order.isTender',
+                'vendor.name as vendorName',
+                'type.category as typeCategory',
+                'type.type as jobType'
             )
-        .leftJoinRelated('order')
-        .leftJoinRelated('vendor')
-        .leftJoinRelated('type')
-        .withGraphFetched('[requests(accepted), stops]')
-        .findByIds(Array.from(setGoodGuids))
-        .modifyGraph('requests', builder =>
-        {
-            builder.select('isValid', 'isAccepted');
-        })
-        .modifyGraph('stops', builder =>
-        {
-            builder.select('sequence', 'stopType', 'dateRequestedStart',
-            'terminal.isResolved as resolvedTerminal', 'terminal.name as terminalName')
-            .leftJoinRelated('terminal').where({ 'terminal.isResolved': false })
-            .distinctOn('terminal.name');
-        });
+            .leftJoinRelated('order')
+            .leftJoinRelated('vendor')
+            .leftJoinRelated('type')
+            .withGraphFetched('[requests(accepted), stops]')
+            .findByIds(Array.from(setGoodGuids))
+            .modifyGraph('requests', builder =>
+            {
+                builder.select('isValid', 'isAccepted');
+            })
+            .modifyGraph('stops', builder =>
+            {
+                builder.select('sequence', 'stopType', 'dateRequestedStart',
+                    'terminal.isResolved as resolvedTerminal', 'terminal.name as terminalName')
+                    .leftJoinRelated('terminal').where({ 'terminal.isResolved': false })
+                    .distinctOn('terminal.name');
+            });
 
         return { jobs, exceptions };
     }
@@ -710,46 +710,46 @@ class OrderJobService
         let res = job.guid;
 
         // A job must belong to a real order(not a tender) before moving to ready
-        if(job.isTender)
+        if (job.isTender)
         {
             res = new HttpError(400, `Job ${job.number} belongs to tender, you must accept tender before moving to ready.`);
         }
 
         // Job cannot be verified again
-        if(job.isReady)
+        if (job.isReady)
         {
             res = new HttpError(409, `Job ${job.number} has already been verified.`);
         }
-        
+
         // depending on the job type, we throw a specific message if there is a vendor assigned
-        if(job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
+        if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
         {
-            if(job.typeCategory == 'transport' && job.jobType == 'transport')
+            if (job.typeCategory == 'transport' && job.jobType == 'transport')
             {
                 res = new HttpError(409, `Carrier ${job.vendorName} for ${job.number} must be undispatched before it can transition to ready.`);
             }
-            else if(job.typeCategory == 'service')
+            else if (job.typeCategory == 'service')
             {
                 res = new HttpError(409, `Vendor ${job.vendorName} for ${job.number} must be unassigned before it can transition to ready.`);
             }
         }
-        
+
         // The job cannot have any active loadboard requests
-        if(job.requests.length != 0)
+        if (job.requests.length != 0)
         {
             res = new HttpError(409, `Please cancel the loadboard request for ${job.number} for it to go to ready.`);
         }
-        
+
         // A dispatcher must be assigned
-        if(!job.dispatcherGuid)
+        if (!job.dispatcherGuid)
         {
             res = new HttpError(409, `Please assign a dispatcher to job ${job.number} first.`);
         }
 
-        for(const bool of booleanFields)
+        for (const bool of booleanFields)
         {
             const field = bool.substring(4, bool.length);
-            if(job[field])
+            if (job[field])
             {
                 res = new HttpError(400, `${field} must be false before ${job.number} can be changed to ready.`);
             }
@@ -758,9 +758,9 @@ class OrderJobService
         // the query should have returned any stops with unverified terminals
         // if there are any stops with unresoled terminals, return an exception
         // telling the client which terminal is unresolved.
-        if(job.stops.length != 0)
+        if (job.stops.length != 0)
         {
-            for(const stop of job.stops)
+            for (const stop of job.stops)
             {
                 res = new HttpError(400, `Address for ${stop.terminalName} for job ${job.number} cannot be mapped to a real location, please verify the address before verifying this job.`);
             }
