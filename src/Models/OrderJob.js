@@ -8,6 +8,11 @@ const jobTypeFields = ['category', 'type'];
 
 class OrderJob extends BaseModel
 {
+    static STATUS = {
+        NEW: 'new',
+        PENDING: 'pending'
+    }
+
     static get tableName()
     {
         return 'rcgTms.orderJobs';
@@ -597,6 +602,39 @@ class OrderJob extends BaseModel
             if (lineFound) return lineFound;
         }
         return {};
+    }
+
+    validateJobForDispatch()
+    {
+        if (this.isDummy)
+            throw new Error('Cannot dispatch dummy job');
+        
+        if (this.type.category != 'transport' && this.type.type != 'transport' && this.isTransport)
+            throw new Error('Cannot dispatch non transport job');
+
+        if (this.isOnHold)
+            throw new Error('Cannot dispatch job that is on hold');
+
+        if (!this.dispatcherGuid)
+            throw new Error('Cannot dispatch job that has no dispatcher');
+
+        if (!this.isReady)
+            throw new Error('Cannot dispatch job that is not ready');
+
+        if (this.isDeleted)
+            throw new Error('Cannot dispatch deleted job');
+
+        if (this.isCanceled)
+            throw new Error('Cannot dispatch canceled job');
+
+        if (this.order.isTender)
+            throw new Error('Cannot dispatch job for tender order');
+
+        if (this.dispatches.length !== 0)
+            throw new Error('Cannot dispatch job with already active load offer');
+
+        if(this.bills.length === 0)
+            throw new Error('Job bill missing. Bill is required in order to set payment method and payment terms');
     }
 
     static get fetch()
