@@ -112,8 +112,13 @@ class OrderService
         );
 
         for (const s of status)
-            if (s in OrderService.statusMap)
-                baseOrderQuery.modify(OrderService.statusMap[s]);
+        {
+            baseOrderQuery.orWhere(builder =>
+            {
+                if (s in OrderService.statusMap)
+                    builder.modify(OrderService.statusMap[s]);
+            });
+        }
 
         const queryFilterCustomer = OrderService.addFilterCustomer(
             baseOrderQuery,
@@ -1639,14 +1644,6 @@ class OrderService
                 });
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
-
-            // TODO: Events here
-            // update loadboard postings (async)
-            orderUpdated.jobs.map(async (job) =>
-            {
-                await LoadboardService.updatePostings(job.guid)
-                    .catch(err => console.log(err));
-            });
 
             await trx.commit();
 

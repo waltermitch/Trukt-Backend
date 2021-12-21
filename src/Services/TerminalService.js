@@ -1,5 +1,5 @@
-const ArcgisClient = require('../ArcgisClient');
 const telemetryClient = require('../ErrorHandling/Insights');
+const ArcgisClient = require('../ArcgisClient');
 const Terminal = require('../Models/Terminal');
 
 const keywordFields = {

@@ -25,7 +25,7 @@ exports.up = function (knex)
         ADD CONSTRAINT "order_jobs_ready_constraint" CHECK ((is_ready = true AND is_deleted = false AND is_canceled = false) OR is_ready = false),
         ADD CONSTRAINT "order_jobs_deleted_constraint" CHECK ((is_deleted = true AND is_canceled = false AND is_complete = false) OR is_deleted = false),
         ADD CONSTRAINT "order_jobs_cancel_constraint" CHECK ((is_canceled = true AND is_deleted = false AND is_complete = false ) OR is_canceled = false),
-        ADD CONSTRAINT "order_jobs_complete_constraint" CHECK ((is_complete = true AND is_ready = false AND is_deleted = false AND is_canceled = false AND is_on_hold = false) OR is_complete = false);
+        ADD CONSTRAINT "order_jobs_complete_constraint" CHECK ((is_complete = true AND is_ready = true AND is_deleted = false AND is_canceled = false AND is_on_hold = false) OR is_complete = false);
     `);
 };
 

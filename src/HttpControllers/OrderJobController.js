@@ -93,7 +93,7 @@ class OrderJobController
             next(error);
         }
     }
-    
+
     static async setJobToReadySingle(req, res, next)
     {
         try
@@ -104,7 +104,7 @@ class OrderJobController
             // throw all the exceptions in the exceptions list
             // otherwise convert all the exceptions into readable json formats
             // so the client can have both the successes and the failures
-            if(results.acceptedJobs.length == 0)
+            if (results.acceptedJobs.length == 0)
             {
                 throw results.exceptions;
             }
@@ -115,16 +115,30 @@ class OrderJobController
                     return error.toJson();
                 });
             }
-            for(const job of results.acceptedJobs)
+            for (const job of results.acceptedJobs)
             {
                 emitter.emit('orderjob_status', job.orderGuid);
             }
             res.status(202).json(results);
         }
-        catch(e)
+        catch (e)
         {
             next(e);
         }
+    }
+
+    static async markJobAsComplete(req, res)
+    {
+        await OrderJobService.markJobAsComplete(req.params.jobGuid, req.session.userGuid);
+
+        res.status(200).send();
+    }
+
+    static async markJobAsUncomplete(req, res)
+    {
+        await OrderJobService.markJobAsUncomplete(req.params.jobGuid, req.session.userGuid);
+
+        res.status(200).send();
     }
 }
 
