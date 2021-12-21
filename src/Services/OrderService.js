@@ -2812,11 +2812,13 @@ class OrderService
                     {
                         await OrderJob.query(trx).patch(job.guid, {
                             'isOnHold': true,
+                            'isReady': false,
                             'updatedByGuid': currentUser
                         });
                     }),
                     Order.query(trx).patchAndFetchById(order.guid, {
                         'isOnHold': true,
+                        'isReady': false,
                         'updatedByGuid': currentUser
                     })
                 ]
