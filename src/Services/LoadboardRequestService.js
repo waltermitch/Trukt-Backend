@@ -1,9 +1,12 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardRequest = require('../Models/LoadboardRequest');
 const LoadboardPost = require('../Models/LoadboardPost');
+const EventEmitter = require('events');
 const { ref } = require('objection');
 const axios = require('axios');
 const https = require('https');
+
+const emitter = new EventEmitter();
 
 const lbInstance = axios.create({
     baseURL: process.env['azure.loadboard.baseurl'],
@@ -134,6 +137,8 @@ class LoadboardRequestService
             }
         });
 
+        emitter.emit('orderjob_dispatch_canceled', { jobGuid: lbPosting.jobGuid, dispatcherGuid: currentUser, orderGuid: lbPosting.orderGuid });
+
         return response;
     }
 
@@ -190,6 +195,8 @@ class LoadboardRequestService
 
         // search RCG data base by the guid and update to accepted
         await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
+
+        emitter.emit('orderjob_dispatch_offer_accepted', { jobGuid: queryRequest.jobGuid, dispatcherGuid: currentUser, orderGuid: queryRequest.orderGuid });
 
         return queryRequest;
     }
@@ -248,6 +255,8 @@ class LoadboardRequestService
 
         // search data base by the guid that super provides and update to canceled
         await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
+
+        emitter.emit('orderjob_dispatch_offer_declined', { jobGuid: queryRequest.jobGuid, dispatcherGuid: currentUser, orderGuid: queryRequest.orderGuid });
 
         return queryRequest;
     }

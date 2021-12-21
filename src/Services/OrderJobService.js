@@ -794,11 +794,13 @@ class OrderJobService
                              FROM rcg_tms.order_stop_links links 
                              WHERE links.job_guid = '${jobGuid}') AS links
                         ON stops.guid = links.stop_guid) AS stops
-                    WHERE guid = '${jobGuid}'`;
+                    WHERE guid = '${jobGuid}' RETURNING status`;
 
         try
         {
-            await knex.raw(q).transacting(trx);
+            const status = await knex.raw(q).transacting(trx);
+
+            // TODO: add event emitter for orderjob_delivered or orderjob_picked_up
 
             await trx.commit();
         }
@@ -849,7 +851,6 @@ class OrderJobService
 
         await trx.commit();
 
-        // emit event
         emitter.emit('orderjob_completed', jobGuid);
 
         return 200;
@@ -866,7 +867,6 @@ class OrderJobService
 
         await trx.commit();
 
-        // emit event
         emitter.emit('orderjob_uncompleted', jobGuid);
 
         return 200;
