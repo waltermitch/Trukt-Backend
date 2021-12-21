@@ -1,0 +1,30 @@
+summary: Cancel job
+operationId: cancelJob
+description: Cancels job
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+responses:
+  204:
+    description: Job canceled succesfully
+    content:
+      application/json: {}
+  404:
+    description: Job does not exist
+    content:
+      application/json:
+        schema:
+          type: string
+          example: Job does not exist
+  400: 
+    description: Dispatched or deleted jobs can not be canceled
+    content:
+        application/json:
+          schema:
+            type: string
+            example: Please un-dispatch or undeleted the job before deleting
