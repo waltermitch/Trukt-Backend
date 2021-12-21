@@ -542,7 +542,7 @@ class OrderJobService
 
     static async setJobToReady(jobGuid, currentUser)
     {
-        return await OrderJobService.setJobsReadyBulk([jobGuid], currentUser);
+        return await OrderJobService.setJobsToReadyBulk([jobGuid], currentUser);
     }
 
     static async setJobsToReadyBulk(jobGuids, currentUser)
@@ -559,7 +559,7 @@ class OrderJobService
             const readyResult = OrderJobService.checkJobIsReady(job);
             if (typeof readyResult == 'string')
             {
-                res.acceptedGuids.push(readyResult);
+                res.acceptedJobs.push(readyResult);
             }
             else if (readyResult instanceof HttpError)
             {
@@ -573,7 +573,7 @@ class OrderJobService
             dateVerified: DateTime.utc().toString(),
             verifiedByGuid: currentUser,
             updatedByGuid: currentUser
-        }).findByIds(res.acceptedGuids).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
+        }).findByIds(res.acceptedJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
 
         await Promise.allSettled(res.acceptedJobs.map(item =>
             StatusManagerHandler.registerStatus({
