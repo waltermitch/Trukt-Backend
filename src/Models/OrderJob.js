@@ -10,6 +10,7 @@ class OrderJob extends BaseModel
 {
     static STATUS = {
         NEW: 'new',
+        READY: 'ready',
         PENDING: 'pending'
     }
 
