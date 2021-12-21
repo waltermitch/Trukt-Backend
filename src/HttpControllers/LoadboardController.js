@@ -154,13 +154,11 @@ class LoadboardController
         }
         catch (err)
         {
-            let status = 500;
+            let status = 400;
             const message = err.toString();
 
             if (message === 'Error: Job not found')
                 status = 404;
-            else if (message === 'Error: No active offers to accept')
-                status = 400;
 
             next({
                 status,
