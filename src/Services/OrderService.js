@@ -3314,6 +3314,108 @@ class OrderService
             throw err;
         }
     }
+
+    static async cancelOrder(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (order.isDeleted)
+            throw new HttpError(400, 'Order is Deleted');
+        else if (['completed', 'delivered'].includes(order.status))
+            throw new HttpError(400, 'Can Not Cancel Completed or Delivered Order');
+        else if (order.isCanceled)
+            return 200;
+
+        // if we got here mark all jobs canceled and the order canceled
+        try
+        {
+            await Promise.all(
+                [
+                    await OrderJob.query(trx).patch({
+                        'isCanceled': true,
+                        'isOnHold': false,
+                        'isReady': false,
+                        'status': 'canceled',
+                        'updatedByGuid': currentUser
+                    }).where('order_guid', order.guid)
+                    ,
+                    Order.query(trx).patch({
+                        'isCanceled': true,
+                        'isOnHold': false,
+                        'isReady': false,
+                        'status': 'canceled',
+                        'updatedByGuid': currentUser
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_canceled', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async uncancelOrder(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (order.isDeleted)
+            throw new HttpError(400, 'Order is Deleted');
+        else if (order.isCanceled)
+            return 200;
+
+        // if we got here mark all jobs uncanceled and the order uncanceled
+        try
+        {
+            await Promise.all(
+                [
+                    await OrderJob.query(trx).patch({
+                        'isCanceled': false,
+                        'status': 'new',
+                        'updatedByGuid': currentUser
+                    }).where('order_guid', order.guid)
+                    ,
+                    Order.query(trx).patch({
+                        'isCanceled': false,
+                        'status': 'new',
+                        'updatedByGuid': currentUser
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_uncanceled', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
 }
 
 module.exports = OrderService;
