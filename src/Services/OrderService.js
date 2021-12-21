@@ -112,8 +112,13 @@ class OrderService
         );
 
         for (const s of status)
-            if (s in OrderService.statusMap)
-                baseOrderQuery.modify(OrderService.statusMap[s]);
+        {
+            baseOrderQuery.orWhere(builder =>
+            {
+                if (s in OrderService.statusMap)
+                    builder.modify(OrderService.statusMap[s]).debug(true);
+            });
+        }
 
         const queryFilterCustomer = OrderService.addFilterCustomer(
             baseOrderQuery,
