@@ -3095,6 +3095,108 @@ class OrderService
 
         return 200;
     }
+
+    static async deleteOrder(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphFetched('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            return 200;
+
+        // if we got here mark all jobs deleted and the order deleted
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        await OrderJob.query(trx).patch({
+                            'isDeleted': true,
+                            'isReady': false,
+                            'status': 'deleted',
+                            'updatedByGuid': currentUser
+                        }).where('guid', job.guid);
+                    }),
+                    Order.query(trx).patch({
+                        'isDeleted': true,
+                        'isReady': false,
+                        'status': 'deleted',
+                        'updatedByGuid': currentUser
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_deleted', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async undeleteOrder(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphFetched('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (!order.isDeleted)
+            return 200;
+
+        // if we got here mark all jobs undeleted and the order undeleted
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        await OrderJob.query(trx).patch({
+                            'isDeleted': false,
+                            'isCanceled': false,
+                            'status': 'new',
+                            'updatedByGuid': currentUser
+                        }).where('guid', job.guid);
+                    }),
+                    Order.query(trx).patch({
+                        'isDeleted': false,
+                        'isCanceled': false,
+                        'status': 'new',
+                        'updatedByGuid': currentUser
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_undeleted', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
 }
 
 module.exports = OrderService;
