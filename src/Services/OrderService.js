@@ -116,7 +116,7 @@ class OrderService
             baseOrderQuery.orWhere(builder =>
             {
                 if (s in OrderService.statusMap)
-                    builder.modify(OrderService.statusMap[s]).debug(true);
+                    builder.modify(OrderService.statusMap[s]);
             });
         }
 
