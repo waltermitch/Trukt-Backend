@@ -267,3 +267,9 @@ paths:
   /job/{jobGuid}/undelete:
     put:
       $ref: paths/job/undelete.yaml
+  /job/{jobGuid}/cancel:
+    put:
+      $ref: paths/job/cancel.yaml
+  /job/{jobGuid}/uncancel:
+    put:
+      $ref: paths/job/uncancel.yaml

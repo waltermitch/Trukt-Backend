@@ -376,13 +376,13 @@ class OrderJobService
                 .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
                 .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
 
-            if(!job)
+            if (!job)
             {
                 throw new HttpError(404, 'Job not found');
             }
 
             // job cannot be dispatched before being put on hold
-            if(job.dispatches.length >= 1)
+            if (job.dispatches.length >= 1)
             {
                 throw new HttpError(400, 'Job must be undispatched before it can be moved to On Hold');
             }
@@ -392,25 +392,25 @@ class OrderJobService
             const loadboardPostGuids = job.loadboardPosts.map(post => post.guid);
 
             await LoadboardRequest.query(trx).patch({
-                    isValid: false,
-                    isCanceled: false,
-                    isDeclined: true,
-                    isSynced: true,
-                    status: 'declined',
-                    declineReason: 'Job set to On Hold',
-                    updatedByGuid: currentUser
-                })
+                isValid: false,
+                isCanceled: false,
+                isDeclined: true,
+                isSynced: true,
+                status: 'declined',
+                declineReason: 'Job set to On Hold',
+                updatedByGuid: currentUser
+            })
                 .whereIn('loadboardPostGuid', loadboardPostGuids);
 
             // unpost the load from all loadboards
             // unposting from loadboards automatically cancels any requests on the
             // loadboards end so we only have to cancel them on our end
             await LoadboardService.unpostPostings(job.guid, job.loadboardPosts, currentUser);
-            
+
             const res = await OrderJob.query(trx)
-            .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
-            .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
-    
+                .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
+                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+
             await trx.commit();
 
             await StatusManagerHandler.registerStatus({
@@ -441,7 +441,7 @@ class OrderJobService
         {
             const queryRes = await OrderJobService.getJobForReadyCheck([jobGuid]);
 
-            if(queryRes.jobs.length < 1)
+            if (queryRes.jobs.length < 1)
             {
                 throw queryRes.exceptions;
             }
@@ -461,7 +461,7 @@ class OrderJobService
                 if (typeof readyResult == 'string')
                 {
                     res = await OrderJob.query(trx).patch(OrderJobService.createStatusPayload('ready', currentUser))
-                    .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+                        .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
                 }
                 else if (readyResult instanceof HttpError)
                 {
@@ -1047,6 +1047,94 @@ class OrderJobService
                 throw new HttpError(404, 'Job does not exist');
 
             if (!job?.isDeleted)
+                return { status: 200 };
+
+            const payload = OrderJobService.createStatusPayload('ready', userGuid);
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).unposted;
+
+            await Promise.all([
+                OrderJob.query(trx).patch(payload).findById(jobGuid),
+                LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
+                    LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
+            ]);
+
+            await trx.commit();
+
+            EventEmitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            return { status: 200 };
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
+    static async cancelJob(jobGuid, userGuid)
+    {
+
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const job = await OrderJobService.checkJobToCancel(jobGuid, trx);
+
+            const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
+            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, userGuid);
+
+            const payload = OrderJobService.createStatusPayload('canceled', userGuid);
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).canceled;
+
+            await Promise.all([
+                OrderJob.query(trx).patch(payload).findById(jobGuid),
+                LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
+                    LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
+            ]);
+
+            await trx.commit();
+
+            EventEmitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            return { status: 200 };
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
+    static async checkJobToCancel(jobGuid, trx)
+    {
+        const jobStatus = [
+            OrderJob.query(trx)
+                .select('orderGuid', 'isDeleted').findOne('guid', jobGuid),
+            OrderJob.query(trx).alias('job')
+                .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
+        ];
+
+        const [job, jobIsDispatched] = await Promise.all(jobStatus);
+        if (!job)
+            throw new HttpError(400, 'Job does not exist');
+
+        if (job?.isDeleted)
+            throw new HttpError(400, 'This Order is deleted and can not be canceled.');
+
+        if (job && jobIsDispatched)
+            throw new HttpError(400, 'Please un-dispatch the Order before deleting');
+
+        return job;
+    }
+
+    static async uncancelJob(jobGuid, userGuid)
+    {
+
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const job = await OrderJob.query(trx).select('orderGuid', 'isCanceled').findOne('guid', jobGuid);
+            if (!job)
+                throw new HttpError(400, 'Job does not exist');
+
+            if (!job?.isCanceled)
                 return { status: 200 };
 
             const payload = OrderJobService.createStatusPayload('ready', userGuid);

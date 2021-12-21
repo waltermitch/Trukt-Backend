@@ -64,10 +64,21 @@ class LoadboardRequest extends BaseModel
                 isSynced: false,
                 isDeleted: false,
                 updatedByGuid: userGuid
+            },
+            canceled: {
+                status: 'canceled',
+                isValid: false,
+                isAccepted: false,
+                isDeclined: false,
+                isCanceled: true,
+                isSynced: false,
+                isDeleted: false,
+                updatedByGuid: userGuid
             }
         };
     }
 
 }
+
 Object.assign(LoadboardRequest.prototype, RecordAuthorMixin);
 module.exports = LoadboardRequest;

@@ -134,6 +134,30 @@
             "category": "job",
             "name": "Job Set On Hold",
             "order_filter_label": "Set On Hold On"
+        },
+        {
+            "id": 23,
+            "category": "job",
+            "name": "Job Canceled",
+            "order_filter_label": "Job Canceled On"
+        },
+        {
+            "id": 24,
+            "category": "job",
+            "name": "Job Uncanceled",
+            "order_filter_label": "Job Uncanceled On"
+        },
+        {
+            "id": 25,
+            "category": "order",
+            "name": "Order Canceled",
+            "order_filter_label": "Order Canceled On"
+        },
+        {
+            "id": 26,
+            "category": "Order",
+            "name": "Order Uncanceled",
+            "order_filter_label": "Order Uncanceled On"
         }
     ]
 }
