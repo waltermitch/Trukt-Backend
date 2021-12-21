@@ -14,13 +14,15 @@ router
     .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes`, controller.getOrderNotes)
     .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes/all`, controller.getAllNotes)
     .put(`${prefix}/:orderGuid(${uuidRegexStr})/clientNote`, controller.updateClientNote)
-    .put(`${prefix}/:orderGuid(${uuidRegexStr})/hold`, (req, res) => http(req, res, controller.putOrderOnHold))
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/hold`, controller.putOrderOnHold)
     .put(`${prefix}/:orderGuid(${uuidRegexStr})/unhold`, controller.removeHoldOnOrder)
     .put(`${prefix}/:orderGuid(${uuidRegexStr})/complete`, controller.markOrderComplete)
     .put(`${prefix}/:orderGuid(${uuidRegexStr})/uncomplete`, controller.markOrderUncomplete)
     .delete(`${prefix}/:orderGuid(${uuidRegexStr})`, controller.deleteOrder)
     .put(`${prefix}/:orderGuid(${uuidRegexStr})/undelete`, controller.undeleteOrder)
     .put(`${prefix}/:orderGuid(${uuidRegexStr})/delivered`, controller.markOrderDelivered)
-    .put(`${prefix}/:orderGuid(${uuidRegexStr})/undelivered`, controller.markOrderUndelivered);
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/undelivered`, controller.markOrderUndelivered)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/cancel`, controller.cancelOrder)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/uncancel`, controller.uncancelOrder);
 
 module.exports = router;

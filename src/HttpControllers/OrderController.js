@@ -83,27 +83,34 @@ class OrderController
 
     static async handleTenders(req, res, next)
     {
-        const orderGuids = req.body.orderGuids;
-
-        let responses = [];
-        if (req.params.action == 'accept')
+        try
         {
-            responses = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+            const orderGuids = req.body.orderGuids;
 
-            for (const response of responses)
+            let responses = [];
+            if (req.params.action == 'accept')
             {
-                if (response.status === 200)
-                    myEmitter.emit('order_created', response.orderGuid);
+                responses = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+
+                for (const response of responses)
+                {
+                    if (response.status === 200)
+                        myEmitter.emit('order_created', response.orderGuid);
+                }
+
+            }
+            else if (req.params.action == 'reject')
+            {
+                responses = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
             }
 
+            res.status(200);
+            res.json(responses);
         }
-        else if (req.params.action == 'reject')
+        catch (err)
         {
-            responses = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+            next(err);
         }
-
-        res.status(200);
-        res.json(responses);
     }
 
     static async patchOrder(req, res, next)
@@ -326,6 +333,37 @@ class OrderController
             next(err);
         }
     }
+
+    static async cancelOrder(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.cancelOrder(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async uncancelOrder(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.uncancelOrder(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
 }
 
 module.exports = OrderController;
