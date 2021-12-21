@@ -2788,8 +2788,8 @@ class OrderService
             Order.startTransaction(),
             Order.query()
                 .where({
-            'orders.guid': orderGuid
-        })
+                    'orders.guid': orderGuid
+                })
                 .withGraphJoined('jobs')
                 .first()
         ]);
@@ -2849,7 +2849,7 @@ class OrderService
             Order.query()
                 .where({
                     'orders.guid': orderGuid
-                    })
+                })
                 .withGraphJoined('jobs')
                 .first()
         ]);
