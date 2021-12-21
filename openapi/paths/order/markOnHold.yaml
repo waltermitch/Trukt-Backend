@@ -1,6 +1,6 @@
 summary: Mark As On Hold
 description: Marks Order As On Hold
-operationId: orderHeld
+operationId: holdOrder
 tags:
   - Order
 parameters:
