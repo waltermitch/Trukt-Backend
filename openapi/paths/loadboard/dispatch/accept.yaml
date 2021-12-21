@@ -9,11 +9,19 @@ parameters:
     schema:
       $ref: '../../../components/schemas/Common.yaml#/guid'
     required: true
-  - in: query
-    name: dispatchGuid
-    schema:
-      $ref: '../../../components/schemas/Common.yaml#/guid'
-    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties: 
+          dispatchGuid: 
+            description: guid of job's dispatch
+            type: string
+            example: 10488cea-41c2-4469-927f-7e3a9a4d243a
+            $ref: '../../../components/schemas/Common.yaml#/guid'
+        required:
+          - dispatchGuid
 responses:
   200:
     description: accepted dispatch
