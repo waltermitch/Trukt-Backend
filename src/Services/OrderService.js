@@ -1,5 +1,4 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
-const LoadboardService = require('../Services/LoadboardService');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
@@ -3020,6 +3019,81 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static async markAsScheduled(orderGuid, currentUser)
+    {
+        const [order] = await Promise.all([
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphFetched('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            throw { 'status': 400, 'data': 'Order is Deleted' };
+        else if (order.isCanceled)
+            throw { 'status': 400, 'data': 'Order is Canceled' };
+        else if (!order.isReady)
+            throw { 'status': 400, 'data': 'Order is Not Ready' };
+        else if (order.isOnHold)
+            throw { 'status': 400, 'data': 'Order is On Hold' };
+        else if (order.status === 'scheduled')
+            return 200;
+
+        // make sure at least one job has a vendor assigned
+        let hasVendor = false;
+        for (const job of order.jobs)
+            if (job.isTransport && job.vendorGuid)
+                hasVendor = true;
+
+        if (!hasVendor)
+            throw { 'status': 400, 'data': 'Order\'s Jobs Have No Vendors Assigned' };
+
+        // if we got here mark the order scheduled
+        await Order.query().patch({
+            'updatedByGuid': currentUser,
+            'status': 'scheduled'
+        }).where('guid', order.guid);
+
+        emitter.emit('order_scheduled', orderGuid);
+
+        return 200;
+    }
+
+    static async markAsUnscheduled(orderGuid, currentUser)
+    {
+        const [order] = await Promise.all([
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphFetched('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            throw { 'status': 400, 'data': 'Order is Deleted' };
+        else if (order.isCanceled)
+            throw { 'status': 400, 'data': 'Order is Canceled' };
+        else if (order.status === 'ready')
+            return 200;
+
+        // make sure there are no jobs with vendors assigned
+        for (const job of order.jobs)
+            if (job.isTransport && job.vendorGuid)
+                throw { 'status': 400, 'data': 'Order\'s Jobs Should Not Have Vendors Assigned' };
+
+        await Order.query().patch({
+            'updatedByGuid': currentUser,
+            'status': 'ready'
+        }).where('guid', order.guid);
+
+        emitter.emit('order_unscheduled', orderGuid);
+
+        return 200;
     }
 }
 
