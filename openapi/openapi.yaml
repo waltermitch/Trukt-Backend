@@ -127,6 +127,9 @@ paths:
       $ref: paths/loadboard/dispatch/post.yaml
     put:
       $ref: paths/loadboard/dispatch/put.yaml
+  /loadboard/{jobId}/accept:
+    put:
+      $ref: paths/loadboard/dispatch/accept.yaml
   /invoice/{invoiceGuid}:
     get:
       $ref: paths/invoice/get.yaml
