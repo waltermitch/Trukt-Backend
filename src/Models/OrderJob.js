@@ -659,7 +659,7 @@ class OrderJob extends BaseModel
 
     static areAllOrderJobsDeleted(query, orderGuid)
     {
-        return query.select(raw('bool_and(is_deleted) as areAllOrderJobsDeleted')).where('orderGuid', orderGuid);
+        return query.select(raw('bool_and(is_deleted) as deleteOrder')).where('orderGuid', orderGuid);
     }
 }
 

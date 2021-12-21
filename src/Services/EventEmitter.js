@@ -88,7 +88,7 @@ emitter.on('orderjob_deleted', async ({ orderGuid, userGuid, jobGuid }) =>
         });
 
         const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
-        if (jobsOrder?.areallorderjobsdeleted)
+        if (jobsOrder?.deleteorder)
         {
             const deleteStatusPayload = Order.createStatusPayload(userGuid).deleted;
             await Promise.allSettled([

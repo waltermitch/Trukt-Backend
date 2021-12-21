@@ -285,6 +285,14 @@ class OrderJobService
 
     static async updateJobStatus(jobGuid, statusToUpdate, userGuid, trx)
     {
+        const generalBulkFunctions = {
+            'deleted': 'delete',
+            'undeleted': 'undelete',
+            'canceled': 'cancel',
+            'uncanceled': 'uncancel'
+        };
+        const generalBulkFunctionName = generalBulkFunctions[statusToUpdate];
+
         if (statusToUpdate == 'ready')
         {
             const [job] = await OrderJob.query(trx).select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid').where('guid', jobGuid);
@@ -295,24 +303,9 @@ class OrderJobService
             if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
                 return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
-        else if (statusToUpdate === 'deleted')
+        else if (generalBulkFunctionName)
         {
-            return await OrderJobService.deleteJob(jobGuid, userGuid)
-                .then(deleteResult =>
-                {
-                    const status = deleteResult.status;
-                    return { jobGuid, error: null, status };
-                })
-                .catch(error =>
-                {
-                    const status = error?.status || 500;
-                    const errorMessage = error?.message || 'Internal server error';
-                    return { jobGuid, error: errorMessage, status };
-                });
-        }
-        else if (statusToUpdate === 'undeleted')
-        {
-            return await OrderJobService.undeleteJob(jobGuid, userGuid)
+            return await OrderJobService[`${generalBulkFunctionName}Job`](jobGuid, userGuid)
                 .then(deleteResult =>
                 {
                     const status = deleteResult.status;
@@ -923,7 +916,7 @@ class OrderJobService
             const [job, jobIsDispatched] = await Promise.all(jobStatus);
 
             if (!job)
-                throw new HttpError(400, 'Job does not exist');
+                throw new HttpError(404, 'Job does not exist');
 
             if (job && jobIsDispatched)
                 throw new HttpError(400, 'Please un-dispatch the Order before deleting');
