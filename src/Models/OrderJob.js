@@ -183,10 +183,10 @@ class OrderJob extends BaseModel
                 join: {
                     from: 'rcgTms.orderJobs.guid',
                     through: {
-                        from: 'rcgTms.LoadboardPosts.guid',
-                        to: 'rcgTms.LoadboardPosts.jobGuid'
+                        from: 'rcgTms.LoadboardPosts.jobGuid',
+                        to: 'rcgTms.LoadboardPosts.guid'
                     },
-                    to: 'rcgTms.loadboardRequests.guid'
+                    to: 'rcgTms.loadboardRequests.loadboardPostGuid'
                 }
             }
         };
