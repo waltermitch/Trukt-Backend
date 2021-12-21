@@ -542,7 +542,7 @@ class OrderJobService
 
     static async setJobToReady(jobGuid, currentUser)
     {
-        return await OrderJobService.setJobsReadyBulk([jobGuid], currentUser);
+        return await OrderJobService.setJobsToReadyBulk([jobGuid], currentUser);
     }
 
     static async setJobsToReadyBulk(jobGuids, currentUser)
