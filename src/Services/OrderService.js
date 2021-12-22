@@ -32,6 +32,7 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 
 const emitter = new EventEmitter();
 
@@ -3111,6 +3112,11 @@ class OrderService
         else if (order.isDeleted)
             return 200;
 
+        // make sure no vendor is assigned to any jobs
+        for (const job of order.jobs)
+            if (job.vendorGuid)
+                throw new HttpError(400, 'Order\'s Jobs Should Not Have Vendors Assigned');
+
         // if we got here mark all jobs deleted and the order deleted
         try
         {
@@ -3172,14 +3178,14 @@ class OrderService
                         await OrderJob.query(trx).patch({
                             'isDeleted': false,
                             'isCanceled': false,
-                            'status': 'new',
+                            'status': 'ready',
                             'updatedByGuid': currentUser
                         }).where('guid', job.guid);
                     }),
                     Order.query(trx).patch({
                         'isDeleted': false,
                         'isCanceled': false,
-                        'status': 'new',
+                        'status': 'ready',
                         'updatedByGuid': currentUser
                     }).where('guid', order.guid)
                 ]
