@@ -433,7 +433,7 @@ class OrderJobService
         try
         {
             const queryRes = await OrderJobService.getJobForReadyCheck([jobGuid]);
-            console.log(queryRes);
+
             if(queryRes.jobs.length < 1)
             {
                 throw queryRes.exceptions;
