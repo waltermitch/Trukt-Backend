@@ -350,6 +350,11 @@ class OrderJobService
                 .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
                 .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
 
+            if(!job)
+            {
+                throw new HttpError(404, 'Job not found');
+            }
+
             // job cannot be dispatched before being put on hold
             if(job.dispatches.length >= 1)
             {
@@ -402,6 +407,11 @@ class OrderJobService
         try
         {
             const job = await OrderJob.query(trx).findById(jobGuid);
+            
+            if(!job)
+            {
+                throw new HttpError(404, 'Job not found');
+            }
             let res;
             if (job.isOnHold)
             {
