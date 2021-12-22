@@ -7,7 +7,8 @@
                 "invoice_bill_lines",
                 "orders",
                 "order_stops",
-                "order_stop_links"
+                "order_stop_links",
+                "order_job_dispatches"
             ]
         }
     ],
