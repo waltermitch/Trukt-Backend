@@ -470,7 +470,19 @@ class LoadboardService
                 isCanceled: raw('(CASE WHEN "is_pending" THEN true ELSE false END)'),
                 dateCanceled: raw('(CASE WHEN "is_pending" = true THEN NOW() ELSE null END)')
             }).whereNot({ guid: dispatch.guid });
+
+            await dispatch.$relatedQuery('loadboardPost', trx).patch({ isPosted: false });
             
+            await dispatch.$query(trx).patch({
+                isAccepted: true,
+                isPending: false,
+                dateAccepted: new Date(),
+                isDeclined: false,
+                dateCanceled: null,
+                dateDeclined: null,
+                updatedByGuid: currentUser
+            });
+
             trx.commit();
 
             return dispatch;
