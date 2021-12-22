@@ -14,6 +14,7 @@ const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
 const EventEmitter = require('events');
 const { DateTime } = require('luxon');
+const { raw } = require('objection');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -451,12 +452,27 @@ class LoadboardService
                 throw new Error('Job is not pending');
             if (Number(job.validDispatchesCount) > 1)
                 throw new Error('Job has more than one valid pending dispatch');
+            if (Number(job.validDispatchesCount) === 0)
+                throw new Error('Job has no valid pending dispatch');
 
             const dispatch = await job.$relatedQuery('dispatches', trx).findById(dispatchGuid);
 
             if (!dispatch)
                 throw new Error('Dispatch not found');
+
+            await job.$relatedQuery('dispatches', trx).patch({
+                isValid: false,
+                isPending: false,
+                dateAccepted: null,
+                dateDeclined: null,
+                isAccepted: false,
+                isDeclined: false,
+                isCanceled: raw('(CASE WHEN "is_pending" THEN true ELSE false END)'),
+                dateCanceled: raw('(CASE WHEN "is_pending" = true THEN NOW() ELSE null END)')
+            }).whereNot({ guid: dispatch.guid });
             
+            trx.commit();
+
             return dispatch;
         }
         catch (e)

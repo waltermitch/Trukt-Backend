@@ -154,11 +154,15 @@ class LoadboardController
         }
         catch (err)
         {
-            let status = 400;
+            let status = 500;
             const message = err.toString();
 
             if (message === 'Error: Job not found')
                 status = 404;
+            else if (message === 'Error: Dispatch not found')
+                status = 404;
+            else if (message.match(/Error: Job/))
+                status = 400;
 
             next({
                 status,
