@@ -103,6 +103,12 @@ paths:
   /order/{orderGuid}/undelete:
     put:
       $ref: paths/order/undeleteOrder.yaml
+  /order/{orderGuid}/delivered:
+    put:
+      $ref: paths/order/markDelivered.yaml
+  /order/{orderGuid}/undelivered:
+    put:
+      $ref: paths/order/markUndelivered.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml

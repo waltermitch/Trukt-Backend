@@ -1,4 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
@@ -2751,7 +2752,7 @@ class OrderService
         const cleaned = R.pickBy((it) => it !== undefined, payload);
 
         if (Object.keys(cleaned).length === 0)
-            throw { 'status': 400, 'data': 'Missing Update Values' };
+            throw new HttpError(400, 'Missing Update Values');
 
         const promises = await Promise.allSettled(orders.map(async (order) =>
         {
@@ -2795,18 +2796,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (order.isOnHold)
             return 200;
 
         // check that there are no vendors on any of the jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw { 'status': 400, 'data': `Related Job ${job.number} shouldn't have a vendor` };
+                throw new HttpError(400, `Related Job ${job.number} shouldn't have a vendor`);
 
         // if we got here mark all jobs on hold and the order on hold
         try
@@ -2855,18 +2856,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (!order.isOnHold)
             return 200;
 
         // check that there are no vendors on any of the jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw { 'status': 400, 'data': `Related Job ${job.number} shouldn't have a vendor` };
+                throw new HttpError(400, `Related Job ${job.number} shouldn't have a vendor`);
 
         // if we got here mark all jobs on hold and the order on hold
         try
@@ -2914,26 +2915,26 @@ class OrderService
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (order.isOnHold)
-            throw { 'status': 400, 'data': 'Order is On Hold' };
+            throw new HttpError(400, 'Order is On Hold');
         else if (!order.isReady)
-            throw { 'status': 400, 'data': 'Order is Not Ready' };
+            throw new HttpError(400, 'Order is Not Ready');
         else if (order.isComplete)
             return 200;
 
         // check that each transport job has a vendor and all commodities are delivered
         for (const job of order.jobs)
             if (!job.vendorGuid)
-                throw { 'status': 400, 'data': `Related Job ${job.number} doesn't have a Vendor` };
+                throw new HttpError(400, `Related Job ${job.number} doesn't have a Vendor`);
 
         for (const commodity of order.commodities)
             if (commodity.deliveryStatus !== 'delivered')
-                throw { 'status': 400, 'data': `Commodity ${commodity.vehicle.name} is not Delivered` };
+                throw new HttpError(400, `Commodity ${commodity.vehicle.number} is not Delivered`);
 
         // if we got here mark all jobs complete and the order complete
         try
@@ -2975,16 +2976,16 @@ class OrderService
             Order.startTransaction(),
             Order.query()
                 .where({ 'orders.guid': orderGuid })
-                .withGraphFetched('jobs')
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (!order.isComplete)
             return 200;
 
@@ -3027,20 +3028,20 @@ class OrderService
         const [order] = await Promise.all([
             Order.query()
                 .where({ 'orders.guid': orderGuid })
-                .withGraphFetched('jobs')
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (!order.isReady)
-            throw { 'status': 400, 'data': 'Order is Not Ready' };
+            throw new HttpError(400, 'Order is Not Ready');
         else if (order.isOnHold)
-            throw { 'status': 400, 'data': 'Order is On Hold' };
+            throw new HttpError(400, 'Order is On Hold');
         else if (order.status === 'scheduled')
             return 200;
 
@@ -3051,7 +3052,7 @@ class OrderService
                 hasVendor = true;
 
         if (!hasVendor)
-            throw { 'status': 400, 'data': 'Order\'s Jobs Have No Vendors Assigned' };
+            throw new HttpError(400, 'Order\'s Jobs Have No Vendors Assigned');
 
         // if we got here mark the order scheduled
         await Order.query().patch({
@@ -3069,23 +3070,23 @@ class OrderService
         const [order] = await Promise.all([
             Order.query()
                 .where({ 'orders.guid': orderGuid })
-                .withGraphFetched('jobs')
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (order.status === 'ready')
             return 200;
 
         // make sure there are no jobs with vendors assigned
         for (const job of order.jobs)
             if (job.isTransport && job.vendorGuid)
-                throw { 'status': 400, 'data': 'Order\'s Jobs Should Not Have Vendors Assigned' };
+                throw new HttpError(400, 'Order\'s Jobs Should Not Have Vendors Assigned');
 
         await Order.query().patch({
             'updatedByGuid': currentUser,
@@ -3103,12 +3104,12 @@ class OrderService
             Order.startTransaction(),
             Order.query()
                 .where({ 'orders.guid': orderGuid })
-                .withGraphFetched('jobs')
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
             return 200;
 
@@ -3159,12 +3160,12 @@ class OrderService
             Order.startTransaction(),
             Order.query()
                 .where({ 'orders.guid': orderGuid })
-                .withGraphFetched('jobs')
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (!order.isDeleted)
             return 200;
 
@@ -3194,6 +3195,122 @@ class OrderService
             await trx.commit();
 
             emitter.emit('order_undeleted', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async markOrderDelivered(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
+                .withGraphJoined('commodities.[vehicle]')
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (order.isDeleted)
+            throw new HttpError(400, 'Order is Deleted');
+        else if (order.isCanceled)
+            throw new HttpError(400, 'Order is Canceled');
+        else if (order.status === 'delivered')
+            return 200;
+        else if (order.status !== 'picked up')
+            throw new HttpError(400, 'Order Must First Be Picked Up');
+
+        // make sure vendor is assigned to all transport jobs
+        for (const job of order.jobs)
+            if (job.isTransport && !job.vendorGuid)
+                throw new HttpError(400, `Order's Job ${job.number} Has No Vendor Assigned`);
+
+        // make sure all commodities are marked as delivered
+        for (const commodity of order.commodities)
+            if (commodity.deliveryStatus !== 'delivered')
+                throw new HttpError(400, `Order's Commodity ${commodity.vehicle.name} Has Not Been Delivered`);
+
+        // if we got here mark all jobs delivered and the order delivered
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        await OrderJob.query(trx).patch({
+                            'status': 'delivered',
+                            'updatedByGuid': currentUser
+                        }).where('guid', job.guid);
+                    }),
+                    Order.query(trx).patch({
+                        'status': 'delivered',
+                        'updatedByGuid': currentUser
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_delivered', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async markOrderUndelivered(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (order.isDeleted)
+            throw new HttpError(400, 'Order is Deleted');
+        else if (order.isCanceled)
+            new HttpError(400, 'Order is Canceled');
+        else if (order.status === 'picked up')
+            return 200;
+        else if (order.status !== 'delivered')
+            throw new HttpError(400, 'Order Must First Be Delivered');
+
+        // if we got here mark all jobs undelivered and the order undelivered
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        await OrderJob.query(trx).patch({
+                            'status': 'picked up',
+                            'updatedByGuid': currentUser
+                        }).where('guid', job.guid);
+                    }),
+                    Order.query(trx).patch({
+                        'status': 'picked up',
+                        'updatedByGuid': currentUser
+                    })
+                ]);
+
+            await trx.commit();
+
+            emitter.emit('order_undelivered', orderGuid);
 
             return 200;
         }

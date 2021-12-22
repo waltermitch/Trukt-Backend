@@ -860,7 +860,7 @@ class OrderJobService
                     SET status =
                     CASE
                         WHEN stops.is_completed = stops.count AND stops.is_started = stops.count THEN 'delivered'
-                        WHEN stops.is_started > 0 AND stops.is_completed != stops.count THEN 'picked_up'
+                        WHEN stops.is_started > 0 AND stops.is_completed != stops.count THEN 'picked up'
                         ELSE status
                     END
                     FROM
@@ -873,15 +873,17 @@ class OrderJobService
                              FROM rcg_tms.order_stop_links links 
                              WHERE links.job_guid = '${jobGuid}') AS links
                         ON stops.guid = links.stop_guid) AS stops
-                    WHERE guid = '${jobGuid}' RETURNING status`;
+                    WHERE guid = '${jobGuid}' RETURNING status, order_guid`;
 
         try
         {
-            const status = await knex.raw(q).transacting(trx);
+            const { rows: [{ status, order_guid: orderGuid }] } = await knex.raw(q).transacting(trx);
 
             // TODO: add event emitter for orderjob_delivered or orderjob_picked_up
-
             await trx.commit();
+
+            status === 'delivered' ? emitter.emit('orderjob_delivered', { jobGuid, dispatcherGuid: null, orderGuid }) : null;
+            status === 'picked up' ? emitter.emit('orderjob_picked_up', { jobGuid, dispatcherGuid: null, orderGuid }) : null;
         }
         catch (error)
         {

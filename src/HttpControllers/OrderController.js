@@ -297,6 +297,35 @@ class OrderController
         }
     }
 
+    static async markOrderDelivered(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.markOrderDelivered(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async markOrderUndelivered(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.markOrderUndelivered(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
 }
 
 module.exports = OrderController;

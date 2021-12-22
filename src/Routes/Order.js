@@ -19,6 +19,8 @@ router
     .put(`${prefix}/:orderGuid(${uuidRegexStr})/complete`, controller.markOrderComplete)
     .put(`${prefix}/:orderGuid(${uuidRegexStr})/uncomplete`, controller.markOrderUncomplete)
     .delete(`${prefix}/:orderGuid(${uuidRegexStr})`, controller.deleteOrder)
-    .put(`${prefix}/:orderGuid(${uuidRegexStr})/undelete`, controller.undeleteOrder);
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/undelete`, controller.undeleteOrder)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/delivered`, controller.markOrderDelivered)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/undelivered`, controller.markOrderUndelivered);
 
 module.exports = router;
