@@ -187,7 +187,7 @@ class LoadboardService
             }
 
             job.validateJobForDispatch();
-            
+
             const carrier = await SFAccount.query(trx).modify('byId', body.carrier.guid).modify('carrier').first();
             const driver = body.driver;
 
@@ -232,8 +232,8 @@ class LoadboardService
             job.delivery.setScheduledDates(body.delivery.dateType, body.delivery.startDate, body.delivery.endDate);
             job.delivery.setUpdatedBy(currentUser);
             allPromises.push(OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid));
-            
-            if(job.delivery.dateScheduledStart < job.pickup.dateScheduledStart ||
+
+            if (job.delivery.dateScheduledStart < job.pickup.dateScheduledStart ||
                 job.delivery.dateScheduledEnd < job.pickup.dateScheduledEnd)
             {
                 throw new Error('Pickup dates should be before delivery date');
@@ -341,21 +341,21 @@ class LoadboardService
         try
         {
             const dispatch = await OrderJobDispatch.query()
-            .select('rcgTms.orderJobDispatches.guid',
+                .select('rcgTms.orderJobDispatches.guid',
                     'rcgTms.orderJobDispatches.jobGuid',
                     'isAccepted',
                     'isPending',
                     'isCanceled',
                     'isDeclined')
-            .withGraphJoined('[loadboardPost, job, vendor, vendorAgent]')
-            .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
-            .andWhere(builder =>
-            {
-                builder.where({ isAccepted: true }).orWhere({ isPending: true });
-            })
-            .modifyGraph('job', builder => builder.select('rcgTms.orderJobs.guid', 'orderGuid'))
-            .modifyGraph('vendor', builder => builder.select('name', 'salesforce.accounts.guid'))
-            .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
+                .withGraphJoined('[loadboardPost, job, vendor, vendorAgent]')
+                .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
+                .andWhere(builder =>
+                {
+                    builder.where({ isAccepted: true }).orWhere({ isPending: true });
+                })
+                .modifyGraph('job', builder => builder.select('rcgTms.orderJobs.guid', 'orderGuid'))
+                .modifyGraph('vendor', builder => builder.select('name', 'salesforce.accounts.guid'))
+                .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
 
             dispatch.setUpdatedBy(currentUser);
 
@@ -447,6 +447,11 @@ class LoadboardService
 
         if (!job)
             throw new Error('Job not found');
+
+        if(job.isOnHold)
+        {
+            throw new Error('Cannot get posting data for job that is on hold');
+        }
 
         await this.createPostRecords(job, posts, currentUser);
 
@@ -661,6 +666,51 @@ class LoadboardService
             jobGuid,
             extraAnnotations: { 'loadboards': loadboardNames }
         });
+    }
+
+    static async deletePostings(jobId, posts, userGuid)
+    {
+        const job = await LoadboardService.getNotDeletedPosts(jobId, posts);
+        const payloads = [];
+        let lbPayload;
+
+        try
+        {
+            // Only send for non deleted loadboards
+            for (const lbName of Object.keys(job.postObjects))
+            {
+                lbPayload = new loadboardClasses[`${lbName}`](job);
+                payloads.push(lbPayload['remove'](userGuid));
+            }
+
+            if (payloads?.length)
+            {
+                await sender.sendMessages({ body: payloads });
+                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, userGuid, 21, jobId);
+            }
+        }
+        catch (e)
+        {
+            throw new Error(e.toString());
+        }
+    }
+
+    static async getNotDeletedPosts(jobId, posts)
+    {
+        const loadboardNames = posts.map((post) => { return post.loadboard; });
+        const job = await Job.query().findById(jobId).withGraphFetched(`[
+            loadboardPosts(getExistingFromList, getNotDeleted)
+        ]`).modifiers({
+            getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
+        });
+
+        if (!job)
+            throw new Error('Job not found');
+
+        job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        delete job.loadboardPosts;
+
+        return job;
     }
 }
 

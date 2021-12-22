@@ -8,8 +8,14 @@ const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
 const Invoice = require('../Models/Invoice');
 const Currency = require('currency.js');
+const LoadboardService = require('../Services/LoadboardService');
+const Loadboard = require('../Models/Loadboard');
+const LoadboardPost = require('../Models/LoadboardPost');
+const LoadboardRequest = require('../Models/LoadboardRequest');
+const EventEmitter = require('./EventEmitter');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const LoadboardRequestService = require('./LoadboardRequestService');
 const Emitter = require('events');
 const R = require('ramda');
 
@@ -280,6 +286,14 @@ class OrderJobService
 
     static async updateJobStatus(jobGuid, statusToUpdate, userGuid, trx)
     {
+        const generalBulkFunctions = {
+            'deleted': 'delete',
+            'undeleted': 'undelete',
+            'canceled': 'cancel',
+            'uncanceled': 'uncancel'
+        };
+        const generalBulkFunctionName = generalBulkFunctions[statusToUpdate];
+
         if (statusToUpdate == 'ready')
         {
             const [job] = await OrderJob.query(trx).select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid').where('guid', jobGuid);
@@ -290,21 +304,38 @@ class OrderJobService
             if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
                 return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
         }
+        else if (generalBulkFunctionName)
+        {
+            return await OrderJobService[`${generalBulkFunctionName}Job`](jobGuid, userGuid)
+                .then(deleteResult =>
+                {
+                    const status = deleteResult.status;
+                    return { jobGuid, error: null, status };
+                })
+                .catch(error =>
+                {
+                    const status = error?.status || 500;
+                    const errorMessage = error?.message || 'Internal server error';
+                    return { jobGuid, error: errorMessage, status };
+                });
+        }
+        else
+        {
+            const payload = OrderJobService.createStatusPayload(statusToUpdate, userGuid);
+            const jobUpdateResponse = await OrderJob.query(trx).patch(payload).findById(jobGuid)
+                .then(patchResult =>
+                {
+                    const status = patchResult ? 200 : 404;
+                    const error = patchResult ? null : 'Job Not Found';
+                    return { jobGuid, error, status };
+                })
+                .catch(error =>
+                {
+                    return { jobGuid, error: error?.message, status: 400 };
+                });
 
-        const payload = OrderJobService.createStatusPayload(statusToUpdate, userGuid);
-        const jobUpdateResponse = await OrderJob.query(trx).patch(payload).findById(jobGuid)
-            .then(patchResult =>
-            {
-                const status = patchResult ? 200 : 404;
-                const error = patchResult ? null : 'Job Not Found';
-                return { jobGuid, error, status };
-            })
-            .catch(error =>
-            {
-                return { jobGuid, error: error?.message, status: 400 };
-            });
-
-        return jobUpdateResponse;
+            return jobUpdateResponse;
+        }
     }
 
     static createStatusPayload(status, userGuid)
@@ -321,8 +352,7 @@ class OrderJobService
             case 'canceled':
                 return { ...statusProperties, isCanceled: true, status };
             case 'deleted':
-                return { ...statusProperties, isDeleted: true, status };
-
+                return { ...statusProperties, isDeleted: true, status, deletedByGuid: userGuid };
         }
     }
 
@@ -337,7 +367,50 @@ class OrderJobService
         const trx = await OrderJob.startTransaction();
         try
         {
-            const res = await OrderJobService.updateJobStatus(jobGuid, 'on hold', currentUser, trx);
+            // Get the job with dispatches and requests
+            const job = await OrderJob.query(trx)
+                .select('guid', 'number')
+                .findById(jobGuid)
+                .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
+                .modifyGraph('loadboardPosts', builder => builder.select('loadboardPosts.guid', 'loadboard'))
+                .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
+                .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
+
+            if(!job)
+            {
+                throw new HttpError(404, 'Job not found');
+            }
+
+            // job cannot be dispatched before being put on hold
+            if(job.dispatches.length >= 1)
+            {
+                throw new HttpError(400, 'Job must be undispatched before it can be moved to On Hold');
+            }
+
+            // extract all the loadboard post guids so that we can cancel the
+            // requests for any loadboard posts that exist
+            const loadboardPostGuids = job.loadboardPosts.map(post => post.guid);
+
+            await LoadboardRequest.query(trx).patch({
+                    isValid: false,
+                    isCanceled: false,
+                    isDeclined: true,
+                    isSynced: true,
+                    status: 'declined',
+                    declineReason: 'Job set to On Hold',
+                    updatedByGuid: currentUser
+                })
+                .whereIn('loadboardPostGuid', loadboardPostGuids);
+
+            // unpost the load from all loadboards
+            // unposting from loadboards automatically cancels any requests on the
+            // loadboards end so we only have to cancel them on our end
+            await LoadboardService.unpostPostings(job.guid, job.loadboardPosts, currentUser);
+            
+            const res = await OrderJob.query(trx)
+            .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
+            .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+    
             await trx.commit();
             return res;
         }
@@ -360,14 +433,20 @@ class OrderJobService
         try
         {
             const job = await OrderJob.query(trx).findById(jobGuid);
+            
+            if(!job)
+            {
+                throw new HttpError(404, 'Job not found');
+            }
             let res;
             if (job.isOnHold)
             {
                 res = await OrderJobService.updateJobStatus(jobGuid, 'ready', currentUser, trx);
+                Object.assign(res, await OrderJob.query(trx).select('guid', 'number', 'status', 'isOnHold', 'isReady').findById(jobGuid));
             }
             else
             {
-                res = { status: 400, message: 'This Job does not have any holds.' };
+                throw new HttpError(400, 'This Job does not have any holds.');
             }
 
             await trx.commit();
@@ -870,6 +949,94 @@ class OrderJobService
         emitter.emit('orderjob_uncompleted', jobGuid);
 
         return 200;
+    }
+
+    static async deleteJob(jobGuid, userGuid)
+    {
+        const trx = await OrderJob.startTransaction();
+
+        try
+        {
+            const jobStatus = [
+                OrderJob.query(trx)
+                    .select('orderGuid').findOne('guid', jobGuid),
+                OrderJob.query(trx).alias('job')
+                    .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
+            ];
+            const [job, jobIsDispatched] = await Promise.all(jobStatus);
+
+            if (!job)
+                throw new HttpError(404, 'Job does not exist');
+
+            if (job && jobIsDispatched)
+                throw new HttpError(400, 'Please un-dispatch the Order before deleting');
+
+            const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
+            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, userGuid);
+
+            // Mark Job as deleted
+            const payload = OrderJobService.createStatusPayload('deleted', userGuid);
+
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).deleted;
+
+            // Mark loadborad as deleted first
+            await Promise.all([
+                OrderJob.query(trx).patch(payload).findById(jobGuid),
+                LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
+                    LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
+            ]);
+
+            await trx.commit();
+
+            EventEmitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            return { status: 200 };
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
+    /**
+     * Order is mark as ready in rcg_update_order_job_status_trigger in DB
+     * @param {*} jobGuid
+     * @param {*} userGuid
+     * @returns
+     */
+    static async undeleteJob(jobGuid, userGuid)
+    {
+        const trx = await OrderJob.startTransaction();
+
+        try
+        {
+            const job = await OrderJob.query(trx).select('orderGuid', 'isDeleted').findOne('guid', jobGuid);
+
+            if (!job)
+                throw new HttpError(404, 'Job does not exist');
+
+            if (!job?.isDeleted)
+                return { status: 200 };
+
+            const payload = OrderJobService.createStatusPayload('ready', userGuid);
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).unposted;
+
+            await Promise.all([
+                OrderJob.query(trx).patch(payload).findById(jobGuid),
+                LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
+                    LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
+            ]);
+
+            await trx.commit();
+
+            EventEmitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            return { status: 200 };
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
     }
 }
 
