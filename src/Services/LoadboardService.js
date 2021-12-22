@@ -14,7 +14,6 @@ const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
 const EventEmitter = require('events');
 const { DateTime } = require('luxon');
-const { HttpError } = require('express-openapi-validator/dist/framework/types');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
