@@ -38,6 +38,32 @@ class LoadboardRequest extends BaseModel
         };
     }
 
+    static createStatusPayload(userGuid)
+    {
+        return {
+            deleted: {
+                status: 'deleted',
+                isValid: false,
+                isAccepted: false,
+                isDeclined: false,
+                isCanceled: false,
+                isSynced: false,
+                isDeleted: true,
+                deletedByGuid: userGuid
+            },
+            unposted: {
+                status: 'unposted',
+                isValid: false,
+                isAccepted: false,
+                isDeclined: false,
+                isCanceled: false,
+                isSynced: false,
+                isDeleted: false,
+                updatedByGuid: userGuid
+            }
+        };
+    }
+
 }
 Object.assign(LoadboardRequest.prototype, RecordAuthorMixin);
 module.exports = LoadboardRequest;

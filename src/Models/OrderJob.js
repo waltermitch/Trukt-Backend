@@ -1,7 +1,7 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const OrderJobType = require('./OrderJobType');
 const BaseModel = require('./BaseModel');
-const { ref } = require('objection');
+const { ref, raw } = require('objection');
 const Order = require('./Order');
 
 const jobTypeFields = ['category', 'type'];
@@ -591,7 +591,8 @@ class OrderJob extends BaseModel
                     'job.isDeleted': false,
                     'job.isCanceled': false
                 });
-        }
+        },
+        areAllOrderJobsDeleted: this.areAllOrderJobsDeleted
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
@@ -654,6 +655,11 @@ class OrderJob extends BaseModel
                 'job.grossProfitMargin'
             ]
         };
+    }
+
+    static areAllOrderJobsDeleted(query, orderGuid)
+    {
+        return query.select(raw('bool_and(is_deleted) as deleteOrder')).where('orderGuid', orderGuid);
     }
 }
 

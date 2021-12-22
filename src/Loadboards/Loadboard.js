@@ -114,6 +114,16 @@ class Loadboard
         return { payload, payloadMetadata };
     }
 
+    remove(userGuid)
+    {
+        const payload = { guid: this.postObject.externalGuid };
+        const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, userGuid };
+        payloadMetadata.action = 'remove';
+        payloadMetadata.user = returnTo;
+
+        return { payload, payloadMetadata };
+    }
+
     toStringDate(input)
     {
         const date = DateTime.fromISO(input).c;
@@ -196,6 +206,32 @@ class Loadboard
     static async handleCreate(post)
     {
         return LoadboardPost.fromJson(post);
+    }
+
+    static async handleRemove(payloadMetadata, response)
+    {
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+        if (response.hasErrors)
+        {
+            objectionPost.isSynced = false;
+            objectionPost.isPosted = false;
+            objectionPost.hasError = true;
+            objectionPost.apiError = response.errors;
+            objectionPost.updatedByGuid = payloadMetadata.userGuid;
+        }
+        else
+        {
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'removed';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = false;
+            objectionPost.isCreated = false;
+            objectionPost.isDeleted = true;
+            objectionPost.deletedByGuid = payloadMetadata.userGuid;
+        }
+
+        await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
+        return;
     }
 }
 

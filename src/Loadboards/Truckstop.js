@@ -37,7 +37,7 @@ class Truckstop extends Loadboard
 
     toJSON()
     {
-        if(this.data.pickup.notes.length > 250 || this.data.delivery.notes.length > 250)
+        if (this.data.pickup.notes.length > 250 || this.data.delivery.notes.length > 250)
         {
             throw new Error('First pickup and last delivery stop notes must be less than 250 characters');
         }
@@ -163,7 +163,7 @@ class Truckstop extends Loadboard
                 objectionPost.isPosted = true;
                 objectionPost.hasError = false;
                 objectionPost.apiError = null;
-
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 

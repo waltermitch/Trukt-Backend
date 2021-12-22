@@ -261,3 +261,9 @@ paths:
   /job/{jobGuid}/dispatch/carrier:
     get:
       $ref: paths/job/getCarrier.yaml
+  /job/{jobGuid}:
+    delete:
+      $ref: paths/job/delete.yaml
+  /job/{jobGuid}/undelete:
+    put:
+      $ref: paths/job/undelete.yaml
