@@ -1,5 +1,5 @@
 summary: Remove a Hold
-description: | 
+description: |
   Removing a Hold from a Job restores functionality to the Job.
 operationId: removeJobHold
 tags:
@@ -12,10 +12,46 @@ parameters:
     required: true
 
 responses:
-  200:
+  202:
     description: Success
     content:
-      application/json: {}
+      application/json:
+        schema:
+          type: object
+          properties:
+            guid:
+              $ref: '../../components/schemas/Common.yaml#/guid'
+            number:
+              type: string
+              example: RC10008A
+            status:
+              type: string
+              example: on hold
+            isOnHold:
+              type: boolean
+              example: false
+            isReady:
+              type: boolean
+              example: true
+
+  400:
+    description: Bad Request Payload
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error
+              example:
+                - message: This Job does not have any holds.
+
   404:
     description: Job Not Found
     content:
@@ -23,7 +59,12 @@ responses:
         schema:
           type: object
           properties:
-            message:
-              type: string
-              description: Error message
-              example: Job not Found
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Job not found
+                    example: Job not found

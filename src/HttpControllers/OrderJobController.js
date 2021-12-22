@@ -75,18 +75,10 @@ class OrderJobController
         try
         {
             const response = await func(jobGuid, req.session.userGuid);
-
-            if (response.status >= 400)
-            {
-                next(response);
-                return;
-            }
-            else
-            {
-                emitter.emit(eventEmitted, jobGuid);
-                res.status(200);
-                res.send();
-            }
+            
+            emitter.emit(eventEmitted, jobGuid);
+            res.status(200);
+            res.json(response);
         }
         catch (error)
         {

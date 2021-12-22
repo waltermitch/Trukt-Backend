@@ -448,6 +448,11 @@ class LoadboardService
         if (!job)
             throw new Error('Job not found');
 
+        if(job.isOnHold)
+        {
+            throw new Error('Cannot get posting data for job that is on hold');
+        }
+
         await this.createPostRecords(job, posts, currentUser);
 
         if (job.order.invoices.length != 0)
