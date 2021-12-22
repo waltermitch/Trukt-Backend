@@ -15,6 +15,7 @@ const LoadboardRequest = require('../Models/LoadboardRequest');
 const EventEmitter = require('./EventEmitter');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const LoadboardRequestService = require('./LoadboardRequestService');
 const Emitter = require('events');
 const R = require('ramda');
 
@@ -366,7 +367,50 @@ class OrderJobService
         const trx = await OrderJob.startTransaction();
         try
         {
-            const res = await OrderJobService.updateJobStatus(jobGuid, 'on hold', currentUser, trx);
+            // Get the job with dispatches and requests
+            const job = await OrderJob.query(trx)
+                .select('guid', 'number')
+                .findById(jobGuid)
+                .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
+                .modifyGraph('loadboardPosts', builder => builder.select('loadboardPosts.guid', 'loadboard'))
+                .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
+                .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
+
+            if(!job)
+            {
+                throw new HttpError(404, 'Job not found');
+            }
+
+            // job cannot be dispatched before being put on hold
+            if(job.dispatches.length >= 1)
+            {
+                throw new HttpError(400, 'Job must be undispatched before it can be moved to On Hold');
+            }
+
+            // extract all the loadboard post guids so that we can cancel the
+            // requests for any loadboard posts that exist
+            const loadboardPostGuids = job.loadboardPosts.map(post => post.guid);
+
+            await LoadboardRequest.query(trx).patch({
+                    isValid: false,
+                    isCanceled: false,
+                    isDeclined: true,
+                    isSynced: true,
+                    status: 'declined',
+                    declineReason: 'Job set to On Hold',
+                    updatedByGuid: currentUser
+                })
+                .whereIn('loadboardPostGuid', loadboardPostGuids);
+
+            // unpost the load from all loadboards
+            // unposting from loadboards automatically cancels any requests on the
+            // loadboards end so we only have to cancel them on our end
+            await LoadboardService.unpostPostings(job.guid, job.loadboardPosts, currentUser);
+            
+            const res = await OrderJob.query(trx)
+            .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
+            .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+    
             await trx.commit();
             return res;
         }
@@ -389,14 +433,20 @@ class OrderJobService
         try
         {
             const job = await OrderJob.query(trx).findById(jobGuid);
+            
+            if(!job)
+            {
+                throw new HttpError(404, 'Job not found');
+            }
             let res;
             if (job.isOnHold)
             {
                 res = await OrderJobService.updateJobStatus(jobGuid, 'ready', currentUser, trx);
+                Object.assign(res, await OrderJob.query(trx).select('guid', 'number', 'status', 'isOnHold', 'isReady').findById(jobGuid));
             }
             else
             {
-                res = { status: 400, message: 'This Job does not have any holds.' };
+                throw new HttpError(400, 'This Job does not have any holds.');
             }
 
             await trx.commit();
