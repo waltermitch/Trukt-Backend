@@ -15,10 +15,7 @@ const LoadboardRequest = require('../Models/LoadboardRequest');
 const EventEmitter = require('./EventEmitter');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
-const LoadboardService = require('./LoadboardService');
 const LoadboardRequestService = require('./LoadboardRequestService');
-const LoadboardPost = require('../Models/LoadboardPost');
-const LoadboardRequest = require('../Models/LoadboardRequest');
 const Emitter = require('events');
 const R = require('ramda');
 
