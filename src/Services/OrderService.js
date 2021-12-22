@@ -33,7 +33,6 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 
 const emitter = new EventEmitter();
 
