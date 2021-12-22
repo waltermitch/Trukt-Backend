@@ -72,6 +72,7 @@ TestController.js
 Test.js
 local.settings.copy*
 test
+temp.*
 
 /edi
 /sql
