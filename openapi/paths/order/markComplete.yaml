@@ -1,6 +1,6 @@
-summary: Mark As On Hold
-description: Marks Order As On Hold
-operationId: holdOrder
+summary: Mark Order As Complete
+description: Marks Order As Complete
+operationId: orderComplete
 tags:
   - Order
 parameters:
@@ -36,4 +36,4 @@ responses:
             message:
               type: string
               description: Error message
-              example: Order Can't Be Marked On Hold When It Is Deleted
+              example: Order Can't Be Marked Complete When It Is Deleted

@@ -89,6 +89,15 @@ paths:
   /order/{orderGuid}/hold:
     put:
       $ref: paths/order/markOnHold.yaml
+  /order/{orderGuid}/unhold:
+    put:
+      $ref: paths/order/removeHold.yaml
+  /order/{orderGuid}/complete:
+    put:
+      $ref: paths/order/markComplete.yaml
+  /order/{orderGuid}/uncomplete:
+    put:
+      $ref: paths/order/markUncomplete.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml
