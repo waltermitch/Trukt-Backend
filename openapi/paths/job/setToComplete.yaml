@@ -1,0 +1,39 @@
+summary: Mark As Complete
+description: Marks Job As Completed
+operationId: jobCompleted
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: Success
+    content:
+      application/json: {}
+  404:
+    description: Job Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Error message
+              example: Job not Found
+  400:
+    description: Bad Request
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Error message
+              example: Job Can't Be Marked As Complete When It Is Not Delivered

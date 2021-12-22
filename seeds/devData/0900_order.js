@@ -21,7 +21,7 @@ function stopsDates()
         pickup: {},
         delivery: {}
     };
-    dates.pickup.start = DateTime.local(now.year, now.month + 1, faker.datatype.number(27) + 1, faker.datatype.number(23), faker.datatype.number(59));
+    dates.pickup.start = DateTime.local(now.year, now.month, faker.datatype.number(27) + 1, faker.datatype.number(23), faker.datatype.number(59));
     dates.delivery.start = dates.pickup.start.plus({ days: faker.datatype.number(7) + 14 });
     dates.pickup.end = dates.pickup.start.plus({ days: faker.datatype.number(3) + 2 });
     dates.delivery.end = dates.delivery.start.plus({ days: faker.datatype.number(3) + 2 });

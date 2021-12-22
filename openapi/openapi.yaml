@@ -80,6 +80,24 @@ paths:
   /job/{jobGuid}/ready:
     put:
       $ref: paths/job/setToReady.yaml
+  /job/{jobGuid}/complete:
+    put:
+      $ref: paths/job/setToComplete.yaml
+  /job/{jobGuid}/uncomplete:
+    put:
+      $ref: paths/job/setToUncomplete.yaml
+  /order/{orderGuid}/hold:
+    put:
+      $ref: paths/order/markOnHold.yaml
+  /order/{orderGuid}/unhold:
+    put:
+      $ref: paths/order/removeHold.yaml
+  /order/{orderGuid}/complete:
+    put:
+      $ref: paths/order/markComplete.yaml
+  /order/{orderGuid}/uncomplete:
+    put:
+      $ref: paths/order/markUncomplete.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml

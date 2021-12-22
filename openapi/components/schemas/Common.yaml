@@ -382,17 +382,17 @@ Enums:
   orderStatus:
     type: string
     enum:
-      - New
-      - On Hold
-      - Ready
-      - Posted
-      - Requests
-      - Pending
-      - Declined
-      - Picked Up
-      - Delivered
-      - Canceled
-      - Deleted
+      - new
+      - on hold
+      - ready
+      - posted
+      - requests
+      - pending
+      - declined
+      - picked up
+      - delivered
+      - canceled
+      - deleted
   Loadboard Name:
     type: string
     enum:
@@ -446,10 +446,10 @@ Enums:
   jobStatus:
     type: string
     enum:
-      - On Hold
-      - Ready
-      - Canceled
-      - Deleted
+      - on hold
+      - ready
+      - canceled
+      - deleted
   bulkJobPriceType:
     type: string
     enum:

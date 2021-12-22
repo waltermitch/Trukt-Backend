@@ -9,9 +9,9 @@ exports.up = function (knex)
         table.uuid('guid').unique().notNullable();
         table.enu('stop_type', ['pickup', 'delivery'],
             { useNative: true, enumName: 'stop_types' });
-        const temrinalguid = 'terminal_guid';
-        table.uuid(temrinalguid).notNullable();
-        table.foreign(temrinalguid).references('guid').inTable('rcg_tms.terminals');
+        const terminalguid = 'terminal_guid';
+        table.uuid(terminalguid).notNullable();
+        table.foreign(terminalguid).references('guid').inTable('rcg_tms.terminals');
         for (const type of ['primary', 'alternative'])
         {
             const fieldname = `${type}_contact_guid`;

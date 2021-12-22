@@ -15,7 +15,7 @@ exports.seed = async function (knex)
     {
         const testUser = await User.query(trx).findOne('name', 'ilike', '%');
         const items = await InvoiceLineItem.query(trx);
-        const orders = await Order.query(trx).withGraphFetched('[commodities(distinct), consignee, client, jobs.[vendor, commodities(distinct)]]');
+        const orders = await Order.query(trx).withGraphFetched('[commodities(distinct), client, jobs.[vendor, commodities(distinct)]]');
         for (const order of orders)
         {
             const invoice = Invoice.fromJson({

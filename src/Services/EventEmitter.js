@@ -1,10 +1,10 @@
-const EventEmitter = require('events');
-const OrderService = require('./OrderService');
-const OrderStopService = require('./OrderStopService');
-const OrderStopLinks = require('../Models/OrderStopLink');
 const LoadboardService = require('../Services/LoadboardService');
-const Order = require('../Models/Order');
+const OrderStopLinks = require('../Models/OrderStopLink');
+const OrderStopService = require('./OrderStopService');
+const OrderService = require('./OrderService');
 const OrderJob = require('../Models/OrderJob');
+const Order = require('../Models/Order');
+const EventEmitter = require('events');
 
 const emitter = new EventEmitter();
 
@@ -54,7 +54,7 @@ emitter.on('orderjob_status', (orderGuid) =>
 
             // WARNING: The COUNT() query in knex with pg returns the count as a string, so
             // the following comparison only works because of javascript magic
-            if(readyJobsCount >= 1)
+            if (readyJobsCount >= 1)
             {
                 await Order.query(trx).patch({
                     isReady: true,
@@ -66,11 +66,11 @@ emitter.on('orderjob_status', (orderGuid) =>
 
             emitter.emit('order_status', { orderGuid, status: 'ready' });
         }
-        catch(e)
+        catch (e)
         {
             await trx.rollback();
         }
-        
+
     });
 });
 
