@@ -370,7 +370,7 @@ class OrderJobService
                     isCanceled: false,
                     isDeclined: true,
                     isSynced: true,
-                    status: 'Declined',
+                    status: 'declined',
                     declineReason: 'Job set to On Hold',
                     updatedByGuid: currentUser
                 })
