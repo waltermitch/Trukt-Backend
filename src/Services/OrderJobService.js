@@ -375,11 +375,10 @@ class OrderJobService
             // unposting from loadboards automatically cancels any requests on the
             // loadboards end so we only have to cancel them on our end
             await LoadboardService.unpostPostings(job.guid, job.loadboardPosts, currentUser);
-
-            // const res = await OrderJobService.updateJobStatus(jobGuid, 'On Hold', currentUser, trx);
+            
             const res = await OrderJob.query(trx)
             .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
-            .findById(jobGuid);
+            .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
     
             await trx.commit();
             return res;
@@ -407,10 +406,11 @@ class OrderJobService
             if (job.isOnHold)
             {
                 res = await OrderJobService.updateJobStatus(jobGuid, 'ready', currentUser, trx);
+                Object.assign(res, await OrderJob.query(trx).select('guid', 'number', 'status', 'isOnHold', 'isReady').findById(jobGuid));
             }
             else
             {
-                res = { status: 400, message: 'This Job does not have any holds.' };
+                throw new HttpError(400, 'This Job does not have any holds.');
             }
 
             await trx.commit();
