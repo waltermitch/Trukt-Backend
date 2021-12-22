@@ -140,6 +140,31 @@ class OrderJobController
 
         res.status(200).send();
     }
+
+    static async deleteJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.deleteJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+    static async undeleteJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.undeleteJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = OrderJobController;
