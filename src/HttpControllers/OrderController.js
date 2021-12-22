@@ -222,7 +222,50 @@ class OrderController
             res.status(200).json(result);
     }
 
+    static async removeHoldOnOrder(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.removeHoldOnOrder(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async markOrderComplete(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.markOrderComplete(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async markOrderUncomplete(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.markOrderUncomplete(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
 }
 
-const controller = new OrderController();
-module.exports = controller;
+module.exports = OrderController;
