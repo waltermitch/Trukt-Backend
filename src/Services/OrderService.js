@@ -228,7 +228,7 @@ class OrderService
 
                 // check to see if there are client notes assigned so we don't bother querying
                 // on something that may not exist
-                if (order.clientNotes)
+                if (order.clientNotes?.updatedByGuid)
                 {
                     // getting the user details so we can show the note users details
                     const user = await User.query().findById(
