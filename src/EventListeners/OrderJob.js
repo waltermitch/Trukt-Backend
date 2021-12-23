@@ -1,8 +1,8 @@
 const OrderJobService = require('../Services/OrderJobService');
 const OrderService = require('../Services/OrderService');
-const Listener = require('events');
+const { EventEmitter } = require('events');
 
-const listener = new Listener();
+const listener = new EventEmitter();
 
 listener.on('orderjob_stop_update', (jobGuid) =>
 {
@@ -63,5 +63,3 @@ listener.on('orderjob_dispatch_canceled', ({ jobGuid, dispatcherGuid, orderGuid 
         //         console.log(p.reason?.response?.data || p.reason);
     });
 });
-
-module.exports = listener;

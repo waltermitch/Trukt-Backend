@@ -4,7 +4,7 @@ const OrderStopService = require('./OrderStopService');
 const OrderService = require('./OrderService');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
-const EventEmitter = require('events');
+const { EventEmitter } = require('events');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const emitter = new EventEmitter();

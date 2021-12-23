@@ -1,8 +1,8 @@
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJob = require('../Models/OrderJob');
-const Listener = require('events');
+const { EventEmitter } = require('events');
 
-const listener = new Listener();
+const listener = new EventEmitter();
 
 listener.on('order_updated', ({ oldOrder, newOrder }) =>
 {
@@ -34,5 +34,3 @@ async function getJobGuids(orderGuid)
 
     return jobs;
 }
-
-module.exports = listener;

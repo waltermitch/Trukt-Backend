@@ -1,17 +1,18 @@
-# Instructions For Adding/Working with Listeners
+# Instructions For Adding/Working with Events
 
 1. There should be a file for each `object` or `service` in the `src` folder.
-   i.e `OrderService.js` would have an `OrderListener.js` file.
+   i.e `OrderService.js` would have an `EventListeners/Order.js` file.
 
 2. Each file listens to the actions related to that objects/services `events`.
-   i.e `OrderListener.js` listens to the `order_updated`, `order_deleted` events.
+   i.e `EventListeners/Order.js` listens to the `order_updated`, `order_deleted` events.
 
-3. There can be multiple listeners for each event.
-   i.e `OrderListener.js` listens to the `order_updated` event.
-   i.e `EDIListener.js` listens to the `order_updated` event.
+3. There can be multiple listeners (emitters) for each Event.
+   i.e `EventListeners/Order.js` listens to the `order_updated` event.
+   i.e `EventListeners/EDI.js` listens to the `order_updated` event.
 
 4. When trying to debug an event, `grep` the event name in the `EventListeners` folder
    i.e `grep ./src/EventListeners -rnw -e 'order_updated'`
+   i.e. `grep 'order_updated' -rn ./src/EventListeners`   
 
 5. Event Emitters can be found in multiple places, this is normal.
 
@@ -23,6 +24,10 @@ The following is a list of all the events that are being emitted.
 # Example of a Listener
 
 ```javascript
+const {EventEmitter} = require('events');
+
+const listener = new EventEmitter();
+
 listener.on("eventName", () => {
     // setImmedite can be async if the functions are async
     // otherwise it should be sync

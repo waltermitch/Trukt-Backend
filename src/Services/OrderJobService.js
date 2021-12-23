@@ -12,14 +12,13 @@ const LoadboardService = require('../Services/LoadboardService');
 const Loadboard = require('../Models/Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 const LoadboardRequest = require('../Models/LoadboardRequest');
-const EventEmitter = require('./EventEmitter');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const LoadboardRequestService = require('./LoadboardRequestService');
-const Emitter = require('events');
+const { EventEmitter } = require('events');
 const R = require('ramda');
 
-const emitter = new Emitter();
+const emitter = new EventEmitter();
 
 class OrderJobService
 {
@@ -1019,7 +1018,7 @@ class OrderJobService
 
             await trx.commit();
 
-            EventEmitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
             return { status: 200 };
         }
         catch (error)
@@ -1060,7 +1059,7 @@ class OrderJobService
 
             await trx.commit();
 
-            EventEmitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
             return { status: 200 };
         }
         catch (error)
