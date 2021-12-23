@@ -1,7 +1,7 @@
-const OrderStopService = require('../Services/OrderStopService');
-const NotesService = require('../Services/NotesService');
 const StatusCacheManager = require('../EventManager/StatusCacheManager');
+const OrderStopService = require('../Services/OrderStopService');
 const OrderJobService = require('../Services/OrderJobService');
+const NotesService = require('../Services/NotesService');
 const emitter = require('../Services/EventEmitter');
 
 class OrderJobController
@@ -76,19 +76,83 @@ class OrderJobController
         {
             const response = await func(jobGuid, req.session.userGuid);
             
-            if(response.status >= 400)
+            emitter.emit(eventEmitted, jobGuid);
+            res.status(200);
+            res.json(response);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async setJobToReadySingle(req, res, next)
+    {
+        try
+        {
+            const results = await OrderJobService.setJobToReady(req.params.jobGuid, req.session.userGuid);
+
+            // check if there are any successfull status changes. If there are none,
+            // throw all the exceptions in the exceptions list
+            // otherwise convert all the exceptions into readable json formats
+            // so the client can have both the successes and the failures
+            if (results.acceptedJobs.length == 0)
             {
-                next(response);
-                return;
+                throw results.exceptions;
             }
             else
             {
-                emitter.emit(eventEmitted, jobGuid);
-                res.status(200);
-                res.send();
+                results.exceptions = results.exceptions.map(error =>
+                {
+                    return error.toJson();
+                });
             }
+            for (const job of results.acceptedJobs)
+            {
+                emitter.emit('orderjob_status', job.orderGuid);
+            }
+            res.status(202).json(results);
         }
-        catch(error)
+        catch (e)
+        {
+            next(e);
+        }
+    }
+
+    static async markJobAsComplete(req, res)
+    {
+        await OrderJobService.markJobAsComplete(req.params.jobGuid, req.session.userGuid);
+
+        res.status(200).send();
+    }
+
+    static async markJobAsUncomplete(req, res)
+    {
+        await OrderJobService.markJobAsUncomplete(req.params.jobGuid, req.session.userGuid);
+
+        res.status(200).send();
+    }
+
+    static async deleteJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.deleteJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+    static async undeleteJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.undeleteJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
         {
             next(error);
         }

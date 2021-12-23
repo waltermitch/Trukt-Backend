@@ -5,14 +5,18 @@ const router = require('express').Router();
 const prefix = '/order';
 
 router
-    .get(`${prefix}/:orderGuid(${uuidRegexStr})`, controller.constructor.getOrder)
-    .get(`${prefix}/find_by_vin/:vin`, controller.constructor.findOrdersByVin)
-    .post(`${prefix}/getorders`, controller.constructor.getOrders)
-    .post(`${prefix}`, controller.constructor.createOrder)
-    .put(`${prefix}/tender/:action(accept|reject)`, controller.constructor.handleTenders)
-    .patch(`${prefix}`, controller.constructor.patchOrder)
-    .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes`, controller.constructor.getOrderNotes)
-    .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes/all`, controller.constructor.getAllNotes)
-    .put(`${prefix}/:orderGuid(${uuidRegexStr})/clientNote`, controller.constructor.updateClientNote);
+    .get(`${prefix}/:orderGuid(${uuidRegexStr})`, controller.getOrder)
+    .get(`${prefix}/find_by_vin/:vin`, controller.findOrdersByVin)
+    .post(`${prefix}/getorders`, controller.getOrders)
+    .post(`${prefix}`, controller.createOrder)
+    .put(`${prefix}/tender/:action(accept|reject)`, controller.handleTenders)
+    .patch(`${prefix}`, controller.patchOrder)
+    .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes`, controller.getOrderNotes)
+    .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes/all`, controller.getAllNotes)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/clientNote`, controller.updateClientNote)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/hold`, (req, res) => http(req, res, controller.putOrderOnHold))
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/unhold`, controller.removeHoldOnOrder)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/complete`, controller.markOrderComplete)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/uncomplete`, controller.markOrderUncomplete);
 
 module.exports = router;

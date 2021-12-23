@@ -1,14 +1,13 @@
-const Loadboard = require('./Loadboard');
-const DateTime = require('luxon').DateTime;
-const LoadboardPost = require('../Models/LoadboardPost');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
-const OrderStop = require('../Models/OrderStop');
+const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
-const Job = require('../Models/OrderJob');
+const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
-const knex = require('../Models/BaseModel').knex();
+const Job = require('../Models/OrderJob');
+const Loadboard = require('./Loadboard');
+const { DateTime } = require('luxon');
 
 class ShipCars extends Loadboard
 {
@@ -220,7 +219,7 @@ class ShipCars extends Loadboard
             {
                 const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
-                for(const comPromise of commodityPromises)
+                for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                 }
@@ -230,6 +229,7 @@ class ShipCars extends Loadboard
                 objectionPost.status = 'created';
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id));
@@ -262,7 +262,7 @@ class ShipCars extends Loadboard
             {
                 const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
-                for(const comPromise of commodityPromises)
+                for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                 }
@@ -274,6 +274,7 @@ class ShipCars extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
@@ -352,7 +353,7 @@ class ShipCars extends Loadboard
 
                 const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle], vendor, vendorAgent]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
-                for(const comPromise of commodityPromises)
+                for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                 }
@@ -370,7 +371,7 @@ class ShipCars extends Loadboard
                         vendorName: job.vendor.name,
                         vendorAgentName: job.vendorAgent.name,
                         code: 'pending'
-                }
+                    }
                 });
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
@@ -417,12 +418,12 @@ class ShipCars extends Loadboard
             objectionPost.isSynced = true;
 
             allPromises.push(OrderStop.query(trx)
-            .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
-            .whereIn('guid',
-                OrderStopLink.query(trx).select('stopGuid')
-                    .where({ 'jobGuid': dispatch.jobGuid })
-                    .distinctOn('stopGuid')
-            ));
+                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
+                .whereIn('guid',
+                    OrderStopLink.query(trx).select('stopGuid')
+                        .where({ 'jobGuid': dispatch.jobGuid })
+                        .distinctOn('stopGuid')
+                ));
 
             if (response.hasErrors)
             {
@@ -444,7 +445,7 @@ class ShipCars extends Loadboard
                     .where({ 'jobGuid': dispatch.jobGuid })
                     .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
             const commodityPromises = this.updateCommodity(commodities, response.vehicles, trx);
-            for(const comPromise of commodityPromises)
+            for (const comPromise of commodityPromises)
             {
                 comPromise.transacting(trx);
             }
@@ -457,13 +458,13 @@ class ShipCars extends Loadboard
             allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid));
 
             const vendor = await SFAccount.query(trx)
-            .findById(dispatch.vendorGuid)
-            .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
-            .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
-            .select('salesforce.accounts.name as vendorName',
-            'salesforce.accounts.guid as vendorGuid',
-            'salesforce.contacts.guid as agentGuid',
-            'salesforce.contacts.name as agentName');
+                .findById(dispatch.vendorGuid)
+                .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
+                .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+                .select('salesforce.accounts.name as vendorName',
+                    'salesforce.accounts.guid as vendorGuid',
+                    'salesforce.contacts.guid as agentGuid',
+                    'salesforce.contacts.name as agentName');
 
             await Promise.all(allPromises);
             await trx.commit();
@@ -602,7 +603,7 @@ class ShipCars extends Loadboard
                         .where({ 'jobGuid': dispatch.jobGuid })
                         .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
                 const commodityPromises = this.updateCommodity(commodities, response.vehicles);
-                for(const comPromise of commodityPromises)
+                for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                 }
@@ -610,12 +611,12 @@ class ShipCars extends Loadboard
 
                 // 5. unset the stop scheduled dates
                 allPromises.push(OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
-                .whereIn('guid',
-                    OrderStopLink.query().select('stopGuid')
-                        .where({ 'jobGuid': dispatch.jobGuid })
-                        .distinctOn('stopGuid')
-                ));
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid')
+                            .where({ 'jobGuid': dispatch.jobGuid })
+                            .distinctOn('stopGuid')
+                    ));
 
                 await Promise.all(allPromises);
 

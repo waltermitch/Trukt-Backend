@@ -92,6 +92,48 @@
             "category": "jobDispatch",
             "name": "Self Assigned",
             "order_filter_label": "Self Assigned On"
+        },
+        {
+            "id": 16,
+            "category": "job",
+            "name": "Set To Ready",
+            "order_filter_label": "Set To Ready On"
+        },
+        {
+            "id": 17,
+            "category": "job",
+            "name": "Job Deleted",
+            "order_filter_label": "Job Deleted On"
+        },
+        {
+            "id": 18,
+            "category": "job",
+            "name": "Job Undeleted",
+            "order_filter_label": "Job Undeleted On"
+        },
+        {
+            "id": 19,
+            "category": "order",
+            "name": "Order Deleted",
+            "order_filter_label": "Order Deleted On"
+        },
+        {
+            "id": 20,
+            "category": "Order",
+            "name": "Order Undeleted",
+            "order_filter_label": "Order Undeleted On"
+        },
+        {
+            "id": 21,
+            "category": "Order",
+            "name": "Removed from",
+            "order_filter_label": "Removed On"
+        },
+        {
+            "id": 22,
+            "category": "job",
+            "name": "Job Set On Hold",
+            "order_filter_label": "Set On Hold On"
         }
     ]
 }

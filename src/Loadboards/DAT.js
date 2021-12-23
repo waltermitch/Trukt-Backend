@@ -1,7 +1,7 @@
-const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
-const DateTime = require('luxon').DateTime;
+const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
+const { DateTime } = require('luxon');
 
 class DAT extends Loadboard
 {
@@ -145,6 +145,7 @@ class DAT extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 

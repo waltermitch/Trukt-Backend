@@ -353,6 +353,27 @@ class Order extends BaseModel
         }
     }
 
+    static createStatusPayload(userGuid)
+    {
+        return {
+            deleted: {
+                status: 'deleted',
+                isOnHold: false,
+                isReady: false,
+                is_canceled: false,
+                isDeleted: true,
+                deletedByGuid: userGuid
+            },
+            undeleted: {
+                status: 'ready',
+                isOnHold: false,
+                isReady: true,
+                is_canceled: false,
+                isDeleted: false,
+                updated_by_guid: userGuid
+            }
+        };
+    }
 }
 
 Object.assign(Order.prototype, RecordAuthorMixin);

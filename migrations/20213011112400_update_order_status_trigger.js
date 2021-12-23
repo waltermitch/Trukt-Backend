@@ -74,6 +74,6 @@ exports.up = function (knex)
 exports.down = function (knex)
 {
     return knex.raw(`  
-    DROP TRIGGER ${TRIGGER_NAME} ON rcg_tms.${TABLE_NAME};
-    DROP FUNCTION rcg_tms.${FUNCTION_NAME}()`);
+    DROP TRIGGER IF EXISTS ${TRIGGER_NAME} ON rcg_tms.${TABLE_NAME};
+    DROP FUNCTION IF EXISTS rcg_tms.${FUNCTION_NAME}()`);
 };

@@ -1,6 +1,6 @@
-const Loadboard = require('./Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
-const DateTime = require('luxon').DateTime;
+const Loadboard = require('./Loadboard');
+const { DateTime } = require('luxon');
 
 class CentralDispatch extends Loadboard
 {
@@ -12,7 +12,7 @@ class CentralDispatch extends Loadboard
         this.senderId = process.env['loadboards.CentralDispatch.Id'];
 
         // attaching the node env onto the job number so different environments unpost each others loads
-        if(process.env.NODE_ENV != 'prod')
+        if (process.env.NODE_ENV != 'prod')
         {
             this.data.number += '-' + process.env.NODE_ENV.slice(0, 3);
         }
@@ -146,6 +146,7 @@ class CentralDispatch extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 

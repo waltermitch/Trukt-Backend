@@ -1,5 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
-const LoadboardService = require('../Services/LoadboardService');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
@@ -112,8 +112,13 @@ class OrderService
         );
 
         for (const s of status)
-            if (s in OrderService.statusMap)
-                baseOrderQuery.modify(OrderService.statusMap[s]);
+        {
+            baseOrderQuery.orWhere(builder =>
+            {
+                if (s in OrderService.statusMap)
+                    builder.modify(OrderService.statusMap[s]);
+            });
+        }
 
         const queryFilterCustomer = OrderService.addFilterCustomer(
             baseOrderQuery,
@@ -224,7 +229,7 @@ class OrderService
 
                 // check to see if there are client notes assigned so we don't bother querying
                 // on something that may not exist
-                if (order.clientNotes)
+                if (order.clientNotes?.updatedByGuid)
                 {
                     // getting the user details so we can show the note users details
                     const user = await User.query().findById(
@@ -1640,14 +1645,6 @@ class OrderService
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
-            // TODO: Events here
-            // update loadboard postings (async)
-            orderUpdated.jobs.map(async (job) =>
-            {
-                await LoadboardService.updatePostings(job.guid)
-                    .catch(err => console.log(err));
-            });
-
             await trx.commit();
 
             return orderUpdated;
@@ -2718,7 +2715,12 @@ class OrderService
             orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
 
         if (consignee?.guid)
-            orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
+        {
+            if (!orderInvoiceFromDB.isPaid)
+                orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
+            else
+                throw new HttpError(400, 'Cannot update consignee on paid invoice');
+        }
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
     }
@@ -2783,6 +2785,321 @@ class OrderService
         return await OrderJob.query().select('guid', 'createdByGuid')
             .where('orderGuid', orderGuid)
             .andWhere('isTransport', true);
+    }
+
+    static async markOrderOnHold(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({
+                    'orders.guid': orderGuid
+                })
+                .withGraphJoined('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            throw { 'status': 400, 'data': 'Order is Deleted' };
+        else if (order.isCanceled)
+            throw { 'status': 400, 'data': 'Order is Canceled' };
+        else if (order.isOnHold)
+            return 200;
+
+        // check that there are no vendors on any of the jobs
+        for (const job of order.jobs)
+            if (job.vendorGuid)
+                throw { 'status': 400, 'data': `Related Job ${job.number} shouldn't have a vendor` };
+
+        // if we got here mark all jobs on hold and the order on hold
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        await OrderJob.query(trx).patch({
+                            'isOnHold': true,
+                            'isReady': false,
+                            'updatedByGuid': currentUser,
+                            'status': 'on hold'
+                        }).where({ 'guid': job.guid });
+                    }),
+                    Order.query(trx).patch({
+                        'isOnHold': true,
+                        'isReady': false,
+                        'updatedByGuid': currentUser,
+                        'status': 'on hold'
+                    }).where({ 'guid': order.guid })
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_hold_added', order.guid);
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async removeHoldOnOrder(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({
+                    'orders.guid': orderGuid
+                })
+                .withGraphJoined('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            throw { 'status': 400, 'data': 'Order is Deleted' };
+        else if (order.isCanceled)
+            throw { 'status': 400, 'data': 'Order is Canceled' };
+        else if (!order.isOnHold)
+            return 200;
+
+        // check that there are no vendors on any of the jobs
+        for (const job of order.jobs)
+            if (job.vendorGuid)
+                throw { 'status': 400, 'data': `Related Job ${job.number} shouldn't have a vendor` };
+
+        // if we got here mark all jobs on hold and the order on hold
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        await OrderJob.query(trx).patch({
+                            'isOnHold': false,
+                            'isReady': true,
+                            'updatedByGuid': currentUser,
+                            'status': 'ready'
+                        }).where({ 'guid': job.guid });
+                    }),
+                    Order.query(trx).patch({
+                        'isOnHold': false,
+                        'isReady': true,
+                        'updatedByGuid': currentUser,
+                        'status': 'ready'
+                    }).where({ 'guid': order.guid })
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_hold_removed', order.guid);
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async markOrderComplete(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
+                .withGraphJoined('commodities.[vehicle]')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            throw { 'status': 400, 'data': 'Order is Deleted' };
+        else if (order.isCanceled)
+            throw { 'status': 400, 'data': 'Order is Canceled' };
+        else if (order.isOnHold)
+            throw { 'status': 400, 'data': 'Order is On Hold' };
+        else if (!order.isReady)
+            throw { 'status': 400, 'data': 'Order is Not Ready' };
+        else if (order.isComplete)
+            return 200;
+
+        // check that each transport job has a vendor and all commodities are delivered
+        for (const job of order.jobs)
+            if (!job.vendorGuid)
+                throw { 'status': 400, 'data': `Related Job ${job.number} doesn't have a Vendor` };
+
+        for (const commodity of order.commodities)
+            if (commodity.deliveryStatus !== 'delivered')
+                throw { 'status': 400, 'data': `Commodity ${commodity.vehicle.name} is not Delivered` };
+
+        // if we got here mark all jobs complete and the order complete
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        await OrderJob.query(trx).patch({
+                            'isComplete': true,
+                            'updatedByGuid': currentUser,
+                            'status': 'complete'
+                        }).where({ 'guid': job.guid });
+                    }),
+                    Order.query(trx).patch({
+                        'isComplete': true,
+                        'updatedByGuid': currentUser,
+                        'status': 'complete'
+                    }).where({ 'guid': order.guid })
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_complete', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async markOrderUncomplete(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphFetched('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            throw { 'status': 400, 'data': 'Order is Deleted' };
+        else if (order.isCanceled)
+            throw { 'status': 400, 'data': 'Order is Canceled' };
+        else if (!order.isComplete)
+            return 200;
+
+        // if we got here mark all jobs uncomplete/delivered and the order uncomplete/delivered
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        await OrderJob.query(trx).patch({
+                            'isComplete': false,
+                            'updatedByGuid': currentUser,
+                            'status': 'delivered'
+                        }).where('guid', job.guid);
+                    }),
+                    Order.query(trx).patch({
+                        'isComplete': false,
+                        'updatedByGuid': currentUser,
+                        'status': 'delivered'
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_uncomplete', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async markAsScheduled(orderGuid, currentUser)
+    {
+        const [order] = await Promise.all([
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphFetched('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            throw { 'status': 400, 'data': 'Order is Deleted' };
+        else if (order.isCanceled)
+            throw { 'status': 400, 'data': 'Order is Canceled' };
+        else if (!order.isReady)
+            throw { 'status': 400, 'data': 'Order is Not Ready' };
+        else if (order.isOnHold)
+            throw { 'status': 400, 'data': 'Order is On Hold' };
+        else if (order.status === 'scheduled')
+            return 200;
+
+        // make sure at least one job has a vendor assigned
+        let hasVendor = false;
+        for (const job of order.jobs)
+            if (job.isTransport && job.vendorGuid)
+                hasVendor = true;
+
+        if (!hasVendor)
+            throw { 'status': 400, 'data': 'Order\'s Jobs Have No Vendors Assigned' };
+
+        // if we got here mark the order scheduled
+        await Order.query().patch({
+            'updatedByGuid': currentUser,
+            'status': 'scheduled'
+        }).where('guid', order.guid);
+
+        emitter.emit('order_scheduled', orderGuid);
+
+        return 200;
+    }
+
+    static async markAsUnscheduled(orderGuid, currentUser)
+    {
+        const [order] = await Promise.all([
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphFetched('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw { 'status': 404, 'data': 'Order Not Found' };
+        else if (order.isDeleted)
+            throw { 'status': 400, 'data': 'Order is Deleted' };
+        else if (order.isCanceled)
+            throw { 'status': 400, 'data': 'Order is Canceled' };
+        else if (order.status === 'ready')
+            return 200;
+
+        // make sure there are no jobs with vendors assigned
+        for (const job of order.jobs)
+            if (job.isTransport && job.vendorGuid)
+                throw { 'status': 400, 'data': 'Order\'s Jobs Should Not Have Vendors Assigned' };
+
+        await Order.query().patch({
+            'updatedByGuid': currentUser,
+            'status': 'ready'
+        }).where('guid', order.guid);
+
+        emitter.emit('order_unscheduled', orderGuid);
+
+        return 200;
     }
 }
 
