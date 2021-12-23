@@ -1,25 +1,26 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
+const LoadboardService = require('../Services/LoadboardService');
+const LoadboardRequest = require('../Models/LoadboardRequest');
+const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
 const InvoiceLine = require('../Models/InvoiceLine');
 const knex = require('../Models/BaseModel').knex();
+const Loadboard = require('../Models/Loadboard');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
+const EventEmitter = require('./EventEmitter');
 const Invoice = require('../Models/Invoice');
 const Currency = require('currency.js');
-const LoadboardService = require('../Services/LoadboardService');
-const Loadboard = require('../Models/Loadboard');
-const LoadboardPost = require('../Models/LoadboardPost');
-const LoadboardRequest = require('../Models/LoadboardRequest');
-const EventEmitter = require('./EventEmitter');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
-const LoadboardRequestService = require('./LoadboardRequestService');
 const Emitter = require('events');
 const R = require('ramda');
 
 const emitter = new Emitter();
+
+const SYSUSER = process.env.SYSTEM_USER;
 
 class OrderJobService
 {
@@ -284,6 +285,8 @@ class OrderJobService
 
     }
 
+    // this is really poorly named, will need to be renamed to something more descriptive
+    // TODO - rename this to something more descriptive (post launch)
     static async updateJobStatus(jobGuid, statusToUpdate, userGuid, trx)
     {
         const generalBulkFunctions = {
@@ -292,6 +295,7 @@ class OrderJobService
             'canceled': 'cancel',
             'uncanceled': 'uncancel'
         };
+
         const generalBulkFunctionName = generalBulkFunctions[statusToUpdate];
 
         if (statusToUpdate == 'ready')
@@ -353,109 +357,8 @@ class OrderJobService
                 return { ...statusProperties, isCanceled: true, status };
             case 'deleted':
                 return { ...statusProperties, isDeleted: true, status, deletedByGuid: userGuid };
-        }
-    }
 
-    /**
-     * Sets a job to On Hold by checking the boolean field isOnHold to true
-     * @param {uuid} jobGuid guid of job to set status
-     * @param {*} currentUser object or guid of current user
-     * @returns the update job or nothing if no job found
-     */
-    static async addHold(jobGuid, currentUser)
-    {
-        const trx = await OrderJob.startTransaction();
-        try
-        {
-            // Get the job with dispatches and requests
-            const job = await OrderJob.query(trx)
-                .select('guid', 'number')
-                .findById(jobGuid)
-                .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
-                .modifyGraph('loadboardPosts', builder => builder.select('loadboardPosts.guid', 'loadboard'))
-                .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
-                .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
-
-            if (!job)
-            {
-                throw new HttpError(404, 'Job not found');
-            }
-
-            // job cannot be dispatched before being put on hold
-            if (job.dispatches.length >= 1)
-            {
-                throw new HttpError(400, 'Job must be undispatched before it can be moved to On Hold');
-            }
-
-            // extract all the loadboard post guids so that we can cancel the
-            // requests for any loadboard posts that exist
-            const loadboardPostGuids = job.loadboardPosts.map(post => post.guid);
-
-            await LoadboardRequest.query(trx).patch({
-                isValid: false,
-                isCanceled: false,
-                isDeclined: true,
-                isSynced: true,
-                status: 'declined',
-                declineReason: 'Job set to On Hold',
-                updatedByGuid: currentUser
-            })
-                .whereIn('loadboardPostGuid', loadboardPostGuids);
-
-            // unpost the load from all loadboards
-            // unposting from loadboards automatically cancels any requests on the
-            // loadboards end so we only have to cancel them on our end
-            await LoadboardService.unpostPostings(job.guid, job.loadboardPosts, currentUser);
-
-            const res = await OrderJob.query(trx)
-                .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
-                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
-
-            await trx.commit();
-            return res;
-        }
-        catch (e)
-        {
-            await trx.rollback();
-            throw e;
-        }
-    }
-
-    /**
-     * Removes the job status from On Hold by setting the isOnHold field to false
-     * @param {uuid} jobGuid guid of job to set status
-     * @param {*} currentUser object or guid of current user
-     * @returns the update job or nothing if no job found
-     */
-    static async removeHold(jobGuid, currentUser)
-    {
-        const trx = await OrderJob.startTransaction();
-        try
-        {
-            const job = await OrderJob.query(trx).findById(jobGuid);
-
-            if (!job)
-            {
-                throw new HttpError(404, 'Job not found');
-            }
-            let res;
-            if (job.isOnHold)
-            {
-                res = await OrderJobService.updateJobStatus(jobGuid, 'ready', currentUser, trx);
-                Object.assign(res, await OrderJob.query(trx).select('guid', 'number', 'status', 'isOnHold', 'isReady').findById(jobGuid));
-            }
-            else
-            {
-                throw new HttpError(400, 'This Job does not have any holds.');
-            }
-
-            await trx.commit();
-            return res;
-        }
-        catch (e)
-        {
-            await trx.rollback();
-            throw e;
+            // is this supposed to have uncanceled?
         }
     }
 
@@ -850,19 +753,18 @@ class OrderJobService
         return res;
     }
 
-    static async calcJobStatus(jobGuid)
+    static async markAsDeliveredOrPickedUp(jobGuid, currentUser = SYSUSER)
     {
-        // start transaction
-        const trx = await OrderStop.startTransaction();
-
         // we are not accounting for the case where delivered is true, true but picked_up is false, false. (in respect to is_complete and is_started)
         const q = `UPDATE rcg_tms.order_jobs
-                    SET status =
-                    CASE
-                        WHEN stops.is_completed = stops.count AND stops.is_started = stops.count THEN 'delivered'
-                        WHEN stops.is_started > 0 AND stops.is_completed != stops.count THEN 'picked up'
-                        ELSE status
-                    END
+                    SET 
+                    updated_by_guid = '${currentUser}',
+                    status =
+                        CASE
+                            WHEN stops.is_completed = stops.count AND stops.is_started = stops.count THEN 'delivered'
+                            WHEN stops.is_started > 0 AND stops.is_completed != stops.count THEN 'picked up'
+                            ELSE status
+                        END
                     FROM
                         (SELECT count(*),
                         SUM(case when stops.is_completed = true then 1 else 0 end) AS is_completed,
@@ -875,21 +777,11 @@ class OrderJobService
                         ON stops.guid = links.stop_guid) AS stops
                     WHERE guid = '${jobGuid}' RETURNING status, order_guid`;
 
-        try
-        {
-            const { rows: [{ status, order_guid: orderGuid }] } = await knex.raw(q).transacting(trx);
+        const { rows: [{ status, order_guid: orderGuid }] } = await knex.raw(q);
 
-            // TODO: add event emitter for orderjob_delivered or orderjob_picked_up
-            await trx.commit();
-
-            status === 'delivered' ? emitter.emit('orderjob_delivered', { jobGuid, dispatcherGuid: null, orderGuid }) : null;
-            status === 'picked up' ? emitter.emit('orderjob_picked_up', { jobGuid, dispatcherGuid: null, orderGuid }) : null;
-        }
-        catch (error)
-        {
-            await trx.rollback();
-            throw error;
-        }
+        // TODO: add event emitter for orderjob_delivered or orderjob_picked_up
+        status === 'delivered' ? emitter.emit('orderjob_delivered', { jobGuid, dispatcherGuid: null, orderGuid }) : null;
+        status === 'picked up' ? emitter.emit('orderjob_picked_up', { jobGuid, dispatcherGuid: null, orderGuid }) : null;
     }
 
     static async markJobAsComplete(jobGuid, currentUser)
@@ -942,6 +834,109 @@ class OrderJobService
         emitter.emit('orderjob_uncompleted', jobGuid);
 
         return 200;
+    }
+
+    /**
+     * Sets a job to On Hold by checking the boolean field isOnHold to true
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async addHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            // Get the job with dispatches and requests
+            const job = await OrderJob.query(trx)
+                .select('guid', 'number')
+                .findById(jobGuid)
+                .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
+                .modifyGraph('loadboardPosts', builder => builder.select('loadboardPosts.guid', 'loadboard'))
+                .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
+                .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
+
+            if (!job)
+            {
+                throw new HttpError(404, 'Job not found');
+            }
+
+            // job cannot be dispatched before being put on hold
+            if (job.dispatches.length >= 1)
+            {
+                throw new HttpError(400, 'Job must be undispatched before it can be moved to On Hold');
+            }
+
+            // extract all the loadboard post guids so that we can cancel the
+            // requests for any loadboard posts that exist
+            const loadboardPostGuids = job.loadboardPosts.map(post => post.guid);
+
+            await LoadboardRequest.query(trx).patch({
+                isValid: false,
+                isCanceled: false,
+                isDeclined: true,
+                isSynced: true,
+                status: 'declined',
+                declineReason: 'Job set to On Hold',
+                updatedByGuid: currentUser
+            })
+                .whereIn('loadboardPostGuid', loadboardPostGuids);
+
+            // unpost the load from all loadboards
+            // unposting from loadboards automatically cancels any requests on the
+            // loadboards end so we only have to cancel them on our end
+            await LoadboardService.unpostPostings(job.guid, job.loadboardPosts, currentUser);
+
+            const res = await OrderJob.query(trx)
+                .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
+                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+
+            await trx.commit();
+            return res;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+
+    /**
+     * Removes the job status from On Hold by setting the isOnHold field to false
+     * @param {uuid} jobGuid guid of job to set status
+     * @param {*} currentUser object or guid of current user
+     * @returns the update job or nothing if no job found
+     */
+    static async removeHold(jobGuid, currentUser)
+    {
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const job = await OrderJob.query(trx).findById(jobGuid);
+
+            if (!job)
+            {
+                throw new HttpError(404, 'Job not found');
+            }
+            let res;
+            if (job.isOnHold)
+            {
+                res = await OrderJobService.updateJobStatus(jobGuid, 'ready', currentUser, trx);
+                Object.assign(res, await OrderJob.query(trx).select('guid', 'number', 'status', 'isOnHold', 'isReady').findById(jobGuid));
+            }
+            else
+            {
+                throw new HttpError(400, 'This Job does not have any holds.');
+            }
+
+            await trx.commit();
+            return res;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
     }
 
     static async deleteJob(jobGuid, userGuid)
