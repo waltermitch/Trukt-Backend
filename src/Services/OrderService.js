@@ -2815,12 +2815,7 @@ class OrderService
                 [
                     ...order.jobs.map(async (job) =>
                     {
-                        await OrderJob.query(trx).patch({
-                            'isOnHold': true,
-                            'isReady': false,
-                            'updatedByGuid': currentUser,
-                            'status': 'on hold'
-                        }).where({ 'guid': job.guid });
+                        OrderJobService.addHold(job.guid, currentUser);
                     }),
                     Order.query(trx).patch({
                         'isOnHold': true,
@@ -2875,12 +2870,7 @@ class OrderService
                 [
                     ...order.jobs.map(async (job) =>
                     {
-                        await OrderJob.query(trx).patch({
-                            'isOnHold': false,
-                            'isReady': true,
-                            'updatedByGuid': currentUser,
-                            'status': 'ready'
-                        }).where({ 'guid': job.guid });
+                        OrderJobService.removeHold(job.guid, currentUser);
                     }),
                     Order.query(trx).patch({
                         'isOnHold': false,
@@ -2904,8 +2894,7 @@ class OrderService
 
     static async markOrderComplete(orderGuid, currentUser)
     {
-        const [trx, order] = await Promise.all([
-            Order.startTransaction(),
+        const [order] = await Promise.all([
             Order.query()
                 .where({ 'orders.guid': orderGuid })
                 .withGraphJoined('jobs')
@@ -2936,43 +2925,28 @@ class OrderService
                 throw new HttpError(400, `Commodity ${commodity.vehicle.number} is not Delivered`);
 
         // if we got here mark all jobs complete and the order complete
-        try
-        {
-            await Promise.all(
-                [
-                    ...order.jobs.map(async (job) =>
-                    {
-                        await OrderJob.query(trx).patch({
-                            'isComplete': true,
-                            'updatedByGuid': currentUser,
-                            'status': 'complete'
-                        }).where({ 'guid': job.guid });
-                    }),
-                    Order.query(trx).patch({
-                        'isComplete': true,
-                        'updatedByGuid': currentUser,
-                        'status': 'complete'
-                    }).where({ 'guid': order.guid })
-                ]
-            );
+        await Promise.all(
+            [
+                ...order.jobs.map(async (job) =>
+                {
+                    OrderJobService.markJobAsComplete(job.guid, currentUser);
+                }),
+                Order.query().patch({
+                    'isComplete': true,
+                    'updatedByGuid': currentUser,
+                    'status': 'complete'
+                }).where({ 'guid': order.guid })
+            ]
+        );
 
-            await trx.commit();
+        emitter.emit('order_complete', orderGuid);
 
-            emitter.emit('order_complete', orderGuid);
-
-            return 200;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw err;
-        }
+        return 200;
     }
 
     static async markOrderUncomplete(orderGuid, currentUser)
     {
-        const [trx, order] = await Promise.all([
-            Order.startTransaction(),
+        const [order] = await Promise.all([
             Order.query()
                 .where({ 'orders.guid': orderGuid })
                 .withGraphJoined('jobs')
@@ -2989,37 +2963,23 @@ class OrderService
             return 200;
 
         // if we got here mark all jobs uncomplete/delivered and the order uncomplete/delivered
-        try
-        {
-            await Promise.all(
-                [
-                    ...order.jobs.map(async (job) =>
-                    {
-                        await OrderJob.query(trx).patch({
-                            'isComplete': false,
-                            'updatedByGuid': currentUser,
-                            'status': 'delivered'
-                        }).where('guid', job.guid);
-                    }),
-                    Order.query(trx).patch({
-                        'isComplete': false,
-                        'updatedByGuid': currentUser,
-                        'status': 'delivered'
-                    }).where('guid', order.guid)
-                ]
-            );
+        await Promise.all(
+            [
+                ...order.jobs.map(async (job) =>
+                {
+                    OrderJobService.markJobAsUncomplete(job.guid, currentUser);
+                }),
+                Order.query().patch({
+                    'isComplete': false,
+                    'updatedByGuid': currentUser,
+                    'status': 'delivered'
+                }).where('guid', order.guid)
+            ]
+        );
 
-            await trx.commit();
+        emitter.emit('order_uncomplete', orderGuid);
 
-            emitter.emit('order_uncomplete', orderGuid);
-
-            return 200;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw err;
-        }
+        return 200;
     }
 
     static async markAsScheduled(orderGuid, currentUser)
@@ -3124,12 +3084,7 @@ class OrderService
                 [
                     ...order.jobs.map(async (job) =>
                     {
-                        await OrderJob.query(trx).patch({
-                            'isDeleted': true,
-                            'isReady': false,
-                            'status': 'deleted',
-                            'updatedByGuid': currentUser
-                        }).where('guid', job.guid);
+                        OrderJobService.deleteJob(job.guid, currentUser);
                     }),
                     Order.query(trx).patch({
                         'isDeleted': true,
@@ -3175,12 +3130,7 @@ class OrderService
                 [
                     ...order.jobs.map(async (job) =>
                     {
-                        await OrderJob.query(trx).patch({
-                            'isDeleted': false,
-                            'isCanceled': false,
-                            'status': 'ready',
-                            'updatedByGuid': currentUser
-                        }).where('guid', job.guid);
+                        OrderJobService.undeleteJob(job.guid, currentUser);
                     }),
                     Order.query(trx).patch({
                         'isDeleted': false,
@@ -3206,8 +3156,7 @@ class OrderService
 
     static async markOrderDelivered(orderGuid, currentUser)
     {
-        const [trx, order] = await Promise.all([
-            Order.startTransaction(),
+        const [order] = await Promise.all([
             Order.query()
                 .where({ 'orders.guid': orderGuid })
                 .withGraphJoined('jobs')
@@ -3237,35 +3186,22 @@ class OrderService
                 throw new HttpError(400, `Order's Commodity ${commodity.vehicle.name} Has Not Been Delivered`);
 
         // if we got here mark all jobs delivered and the order delivered
-        try
-        {
-            await Promise.all(
-                [
-                    ...order.jobs.map(async (job) =>
-                    {
-                        await OrderJob.query(trx).patch({
-                            'status': 'delivered',
-                            'updatedByGuid': currentUser
-                        }).where('guid', job.guid);
-                    }),
-                    Order.query(trx).patch({
-                        'status': 'delivered',
-                        'updatedByGuid': currentUser
-                    }).where('guid', order.guid)
-                ]
-            );
+        await Promise.all(
+            [
+                ...order.jobs.map(async (job) =>
+                {
+                    OrderJobService.markAsDeliveredOrPickedUp(job.guid, currentUser);
+                }),
+                Order.query().patch({
+                    'status': 'delivered',
+                    'updatedByGuid': currentUser
+                }).where('guid', order.guid)
+            ]
+        );
 
-            await trx.commit();
+        emitter.emit('order_delivered', orderGuid);
 
-            emitter.emit('order_delivered', orderGuid);
-
-            return 200;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw err;
-        }
+        return 200;
     }
 
     static async markOrderUndelivered(orderGuid, currentUser)
@@ -3296,6 +3232,8 @@ class OrderService
                 [
                     ...order.jobs.map(async (job) =>
                     {
+                        // since the job doesn't have explicit undelivered method, because it's not defined in func spec
+                        // leaving this as is, until further development
                         await OrderJob.query(trx).patch({
                             'status': 'picked up',
                             'updatedByGuid': currentUser
@@ -3326,6 +3264,7 @@ class OrderService
             Order.startTransaction(),
             Order.query()
                 .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
@@ -3343,14 +3282,10 @@ class OrderService
         {
             await Promise.all(
                 [
-                    await OrderJob.query(trx).patch({
-                        'isCanceled': true,
-                        'isOnHold': false,
-                        'isReady': false,
-                        'status': 'canceled',
-                        'updatedByGuid': currentUser
-                    }).where('order_guid', order.guid)
-                    ,
+                    ...order.jobs.map(async (job) =>
+                    {
+                        OrderJobService.updateJobStatus(job.guid, 'canceled', currentUser, trx);
+                    }),
                     Order.query(trx).patch({
                         'isCanceled': true,
                         'isOnHold': false,
@@ -3395,6 +3330,7 @@ class OrderService
         {
             await Promise.all(
                 [
+                    // this needs to be done throug OrderJobService once TBE-285 is resolved
                     await OrderJob.query(trx).patch({
                         'isCanceled': false,
                         'status': 'new',
