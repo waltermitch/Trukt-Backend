@@ -10,7 +10,16 @@ class OrderJob extends BaseModel
 {
     static STATUS = {
         NEW: 'new',
-        PENDING: 'pending'
+        READY: 'ready',
+        ON_HOLD: 'on hold',
+        POSTED: 'posted',
+        PENDING: 'pending',
+        DECLINED: 'declined',
+        DISPATCHED: 'dispatched',
+        PICKED_UP: 'picked up',
+        DELIVERED: 'delivered',
+        CANCELED: 'canceled',
+        DELETED: 'deleted'
     }
 
     static get tableName()
