@@ -392,6 +392,9 @@ class LoadboardService
                     );
 
                 const job = Job.fromJson({
+                    vendorGuid: null,
+                    vendorAgentGuid: null,
+                    vendorContact: null,
                     dateStarted: null,
                     status: 'ready'
                 });
