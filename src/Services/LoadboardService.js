@@ -16,6 +16,8 @@ const EventEmitter = require('events');
 const { DateTime } = require('luxon');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const { raw } = require('objection');
+const InvoiceLine = require('../Models/InvoiceLine');
+const currency = require('currency.js');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -498,6 +500,40 @@ class LoadboardService
             }));
 
             await Promise.all(allPromises);
+
+            let jobBillLinesCount = await dispatch.$query(trx).joinRelated('job.bills.lines').count('job:bills:lines.*');
+            jobBillLinesCount = jobBillLinesCount.count;
+            const dispatchPrice = dispatch.price;
+            const priceToSave = currency(dispatchPrice).divide(jobBillLinesCount);
+            
+            const jobBillLines = await dispatch.$query(trx)
+                .joinRelated('job.bills.lines')
+                .select('job:bills:lines.*', 'job.isTransport')
+                .where({ 'job.isTransport': true });
+            const jobBillLinesPromises = [];
+
+            if (Array.isArray(jobBillLines) && jobBillLines.length > 0)
+                for (const line of jobBillLines)
+                    if (currency(line.amount).value !== priceToSave.value)
+                        jobBillLinesPromises.push(
+                            InvoiceLine.query(trx)
+                                .patch({ amount: priceToSave.value })
+                                .where({ guid: line.guid })
+                        );
+            else if (
+                !Array.isArray(jobBillLines) &&
+                currency(jobBillLines.amount).value !== priceToSave.value
+            )
+                jobBillLinesPromises.push(
+                    InvoiceLine.query(trx)
+                        .patch({ amount: priceToSave.value })
+                        .where({ guid: jobBillLines.guid })
+                );
+
+            await Promise.all(jobBillLinesPromises);
+            await trx.commit();
+
+            return { jobBillLines };
         }
         catch (e)
         {
