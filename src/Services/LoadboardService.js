@@ -545,14 +545,20 @@ class LoadboardService
             await Promise.all(allPromises);
             await trx.commit();
 
-            return { jobBillLines };
+            StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                userGuid: currentUser,
+                statusId: 13,
+                jobGuid: job.guid
+            });
+
+            return;
         }
         catch (e)
         {
             await trx.rollback();
             throw e;
         }
-            
     }
 
     // This method gets all the job information and creates new post records based on the posts
