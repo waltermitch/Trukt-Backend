@@ -105,6 +105,7 @@ class CarDeliveryNetwork extends Loadboard
                 objectionPost.status = 'created';
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
@@ -141,6 +142,7 @@ class CarDeliveryNetwork extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = true;
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
