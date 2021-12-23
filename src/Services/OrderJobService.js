@@ -369,7 +369,7 @@ class OrderJobService
         {
             // Get the job with dispatches and requests
             const job = await OrderJob.query(trx)
-                .select('guid', 'number')
+                .select('guid', 'orderGuid', 'number')
                 .findById(jobGuid)
                 .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
                 .modifyGraph('loadboardPosts', builder => builder.select('loadboardPosts.guid', 'loadboard'))
@@ -412,6 +412,13 @@ class OrderJobService
             .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
     
             await trx.commit();
+
+            await StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                jobGuid: jobGuid,
+                userGuid: currentUser,
+                statusId: 22
+            });
             return res;
         }
         catch (e)
@@ -467,6 +474,13 @@ class OrderJobService
             }
 
             await trx.commit();
+
+            await StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                jobGuid: jobGuid,
+                userGuid: currentUser,
+                statusId: 16
+            });
             return res;
         }
         catch (e)
