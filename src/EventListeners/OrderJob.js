@@ -9,7 +9,7 @@ listener.on('orderjob_stop_update', (jobGuid) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderJobService.calcJobStatus(jobGuid)]);
+        const proms = await Promise.allSettled([OrderJobService.markAsDeliveredOrPickedUp(jobGuid)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
