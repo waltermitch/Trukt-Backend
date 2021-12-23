@@ -451,17 +451,17 @@ class LoadboardService
                         isValid: true,
                         isPending: true
                     }).count().as('validDispatchesCount')
-                ]);
+                ]).withGraphFetched('[bills, commodities]');
 
             if (!job)
-                throw new Error('Job not found');
+                throw new HttpError(404, 'Job not found');
 
             job.validateJobForAccepting();
 
             const dispatch = await job.$relatedQuery('dispatches', trx).findById(dispatchGuid);
 
             if (!dispatch)
-                throw new Error('Dispatch not found');
+                throw new HttpError(404, 'Dispatch not found');
 
             allPromises.push(job.$relatedQuery('dispatches', trx).patch({
                 isValid: false,
@@ -493,39 +493,14 @@ class LoadboardService
                 updatedByGuid: currentUser
             }));
 
-            let jobBillLinesCount = await dispatch.$query(trx).joinRelated('job.bills.lines').count('job:bills:lines.*');
-            jobBillLinesCount = jobBillLinesCount.count;
-            const dispatchPrice = dispatch.price;
-            const priceToSave = currency(dispatchPrice).divide(jobBillLinesCount);
-            
-            const jobBillLines = await dispatch.$query(trx)
-                .joinRelated('job.bills.lines')
-                .select('job:bills:lines.*', 'job.isTransport')
-                .where({ 'job.isTransport': true });
-
-            if (Array.isArray(jobBillLines) && jobBillLines.length > 0)
-                for (const line of jobBillLines)
-                    if (currency(line.amount).value !== priceToSave.value)
-                        allPromises.push(
-                            InvoiceLine.query(trx)
-                                .patch({ amount: priceToSave.value })
-                                .where({ guid: line.guid })
-                        );
-            else if (
-                !Array.isArray(jobBillLines) &&
-                currency(jobBillLines.amount).value !== priceToSave.value
-            )
-                allPromises.push(
-                    InvoiceLine.query(trx)
-                        .patch({ amount: priceToSave.value })
-                        .where({ guid: jobBillLines.guid })
-                );
+            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, dispatch.price, currentUser);
+            for (const line of lines) line.transacting(trx);
+            allPromises.push(...lines);
 
             const jobBill = await dispatch.$query(trx)
                 .joinRelated('job.bills')
                 .select('job:bills.*', 'job.isTransport')
-                .where({ 'job.isTransport': true })
-                .debug();
+                .where({ 'job.isTransport': true });
             
             allPromises.push(
                 InvoiceBill.query(trx).patch({
@@ -541,7 +516,7 @@ class LoadboardService
             StatusManagerHandler.registerStatus({
                 orderGuid: job.orderGuid,
                 userGuid: currentUser,
-                statusId: 13,
+                statusId: 11,
                 jobGuid: job.guid
             });
 
