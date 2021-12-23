@@ -32,6 +32,7 @@ async function run()
     {
         await PGListener.listen();
         await Mongo.connect();
+        registerEventListeners();
     }
     catch (error)
     {
@@ -151,5 +152,14 @@ function corsMiddleware()
     else
     {
         throw new Error('Missing CORS_ORIGINS env var.');
+    }
+}
+
+function registerEventListeners()
+{
+    const filepaths = fs.readdirSync('./src/EventListeners');
+    for (const filepath of filepaths)
+    {
+        require(`./src/EventListeners/${filepath}`);
     }
 }
