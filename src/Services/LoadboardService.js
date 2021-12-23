@@ -14,6 +14,7 @@ const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
 const EventEmitter = require('events');
 const { DateTime } = require('luxon');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -175,6 +176,11 @@ class LoadboardService
             {
                 job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch), type, order]');
 
+                if(!job)
+                {
+                    throw new HttpError(404, 'Job not found');
+                }
+
                 const stops = await this.getFirstAndLastStops(job.stops);
 
                 Object.assign(job, stops);
@@ -324,7 +330,7 @@ class LoadboardService
                 jobGuid: job.guid,
                 dispatchGuid: job.dispatch.guid
             });
-
+            dispatch.jobStatus = Job.STATUS.PENDING;
             return dispatch;
         }
         catch (e)
@@ -356,12 +362,11 @@ class LoadboardService
                 .modifyGraph('job', builder => builder.select('rcgTms.orderJobs.guid', 'orderGuid'))
                 .modifyGraph('vendor', builder => builder.select('name', 'salesforce.accounts.guid'))
                 .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
-
-            dispatch.setUpdatedBy(currentUser);
-
+                
             if (!dispatch)
-                throw new Error('No active offers to undispatch');
-
+                throw new HttpError(404, 'No active offers to undispatch');
+            
+            dispatch.setUpdatedBy(currentUser);
             if (dispatch.loadboardPostGuid != null)
             {
                 const job = await this.getAllPostingData(jobGuid, [{ loadboard: dispatch.loadboardPost.loadboard }], currentUser);
@@ -387,9 +392,6 @@ class LoadboardService
                     );
 
                 const job = Job.fromJson({
-                    vendorGuid: null,
-                    vendorContactGuid: null,
-                    vendorAgentGuid: null,
                     dateStarted: null,
                     status: 'ready'
                 });
@@ -397,6 +399,7 @@ class LoadboardService
                 job.setUpdatedBy(currentUser);
 
                 await Job.query(trx).patch(job).findById(dispatch.jobGuid);
+                dispatch.jobStatus = 'ready';
             }
 
             await trx.commit();
