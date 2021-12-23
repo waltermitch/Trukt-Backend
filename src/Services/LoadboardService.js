@@ -438,6 +438,7 @@ class LoadboardService
     static async acceptDispatch(jobGuid, dispatchGuid, currentUser)
     {
         const trx = await OrderJobDispatch.startTransaction();
+        const allPromises = [];
 
         try
         {
@@ -466,7 +467,7 @@ class LoadboardService
             if (!dispatch)
                 throw new Error('Dispatch not found');
 
-            await job.$relatedQuery('dispatches', trx).patch({
+            allPromises.push(job.$relatedQuery('dispatches', trx).patch({
                 isValid: false,
                 isPending: false,
                 dateAccepted: null,
@@ -475,11 +476,11 @@ class LoadboardService
                 isDeclined: false,
                 isCanceled: raw('(CASE WHEN "is_pending" THEN true ELSE false END)'),
                 dateCanceled: raw('(CASE WHEN "is_pending" = true THEN NOW() ELSE null END)')
-            }).whereNot({ guid: dispatch.guid });
+            }).whereNot({ guid: dispatch.guid }));
 
-            await dispatch.$relatedQuery('loadboardPost', trx).patch({ isPosted: false });
+            allPromises.push(dispatch.$relatedQuery('loadboardPost', trx).patch({ isPosted: false }));
             
-            await dispatch.$query(trx).patch({
+            allPromises.push(dispatch.$query(trx).patch({
                 isAccepted: true,
                 isPending: false,
                 dateAccepted: new Date(),
@@ -487,11 +488,16 @@ class LoadboardService
                 dateCanceled: null,
                 dateDeclined: null,
                 updatedByGuid: currentUser
-            });
+            }));
 
-            trx.commit();
+            allPromises.push(job.$query(trx).patch({
+                vendorGuid: dispatch.vendorGuid,
+                vendorContactGuid: dispatch.vendorContactGuid,
+                vendorAgentGuid: dispatch.vendorAgentGuid,
+                updatedByGuid: currentUser
+            }));
 
-            return dispatch;
+            await Promise.all(allPromises);
         }
         catch (e)
         {
