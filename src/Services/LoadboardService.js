@@ -499,7 +499,6 @@ class LoadboardService
                 updatedByGuid: currentUser
             }));
 
-            await Promise.all(allPromises);
 
             let jobBillLinesCount = await dispatch.$query(trx).joinRelated('job.bills.lines').count('job:bills:lines.*');
             jobBillLinesCount = jobBillLinesCount.count;
@@ -510,12 +509,11 @@ class LoadboardService
                 .joinRelated('job.bills.lines')
                 .select('job:bills:lines.*', 'job.isTransport')
                 .where({ 'job.isTransport': true });
-            const jobBillLinesPromises = [];
 
             if (Array.isArray(jobBillLines) && jobBillLines.length > 0)
                 for (const line of jobBillLines)
                     if (currency(line.amount).value !== priceToSave.value)
-                        jobBillLinesPromises.push(
+                        allPromises.push(
                             InvoiceLine.query(trx)
                                 .patch({ amount: priceToSave.value })
                                 .where({ guid: line.guid })
@@ -524,13 +522,27 @@ class LoadboardService
                 !Array.isArray(jobBillLines) &&
                 currency(jobBillLines.amount).value !== priceToSave.value
             )
-                jobBillLinesPromises.push(
+                allPromises.push(
                     InvoiceLine.query(trx)
                         .patch({ amount: priceToSave.value })
                         .where({ guid: jobBillLines.guid })
                 );
 
-            await Promise.all(jobBillLinesPromises);
+            const jobBill = await dispatch.$query(trx)
+                .joinRelated('job.bills')
+                .select('job:bills.*', 'job.isTransport')
+                .where({ 'job.isTransport': true })
+                .debug();
+            
+            allPromises.push(
+                InvoiceBill.query(trx).patch({
+                    paymentTermId: dispatch.paymentTermId,
+                    paymentMethodId: dispatch.paymentMethodId,
+                    consigneeGuid: dispatch.vendorGuid
+                }).findById(jobBill.guid)
+            );
+
+            await Promise.all(allPromises);
             await trx.commit();
 
             return { jobBillLines };
