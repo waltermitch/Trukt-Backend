@@ -9,7 +9,7 @@ module.exports = (errors, request, response, next) =>
     {
         errors = [errors];
     }
-    let status;
+    let status = 500;
     let data = {
         errors: []
     };
@@ -27,10 +27,11 @@ module.exports = (errors, request, response, next) =>
         {
             status = 400;
             data.errors.push(e.toJson());
-            return;
+        } else 
+        {
+            status = e.status || status;
+            data.errors.push({message: e.message || e.data.message});
         }
-        status = e?.status ?? 500;
-        data.errors.push(e);
     }
     console.log(...errors);
     response.status(status);

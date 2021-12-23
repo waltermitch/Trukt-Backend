@@ -1,0 +1,23 @@
+summary: Undeletes a job
+operationId: undeleteJob
+description: Undeletes job, requests and loadborad posts are not recreated
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+responses:
+  204:
+    description: Job undeleted succesfully
+    content:
+      application/json: {}
+  404:
+    description: Job does not exist
+    content:
+      application/json:
+        schema:
+          type: string
+          example: Job does not exist

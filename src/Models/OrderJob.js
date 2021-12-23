@@ -1,8 +1,9 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const OrderJobType = require('./OrderJobType');
 const BaseModel = require('./BaseModel');
-const { ref } = require('objection');
+const { ref, raw } = require('objection');
 const Order = require('./Order');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 
 const jobTypeFields = ['category', 'type'];
 
@@ -11,7 +12,15 @@ class OrderJob extends BaseModel
     static STATUS = {
         NEW: 'new',
         READY: 'ready',
-        PENDING: 'pending'
+        ON_HOLD: 'on hold',
+        POSTED: 'posted',
+        PENDING: 'pending',
+        DECLINED: 'declined',
+        DISPATCHED: 'dispatched',
+        PICKED_UP: 'picked up',
+        DELIVERED: 'delivered',
+        CANCELED: 'canceled',
+        DELETED: 'deleted'
     }
 
     static get tableName()
@@ -572,13 +581,13 @@ class OrderJob extends BaseModel
                 .whereExists(Order.query().alias('o').where({ 'o.guid': ref('job.order_guid'), 'o.isTender': false }))
                 .whereNotExists(loadboardPost.query().alias('post')
                     .where({
-                        'post.isPosted': false,
+                        'post.isPosted': true,
                         'post.jobGuid': ref('job.guid')
                     }))
                 .whereNotExists(orderJobDispatches.query().alias('ojd')
                     .where({
-                        'ojd.isAccepted': false,
-                        'ojd.isPending': false,
+                        'ojd.isPending': true,
+                        'ojd.isValid': true,
                         'ojd.jobGuid': ref('job.guid')
                     }));
         },
@@ -592,7 +601,8 @@ class OrderJob extends BaseModel
                     'job.isDeleted': false,
                     'job.isCanceled': false
                 });
-        }
+        },
+        areAllOrderJobsDeleted: this.areAllOrderJobsDeleted
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
@@ -608,34 +618,34 @@ class OrderJob extends BaseModel
     validateJobForDispatch()
     {
         if (this.isDummy)
-            throw new Error('Cannot dispatch dummy job');
-        
+            throw new HttpError(400, 'Cannot dispatch dummy job');
+
         if (this.type.category != 'transport' && this.type.type != 'transport' && this.isTransport)
-            throw new Error('Cannot dispatch non transport job');
+            throw new HttpError(400, 'Cannot dispatch non transport job');
 
         if (this.isOnHold)
-            throw new Error('Cannot dispatch job that is on hold');
+            throw new HttpError(400, 'Cannot dispatch job that is on hold');
 
         if (!this.dispatcherGuid)
-            throw new Error('Cannot dispatch job that has no dispatcher');
+            throw new HttpError(400, 'Cannot dispatch job that has no dispatcher');
 
         if (!this.isReady)
-            throw new Error('Cannot dispatch job that is not ready');
+            throw new HttpError(400, 'Cannot dispatch job that is not ready');
 
         if (this.isDeleted)
-            throw new Error('Cannot dispatch deleted job');
+            throw new HttpError(400, 'Cannot dispatch deleted job');
 
         if (this.isCanceled)
-            throw new Error('Cannot dispatch canceled job');
+            throw new HttpError(400, 'Cannot dispatch canceled job');
 
         if (this.order.isTender)
-            throw new Error('Cannot dispatch job for tender order');
+            throw new HttpError(400, 'Cannot dispatch job for tender order');
 
         if (this.dispatches.length !== 0)
-            throw new Error('Cannot dispatch job with already active load offer');
+            throw new HttpError(400, 'Cannot dispatch job with already active load offer');
 
-        if(this.bills.length === 0)
-            throw new Error('Job bill missing. Bill is required in order to set payment method and payment terms');
+        if (this.bills.length === 0)
+            throw new HttpError(400, 'Job bill missing. Bill is required in order to set payment method and payment terms');
     }
 
     static get fetch()
@@ -655,6 +665,11 @@ class OrderJob extends BaseModel
                 'job.grossProfitMargin'
             ]
         };
+    }
+
+    static areAllOrderJobsDeleted(query, orderGuid)
+    {
+        return query.select(raw('bool_and(is_deleted) as deleteOrder')).where('orderGuid', orderGuid);
     }
 }
 
