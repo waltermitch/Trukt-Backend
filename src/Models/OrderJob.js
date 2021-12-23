@@ -648,6 +648,18 @@ class OrderJob extends BaseModel
             throw new HttpError(400, 'Job bill missing. Bill is required in order to set payment method and payment terms');
     }
 
+    validateJobForAccepting()
+    {
+        if (!this.isReady)
+            throw new Error('Job is not ready');
+        if (this.status !== OrderJob.STATUS.PENDING)
+            throw new Error('Job is not pending');
+        if (Number(this.validDispatchesCount) > 1)
+            throw new Error('Job has more than one valid pending dispatch');
+        if (Number(this.validDispatchesCount) === 0)
+            throw new Error('Job has no valid pending dispatch');
+    }
+
     static get fetch()
     {
         return {

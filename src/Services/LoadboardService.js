@@ -455,14 +455,8 @@ class LoadboardService
 
             if (!job)
                 throw new Error('Job not found');
-            if (!job.isReady)
-                throw new Error('Job is not ready');
-            if (job.status !== Job.STATUS.PENDING)
-                throw new Error('Job is not pending');
-            if (Number(job.validDispatchesCount) > 1)
-                throw new Error('Job has more than one valid pending dispatch');
-            if (Number(job.validDispatchesCount) === 0)
-                throw new Error('Job has no valid pending dispatch');
+
+            job.validateJobForAccepting();
 
             const dispatch = await job.$relatedQuery('dispatches', trx).findById(dispatchGuid);
 
@@ -498,7 +492,6 @@ class LoadboardService
                 vendorAgentGuid: dispatch.vendorAgentGuid,
                 updatedByGuid: currentUser
             }));
-
 
             let jobBillLinesCount = await dispatch.$query(trx).joinRelated('job.bills.lines').count('job:bills:lines.*');
             jobBillLinesCount = jobBillLinesCount.count;
