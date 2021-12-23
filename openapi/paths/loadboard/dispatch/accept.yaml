@@ -26,10 +26,45 @@ responses:
   200:
     description: accepted dispatch
     content:
-      application/json: {}
+      application/json: 
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: message response
+              example: 'Job dispatch accepted'
   400:
     description: error in sent values
     content:
-      application/json: {}
+      application/json:
+        schema:
+          type: object
+          properties:
+            errors:
+              type: array
+              description: error messages list
+              items:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: error message
+                    example: 'Invalid dispatch guid'
   404:
     description: dispatch or job not found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            errors:
+              type: array
+              description: error messages list
+              items:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: error message
+                    example: 'Job not found'
