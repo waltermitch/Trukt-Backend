@@ -37,7 +37,7 @@ class OrderJobService
         const cleaned = R.pickBy((it) => it !== undefined, payload);
 
         if (Object.keys(cleaned).length === 0)
-            throw { 'status': 400, 'data': 'Missing Update Values' };
+            throw new HttpError(400, 'Missing Update Values');
 
         const promises = await Promise.allSettled(jobs.map(async (job) =>
         {
@@ -376,13 +376,13 @@ class OrderJobService
                 .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
                 .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
 
-            if(!job)
+            if (!job)
             {
                 throw new HttpError(404, 'Job not found');
             }
 
             // job cannot be dispatched before being put on hold
-            if(job.dispatches.length >= 1)
+            if (job.dispatches.length >= 1)
             {
                 throw new HttpError(400, 'Job must be undispatched before it can be moved to On Hold');
             }
@@ -392,25 +392,25 @@ class OrderJobService
             const loadboardPostGuids = job.loadboardPosts.map(post => post.guid);
 
             await LoadboardRequest.query(trx).patch({
-                    isValid: false,
-                    isCanceled: false,
-                    isDeclined: true,
-                    isSynced: true,
-                    status: 'declined',
-                    declineReason: 'Job set to On Hold',
-                    updatedByGuid: currentUser
-                })
+                isValid: false,
+                isCanceled: false,
+                isDeclined: true,
+                isSynced: true,
+                status: 'declined',
+                declineReason: 'Job set to On Hold',
+                updatedByGuid: currentUser
+            })
                 .whereIn('loadboardPostGuid', loadboardPostGuids);
 
             // unpost the load from all loadboards
             // unposting from loadboards automatically cancels any requests on the
             // loadboards end so we only have to cancel them on our end
             await LoadboardService.unpostPostings(job.guid, job.loadboardPosts, currentUser);
-            
+
             const res = await OrderJob.query(trx)
-            .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
-            .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
-    
+                .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
+                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+
             await trx.commit();
             return res;
         }
@@ -433,8 +433,8 @@ class OrderJobService
         try
         {
             const job = await OrderJob.query(trx).findById(jobGuid);
-            
-            if(!job)
+
+            if (!job)
             {
                 throw new HttpError(404, 'Job not found');
             }
@@ -894,10 +894,7 @@ class OrderJobService
 
     static async markJobAsComplete(jobGuid, currentUser)
     {
-        // start transaction
-        const trx = await OrderStop.startTransaction();
-
-        const job = await OrderJob.query(trx).where(
+        const job = await OrderJob.query().where(
             {
                 'orderJobs.guid': jobGuid
             })
@@ -905,32 +902,30 @@ class OrderJobService
             .withGraphJoined('stopLinks').first();
 
         if (!job)
-            throw { 'status': 400, 'data': 'Job Doesn\'t Match Criteria To Move To Complete State' };
+            throw new HttpError(400, 'Job Doesn\'t Match Criteria To Move To Complete State');
         else if (!job.isReady)
-            throw { 'status': 400, 'data': 'Job Is Not Ready' };
+            throw new HttpError(400, 'Job Is Not Ready');
         else if (job.isOnHold)
-            throw { 'status': 400, 'data': 'Job Is On Hold' };
+            throw new HttpError(400, 'Job Is On Hold');
         else if (job.isDeleted)
-            throw { 'status': 400, 'data': 'Job Is Deleted' };
+            throw new HttpError(400, 'Job Is Deleted');
         else if (job.isCanceled)
-            throw { 'status': 400, 'data': 'Job Is Canceled' };
+            throw new HttpError(400, 'Job Is Canceled');
         else if (!job.vendorGuid)
-            throw { 'status': 400, 'data': 'Job Has No Vendor' };
+            throw new HttpError(400, 'Job Has No Vendor');
         else if (!job.dispatcherGuid)
-            throw { 'status': 400, 'data': 'Job Has No Dispatcher' };
+            throw new HttpError(400, 'Job Has No Dispatcher');
         else if (job.order.isTender)
-            throw { 'status': 400, 'data': 'Job Is Part Of Tender Order' };
+            throw new HttpError(400, 'Job Is Part Of Tender Order');
         else if (job.isComplete)
             return 200;
 
         const allCompleted = job.stopLinks.every(stop => stop.isStarted && stop.isCompleted);
 
         if (!allCompleted)
-            throw { 'status': 400, 'data': 'All stops must be completed before job can be marked as complete.' };
+            throw new HttpError(400, 'All stops must be completed before job can be marked as complete.');
 
-        await OrderJob.query(trx).patch({ 'isComplete': true, 'updatedByGuid': currentUser, 'status': 'completed' }).where('guid', jobGuid);
-
-        await trx.commit();
+        await OrderJob.query().patch({ 'isComplete': true, 'updatedByGuid': currentUser, 'status': 'completed' }).where('guid', jobGuid);
 
         emitter.emit('orderjob_completed', jobGuid);
 
@@ -939,14 +934,10 @@ class OrderJobService
 
     static async markJobAsUncomplete(jobGuid, currentUser)
     {
-        const trx = await OrderStop.startTransaction();
-
-        await OrderJob.query(trx).where(
+        await OrderJob.query().where(
             {
                 'guid': jobGuid
             }).patch({ 'isComplete': false, 'updatedByGuid': currentUser, 'status': 'delivered' }).first();
-
-        await trx.commit();
 
         emitter.emit('orderjob_uncompleted', jobGuid);
 
