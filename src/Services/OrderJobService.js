@@ -12,7 +12,6 @@ const LoadboardService = require('../Services/LoadboardService');
 const Loadboard = require('../Models/Loadboard');
 const LoadboardPost = require('../Models/LoadboardPost');
 const LoadboardRequest = require('../Models/LoadboardRequest');
-const EventEmitter = require('./EventEmitter');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const LoadboardRequestService = require('./LoadboardRequestService');
@@ -1003,36 +1002,42 @@ class OrderJobService
                 throw new HttpError(400, 'Please un-dispatch the Order before deleting');
 
             const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
+
+            // updating postings to be deleted
             await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, userGuid);
 
-            // Mark Job as deleted
+            // marking job as deleted
             const payload = OrderJobService.createStatusPayload('deleted', userGuid);
 
+            // creating payload for requests to deleted
             const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).deleted;
 
-            // Mark loadborad as deleted first
+            // mark all orderJon and and requrest as deleted
             await Promise.all([
                 OrderJob.query(trx).patch(payload).findById(jobGuid),
                 LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
                     LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
             ]);
 
+            // commiting transactions
             await trx.commit();
 
-            EventEmitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            // emitting event to update status manager
+            emitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+
             return { status: 200 };
         }
         catch (error)
         {
             await trx.rollback();
-            throw error;
+            throw new HttpError(500, error);
         }
     }
 
     /**
      * Order is mark as ready in rcg_update_order_job_status_trigger in DB
-     * @param {*} jobGuid
-     * @param {*} userGuid
+     * @param {uuid} jobGuid
+     * @param {uuid} userGuid
      * @returns
      */
     static async undeleteJob(jobGuid, userGuid)
@@ -1049,24 +1054,24 @@ class OrderJobService
             if (!job?.isDeleted)
                 return { status: 200 };
 
+            // setting order back to ready status
             const payload = OrderJobService.createStatusPayload('ready', userGuid);
-            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).unposted;
 
-            await Promise.all([
-                OrderJob.query(trx).patch(payload).findById(jobGuid),
-                LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
-                    LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
-            ]);
+            // udpating orderJob in data base
+            await OrderJob.query(trx).patch(payload).findById(jobGuid);
 
+            // commiting transaction
             await trx.commit();
 
-            EventEmitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            // emit the event to register with status manager
+            emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+
             return { status: 200 };
         }
         catch (error)
         {
             await trx.rollback();
-            throw error;
+            throw new HttpError(500, error);
         }
     }
 
@@ -1092,13 +1097,13 @@ class OrderJobService
 
             await trx.commit();
 
-            EventEmitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
             return { status: 200 };
         }
         catch (error)
         {
             await trx.rollback();
-            throw error;
+            throw new HttpError(500, error);
         }
     }
 
@@ -1130,31 +1135,33 @@ class OrderJobService
         const trx = await OrderJob.startTransaction();
         try
         {
+            // getting canceled job with passed guid
             const job = await OrderJob.query(trx).select('orderGuid', 'isCanceled').findOne('guid', jobGuid);
+
             if (!job)
                 throw new HttpError(400, 'Job does not exist');
 
             if (!job?.isCanceled)
                 return { status: 200 };
 
+            // createing ready status to undo delete
             const payload = OrderJobService.createStatusPayload('ready', userGuid);
-            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).unposted;
 
-            await Promise.all([
-                OrderJob.query(trx).patch(payload).findById(jobGuid),
-                LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
-                    LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
-            ]);
+            // update orderJob to Ready state
+            await OrderJob.query(trx).patch(payload).findById(jobGuid);
 
+            // commiting transaction
             await trx.commit();
 
-            EventEmitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            // emitting event for update statys manager
+            emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+
             return { status: 200 };
         }
         catch (error)
         {
             await trx.rollback();
-            throw error;
+            throw new HttpError(500, error);
         }
     }
 }
