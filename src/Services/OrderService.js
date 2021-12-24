@@ -1,4 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
@@ -2714,7 +2715,12 @@ class OrderService
             orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
 
         if (consignee?.guid)
-            orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
+        {
+            if (!orderInvoiceFromDB.isPaid)
+                orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
+            else
+                throw new HttpError(400, 'Cannot update consignee on paid invoice');
+        }
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
     }

@@ -1,0 +1,70 @@
+summary: Accept dispatch
+operationId: putAcceptDispatch
+description: Accept a job dispatch
+tags:
+  - Loadboard
+parameters:
+  - in: path
+    name: jobId
+    schema:
+      $ref: '../../../components/schemas/Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties: 
+          dispatchGuid: 
+            description: guid of job's dispatch
+            type: string
+            example: 10488cea-41c2-4469-927f-7e3a9a4d243a
+            $ref: '../../../components/schemas/Common.yaml#/guid'
+        required:
+          - dispatchGuid
+responses:
+  200:
+    description: accepted dispatch
+    content:
+      application/json: 
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: message response
+              example: 'Job dispatch accepted'
+  400:
+    description: error in sent values
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            errors:
+              type: array
+              description: error messages list
+              items:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: error message
+                    example: 'Invalid dispatch guid'
+  404:
+    description: dispatch or job not found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            errors:
+              type: array
+              description: error messages list
+              items:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: error message
+                    example: 'Job not found'
