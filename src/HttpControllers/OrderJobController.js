@@ -159,6 +159,32 @@ class OrderJobController
             next(error);
         }
     }
+
+    static async cancelJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.cancelJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async uncancelJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.uncancelJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = OrderJobController;

@@ -478,7 +478,7 @@ class LoadboardService
             }).whereNot({ guid: dispatch.guid }));
 
             allPromises.push(dispatch.$relatedQuery('loadboardPost', trx).patch({ isPosted: false }));
-            
+
             allPromises.push(dispatch.$query(trx).patch({
                 isAccepted: true,
                 isPending: false,
@@ -504,7 +504,7 @@ class LoadboardService
                 .joinRelated('job.bills')
                 .select('job:bills.*', 'job.isTransport')
                 .where({ 'job.isTransport': true });
-            
+
             allPromises.push(
                 InvoiceBill.query(trx).patch({
                     paymentTermId: dispatch.paymentTermId,
@@ -777,7 +777,6 @@ class LoadboardService
         const job = await LoadboardService.getNotDeletedPosts(jobId, posts);
         const payloads = [];
         let lbPayload;
-
         try
         {
             // Only send for non deleted loadboards
@@ -786,7 +785,6 @@ class LoadboardService
                 lbPayload = new loadboardClasses[`${lbName}`](job);
                 payloads.push(lbPayload['remove'](userGuid));
             }
-
             if (payloads?.length)
             {
                 await sender.sendMessages({ body: payloads });
