@@ -1,12 +1,11 @@
 const SystemManagementService = require('../Services/SystemManagementService');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const StatusCacheManager = require('../EventManager/StatusCacheManager');
+const TerminalsHandler = require('../EventManager/TerminalsHandler');
 const CoupaManager = require('../EventManager/CoupaManager');
-const Triumph = require('../Triumph/API');
 const QBO = require('../QuickBooks/API');
 const Super = require('../Super/API');
 const Cron = require('node-cron');
-const TerminalsHandler = require('../EventManager/TerminalsHandler');
-const StatusCacheManager = require('../EventManager/StatusCacheManager');
 
 const expressions =
 {
@@ -29,14 +28,12 @@ const expressions =
 Cron.schedule(expressions.fiveMinutes, async () =>
 {
     await StatusCacheManager.updateStatus();
-    await CoupaManager.checkCoupaQueue();
+    // await CoupaManager.checkCoupaQueue();
 });
 
 // every 30 minutes
 Cron.schedule(expressions.thirtyMinutes, async () =>
 {
-    await QBO.refreshToken();
-
     await SystemManagementService.generateTmsUserToken();
 });
 
@@ -56,7 +53,6 @@ Cron.schedule(expressions.daily, async () =>
     Super.retryCarrierUpdates();
 
     // get triumph token
-    await Triumph.refreshToken();
     await QBO.syncListsToDB();
 });
 
