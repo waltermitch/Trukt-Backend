@@ -1,9 +1,8 @@
 const OrderJobService = require('../Services/OrderJobService');
 const OrderService = require('../Services/OrderService');
-const { EventEmitter } = require('events');
+const listener = require('./index');
 
 const SYSUSER = process.env.SYSTEM_USER;
-const listener = new EventEmitter();
 
 listener.on('orderjob_stop_update', (jobGuid) =>
 {

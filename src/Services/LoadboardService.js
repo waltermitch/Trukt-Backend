@@ -1,4 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardContact = require('../Models/LoadboardContact');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
@@ -6,24 +7,20 @@ const { ServiceBusClient } = require('@azure/service-bus');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
 const InvoiceBill = require('../Models/InvoiceBill');
+const emitter = require('../EventListeners/index');
 const Loadboard = require('../Models/Loadboard');
 const SFAccount = require('../Models/SFAccount');
 const SFContact = require('../Models/SFContact');
 const OrderStop = require('../Models/OrderStop');
 const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
-const EventEmitter = require('events');
 const { DateTime } = require('luxon');
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const { raw } = require('objection');
-const InvoiceLine = require('../Models/InvoiceLine');
-const currency = require('currency.js');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
-const emitter = new EventEmitter();
 
 const dispatchableLoadboards = ['SUPERDISPATCH', 'SHIPCARS'];
 let dbLoadboardNames;

@@ -11,6 +11,7 @@ const SFRecordType = require('../Models/SFRecordType');
 const Contact = require('../Models/TerminalContact');
 const InvoiceBill = require('../Models/InvoiceBill');
 const InvoiceLine = require('../Models/InvoiceLine');
+const emitter = require('../EventListeners/index');
 const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
@@ -27,14 +28,11 @@ const NodeCache = require('node-cache');
 const currency = require('currency.js');
 const User = require('../Models/User');
 const Bill = require('../Models/Bill');
-const EventEmitter = require('events');
 const { DateTime } = require('luxon');
 const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
-
-const emitter = new EventEmitter();
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
