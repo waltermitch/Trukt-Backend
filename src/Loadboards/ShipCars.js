@@ -376,7 +376,7 @@ class ShipCars extends Loadboard
                     extraAnnotations: {
                         dispatchedTo: this.loadboardName,
                         vendorGuid: vendor.vendorGuid,
-                        vendorAgentGuid: vendor.vendorAgentGuid,
+                        vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
                         vendorAgentName: vendor.vendorAgentName,
                         code: 'pending'
