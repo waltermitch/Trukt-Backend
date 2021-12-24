@@ -37,6 +37,7 @@ async function run()
     catch (error)
     {
         console.error(`Start error: ${error.message || error}`);
+        console.error(error);
     }
 
     const store = new KnexSessionStore
@@ -157,7 +158,7 @@ function corsMiddleware()
 
 function registerEventListeners()
 {
-    const filepaths = fs.readdirSync('./src/EventListeners');
+    const filepaths = fs.readdirSync('./src/EventListeners').filter(x => x.match(/\.js$/));
     for (const filepath of filepaths)
     {
         require(`./src/EventListeners/${filepath}`);
