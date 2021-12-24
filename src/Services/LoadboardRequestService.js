@@ -1,12 +1,10 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardRequest = require('../Models/LoadboardRequest');
 const LoadboardPost = require('../Models/LoadboardPost');
-const EventEmitter = require('events');
+const emitter = require('../EventListeners/index');
 const { ref } = require('objection');
 const axios = require('axios');
 const https = require('https');
-
-const emitter = new EventEmitter();
 
 const lbInstance = axios.create({
     baseURL: process.env['azure.loadboard.baseurl'],

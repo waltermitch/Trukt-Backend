@@ -1,10 +1,8 @@
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderStopLinks = require('../Models/OrderStopLink');
 const knex = require('../Models/BaseModel').knex();
+const emitter = require('../EventListeners/index');
 const OrderStops = require('../Models/OrderStop');
-const { EventEmitter } = require('events');
-
-const emitter = new EventEmitter();
 
 class OrderStopService
 {
