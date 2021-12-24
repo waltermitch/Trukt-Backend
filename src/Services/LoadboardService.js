@@ -15,6 +15,9 @@ const Job = require('../Models/OrderJob');
 const EventEmitter = require('events');
 const { DateTime } = require('luxon');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
+const { raw } = require('objection');
+const InvoiceLine = require('../Models/InvoiceLine');
+const currency = require('currency.js');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -426,6 +429,98 @@ class LoadboardService
             }
 
             return dispatch;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+
+    static async acceptDispatch(jobGuid, dispatchGuid, currentUser)
+    {
+        const trx = await OrderJobDispatch.startTransaction();
+        const allPromises = [];
+
+        try
+        {
+            const job = await Job.query(trx).findById(jobGuid)
+                .select([
+                    Job.ref('*'),
+                    Job.relatedQuery('dispatches').where({
+                        isValid: true,
+                        isPending: true
+                    }).count().as('validDispatchesCount')
+                ]).withGraphFetched('[bills, commodities]');
+
+            if (!job)
+                throw new HttpError(404, 'Job not found');
+
+            job.validateJobForAccepting();
+
+            const dispatch = await job.$relatedQuery('dispatches', trx).findById(dispatchGuid);
+
+            if (!dispatch)
+                throw new HttpError(404, 'Dispatch not found');
+
+            allPromises.push(job.$relatedQuery('dispatches', trx).patch({
+                isValid: false,
+                isPending: false,
+                dateAccepted: null,
+                dateDeclined: null,
+                isAccepted: false,
+                isDeclined: false,
+                isCanceled: raw('(CASE WHEN "is_pending" THEN true ELSE false END)'),
+                dateCanceled: raw('(CASE WHEN "is_pending" = true THEN NOW() ELSE null END)')
+            }).whereNot({ guid: dispatch.guid }));
+
+            allPromises.push(dispatch.$relatedQuery('loadboardPost', trx).patch({ isPosted: false }));
+            
+            allPromises.push(dispatch.$query(trx).patch({
+                isAccepted: true,
+                isPending: false,
+                dateAccepted: new Date(),
+                isDeclined: false,
+                dateCanceled: null,
+                dateDeclined: null,
+                updatedByGuid: currentUser
+            }));
+
+            allPromises.push(job.$query(trx).patch({
+                vendorGuid: dispatch.vendorGuid,
+                vendorContactGuid: dispatch.vendorContactGuid,
+                vendorAgentGuid: dispatch.vendorAgentGuid,
+                updatedByGuid: currentUser
+            }));
+
+            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, dispatch.price, currentUser);
+            for (const line of lines) line.transacting(trx);
+            allPromises.push(...lines);
+
+            const jobBill = await dispatch.$query(trx)
+                .joinRelated('job.bills')
+                .select('job:bills.*', 'job.isTransport')
+                .where({ 'job.isTransport': true });
+            
+            allPromises.push(
+                InvoiceBill.query(trx).patch({
+                    paymentTermId: dispatch.paymentTermId,
+                    paymentMethodId: dispatch.paymentMethodId,
+                    consigneeGuid: dispatch.vendorGuid
+                }).findById(jobBill.guid)
+            );
+
+            await Promise.all(allPromises);
+            await trx.commit();
+
+            StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                userGuid: currentUser,
+                statusId: 11,
+                jobGuid: job.guid
+            });
+
+            return;
         }
         catch (e)
         {
