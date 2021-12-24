@@ -5,19 +5,18 @@ const LoadboardRequest = require('../Models/LoadboardRequest');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
 const InvoiceLine = require('../Models/InvoiceLine');
+const emitter = require('../EventListeners/index');
 const knex = require('../Models/BaseModel').knex();
 const Loadboard = require('../Models/Loadboard');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
 const Invoice = require('../Models/Invoice');
-const { EventEmitter } = require('events');
 const Currency = require('currency.js');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const R = require('ramda');
 
-const emitter = new EventEmitter();
 
 const SYSUSER = process.env.SYSTEM_USER;
 

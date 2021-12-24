@@ -158,9 +158,8 @@ function corsMiddleware()
 
 function registerEventListeners()
 {
-    const filepaths = fs.readdirSync('./src/EventListeners').filter(x => x.match(/\.js$/));
+    const filepaths = fs.readdirSync('./src/EventListeners').filter(x => x.match(/(?<!index)\.js$/i));
+
     for (const filepath of filepaths)
-    {
         require(`./src/EventListeners/${filepath}`);
-    }
 }
