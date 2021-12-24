@@ -1,9 +1,7 @@
 const OrderService = require('../Services/OrderService');
 const NotesService = require('../Services/NotesService');
+const emitter = require('../EventListeners/index');
 const Order = require('../Models/Order');
-const EventEmitter = require('events');
-
-const emitter = new EventEmitter();
 
 class OrderController
 {
@@ -24,7 +22,6 @@ class OrderController
                     res.status(404);
                     res.send();
                 }
-
             }
             catch (err)
             {
@@ -115,8 +112,6 @@ class OrderController
             const order = await OrderService.patchOrder(body, req.session.userGuid);
 
             // register this event
-            // OrderUpdate will be deprecated, use order_updated instead
-            emitter.emit('OrderUpdate', { old: oldOrder, new: order });
             emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: order });
 
             res.status(200);

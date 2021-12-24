@@ -2,9 +2,7 @@ const StatusCacheManager = require('../EventManager/StatusCacheManager');
 const OrderStopService = require('../Services/OrderStopService');
 const OrderJobService = require('../Services/OrderJobService');
 const NotesService = require('../Services/NotesService');
-const { EventEmitter } = require('events');
-
-const emitter = new EventEmitter();
+const emitter = require('../EventListeners/index');
 
 class OrderJobController
 {
@@ -77,7 +75,7 @@ class OrderJobController
         try
         {
             const response = await func(jobGuid, req.session.userGuid);
-            
+
             emitter.emit(eventEmitted, jobGuid);
             res.status(200);
             res.json(response);
