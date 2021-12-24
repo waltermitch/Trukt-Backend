@@ -2721,8 +2721,6 @@ class OrderService
             orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
 
         if (consignee?.guid && orderInvoiceFromDB?.length)
-            orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
-        if (consignee?.guid)
         {
             if (!orderInvoiceFromDB.isPaid)
                 orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
