@@ -987,12 +987,14 @@ class OrderJobService
 
         try
         {
+            // getting job and verify if job is dispatched
             const jobStatus = [
                 OrderJob.query(trx)
                     .select('orderGuid').findOne('guid', jobGuid),
                 OrderJob.query(trx).alias('job')
                     .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
             ];
+
             const [job, jobIsDispatched] = await Promise.all(jobStatus);
 
             if (!job)
