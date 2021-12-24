@@ -1,16 +1,16 @@
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderStopLinks = require('../Models/OrderStopLink');
-const OrderStopService = require('./OrderStopService');
-const OrderService = require('./OrderService');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const EventEmitter = require('events');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const emitter = new EventEmitter();
 
 emitter.on('order_created', (orderGuid) =>
 {
+    const OrderService = require('./OrderService');
+
     // set Immediate make the call async
     setImmediate(async () =>
     {
@@ -24,6 +24,8 @@ emitter.on('order_created', (orderGuid) =>
 
 emitter.on('OrderUpdate', (Object) =>
 {
+    const OrderService = require('./OrderService');
+
     // set Immediate make the call async
     setImmediate(() =>
     {
@@ -33,6 +35,8 @@ emitter.on('OrderUpdate', (Object) =>
 
 emitter.on('orderstop_status_update', (stopGuids) =>
 {
+    const OrderStopService = require('./OrderStopService');
+
     // this will kick it off on the next loop iteration.
     setImmediate(async () =>
     {
@@ -134,6 +138,61 @@ emitter.on('orderjob_undeleted', async ({ orderGuid, userGuid, jobGuid }) =>
     catch (error)
     {
         console.error(`Error: Order ${orderGuid} could not be marked as undeleted!!. ${error?.message || error}`);
+    }
+});
+
+emitter.on('orderjob_canceled', async ({ orderGuid, userGuid, jobGuid }) =>
+{
+    try
+    {
+        // Register job canceled first
+        await StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 22
+        });
+
+        // The order is marked as canceled in rcg_update_order_job_status_trigger
+        const order = await Order.query().select('isCanceled').findById(orderGuid);
+        if (order?.isCanceled)
+        {
+            await StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid,
+                statusId: 24
+            });
+        }
+    }
+    catch (error)
+    {
+        // TODO: Error handler
+    }
+});
+
+emitter.on('orderjob_uncanceled', async ({ orderGuid, userGuid, jobGuid }) =>
+{
+    try
+    {
+        // Register job uncanceled first
+        await StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 23
+        });
+
+        await StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 25
+        });
+    }
+    catch (error)
+    {
+        // TODO: Error handler
     }
 });
 

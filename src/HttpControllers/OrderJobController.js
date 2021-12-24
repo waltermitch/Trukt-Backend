@@ -2,7 +2,9 @@ const StatusCacheManager = require('../EventManager/StatusCacheManager');
 const OrderStopService = require('../Services/OrderStopService');
 const OrderJobService = require('../Services/OrderJobService');
 const NotesService = require('../Services/NotesService');
-const emitter = require('../Services/EventEmitter');
+const { EventEmitter } = require('events');
+
+const emitter = new EventEmitter();
 
 class OrderJobController
 {
@@ -75,18 +77,10 @@ class OrderJobController
         try
         {
             const response = await func(jobGuid, req.session.userGuid);
-
-            if (response.status >= 400)
-            {
-                next(response);
-                return;
-            }
-            else
-            {
-                emitter.emit(eventEmitted, jobGuid);
-                res.status(200);
-                res.send();
-            }
+            
+            emitter.emit(eventEmitted, jobGuid);
+            res.status(200);
+            res.json(response);
         }
         catch (error)
         {
@@ -158,6 +152,32 @@ class OrderJobController
         try
         {
             const { status, message } = await OrderJobService.undeleteJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async cancelJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.cancelJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async uncancelJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.uncancelJob(req.params.jobGuid, req.session.userGuid);
             res.status(status).send(message);
         }
         catch (error)

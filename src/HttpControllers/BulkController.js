@@ -1,6 +1,8 @@
 const OrderJobSerivce = require('../services/OrderJobService');
 const OrderService = require('../services/OrderService');
-const emitter = require('../Services/EventEmitter');
+const { EventEmitter } = require('events');
+
+const emitter = new EventEmitter();
 
 class BulkController
 {

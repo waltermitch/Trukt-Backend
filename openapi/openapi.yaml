@@ -45,6 +45,8 @@ paths:
   /order/{guid}:
     get:
       $ref: paths/order/get.yaml
+    delete:
+      $ref: paths/order/deleteOrder.yaml
   /order/find_by_vin/{vin}:
     get:
       $ref: paths/order/findByVin.yaml
@@ -98,6 +100,21 @@ paths:
   /order/{orderGuid}/uncomplete:
     put:
       $ref: paths/order/markUncomplete.yaml
+  /order/{orderGuid}/undelete:
+    put:
+      $ref: paths/order/undeleteOrder.yaml
+  /order/{orderGuid}/delivered:
+    put:
+      $ref: paths/order/markDelivered.yaml
+  /order/{orderGuid}/undelivered:
+    put:
+      $ref: paths/order/markUndelivered.yaml
+  /order/{orderGuid}/cancel:
+    put:
+      $ref: paths/order/cancelOrder.yaml
+  /order/{orderGuid}/uncancel:
+    put:
+      $ref: paths/order/uncancelOrder.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml
@@ -136,6 +153,9 @@ paths:
       $ref: paths/loadboard/dispatch/post.yaml
     put:
       $ref: paths/loadboard/dispatch/put.yaml
+  /loadboard/{jobId}/accept:
+    put:
+      $ref: paths/loadboard/dispatch/accept.yaml
   /invoice/{invoiceGuid}:
     get:
       $ref: paths/invoice/get.yaml
@@ -267,3 +287,9 @@ paths:
   /job/{jobGuid}/undelete:
     put:
       $ref: paths/job/undelete.yaml
+  /job/{jobGuid}/cancel:
+    put:
+      $ref: paths/job/cancel.yaml
+  /job/{jobGuid}/uncancel:
+    put:
+      $ref: paths/job/uncancel.yaml
