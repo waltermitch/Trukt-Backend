@@ -912,17 +912,34 @@ class OrderJobService
         const trx = await OrderJob.startTransaction();
         try
         {
-            const job = await OrderJob.query(trx).findById(jobGuid);
+            const queryRes = await OrderJobService.getJobForReadyCheck([jobGuid]);
 
-            if (!job)
+            if (queryRes.jobs.length < 1)
             {
-                throw new HttpError(404, 'Job not found');
+                throw queryRes.exceptions;
             }
+            const job = queryRes.jobs[0];
             let res;
             if (job.isOnHold)
             {
-                res = await OrderJobService.updateJobStatus(jobGuid, 'ready', currentUser, trx);
-                Object.assign(res, await OrderJob.query(trx).select('guid', 'number', 'status', 'isOnHold', 'isReady').findById(jobGuid));
+                // removing the hold before checking if the job is not on hold so that it
+                // can pass through the check to see if it is ready.
+                await OrderJob.query(trx).patch({ isOnHold: false }).findById(jobGuid);
+                job.isOnHold = false;
+
+                // not using the setJobToReady function because that function uses its own
+                // transaction and this it does not know the hold has been removed for
+                // this current job
+                const readyResult = OrderJobService.checkJobIsReady(job);
+                if (typeof readyResult == 'string')
+                {
+                    res = await OrderJob.query(trx).patch(OrderJobService.createStatusPayload('ready', currentUser))
+                        .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+                }
+                else if (readyResult instanceof HttpError)
+                {
+                    throw readyResult;
+                }
             }
             else
             {
@@ -930,6 +947,13 @@ class OrderJobService
             }
 
             await trx.commit();
+
+            await StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                jobGuid: jobGuid,
+                userGuid: currentUser,
+                statusId: 16
+            });
             return res;
         }
         catch (e)
