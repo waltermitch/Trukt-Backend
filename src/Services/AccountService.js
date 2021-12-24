@@ -37,7 +37,7 @@ class AccountService
                     break;
             }
 
-            builder.orWhere(`${tableName}.name`, 'ilike', `%${search}%`);
+            builder.orWhere(`${tableName}.name`, 'ilike', `%${search}%`).andWhere(`${tableName}.name`, 'not ilike', '%Parent%');
 
             for (const type of addressTypes)
 

@@ -395,6 +395,7 @@ class OrderJob extends BaseModel
         serviceJob: (queryBuilder) => { queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['service'])); },
         statusActive: (queryBuilder) =>
         {
+            const Order = require('./Order');
             queryBuilder
                 .alias('job')
                 .where({
@@ -406,6 +407,7 @@ class OrderJob extends BaseModel
         statusOnHold: (queryBuilder) => { queryBuilder.alias('job').where({ 'job.isOnHold': true, 'job.isDeleted': false, 'job.isCanceled': false }); },
         statusNew: (queryBuilder) =>
         {
+            const Order = require('./Order');
             queryBuilder
                 .alias('job')
                 .where({
@@ -419,6 +421,7 @@ class OrderJob extends BaseModel
         },
         statusTender: (queryBuilder) =>
         {
+            const Order = require('./Order');
             queryBuilder
                 .alias('job')
                 .where({
@@ -461,7 +464,7 @@ class OrderJob extends BaseModel
         },
         statusPosted: (queryBuilder) =>
         {
-            const LoadboardPost = require('../Models/LoadboardPost');
+            const LoadboardPost = require('./LoadboardPost');
             queryBuilder
                 .alias('job')
                 .where({
@@ -474,7 +477,7 @@ class OrderJob extends BaseModel
         },
         statusPending: (queryBuilder) =>
         {
-            const OrderJobDispatch = require('../Models/OrderJobDispatch');
+            const OrderJobDispatch = require('./OrderJobDispatch');
             queryBuilder
                 .alias('job')
                 .where({
@@ -487,7 +490,7 @@ class OrderJob extends BaseModel
         },
         statusDeclined: (queryBuilder) =>
         {
-            const OrderJobDispatch = require('../Models/OrderJobDispatch');
+            const OrderJobDispatch = require('./OrderJobDispatch');
             queryBuilder
                 .alias('job')
                 .where({
@@ -566,6 +569,7 @@ class OrderJob extends BaseModel
         },
         statusReady: (queryBuilder) =>
         {
+            const Order = require('./Order');
             const loadboardPost = require('./LoadboardPost');
             const orderJobDispatches = require('./OrderJobDispatch');
             queryBuilder
@@ -646,6 +650,18 @@ class OrderJob extends BaseModel
 
         if (this.bills.length === 0)
             throw new HttpError(400, 'Job bill missing. Bill is required in order to set payment method and payment terms');
+    }
+
+    validateJobForAccepting()
+    {
+        if (!this.isReady)
+            throw new HttpError(400, 'Job is not ready');
+        if (this.status !== OrderJob.STATUS.PENDING)
+            throw new HttpError(400, 'Job is not pending');
+        if (Number(this.validDispatchesCount) > 1)
+            throw new HttpError(400, 'Job has more than one valid pending dispatch');
+        if (Number(this.validDispatchesCount) === 0)
+            throw new HttpError(400, 'Job has no valid pending dispatch');
     }
 
     static get fetch()

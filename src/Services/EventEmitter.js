@@ -1,16 +1,16 @@
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderStopLinks = require('../Models/OrderStopLink');
-const OrderStopService = require('./OrderStopService');
-const OrderService = require('./OrderService');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
-const { EventEmitter } = require('events');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const EventEmitter = require('events');
 
 const emitter = new EventEmitter();
 
 emitter.on('order_created', (orderGuid) =>
 {
+    const OrderService = require('./OrderService');
+
     // set Immediate make the call async
     setImmediate(async () =>
     {
@@ -24,6 +24,8 @@ emitter.on('order_created', (orderGuid) =>
 
 emitter.on('OrderUpdate', (Object) =>
 {
+    const OrderService = require('./OrderService');
+
     // set Immediate make the call async
     setImmediate(() =>
     {
@@ -33,6 +35,8 @@ emitter.on('OrderUpdate', (Object) =>
 
 emitter.on('orderstop_status_update', (stopGuids) =>
 {
+    const OrderStopService = require('./OrderStopService');
+
     // this will kick it off on the next loop iteration.
     setImmediate(async () =>
     {
