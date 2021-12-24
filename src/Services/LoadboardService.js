@@ -179,7 +179,7 @@ class LoadboardService
             {
                 job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch), type, order]');
 
-                if(!job)
+                if (!job)
                 {
                     throw new HttpError(404, 'Job not found');
                 }
@@ -290,6 +290,9 @@ class LoadboardService
             let message = {};
             if (lbPost)
             {
+                // assigning the vendor to the job because we need it for
+                // creating loadboard messages
+                job.vendor = carrier;
                 const lbPayload = new loadboardClasses[`${body.loadboard}`](job);
                 message = [lbPayload['dispatch']()];
 
@@ -355,20 +358,22 @@ class LoadboardService
                     'isAccepted',
                     'isPending',
                     'isCanceled',
-                    'isDeclined')
+                    'isDeclined',
+                    'loadboardPostGuid',
+                    'rcgTms.orderJobDispatches.externalGuid')
                 .withGraphJoined('[loadboardPost, job, vendor, vendorAgent]')
                 .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
                 .andWhere(builder =>
                 {
-                    builder.where({ isAccepted: true }).orWhere({ isPending: true });
+                    builder.where({ isAccepted: true }).orWhere({ isPending: true }).where({ isValid: true });
                 })
                 .modifyGraph('job', builder => builder.select('rcgTms.orderJobs.guid', 'orderGuid'))
                 .modifyGraph('vendor', builder => builder.select('name', 'salesforce.accounts.guid'))
                 .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
-                
+
             if (!dispatch)
                 throw new HttpError(404, 'No active offers to undispatch');
-            
+
             dispatch.setUpdatedBy(currentUser);
             if (dispatch.loadboardPostGuid != null)
             {
@@ -381,9 +386,7 @@ class LoadboardService
             }
             else
             {
-                dispatch.isPending = false;
-                dispatch.isAccepted = false;
-                dispatch.isCanceled = true;
+                dispatch.setToCanceled(currentUser);
 
                 await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
                 await OrderStop.query(trx)
@@ -549,7 +552,7 @@ class LoadboardService
         if (!job)
             throw new Error('Job not found');
 
-        if(job.isOnHold)
+        if (job.isOnHold)
         {
             throw new Error('Cannot get posting data for job that is on hold');
         }

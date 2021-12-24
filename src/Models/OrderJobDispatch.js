@@ -1,5 +1,6 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
+const DateTime = require('luxon').DateTime;
 
 class OrderJobDispatch extends BaseModel
 {
@@ -85,6 +86,42 @@ class OrderJobDispatch extends BaseModel
                 builder.where({ isPending: true, isCanceled: false, isValid: true }).orWhere({ isAccepted: true, isCanceled: false, isValid: true }).limit(1);
             }
         };
+    }
+
+    // this is meant to be used to update the dispatch when a carrier declines an offer
+    setToDeclined()
+    {
+        this.isPending = false;
+        this.isAccepted = false;
+        this.isCanceled = false;
+        this.isDeclined = true;
+        this.isValid = false;
+        this.dateDeclined = DateTime.now();
+    }
+
+    // this is meant to be used to update the dispatch when a carrier or a dispatcher
+    // accepts the offer
+    setToAccepted()
+    {
+        this.isPending = false;
+        this.isAccepted = true;
+        this.isCanceled = false;
+        this.isDeclined = false;
+        this.isValid = true;
+        this.dateAccepted = DateTime.now();
+    }
+
+    // this is meant to be used to update the dispatch when a dispatcher
+    // cancels the offer/dispatch themselves
+    setToCanceled(userGuid)
+    {
+        this.isPending = false;
+        this.isAccepted = false;
+        this.isCanceled = true;
+        this.isDeclined = false;
+        this.isValid = false;
+        this.dateCanceled = DateTime.now();
+        this.canceledByGuid = userGuid;
     }
 }
 
