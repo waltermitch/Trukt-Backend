@@ -1,12 +1,12 @@
 const OrderService = require('../Services/OrderService');
 const NotesService = require('../Services/NotesService');
-const orderEvents = require('../EventListeners/Order');
 const Order = require('../Models/Order');
+const EventEmitter = require('events');
+
+const emitter = new EventEmitter();
 
 class OrderController
 {
-    // nesting this because circular dependency
-    static myEmitter = require('../Services/EventEmitter');
     static async getOrder(req, res, next)
     {
         if (req.params.orderGuid)
@@ -48,7 +48,7 @@ class OrderController
             console.log(order.guid);
 
             if (!order?.isTender)
-                OrderController.myEmitter.emit('order_created', order.guid);
+                emitter.emit('order_created', order.guid);
 
             // registering order to status manager
             OrderService.registerCreateOrderStatusManager(order, req.session.userGuid);
@@ -93,7 +93,7 @@ class OrderController
             for (const response of responses)
             {
                 if (response.status === 200)
-                    OrderController.myEmitter.emit('order_created', response.orderGuid);
+                    emitter.emit('order_created', response.orderGuid);
             }
 
         }
@@ -116,8 +116,8 @@ class OrderController
 
             // register this event
             // OrderUpdate will be deprecated, use order_updated instead
-            OrderController.myEmitter.emit('OrderUpdate', { old: oldOrder, new: order });
-            orderEvents.emit('order_updated', { oldOrder: oldOrder, newOrder: order });
+            emitter.emit('OrderUpdate', { old: oldOrder, new: order });
+            emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: order });
 
             res.status(200);
             res.json(order);
@@ -197,7 +197,7 @@ class OrderController
             const order = await OrderService.updateClientNote(req.params.orderGuid, req.body, req.session.userGuid);
 
             // emit event order_updated
-            orderEvents.emit('order_client_notes_updated', req.params.orderGuid);
+            emitter.emit('order_client_notes_updated', req.params.orderGuid);
 
             res.status(202).json(order);
         }
