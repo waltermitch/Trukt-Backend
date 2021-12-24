@@ -2760,7 +2760,7 @@ class OrderService
         const cleaned = R.pickBy((it) => it !== undefined, payload);
 
         if (Object.keys(cleaned).length === 0)
-            throw { 'status': 400, 'data': 'Missing Update Values' };
+            throw new HttpError(400, 'Missing Update Values');
 
         const promises = await Promise.allSettled(orders.map(async (order) =>
         {
@@ -2804,18 +2804,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (order.isOnHold)
             return 200;
 
         // check that there are no vendors on any of the jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw { 'status': 400, 'data': `Related Job ${job.number} shouldn't have a vendor` };
+                throw new HttpError(400, `Related Job ${job.number} shouldn't have a vendor`);
 
         // if we got here mark all jobs on hold and the order on hold
         try
@@ -2824,12 +2824,7 @@ class OrderService
                 [
                     ...order.jobs.map(async (job) =>
                     {
-                        await OrderJob.query(trx).patch({
-                            'isOnHold': true,
-                            'isReady': false,
-                            'updatedByGuid': currentUser,
-                            'status': 'on hold'
-                        }).where({ 'guid': job.guid });
+                        OrderJobService.addHold(job.guid, currentUser);
                     }),
                     Order.query(trx).patch({
                         'isOnHold': true,
@@ -2864,18 +2859,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (!order.isOnHold)
             return 200;
 
         // check that there are no vendors on any of the jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw { 'status': 400, 'data': `Related Job ${job.number} shouldn't have a vendor` };
+                throw new HttpError(400, `Related Job ${job.number} shouldn't have a vendor`);
 
         // if we got here mark all jobs on hold and the order on hold
         try
@@ -2884,12 +2879,7 @@ class OrderService
                 [
                     ...order.jobs.map(async (job) =>
                     {
-                        await OrderJob.query(trx).patch({
-                            'isOnHold': false,
-                            'isReady': true,
-                            'updatedByGuid': currentUser,
-                            'status': 'ready'
-                        }).where({ 'guid': job.guid });
+                        OrderJobService.removeHold(job.guid, currentUser);
                     }),
                     Order.query(trx).patch({
                         'isOnHold': false,
@@ -2913,8 +2903,7 @@ class OrderService
 
     static async markOrderComplete(orderGuid, currentUser)
     {
-        const [trx, order] = await Promise.all([
-            Order.startTransaction(),
+        const [order] = await Promise.all([
             Order.query()
                 .where({ 'orders.guid': orderGuid })
                 .withGraphJoined('jobs')
@@ -2923,112 +2912,83 @@ class OrderService
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (order.isOnHold)
-            throw { 'status': 400, 'data': 'Order is On Hold' };
+            throw new HttpError(400, 'Order is On Hold');
         else if (!order.isReady)
-            throw { 'status': 400, 'data': 'Order is Not Ready' };
+            throw new HttpError(400, 'Order is Not Ready');
         else if (order.isComplete)
             return 200;
 
         // check that each transport job has a vendor and all commodities are delivered
         for (const job of order.jobs)
             if (!job.vendorGuid)
-                throw { 'status': 400, 'data': `Related Job ${job.number} doesn't have a Vendor` };
+                throw new HttpError(400, `Related Job ${job.number} doesn't have a Vendor`);
 
         for (const commodity of order.commodities)
             if (commodity.deliveryStatus !== 'delivered')
-                throw { 'status': 400, 'data': `Commodity ${commodity.vehicle.name} is not Delivered` };
+                throw new HttpError(400, `Commodity ${commodity.vehicle.number} is not Delivered`);
 
         // if we got here mark all jobs complete and the order complete
-        try
-        {
-            await Promise.all(
-                [
-                    ...order.jobs.map(async (job) =>
-                    {
-                        await OrderJob.query(trx).patch({
-                            'isComplete': true,
-                            'updatedByGuid': currentUser,
-                            'status': 'complete'
-                        }).where({ 'guid': job.guid });
-                    }),
-                    Order.query(trx).patch({
-                        'isComplete': true,
-                        'updatedByGuid': currentUser,
-                        'status': 'complete'
-                    }).where({ 'guid': order.guid })
-                ]
-            );
+        await Promise.all(
+            [
+                ...order.jobs.map(async (job) =>
+                {
+                    OrderJobService.markJobAsComplete(job.guid, currentUser);
+                }),
+                Order.query().patch({
+                    'isComplete': true,
+                    'updatedByGuid': currentUser,
+                    'status': 'complete'
+                }).where({ 'guid': order.guid })
+            ]
+        );
 
-            await trx.commit();
+        emitter.emit('order_complete', orderGuid);
 
-            emitter.emit('order_complete', orderGuid);
-
-            return 200;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw err;
-        }
+        return 200;
     }
 
     static async markOrderUncomplete(orderGuid, currentUser)
     {
-        const [trx, order] = await Promise.all([
-            Order.startTransaction(),
+        const [order] = await Promise.all([
             Order.query()
                 .where({ 'orders.guid': orderGuid })
-                .withGraphFetched('jobs')
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (!order.isComplete)
             return 200;
 
         // if we got here mark all jobs uncomplete/delivered and the order uncomplete/delivered
-        try
-        {
-            await Promise.all(
-                [
-                    ...order.jobs.map(async (job) =>
-                    {
-                        await OrderJob.query(trx).patch({
-                            'isComplete': false,
-                            'updatedByGuid': currentUser,
-                            'status': 'delivered'
-                        }).where('guid', job.guid);
-                    }),
-                    Order.query(trx).patch({
-                        'isComplete': false,
-                        'updatedByGuid': currentUser,
-                        'status': 'delivered'
-                    }).where('guid', order.guid)
-                ]
-            );
+        await Promise.all(
+            [
+                ...order.jobs.map(async (job) =>
+                {
+                    OrderJobService.markJobAsUncomplete(job.guid, currentUser);
+                }),
+                Order.query().patch({
+                    'isComplete': false,
+                    'updatedByGuid': currentUser,
+                    'status': 'delivered'
+                }).where('guid', order.guid)
+            ]
+        );
 
-            await trx.commit();
+        emitter.emit('order_uncomplete', orderGuid);
 
-            emitter.emit('order_uncomplete', orderGuid);
-
-            return 200;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw err;
-        }
+        return 200;
     }
 
     static async markAsScheduled(orderGuid, currentUser)
@@ -3036,20 +2996,20 @@ class OrderService
         const [order] = await Promise.all([
             Order.query()
                 .where({ 'orders.guid': orderGuid })
-                .withGraphFetched('jobs')
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (!order.isReady)
-            throw { 'status': 400, 'data': 'Order is Not Ready' };
+            throw new HttpError(400, 'Order is Not Ready');
         else if (order.isOnHold)
-            throw { 'status': 400, 'data': 'Order is On Hold' };
+            throw new HttpError(400, 'Order is On Hold');
         else if (order.status === 'scheduled')
             return 200;
 
@@ -3060,7 +3020,7 @@ class OrderService
                 hasVendor = true;
 
         if (!hasVendor)
-            throw { 'status': 400, 'data': 'Order\'s Jobs Have No Vendors Assigned' };
+            throw new HttpError(400, 'Order\'s Jobs Have No Vendors Assigned');
 
         // if we got here mark the order scheduled
         await Order.query().patch({
@@ -3078,23 +3038,23 @@ class OrderService
         const [order] = await Promise.all([
             Order.query()
                 .where({ 'orders.guid': orderGuid })
-                .withGraphFetched('jobs')
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
         if (!order)
-            throw { 'status': 404, 'data': 'Order Not Found' };
+            throw new HttpError(404, 'Order Not Found');
         else if (order.isDeleted)
-            throw { 'status': 400, 'data': 'Order is Deleted' };
+            throw new HttpError(400, 'Order is Deleted');
         else if (order.isCanceled)
-            throw { 'status': 400, 'data': 'Order is Canceled' };
+            throw new HttpError(400, 'Order is Canceled');
         else if (order.status === 'ready')
             return 200;
 
         // make sure there are no jobs with vendors assigned
         for (const job of order.jobs)
             if (job.isTransport && job.vendorGuid)
-                throw { 'status': 400, 'data': 'Order\'s Jobs Should Not Have Vendors Assigned' };
+                throw new HttpError(400, 'Order\'s Jobs Should Not Have Vendors Assigned');
 
         await Order.query().patch({
             'updatedByGuid': currentUser,
@@ -3104,6 +3064,307 @@ class OrderService
         emitter.emit('order_unscheduled', orderGuid);
 
         return 200;
+    }
+
+    static async deleteOrder(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (order.isDeleted)
+            return 200;
+
+        // make sure no vendor is assigned to any jobs
+        for (const job of order.jobs)
+            if (job.vendorGuid)
+                throw new HttpError(400, 'Order\'s Jobs Should Not Have Vendors Assigned');
+
+        // if we got here mark all jobs deleted and the order deleted
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        OrderJobService.deleteJob(job.guid, currentUser);
+                    }),
+                    Order.query(trx).patch({
+                        'isDeleted': true,
+                        'isReady': false,
+                        'status': 'deleted',
+                        'updatedByGuid': currentUser
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_deleted', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async undeleteOrder(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (!order.isDeleted)
+            return 200;
+
+        // if we got here mark all jobs undeleted and the order undeleted
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        OrderJobService.undeleteJob(job.guid, currentUser);
+                    }),
+                    Order.query(trx).patch({
+                        'isDeleted': false,
+                        'isCanceled': false,
+                        'status': 'ready',
+                        'updatedByGuid': currentUser
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_undeleted', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async markOrderDelivered(orderGuid, currentUser)
+    {
+        const [order] = await Promise.all([
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
+                .withGraphJoined('commodities.[vehicle]')
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (order.isDeleted)
+            throw new HttpError(400, 'Order is Deleted');
+        else if (order.isCanceled)
+            throw new HttpError(400, 'Order is Canceled');
+        else if (order.status === 'delivered')
+            return 200;
+        else if (order.status !== 'picked up')
+            throw new HttpError(400, 'Order Must First Be Picked Up');
+
+        // make sure vendor is assigned to all transport jobs
+        for (const job of order.jobs)
+            if (job.isTransport && !job.vendorGuid)
+                throw new HttpError(400, `Order's Job ${job.number} Has No Vendor Assigned`);
+
+        // make sure all commodities are marked as delivered
+        for (const commodity of order.commodities)
+            if (commodity.deliveryStatus !== 'delivered')
+                throw new HttpError(400, `Order's Commodity ${commodity.vehicle.name} Has Not Been Delivered`);
+
+        // if we got here mark all jobs delivered and the order delivered
+        await Promise.all(
+            [
+                ...order.jobs.map(async (job) =>
+                {
+                    OrderJobService.markAsDeliveredOrPickedUp(job.guid, currentUser);
+                }),
+                Order.query().patch({
+                    'status': 'delivered',
+                    'updatedByGuid': currentUser
+                }).where('guid', order.guid)
+            ]
+        );
+
+        emitter.emit('order_delivered', orderGuid);
+
+        return 200;
+    }
+
+    static async markOrderUndelivered(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (order.isDeleted)
+            throw new HttpError(400, 'Order is Deleted');
+        else if (order.isCanceled)
+            new HttpError(400, 'Order is Canceled');
+        else if (order.status === 'picked up')
+            return 200;
+        else if (order.status !== 'delivered')
+            throw new HttpError(400, 'Order Must First Be Delivered');
+
+        // if we got here mark all jobs undelivered and the order undelivered
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        // since the job doesn't have explicit undelivered method, because it's not defined in func spec
+                        // leaving this as is, until further development
+                        await OrderJob.query(trx).patch({
+                            'status': 'picked up',
+                            'updatedByGuid': currentUser
+                        }).where('guid', job.guid);
+                    }),
+                    Order.query(trx).patch({
+                        'status': 'picked up',
+                        'updatedByGuid': currentUser
+                    })
+                ]);
+
+            await trx.commit();
+
+            emitter.emit('order_undelivered', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async cancelOrder(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (order.isDeleted)
+            throw new HttpError(400, 'Order is Deleted');
+        else if (['completed', 'delivered'].includes(order.status))
+            throw new HttpError(400, 'Can Not Cancel Completed or Delivered Order');
+        else if (order.isCanceled)
+            return 200;
+
+        // if we got here mark all jobs canceled and the order canceled
+        try
+        {
+            await Promise.all(
+                [
+                    ...order.jobs.map(async (job) =>
+                    {
+                        OrderJobService.updateJobStatus(job.guid, 'canceled', currentUser, trx);
+                    }),
+                    Order.query(trx).patch({
+                        'isCanceled': true,
+                        'isOnHold': false,
+                        'isReady': false,
+                        'status': 'canceled',
+                        'updatedByGuid': currentUser
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_canceled', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
+    }
+
+    static async uncancelOrder(orderGuid, currentUser)
+    {
+        const [trx, order] = await Promise.all([
+            Order.startTransaction(),
+            Order.query()
+                .where({ 'orders.guid': orderGuid })
+                .first()
+        ]);
+
+        if (!order)
+            throw new HttpError(404, 'Order Not Found');
+        else if (order.isDeleted)
+            throw new HttpError(400, 'Order is Deleted');
+        else if (order.isCanceled)
+            return 200;
+
+        // if we got here mark all jobs uncanceled and the order uncanceled
+        try
+        {
+            await Promise.all(
+                [
+                    // this needs to be done throug OrderJobService once TBE-285 is resolved
+                    await OrderJob.query(trx).patch({
+                        'isCanceled': false,
+                        'status': 'new',
+                        'updatedByGuid': currentUser
+                    }).where('order_guid', order.guid)
+                    ,
+                    Order.query(trx).patch({
+                        'isCanceled': false,
+                        'status': 'new',
+                        'updatedByGuid': currentUser
+                    }).where('guid', order.guid)
+                ]
+            );
+
+            await trx.commit();
+
+            emitter.emit('order_uncanceled', orderGuid);
+
+            return 200;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
     }
 }
 

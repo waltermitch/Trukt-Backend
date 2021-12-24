@@ -141,6 +141,7 @@ class OrderStopService
             await trx.commit();
 
             // we emit event that stop has been updated
+            // TODO: update this method to track of currentUser, so we can emit event with currentUser, and know who did the updates
             OrderJobEvent.emit('orderjob_stop_update', jobGuid);
         }
         catch (error)
