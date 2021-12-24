@@ -2,7 +2,9 @@ const StatusCacheManager = require('../EventManager/StatusCacheManager');
 const OrderStopService = require('../Services/OrderStopService');
 const OrderJobService = require('../Services/OrderJobService');
 const NotesService = require('../Services/NotesService');
-const emitter = require('../Services/EventEmitter');
+const { EventEmitter } = require('events');
+
+const emitter = new EventEmitter();
 
 class OrderJobController
 {
