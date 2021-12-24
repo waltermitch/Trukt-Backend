@@ -235,7 +235,7 @@ class OrderService
                     const user = await User.query().findById(
                         order.clientNotes.updatedByGuid
                     );
-                    Object.assign(order?.clientNotes, {
+                    Object.assign(order?.clientNotes || {}, {
                         updatedBy: {
                             userName: user.name,
                             email: user.email
