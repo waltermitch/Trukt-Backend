@@ -1,12 +1,12 @@
 const OrderService = require('../Services/OrderService');
 const NotesService = require('../Services/NotesService');
 const orderEvents = require('../EventListeners/Order');
-const myEmitter = require('../Services/EventEmitter');
 const Order = require('../Models/Order');
 
 class OrderController
 {
-
+    // nesting this because circular dependency
+    static myEmitter = require('../Services/EventEmitter');
     static async getOrder(req, res, next)
     {
         if (req.params.orderGuid)
@@ -48,7 +48,7 @@ class OrderController
             console.log(order.guid);
 
             if (!order?.isTender)
-                myEmitter.emit('order_created', order.guid);
+                OrderController.myEmitter.emit('order_created', order.guid);
 
             // registering order to status manager
             OrderService.registerCreateOrderStatusManager(order, req.session.userGuid);
@@ -93,7 +93,7 @@ class OrderController
             for (const response of responses)
             {
                 if (response.status === 200)
-                    myEmitter.emit('order_created', response.orderGuid);
+                    OrderController.myEmitter.emit('order_created', response.orderGuid);
             }
 
         }
@@ -116,7 +116,7 @@ class OrderController
 
             // register this event
             // OrderUpdate will be deprecated, use order_updated instead
-            myEmitter.emit('OrderUpdate', { old: oldOrder, new: order });
+            OrderController.myEmitter.emit('OrderUpdate', { old: oldOrder, new: order });
             orderEvents.emit('order_updated', { oldOrder: oldOrder, newOrder: order });
 
             res.status(200);
