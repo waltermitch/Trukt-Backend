@@ -55,16 +55,6 @@ class LoadboardRequest extends BaseModel
                 isDeleted: true,
                 deletedByGuid: userGuid
             },
-            unposted: {
-                status: 'unposted',
-                isValid: false,
-                isAccepted: false,
-                isDeclined: false,
-                isCanceled: false,
-                isSynced: false,
-                isDeleted: false,
-                updatedByGuid: userGuid
-            },
             canceled: {
                 status: 'canceled',
                 isValid: false,
