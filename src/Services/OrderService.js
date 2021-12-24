@@ -2694,6 +2694,10 @@ class OrderService
                     jobInvoiceLineToCreate.link = { '#ref': orderInvoiceLineToCreate['#id'] };
 
                     const bill = invoiceBillsFromDB.find(bill => bill.job.guid === job.guid);
+
+                    if (!bill)
+                        throw new HttpError(500, 'Job Is Missing Bill');
+
                     bill.lines.push(jobInvoiceLineToCreate);
                     if (!jobBillsWithLinesToUpdate.has(bill.guid))
                         jobBillsWithLinesToUpdate.set(bill.guid, bill);
