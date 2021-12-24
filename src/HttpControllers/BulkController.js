@@ -1,6 +1,6 @@
 const OrderJobSerivce = require('../services/OrderJobService');
 const OrderService = require('../services/OrderService');
-const emitter = require('../Services/EventEmitter');
+const emitter = require('../EventListeners/index');
 
 class BulkController
 {
@@ -48,7 +48,7 @@ class BulkController
             // throw all the exceptions in the exceptions list
             // otherwise convert all the exceptions into readable json formats
             // so the client can have both the successes and the failures
-            if(results.acceptedGuids.length == 0)
+            if (results.acceptedGuids.length == 0)
             {
                 throw results.exceptions;
             }
@@ -59,13 +59,13 @@ class BulkController
                     return error.toJson();
                 });
             }
-            for(const job of results.acceptedGuids)
+            for (const job of results.acceptedGuids)
             {
                 emitter.emit('orderjob_status', job.orderGuid);
             }
             res.status(202).json(results);
         }
-        catch(error)
+        catch (error)
         {
             next(error);
         }

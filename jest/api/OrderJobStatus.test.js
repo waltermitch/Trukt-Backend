@@ -26,15 +26,15 @@ function getJob(status)
     return OrderJob.query(trx)
         .alias('job')
         .select(
-        'job.guid',
-        'job.isReady',
-        'job.isOnHold',
-        'job.isDeleted',
-        'job.isCanceled',
-        'job.isComplete',
-        'typeId',
-        'job.vendorGuid',
-        'job.vendorAgentGuid')
+            'job.guid',
+            'job.isReady',
+            'job.isOnHold',
+            'job.isDeleted',
+            'job.isCanceled',
+            'job.isComplete',
+            'typeId',
+            'job.vendorGuid',
+            'job.vendorAgentGuid')
         .modify(`status${status}`)
         .withGraphFetched('order')
         .modifyGraph('order', builder => builder.select('isTender'))
@@ -80,7 +80,7 @@ async function insertStopsAndCommodities()
 
     // insert links
     const links = [];
-    for(const commodity of context.commodities)
+    for (const commodity of context.commodities)
     {
         links.push(OrderStopLink.query(trx).insertAndFetch({
             commodityGuid: commodity.guid,
@@ -209,12 +209,12 @@ describe('Status verification', () =>
         // set data
         await OrderJob.query(trx).patch({ isReady: true }).findById(context.job.guid);
         await LoadboardPost.query(trx)
-        .insert({
-            jobGuid: context.job.guid,
-            loadboard: 'SUPERDISPATCH',
-            isPosted: true,
-            createdByGuid: process.env.SYSTEM_USER
-        });
+            .insert({
+                jobGuid: context.job.guid,
+                loadboard: 'SUPERDISPATCH',
+                isPosted: true,
+                createdByGuid: process.env.SYSTEM_USER
+            });
 
         // get data
         const query = getJob('Posted').withGraphFetched('loadboardPosts');
@@ -231,21 +231,21 @@ describe('Status verification', () =>
         // set data
         await OrderJob.query(trx).patch({ isReady: true }).findById(context.job.guid);
         const post = await LoadboardPost.query(trx)
-        .insertAndFetch({
-            jobGuid: context.job.guid,
-            loadboard: 'SUPERDISPATCH',
-            isPosted: true,
-            createdByGuid: process.env.SYSTEM_USER
-        });
+            .insertAndFetch({
+                jobGuid: context.job.guid,
+                loadboard: 'SUPERDISPATCH',
+                isPosted: true,
+                createdByGuid: process.env.SYSTEM_USER
+            });
         await LoadboardRequest.query(trx)
-        .insert({
-            status: 'lmao',
-            price: 420.69,
-            loadboard: post.loadboard,
-            loadboardPostGuid: post.guid,
-            isValid: true,
-            createdByGuid: process.env.SYSTEM_USER
-        });
+            .insert({
+                status: 'lmao',
+                price: 420.69,
+                loadboard: post.loadboard,
+                loadboardPostGuid: post.guid,
+                isValid: true,
+                createdByGuid: process.env.SYSTEM_USER
+            });
 
         // get data
         const query = getJob('Posted').withGraphFetched('[loadboardPosts.requests]');
@@ -283,7 +283,7 @@ describe('Status verification', () =>
     });
 
     it('Job is Declined', async () =>
-{
+    {
         // set data
         await OrderJob.query(trx).patch({ isReady: true }).findById(context.job.guid);
         await OrderJobDispatch.query(trx).insert({
@@ -310,10 +310,13 @@ describe('Status verification', () =>
 
     it('Job is Dispatched', async () =>
     {
+        await insertStopsAndCommodities();
+
         // set data
         await OrderJob.query(trx).patch({
             vendorGuid: context.client.guid,
-            isReady: true })
+            isReady: true
+        })
             .findById(context.job.guid);
         await OrderJobDispatch.query(trx).insert({
             jobGuid: context.job.guid,
@@ -325,6 +328,9 @@ describe('Status verification', () =>
             isAccepted: true,
             createdByGuid: process.env.SYSTEM_USER
         });
+
+        // mark all pickups as completed
+        await OrderStopLink.query(trx).patch({ isStarted: false, isCompleted: false }).where({ stopGuid: context.stops[0].guid });
 
         // get data
         const query = getJob('Dispatched').withGraphFetched('[dispatches]');
@@ -345,9 +351,10 @@ describe('Status verification', () =>
         // set data
         await OrderJob.query(trx).patch({
             vendorGuid: context.client.guid,
-            isReady: true })
+            isReady: true
+        })
             .findById(context.job.guid);
-        
+
         // mark all pickups as completed
         await OrderStopLink.query(trx).patch({ isCompleted: true }).where({ stopGuid: context.stops[0].guid });
 
@@ -367,7 +374,8 @@ describe('Status verification', () =>
         // set data
         await OrderJob.query(trx).patch({
             vendorGuid: context.client.guid,
-            isReady: true })
+            isReady: true
+        })
             .findById(context.job.guid);
 
         // mark all deliveries as completed
@@ -387,14 +395,18 @@ describe('Status verification', () =>
         // set data
         await OrderJob.query(trx).patch({
             vendorGuid: context.client.guid,
-            isComplete: true })
+            isComplete: true,
+            isCanceled: false,
+            isDeleted: false,
+            isReady: true
+        })
             .findById(context.job.guid);
-        
+
         // get data
         const resJob = await getJob('Complete');
 
         // assert
-        expectFields(resJob, false, false, false, false, false, true);
+        expectFields(resJob, false, true, false, false, false, true);
     });
 
     it('Job is Canceled', async () =>
@@ -402,7 +414,8 @@ describe('Status verification', () =>
         // set data
         await OrderJob.query(trx).patch({
             vendorGuid: context.client.guid,
-            isCanceled: true })
+            isCanceled: true
+        })
             .findById(context.job.guid);
 
         // get data
@@ -417,7 +430,8 @@ describe('Status verification', () =>
         // set data
         await OrderJob.query(trx).patch({
             vendorGuid: context.client.guid,
-            isDeleted: true })
+            isDeleted: true
+        })
             .findById(context.job.guid);
 
         // get data
@@ -434,11 +448,12 @@ describe('Status verification', () =>
         // set data
         await OrderJob.query(trx).patch({
             vendorGuid: context.client.guid,
-            isReady: true })
+            isReady: true
+        })
             .findById(context.job.guid);
-        
+
         // mark most pickups as completed except for the first link which should be a pickup link
-        await OrderStopLink.query(trx).patch({ isCompleted: true }).where({ stopGuid: context.stops[0].guid }).whereNot({ id: context.links[0].id });
+        await OrderStopLink.query(trx).patch({ isCompleted: false }).where({ stopGuid: context.stops[0].guid }).whereNot({ id: context.links[0].id });
 
         // get data
         const resJob = await getJob('PickedUp');
@@ -454,11 +469,12 @@ describe('Status verification', () =>
         // set data
         await OrderJob.query(trx).patch({
             vendorGuid: context.client.guid,
-            isReady: true })
+            isReady: true
+        })
             .findById(context.job.guid);
-        
+
         // mark most deliveries as completed except for the first link which should be a delivery link
-        await OrderStopLink.query(trx).patch({ isCompleted: true }).where({ stopGuid: context.stops[1].guid }).whereNot({ id: context.links[context.links.length - 1].id });
+        await OrderStopLink.query(trx).patch({ isCompleted: false }).where({ stopGuid: context.stops[1].guid }).whereNot({ id: context.links[context.links.length - 1].id });
 
         // get data
         const resJob = await getJob('Delivered');
@@ -476,23 +492,6 @@ describe('Status verification', () =>
         expectFields(resJob, false, false, false, false, false, false);
     });
 
-    it('Job is Not Active', async () =>
-    {
-        // set data
-        await OrderJob.query(trx).patch({
-            vendorGuid: context.client.guid,
-            isCanceled: true })
-            .findById(context.job.guid);
-        
-        await Order.query(trx).patch({ isTender: true }).findById(context.order.guid);
-        
-        // get data
-        const resJob = await getJob('Active');
-
-        // assert
-        expect(resJob).toBeUndefined();
-    });
-
     it('Job is Ready And Canceled', async () =>
     {
         try
@@ -503,13 +502,13 @@ describe('Status verification', () =>
                 isCanceled: true
             }).findById(context.job.guid);
         }
-        catch(e)
+        catch (e)
         {
             expect(e.toString()).toContain(data.orderJobsReadyConstraintError);
         }
     });
 
-     it('Job is Complete and Canceled', async () =>
+    it('Job is Complete and Canceled', async () =>
     {
         try
         {
@@ -520,7 +519,7 @@ describe('Status verification', () =>
                 isCanceled: true
             }).findById(context.job.guid);
         }
-        catch(e)
+        catch (e)
         {
             expect(e.toString()).toContain(data.orderJobsCancelConstraintError);
         }
@@ -536,7 +535,7 @@ describe('Status verification', () =>
                 isOnHold: true
             }).findById(context.job.guid);
         }
-        catch(e)
+        catch (e)
         {
             expect(e.toString()).toContain(data.orderJobsCompleteContstraintError);
         }

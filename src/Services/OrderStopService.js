@@ -1,7 +1,7 @@
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
-const OrderJobEvent = require('../EventListeners/OrderJob');
 const OrderStopLinks = require('../Models/OrderStopLink');
 const knex = require('../Models/BaseModel').knex();
+const emitter = require('../EventListeners/index');
 const OrderStops = require('../Models/OrderStop');
 
 class OrderStopService
@@ -141,7 +141,7 @@ class OrderStopService
             await trx.commit();
 
             // we emit event that stop has been updated
-            OrderJobEvent.emit('orderjob_stop_update', jobGuid);
+            emitter.emit('orderjob_stop_update', jobGuid, jobStop, stopGuid);
         }
         catch (error)
         {

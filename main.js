@@ -32,10 +32,12 @@ async function run()
     {
         await PGListener.listen();
         await Mongo.connect();
+        registerEventListeners();
     }
     catch (error)
     {
         console.error(`Start error: ${error.message || error}`);
+        console.error(error);
     }
 
     const store = new KnexSessionStore
@@ -152,4 +154,12 @@ function corsMiddleware()
     {
         throw new Error('Missing CORS_ORIGINS env var.');
     }
+}
+
+function registerEventListeners()
+{
+    const filepaths = fs.readdirSync('./src/EventListeners').filter(x => x.match(/(?<!index)\.js$/i));
+
+    for (const filepath of filepaths)
+        require(`./src/EventListeners/${filepath}`);
 }

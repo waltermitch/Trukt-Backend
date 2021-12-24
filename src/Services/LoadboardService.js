@@ -1,4 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardContact = require('../Models/LoadboardContact');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
@@ -6,20 +7,20 @@ const { ServiceBusClient } = require('@azure/service-bus');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
 const InvoiceBill = require('../Models/InvoiceBill');
+const emitter = require('../EventListeners/index');
 const Loadboard = require('../Models/Loadboard');
 const SFAccount = require('../Models/SFAccount');
 const SFContact = require('../Models/SFContact');
 const OrderStop = require('../Models/OrderStop');
 const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
-const EventEmitter = require('events');
 const { DateTime } = require('luxon');
+const { raw } = require('objection');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
-const emitter = new EventEmitter();
 
 const dispatchableLoadboards = ['SUPERDISPATCH', 'SHIPCARS'];
 let dbLoadboardNames;
@@ -175,6 +176,11 @@ class LoadboardService
             {
                 job = await Job.query(trx).findById(jobId).withGraphFetched('[stops(distinct), commodities(distinct, isNotDeleted), bills, dispatches(activeDispatch), type, order]');
 
+                if (!job)
+                {
+                    throw new HttpError(404, 'Job not found');
+                }
+
                 const stops = await this.getFirstAndLastStops(job.stops);
 
                 Object.assign(job, stops);
@@ -187,7 +193,7 @@ class LoadboardService
             }
 
             job.validateJobForDispatch();
-            
+
             const carrier = await SFAccount.query(trx).modify('byId', body.carrier.guid).modify('carrier').first();
             const driver = body.driver;
 
@@ -232,8 +238,8 @@ class LoadboardService
             job.delivery.setScheduledDates(body.delivery.dateType, body.delivery.startDate, body.delivery.endDate);
             job.delivery.setUpdatedBy(currentUser);
             allPromises.push(OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid));
-            
-            if(job.delivery.dateScheduledStart < job.pickup.dateScheduledStart ||
+
+            if (job.delivery.dateScheduledStart < job.pickup.dateScheduledStart ||
                 job.delivery.dateScheduledEnd < job.pickup.dateScheduledEnd)
             {
                 throw new Error('Pickup dates should be before delivery date');
@@ -281,6 +287,9 @@ class LoadboardService
             let message = {};
             if (lbPost)
             {
+                // assigning the vendor to the job because we need it for
+                // creating loadboard messages
+                job.vendor = carrier;
                 const lbPayload = new loadboardClasses[`${body.loadboard}`](job);
                 message = [lbPayload['dispatch']()];
 
@@ -324,7 +333,7 @@ class LoadboardService
                 jobGuid: job.guid,
                 dispatchGuid: job.dispatch.guid
             });
-
+            dispatch.jobStatus = Job.STATUS.PENDING;
             return dispatch;
         }
         catch (e)
@@ -341,27 +350,28 @@ class LoadboardService
         try
         {
             const dispatch = await OrderJobDispatch.query()
-            .select('rcgTms.orderJobDispatches.guid',
+                .select('rcgTms.orderJobDispatches.guid',
                     'rcgTms.orderJobDispatches.jobGuid',
                     'isAccepted',
                     'isPending',
                     'isCanceled',
-                    'isDeclined')
-            .withGraphJoined('[loadboardPost, job, vendor, vendorAgent]')
-            .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
-            .andWhere(builder =>
-            {
-                builder.where({ isAccepted: true }).orWhere({ isPending: true });
-            })
-            .modifyGraph('job', builder => builder.select('rcgTms.orderJobs.guid', 'orderGuid'))
-            .modifyGraph('vendor', builder => builder.select('name', 'salesforce.accounts.guid'))
-            .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
-
-            dispatch.setUpdatedBy(currentUser);
+                    'isDeclined',
+                    'loadboardPostGuid',
+                    'rcgTms.orderJobDispatches.externalGuid')
+                .withGraphJoined('[loadboardPost, job, vendor, vendorAgent]')
+                .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
+                .andWhere(builder =>
+                {
+                    builder.where({ isAccepted: true }).orWhere({ isPending: true }).where({ isValid: true });
+                })
+                .modifyGraph('job', builder => builder.select('rcgTms.orderJobs.guid', 'orderGuid'))
+                .modifyGraph('vendor', builder => builder.select('name', 'salesforce.accounts.guid'))
+                .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
 
             if (!dispatch)
-                throw new Error('No active offers to undispatch');
+                throw new HttpError(404, 'No active offers to undispatch');
 
+            dispatch.setUpdatedBy(currentUser);
             if (dispatch.loadboardPostGuid != null)
             {
                 const job = await this.getAllPostingData(jobGuid, [{ loadboard: dispatch.loadboardPost.loadboard }], currentUser);
@@ -373,9 +383,7 @@ class LoadboardService
             }
             else
             {
-                dispatch.isPending = false;
-                dispatch.isAccepted = false;
-                dispatch.isCanceled = true;
+                dispatch.setToCanceled(currentUser);
 
                 await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
                 await OrderStop.query(trx)
@@ -388,8 +396,8 @@ class LoadboardService
 
                 const job = Job.fromJson({
                     vendorGuid: null,
-                    vendorContactGuid: null,
                     vendorAgentGuid: null,
+                    vendorContact: null,
                     dateStarted: null,
                     status: 'ready'
                 });
@@ -397,6 +405,7 @@ class LoadboardService
                 job.setUpdatedBy(currentUser);
 
                 await Job.query(trx).patch(job).findById(dispatch.jobGuid);
+                dispatch.jobStatus = 'ready';
             }
 
             await trx.commit();
@@ -428,6 +437,98 @@ class LoadboardService
         }
     }
 
+    static async acceptDispatch(jobGuid, dispatchGuid, currentUser)
+    {
+        const trx = await OrderJobDispatch.startTransaction();
+        const allPromises = [];
+
+        try
+        {
+            const job = await Job.query(trx).findById(jobGuid)
+                .select([
+                    Job.ref('*'),
+                    Job.relatedQuery('dispatches').where({
+                        isValid: true,
+                        isPending: true
+                    }).count().as('validDispatchesCount')
+                ]).withGraphFetched('[bills, commodities]');
+
+            if (!job)
+                throw new HttpError(404, 'Job not found');
+
+            job.validateJobForAccepting();
+
+            const dispatch = await job.$relatedQuery('dispatches', trx).findById(dispatchGuid);
+
+            if (!dispatch)
+                throw new HttpError(404, 'Dispatch not found');
+
+            allPromises.push(job.$relatedQuery('dispatches', trx).patch({
+                isValid: false,
+                isPending: false,
+                dateAccepted: null,
+                dateDeclined: null,
+                isAccepted: false,
+                isDeclined: false,
+                isCanceled: raw('(CASE WHEN "is_pending" THEN true ELSE false END)'),
+                dateCanceled: raw('(CASE WHEN "is_pending" = true THEN NOW() ELSE null END)')
+            }).whereNot({ guid: dispatch.guid }));
+
+            allPromises.push(dispatch.$relatedQuery('loadboardPost', trx).patch({ isPosted: false }));
+
+            allPromises.push(dispatch.$query(trx).patch({
+                isAccepted: true,
+                isPending: false,
+                dateAccepted: new Date(),
+                isDeclined: false,
+                dateCanceled: null,
+                dateDeclined: null,
+                updatedByGuid: currentUser
+            }));
+
+            allPromises.push(job.$query(trx).patch({
+                vendorGuid: dispatch.vendorGuid,
+                vendorContactGuid: dispatch.vendorContactGuid,
+                vendorAgentGuid: dispatch.vendorAgentGuid,
+                updatedByGuid: currentUser
+            }));
+
+            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, dispatch.price, currentUser);
+            for (const line of lines) line.transacting(trx);
+            allPromises.push(...lines);
+
+            const jobBill = await dispatch.$query(trx)
+                .joinRelated('job.bills')
+                .select('job:bills.*', 'job.isTransport')
+                .where({ 'job.isTransport': true });
+
+            allPromises.push(
+                InvoiceBill.query(trx).patch({
+                    paymentTermId: dispatch.paymentTermId,
+                    paymentMethodId: dispatch.paymentMethodId,
+                    consigneeGuid: dispatch.vendorGuid
+                }).findById(jobBill.guid)
+            );
+
+            await Promise.all(allPromises);
+            await trx.commit();
+
+            StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                userGuid: currentUser,
+                statusId: 11,
+                jobGuid: job.guid
+            });
+
+            return;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
+    }
+
     // This method gets all the job information and creates new post records based on the posts
     // list that is sent in if needed
     static async getAllPostingData(jobId, posts, currentUser)
@@ -447,6 +548,11 @@ class LoadboardService
 
         if (!job)
             throw new Error('Job not found');
+
+        if (job.isOnHold)
+        {
+            throw new Error('Cannot get posting data for job that is on hold');
+        }
 
         await this.createPostRecords(job, posts, currentUser);
 
@@ -661,6 +767,49 @@ class LoadboardService
             jobGuid,
             extraAnnotations: { 'loadboards': loadboardNames }
         });
+    }
+
+    static async deletePostings(jobId, posts, userGuid)
+    {
+        const job = await LoadboardService.getNotDeletedPosts(jobId, posts);
+        const payloads = [];
+        let lbPayload;
+        try
+        {
+            // Only send for non deleted loadboards
+            for (const lbName of Object.keys(job.postObjects))
+            {
+                lbPayload = new loadboardClasses[`${lbName}`](job);
+                payloads.push(lbPayload['remove'](userGuid));
+            }
+            if (payloads?.length)
+            {
+                await sender.sendMessages({ body: payloads });
+                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, userGuid, 21, jobId);
+            }
+        }
+        catch (e)
+        {
+            throw new Error(e.toString());
+        }
+    }
+
+    static async getNotDeletedPosts(jobId, posts)
+    {
+        const loadboardNames = posts.map((post) => { return post.loadboard; });
+        const job = await Job.query().findById(jobId).withGraphFetched(`[
+            loadboardPosts(getExistingFromList, getNotDeleted)
+        ]`).modifiers({
+            getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
+        });
+
+        if (!job)
+            throw new Error('Job not found');
+
+        job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        delete job.loadboardPosts;
+
+        return job;
     }
 }
 

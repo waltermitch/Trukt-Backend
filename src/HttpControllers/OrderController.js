@@ -1,12 +1,10 @@
 const OrderService = require('../Services/OrderService');
 const NotesService = require('../Services/NotesService');
-const orderEvents = require('../EventListeners/Order');
-const myEmitter = require('../Services/EventEmitter');
+const emitter = require('../EventListeners/index');
 const Order = require('../Models/Order');
 
 class OrderController
 {
-
     static async getOrder(req, res, next)
     {
         if (req.params.orderGuid)
@@ -24,7 +22,6 @@ class OrderController
                     res.status(404);
                     res.send();
                 }
-
             }
             catch (err)
             {
@@ -48,7 +45,7 @@ class OrderController
             console.log(order.guid);
 
             if (!order?.isTender)
-                myEmitter.emit('order_created', order.guid);
+                emitter.emit('order_created', order.guid);
 
             // registering order to status manager
             OrderService.registerCreateOrderStatusManager(order, req.session.userGuid);
@@ -93,7 +90,7 @@ class OrderController
             for (const response of responses)
             {
                 if (response.status === 200)
-                    myEmitter.emit('order_created', response.orderGuid);
+                    emitter.emit('order_created', response.orderGuid);
             }
 
         }
@@ -115,9 +112,7 @@ class OrderController
             const order = await OrderService.patchOrder(body, req.session.userGuid);
 
             // register this event
-            // OrderUpdate will be deprecated, use order_updated instead
-            myEmitter.emit('OrderUpdate', { old: oldOrder, new: order });
-            orderEvents.emit('order_updated', { oldOrder: oldOrder, newOrder: order });
+            emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: order });
 
             res.status(200);
             res.json(order);
@@ -197,7 +192,7 @@ class OrderController
             const order = await OrderService.updateClientNote(req.params.orderGuid, req.body, req.session.userGuid);
 
             // emit event order_updated
-            orderEvents.emit('order_client_notes_updated', req.params.orderGuid);
+            emitter.emit('order_client_notes_updated', req.params.orderGuid);
 
             res.status(202).json(order);
         }
@@ -266,6 +261,97 @@ class OrderController
             next(err);
         }
     }
+
+    static async deleteOrder(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.deleteOrder(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async undeleteOrder(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.undeleteOrder(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async markOrderDelivered(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.markOrderDelivered(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async markOrderUndelivered(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.markOrderUndelivered(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async cancelOrder(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.cancelOrder(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async uncancelOrder(req, res, next)
+    {
+        try
+        {
+            const result = await OrderService.uncancelOrder(req.params.orderGuid, req.session.userGuid);
+
+            if (result)
+                res.status(200).send();
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
 }
 
 module.exports = OrderController;

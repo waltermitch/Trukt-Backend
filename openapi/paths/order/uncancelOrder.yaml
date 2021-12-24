@@ -1,0 +1,39 @@
+summary: Uncancel Order
+description: Marks Order As New (effectively uncancelling it)
+operationId: uncancelOrder
+tags:
+  - Order
+parameters:
+  - in: path
+    name: orderGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: Success
+    content:
+      application/json: {}
+  404:
+    description: Order Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Error message
+              example: Order not Found
+  400:
+    description: Bad Request
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Error message
+              example: Order Can't Be Uncanceled When It Is Not Canceled

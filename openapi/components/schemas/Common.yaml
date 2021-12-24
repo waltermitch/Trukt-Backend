@@ -450,6 +450,8 @@ Enums:
       - ready
       - canceled
       - deleted
+      - undeleted
+      - uncanceled
   bulkJobPriceType:
     type: string
     enum:

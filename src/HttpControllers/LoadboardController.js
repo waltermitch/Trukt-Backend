@@ -46,7 +46,7 @@ class LoadboardController
             }
             next({
                 status,
-                data: { message: e.toString() || 'Internal server error' }
+                data: { message: e.message || 'Internal server error' }
             });
         }
 
@@ -110,15 +110,7 @@ class LoadboardController
         }
         catch (err)
         {
-            let status = 400;
-            if (err.toString() == 'Error: Job not found')
-            {
-                status = 404;
-            }
-            next({
-                status,
-                data: { message: err.toString() }
-            });
+            next(err);
         }
     }
 
@@ -132,15 +124,21 @@ class LoadboardController
         }
         catch (err)
         {
-            let status = 400;
-            if (err.toString() == 'Error: No active offers to undispatch')
-            {
-                status = 404;
-            }
-            next({
-                status,
-                data: { message: err.toString() }
-            });
+            next(err);
+        }
+    }
+
+    static async acceptDispatch(req, res, next)
+    {
+        try
+        {
+            await LoadboardService.acceptDispatch(req.params.jobId, req.body.dispatchGuid, req.session.userGuid);
+            res.json({ message: 'Job dispatch accepted' });
+            res.status(200);
+        }
+        catch (err)
+        {
+            next(err);
         }
     }
 }
