@@ -3,7 +3,6 @@ const ArcgisClient = require('../ArcgisClient');
 const Terminal = require('../Models/Terminal');
 
 const keywordFields = {
-    'name': ['name'],
     'country': ['country'],
     'state': ['state'],
     'city': ['city'],
@@ -38,10 +37,25 @@ class TerminalService
         // clamp between 1 and 100 with default value of 10
         const rc = Math.min(100, Math.max(1, query.rc || 10));
 
-        let qb = Terminal.query();
+        const qb = Terminal.query();
         let orderbypriority = [];
         const normalOnes = [];
         const searchOnes = [];
+
+        if (query.name || query.search)
+        {
+            let q = query.name || query.search;
+
+            // remove the following characters from the query: ; * & $ @
+            q = q.replace(/[;*&$@]/g, '');
+
+            orderbypriority.push(['name']);
+
+            // split the query by spaces add wild card to the end of each word, and join them with &
+            const searchVal = (q.split(' ').map((word) => word + ':*')).join(' & ');
+
+            qb.whereRaw('vector_name @@ to_tsquery(\'english\', ? )', [searchVal]);
+        }
 
         for (const keyword in keywordFields)
 
@@ -66,8 +80,7 @@ class TerminalService
                     }
 
         if (normalOnes.length > 0)
-
-            qb = qb.where((builder) =>
+            qb.where((builder) =>
             {
                 for (const o of normalOnes)
                 {
@@ -77,8 +90,7 @@ class TerminalService
             });
 
         if (searchOnes.length > 0)
-
-            qb = qb.where((builder) =>
+            qb.orWhere((builder) =>
             {
                 for (const o of searchOnes)
                 {
@@ -90,17 +102,18 @@ class TerminalService
         if ('lat' in query)
         {
             orderbypriority.push('latitude');
-            qb = qb.where('latitude', query.lat);
+            qb.where('latitude', query.lat);
         }
+
         if ('long' in query)
         {
             orderbypriority.push('longitude');
-            qb = qb.where('longitude', query.long);
+            qb.where('longitude', query.long);
         }
 
         orderbypriority = orderbypriority.map((x) => { return { column: `rcgTms.terminals.${x}`, order: 'asc' }; });
+        qb.orderBy(orderbypriority).page(pg, rc);
 
-        qb = qb.orderBy(orderbypriority).page(pg, rc);
         const terminal = await qb.withGraphFetched('[primaryContact, alternativeContact, contacts]');
 
         return terminal.results || terminal;
