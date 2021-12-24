@@ -1605,9 +1605,10 @@ class OrderService
                 trx
             );
 
+            const jobCompleteBills = await OrderService.createMissingJobBills(invoiceBills, jobsToUpdate, currentUser, trx);
             const { jobsToUpdateWithExpenses, orderInvoicesToUpdate } = OrderService.updateExpensesGraph(
                 commoditiesMap,
-                invoiceBills,
+                jobCompleteBills,
                 orderInvoices,
                 jobsToUpdate,
                 consignee,
@@ -1651,7 +1652,7 @@ class OrderService
         {
             console.log(error);
             await trx.rollback();
-            throw error;
+            throw new HttpError(500, error.message || error);
         }
     }
 
@@ -2629,7 +2630,7 @@ class OrderService
      *  orderInvoicesToUpdate Order invoices with the lines to create
      * }
      */
-    static updateExpensesGraph(commoditiesMap, invoiceBillsFromDB, orderInvoiceFromDB, jobsToUpdate, consignee, currentUser)
+    static updateExpensesGraph(commoditiesMap, invoiceBills, orderInvoiceFromDB, jobsToUpdate, consignee, currentUser)
     {
         const orderInvoiceListToCreate = [];
         const jobsToUpdateWithExpenses = jobsToUpdate.map(job =>
@@ -2645,7 +2646,7 @@ class OrderService
                 // If commodity is not found, must be a typo on the commodity index sent by the caller
                 if (commodity)
                 {
-                    for (const bill of invoiceBillsFromDB)
+                    for (const bill of invoiceBills)
                     {
                         if (bill.job.guid === job.guid)
                         {
@@ -2691,7 +2692,8 @@ class OrderService
                     jobInvoiceLineToCreate.graphLink('commodity', commodity);
                     jobInvoiceLineToCreate.link = { '#ref': orderInvoiceLineToCreate['#id'] };
 
-                    const bill = invoiceBillsFromDB.find(bill => bill.job.guid === job.guid);
+                    const bill = invoiceBills.find(bill => bill.job?.guid === job.guid);
+                    bill.lines?.push(jobInvoiceLineToCreate);
 
                     if (!bill)
                         throw new HttpError(500, 'Job Is Missing Bill');
@@ -2716,7 +2718,7 @@ class OrderService
         if (orderInvoiceFromDB.length > 0)
             orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
 
-        if (consignee?.guid)
+        if (consignee?.guid && orderInvoiceFromDB?.length)
         {
             if (!orderInvoiceFromDB.isPaid)
                 orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
@@ -2725,6 +2727,45 @@ class OrderService
         }
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
+    }
+
+    /**
+     * New job bills need to be created in case the job does not have any, and that has to be
+     * before the order Upsert runs so the graph path from invoiceLine to the order is
+     * complete and the DB trigger can calculate the actual expense and revenue correctly
+     * @param {*} invoiceBillsFromDB
+     * @param {*} jobs
+     * @param {*} currentUser
+     * @param {*} trx
+     * @returns
+     */
+    static async createMissingJobBills(invoiceBillsFromDB, jobs, currentUser, trx)
+    {
+        const billsToCreate = [];
+        const existingBills = [];
+        for (const job of jobs)
+        {
+            const billFound = invoiceBillsFromDB.find(bill => bill.job?.guid === job.guid);
+            if (!billFound)
+            {
+                const newJobBill = OrderService.createInvoiceBillGraph(
+                    [], false, currentUser, null
+                );
+                newJobBill.job = { guid: job.guid };
+                billsToCreate.push(
+                    InvoiceBill.query(trx).insertGraphAndFetch(newJobBill, {
+                        relate: true,
+                        noDelete: true,
+                        allowRefs: true
+                    })
+                );
+            }
+            else
+                existingBills.push(billFound);
+        }
+
+        const newJobBills = await Promise.all(billsToCreate);
+        return [...newJobBills, ...existingBills];
     }
 
     static async findByVin(vin)
