@@ -774,7 +774,6 @@ class LoadboardService
         const job = await LoadboardService.getNotDeletedPosts(jobId, posts);
         const payloads = [];
         let lbPayload;
-
         try
         {
             // Only send for non deleted loadboards
@@ -783,7 +782,6 @@ class LoadboardService
                 lbPayload = new loadboardClasses[`${lbName}`](job);
                 payloads.push(lbPayload['remove'](userGuid));
             }
-
             if (payloads?.length)
             {
                 await sender.sendMessages({ body: payloads });

@@ -55,12 +55,12 @@ class LoadboardRequest extends BaseModel
                 isDeleted: true,
                 deletedByGuid: userGuid
             },
-            unposted: {
-                status: 'unposted',
+            canceled: {
+                status: 'canceled',
                 isValid: false,
                 isAccepted: false,
                 isDeclined: false,
-                isCanceled: false,
+                isCanceled: true,
                 isSynced: false,
                 isDeleted: false,
                 updatedByGuid: userGuid
@@ -69,5 +69,6 @@ class LoadboardRequest extends BaseModel
     }
 
 }
+
 Object.assign(LoadboardRequest.prototype, RecordAuthorMixin);
 module.exports = LoadboardRequest;
