@@ -39,6 +39,7 @@ exports.up = function (knex)
             delivery_notes__c as delivery_notes,
             description as description,
             dot_number__c as dot_number,
+            edi_client__c as edi_client,
             email__c as email,
             fax as fax,
             firstname as first_name,

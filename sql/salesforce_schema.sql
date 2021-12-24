@@ -114,6 +114,7 @@ CREATE TABLE salesforce.account (
 	user_role__c varchar(255) NULL,
 	sc_id__c varchar(100) NULL,
 	status__c varchar(255) NULL,
+    edi_client__c bool NULL,
 	CONSTRAINT account_pkey PRIMARY KEY (id)
 );
 CREATE INDEX hc_idx_account_systemmodstamp ON salesforce.account USING btree (systemmodstamp);
