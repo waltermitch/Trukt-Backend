@@ -298,6 +298,7 @@ class Super extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
     }
 
@@ -355,6 +356,7 @@ class Super extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
     }
 
@@ -388,6 +390,7 @@ class Super extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
     }
 
@@ -468,9 +471,8 @@ class Super extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
-
-        return objectionPost;
     }
 
     static async handleDispatch(payloadMetadata, response)
@@ -501,8 +503,7 @@ class Super extends Loadboard
                 objectionPost.externalGuid = response.order.guid;
 
                 const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
-                    order.[client], commodities(distinct, isNotDeleted).[vehicle], vendor, vendorAgent
-                ]`);
+                    order.[client], commodities(distinct, isNotDeleted).[vehicle]]`);
 
                 const commodityPromises = this.updateCommodity(job.commodities, response.order.vehicles);
                 for (const comPromise of commodityPromises)
@@ -518,17 +519,26 @@ class Super extends Loadboard
                     allPromises.push(SFAccount.query(trx).patch(client).findById(client.guid));
                 }
 
+                const vendor = await SFAccount.query(trx)
+                    .findById(dispatch.vendorGuid)
+                    .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
+                    .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+                    .select('salesforce.accounts.name as vendorName',
+                        'salesforce.accounts.guid as vendorGuid',
+                        'salesforce.contacts.guid as agentGuid',
+                        'salesforce.contacts.name as agentName');
+
                 StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
                     statusId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: 'SUPERDISPATCH',
-                        vendorGuid: job.vendorGuid,
-                        vendorAgentGuid: job.vendorAgentGuid,
-                        vendorName: job.vendor.name,
-                        vendorAgentName: job.vendorAgent.name,
+                        dispatchedTo: this.loadboardName,
+                        vendorGuid: vendor.vendorGuid,
+                        vendorAgentGuid: vendor.agentGuid,
+                        vendorName: vendor.vendorName,
+                        vendorAgentName: vendor.agentName,
                         code: 'pending'
                     }
                 });
@@ -544,6 +554,7 @@ class Super extends Loadboard
         catch (e)
         {
             await trx.rollback();
+            throw new Error(e.message);
         }
     }
 
@@ -564,9 +575,7 @@ class Super extends Loadboard
             allPromises.push(Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
-            dispatch.isPending = false;
-            dispatch.isAccepted = false;
-            dispatch.isCanceled = true;
+            dispatch.setToCanceled(dispatch.loadboardPost.updatedByGuid);
             dispatch.setUpdatedBy(dispatch.updatedByGuid);
 
             const objectionPost = LoadboardPost.fromJson({
@@ -600,9 +609,9 @@ class Super extends Loadboard
             allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid));
 
             const vendor = await SFAccount.query(trx)
-                .findById(dispatch.vendorGuid)
+                .findById(dispatch.vendor.guid)
                 .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
-                .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+                .where({ 'salesforce.contacts.guid': dispatch.vendorAgent.guid })
                 .select('salesforce.accounts.name as vendorName',
                     'salesforce.accounts.guid as vendorGuid',
                     'salesforce.contacts.guid as agentGuid',
@@ -617,7 +626,7 @@ class Super extends Loadboard
                 statusId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
-                    undispatchedFrom: 'SUPERDISPATCH',
+                    undispatchedFrom: this.loadboardName,
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,
@@ -630,6 +639,7 @@ class Super extends Loadboard
         catch (e)
         {
             await trx.rollback();
+            throw new Error(e.message);
         }
 
     }
@@ -645,23 +655,27 @@ class Super extends Loadboard
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
-                dispatch.isPending = false;
-                dispatch.isAccepted = true;
+                const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
+                objectionDispatch.setToAccepted();
                 dispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
-                await OrderJobDispatch.query(trx).patch(dispatch).where({
+                await OrderJobDispatch.query(trx).patch(objectionDispatch).where({
                     'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
                     isPending: true,
-                    isCanceled: false
+                    isCanceled: false,
+                    isValid: true
                 });
 
                 // update the job status to accepted. It's a string, we can literally write anything to this
                 await Job.query(trx).patch({
+                    vendorGuid: objectionDispatch.vendorGuid,
+                    vendorContactGuid: objectionDispatch.vendorContactGuid,
+                    vendorAgentGuid: objectionDispatch.vendorAgentGuid,
                     status: 'dispatched',
                     updatedByGuid: process.env.SYSTEM_USER
-                }).findById(dispatch.jobGuid);
+                }).findById(objectionDispatch.jobGuid);
 
                 await trx.commit();
 
@@ -669,21 +683,22 @@ class Super extends Loadboard
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 13,
-                    jobGuid: dispatch.jobGuid,
+                    jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: 'SUPERDISPATCH',
+                        dispatchedTo: this.loadboardName,
                         code: 'dispatched',
-                        vendorGuid: dispatch.vendorGuid,
-                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorGuid: objectionDispatch.vendorGuid,
+                        vendorAgentGuid: objectionDispatch.vendorAgentGuid,
                         vendorName: vendorName,
                         vendorAgentName: vendorAgentName
                     }
                 });
-                return dispatch.jobGuid;
+                return objectionDispatch.jobGuid;
             }
             catch (e)
             {
-                await trx.rollback(e);
+                await trx.rollback();
+                throw new Error(e.message);
             }
         }
     }
@@ -702,32 +717,29 @@ class Super extends Loadboard
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
-                dispatch.isPending = false;
-                dispatch.isAccepted = false;
-                dispatch.isCanceled = true;
-                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
+                const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
+
+                objectionDispatch.setToDeclined();
+                objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 await OrderStop.query(trx)
                     .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid')
-                            .where({ 'jobGuid': dispatch.jobGuid })
+                            .where({ 'jobGuid': objectionDispatch.jobGuid })
                             .distinctOn('stopGuid')
                     );
 
                 const job = Job.fromJson({
-                    vendorGuid: null,
-                    vendorContactGuid: null,
-                    vendorAgentGuid: null,
                     dateStarted: null,
                     status: 'declined'
                 });
                 job.setUpdatedBy(process.env.SYSTEM_USER);
-                await Job.query(trx).patch(job).findById(dispatch.jobGuid);
+                await Job.query(trx).patch(job).findById(objectionDispatch.jobGuid);
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
-                await OrderJobDispatch.query().patch(dispatch).findById(dispatch.guid);
+                await OrderJobDispatch.query(trx).patch(objectionDispatch).findById(objectionDispatch.guid);
 
                 await trx.commit();
 
@@ -735,22 +747,23 @@ class Super extends Loadboard
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 14,
-                    jobGuid: dispatch.jobGuid,
+                    jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        undispatchedFrom: 'SUPERDISPATCH',
+                        undispatchedFrom: this.loadboardName,
                         code: 'declined',
-                        vendorGuid: dispatch.vendorGuid,
-                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorGuid: objectionDispatch.vendorGuid,
+                        vendorAgentGuid: objectionDispatch.vendorAgentGuid,
                         vendorName: vendorName,
                         vendorAgentName: vendorAgentName
                     }
                 });
 
-                return dispatch.jobGuid;
+                return objectionDispatch.jobGuid;
             }
             catch (e)
             {
                 await trx.rollback(e);
+                throw new Error(e.message);
             }
         }
     }
