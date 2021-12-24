@@ -8,7 +8,6 @@ const SFAccount = require('../Models/SFAccount');
 const Job = require('../Models/OrderJob');
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
-const DateTime = require('luxon').DateTime;
 
 class Super extends Loadboard
 {
@@ -299,6 +298,7 @@ class Super extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
     }
 
@@ -356,6 +356,7 @@ class Super extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
     }
 
@@ -389,6 +390,7 @@ class Super extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
     }
 
@@ -442,9 +444,8 @@ class Super extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
-
-        return objectionPost;
     }
 
     static async handleDispatch(payloadMetadata, response)
@@ -525,8 +526,8 @@ class Super extends Loadboard
         }
         catch (e)
         {
-            console.log(e);
             await trx.rollback();
+            throw new Error(e.message);
         }
     }
 
@@ -611,8 +612,8 @@ class Super extends Loadboard
         }
         catch (e)
         {
-            console.log(e);
             await trx.rollback();
+            throw new Error(e.message);
         }
 
     }
@@ -671,6 +672,7 @@ class Super extends Loadboard
             catch (e)
             {
                 await trx.rollback();
+                throw new Error(e.message);
             }
         }
     }
@@ -734,8 +736,8 @@ class Super extends Loadboard
             }
             catch (e)
             {
-                console.log(e);
                 await trx.rollback(e);
+                throw new Error(e.message);
             }
         }
     }

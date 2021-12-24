@@ -241,6 +241,7 @@ class ShipCars extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
     }
 
@@ -287,6 +288,7 @@ class ShipCars extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
     }
 
@@ -320,6 +322,7 @@ class ShipCars extends Loadboard
         catch (err)
         {
             await trx.rollback();
+            throw new Error(err.message);
         }
     }
 
@@ -393,6 +396,7 @@ class ShipCars extends Loadboard
         catch (e)
         {
             trx.rollback();
+            throw new Error(e.message);
         }
     }
 
@@ -495,6 +499,7 @@ class ShipCars extends Loadboard
         catch (e)
         {
             await trx.rollback();
+            throw new Error(e.message);
         }
     }
 
@@ -554,6 +559,7 @@ class ShipCars extends Loadboard
             catch (e)
             {
                 await trx.rollback(e);
+                throw new Error(e.message);
             }
         }
     }
@@ -650,6 +656,7 @@ class ShipCars extends Loadboard
             catch (e)
             {
                 await trx.rollback(e);
+                throw new Error(e.message);
             }
         }
     }
