@@ -437,7 +437,7 @@ class LoadboardService
         }
     }
 
-    static async acceptDispatch(jobGuid, dispatchGuid, currentUser)
+    static async acceptDispatch(jobGuid, currentUser)
     {
         const trx = await OrderJobDispatch.startTransaction();
         const allPromises = [];
@@ -458,21 +458,29 @@ class LoadboardService
 
             job.validateJobForAccepting();
 
-            const dispatch = await job.$relatedQuery('dispatches', trx).findById(dispatchGuid);
+            const dispatch = await job.$relatedQuery('dispatches', trx)
+                .findOne({ 'orderJobDispatches.jobGuid': jobGuid, isPending: true, isValid: true })
+                .select(
+                    'orderJobDispatches.*',
+                    'loadboardPost.loadboard as loadboardName',
+                    'loadboardPost.externalGuid as externalPostGuid')
+                .leftJoinRelated('loadboardPost')
+                .withGraphFetched('[vendor, vendorAgent]');
 
+            console.log(dispatch);
             if (!dispatch)
                 throw new HttpError(404, 'Dispatch not found');
 
-            allPromises.push(job.$relatedQuery('dispatches', trx).patch({
-                isValid: false,
-                isPending: false,
-                dateAccepted: null,
-                dateDeclined: null,
-                isAccepted: false,
-                isDeclined: false,
-                isCanceled: raw('(CASE WHEN "is_pending" THEN true ELSE false END)'),
-                dateCanceled: raw('(CASE WHEN "is_pending" = true THEN NOW() ELSE null END)')
-            }).whereNot({ guid: dispatch.guid }));
+            const lbPayload = [];
+            if (dispatch.loadboardName == 'SHIPCARS')
+            {
+                throw new HttpError(400, 'Cannot manually accept job that was dispatched to Ship.Cars');
+            }
+            else if (dispatch.loadboardName == 'SUPERDISPATCH')
+            {
+                const lb = new loadboardClasses[`${dispatch.loadboardName}`](dispatch);
+                lbPayload.push(lb.manuallyAcceptDispatch());
+            }
 
             allPromises.push(dispatch.$relatedQuery('loadboardPost', trx).patch({ isPosted: false }));
 
@@ -490,6 +498,7 @@ class LoadboardService
                 vendorGuid: dispatch.vendorGuid,
                 vendorContactGuid: dispatch.vendorContactGuid,
                 vendorAgentGuid: dispatch.vendorAgentGuid,
+                status: Job.STATUS.DISPATCHED,
                 updatedByGuid: currentUser
             }));
 
@@ -509,21 +518,31 @@ class LoadboardService
                     consigneeGuid: dispatch.vendorGuid
                 }).findById(jobBill.guid)
             );
+            allPromises.push(await sender.sendMessages({ body: lbPayload }));
 
             await Promise.all(allPromises);
             await trx.commit();
+            dispatch.status = Job.STATUS.DISPATCHED;
 
             StatusManagerHandler.registerStatus({
                 orderGuid: job.orderGuid,
                 userGuid: currentUser,
                 statusId: 11,
-                jobGuid: job.guid
+                jobGuid: job.guid,
+                extraAnnotations: {
+                    dispatchedTo: dispatch.loadboardName || 'TRUKT',
+                    vendorGuid: dispatch.vendor.guid,
+                    vendorAgentGuid: dispatch.vendorAgent.guid,
+                    vendorName: dispatch.vendor.name,
+                    vendorAgentName: dispatch.vendorAgent.name
+                }
             });
 
-            return;
+            return dispatch;
         }
         catch (e)
         {
+            console.log('should be rolling trx back', e);
             await trx.rollback();
             throw e;
         }
