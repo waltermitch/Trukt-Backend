@@ -147,6 +147,16 @@ class OrderStop extends BaseModel
     {
         return (firstStop, secondStop) => firstStop.sequence - secondStop.sequence;
     }
+
+    get isPickup()
+    {
+        return this.stopType == 'pickup';
+    }
+
+    get isDelivery()
+    {
+        return this.stopType == 'delivery';
+    }
 }
 
 Object.assign(OrderStop.prototype, RecordAuthorMixin);
