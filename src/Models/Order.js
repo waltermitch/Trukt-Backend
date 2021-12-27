@@ -17,6 +17,12 @@ class Order extends BaseModel
         return 'guid';
     }
 
+    static STATUS = {
+        NEW: 'new',
+        SUBMITTED: 'submitted',
+        VERIFIED: 'verified'
+    };
+
     static get relationMappings()
     {
         const SFAccount = require('./SFAccount');
