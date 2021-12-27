@@ -45,6 +45,13 @@ responses:
                     - 400
                     - 200
                     - 500
+                data: 
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      description: Status on which the job is now set to, only return for uncancel
+                      example: ready
   400:
     description: Request does not provide the required parametters
     content:
