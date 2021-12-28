@@ -83,7 +83,10 @@ class OrderJobDispatch extends BaseModel
             // returns a single active dispatch record
             activeDispatch(builder)
             {
-                builder.where({ isPending: true, isCanceled: false, isValid: true }).orWhere({ isAccepted: true, isCanceled: false, isValid: true }).limit(1);
+                builder.where((builder) =>
+                {
+                    builder.where({ isPending: true, isCanceled: false, isValid: true }).orWhere({ isAccepted: true, isCanceled: false, isValid: true });
+                }).limit(1);
             }
         };
     }
