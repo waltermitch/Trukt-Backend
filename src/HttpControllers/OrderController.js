@@ -42,7 +42,6 @@ class OrderController
         {
             let order = await OrderService.create(req.body, req.session.userGuid);
             order = await OrderService.getOrderByGuid(order.guid);
-            console.log(order.guid);
 
             if (!order?.isTender)
                 emitter.emit('order_created', order.guid);

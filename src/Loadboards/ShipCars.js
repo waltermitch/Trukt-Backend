@@ -206,6 +206,7 @@ class ShipCars extends Loadboard
         const trx = await LoadboardPost.startTransaction();
         const objectionPost = LoadboardPost.fromJson(post);
         const allPromises = [];
+
         try
         {
             if (response.hasErrors)

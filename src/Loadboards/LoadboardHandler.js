@@ -1,6 +1,7 @@
 const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
+const OrderJobService = require('../Services/OrderJobService');
 const OrderJob = require('../Models/OrderJob');
 const R = require('ramda');
 
@@ -42,7 +43,6 @@ const myMessageHandler = async (message) =>
 
         if (jobGuid)
         {
-
             const pubsubAction = responses[0].payloadMetadata.action;
 
             // publish to a group that is named after the the jobGuid which
@@ -69,28 +69,19 @@ const myMessageHandler = async (message) =>
             }
             else
             {
-                const posts = await LoadboardService.getAllLoadboardPosts(jobGuid);
+                // getting status field by current state data is in, and active post that belongs to the post
+                const [{ value: status, reason: error }, posts] = await Promise.allSettled([OrderJobService.updateStatusField(jobGuid), LoadboardService.getAllLoadboardPosts(jobGuid)]);
 
-                // this loops through all the posts and returns true as soon as
-                // it finds that one of the loadboards is marked as posted
-                const isPosted = R.any(post => post.posted())(Object.values(posts));
-                let status = isPosted ? 'posted' : 'ready';
+                if (!status)
+                    throw error;
 
-                const job = await OrderJob.query()
+                // updating the job status field
+                await OrderJob.query()
                     .patch(OrderJob.fromJson({ status }))
                     .findById(jobGuid)
-                    .whereNotIn('status', [
-                        'on hold',
-                        'pending',
-                        'picked up',
-                        'delivered'
-                    ]).returning('status');
+                    .returning('status');
 
-                if (!job)
-                {
-                    status = (await OrderJob.query().select('status').findById(jobGuid)).status;
-                }
-
+                // publishing status and post to posting group
                 await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts, status } });
             }
 
