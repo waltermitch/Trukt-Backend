@@ -5,6 +5,7 @@ const LoadboardRequest = require('../Models/LoadboardRequest');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
 const InvoiceLine = require('../Models/InvoiceLine');
+const { uuidRegexStr } = require('../Utils/Regexes');
 const emitter = require('../EventListeners/index');
 const knex = require('../Models/BaseModel').knex();
 const Loadboard = require('../Models/Loadboard');
@@ -17,6 +18,7 @@ const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const R = require('ramda');
 
+const regex = new RegExp(uuidRegexStr);
 
 const SYSUSER = process.env.SYSTEM_USER;
 
@@ -1155,6 +1157,94 @@ class OrderJobService
             await trx.rollback();
             throw new HttpError(500, error);
         }
+    }
+
+    static updateStatusField(jobGuid)
+    {
+        if (!regex.test(jobGuid))
+            throw new HttpError(400, 'Not a Job UUID');
+
+        return knex.raw(`
+            SELECT
+                oj.is_on_hold,
+                oj.is_complete,
+                oj.is_deleted,
+                oj.is_canceled,
+                ( SELECT bool_and(links.is_completed) FROM rcg_tms.order_stop_links links LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid WHERE links.job_guid = oj.guid AND stop.stop_type = 'pickup' ) AS is_pickedup,
+                ( SELECT bool_and(links.is_completed) FROM rcg_tms.order_stop_links links LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid WHERE links.job_guid = oj.guid AND stop.stop_type = 'delivery' ) AS is_delivered,
+                ( SELECT count(*) > 0 FROM rcg_tms.loadboard_posts lbp WHERE lbp.job_guid = oj.guid AND lbp.is_posted) AS is_posted,
+                ( SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
+                    LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbp2.job_guid = oj.guid) AS has_requests,
+                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_pending) AS is_pending,
+                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_declined) AS is_declined,
+                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_accepted AND oj.vendor_guid IS NOT NULL ) AS is_dispatched,
+                oj.is_ready,
+                o.is_tender
+            FROM
+                rcg_tms.order_jobs oj
+            LEFT JOIN rcg_tms.orders o
+                ON o.guid = oj.order_guid
+            WHERE oj.guid = '${jobGuid}'
+        `).then((response) =>
+        {
+            const statusArray = response.rows[0];
+            if (statusArray.is_on_hold)
+            {
+                return 'onhold';
+            }
+            else if (statusArray.is_complete)
+            {
+                return 'complete';
+            }
+            else if (statusArray.is_deleted)
+            {
+                return 'deleted';
+            }
+            else if (statusArray.is_canceled)
+            {
+                return 'canceled';
+            }
+            else if (statusArray.is_pickedup)
+            {
+                return 'pickup';
+            }
+            else if (statusArray.is_delivered)
+            {
+                return 'delivered';
+            }
+            else if (statusArray.is_posted)
+            {
+                return 'posted';
+            }
+            else if (statusArray.has_requests)
+            {
+                return 'posted';
+            }
+            else if (statusArray.is_pending)
+            {
+                return 'pending';
+            }
+            else if (statusArray.is_declined)
+            {
+                return 'declined';
+            }
+            else if (statusArray.is_dispatched)
+            {
+                return 'dispatched';
+            }
+            else if (statusArray.is_ready)
+            {
+                return 'ready';
+            }
+            else if (statusArray.is_tender)
+            {
+                return 'tender';
+            }
+            else
+            {
+                return 'new';
+            }
+        }).catch((error) => console.log(error));
     }
 }
 
