@@ -517,9 +517,8 @@ class LoadboardService
                     consigneeGuid: dispatch.vendorGuid
                 }).findById(jobBill.guid)
             );
-            allPromises.push(sender.sendMessages({ body: lbPayload }));
 
-            await Promise.all(allPromises);
+            await Promise.all([...allPromises, sender.sendMessages({ body: lbPayload })]);
             await trx.commit();
             dispatch.status = Job.STATUS.DISPATCHED;
 
