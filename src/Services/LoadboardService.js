@@ -495,9 +495,9 @@ class LoadboardService
             }));
 
             allPromises.push(job.$query(trx).patch({
-                vendorGuid: dispatch.vendorGuid,
+                vendorGuid: dispatch.vendor.guid,
                 vendorContactGuid: dispatch.vendorContactGuid,
-                vendorAgentGuid: dispatch.vendorAgentGuid,
+                vendorAgentGuid: dispatch.vendorAgent.guid,
                 status: Job.STATUS.DISPATCHED,
                 updatedByGuid: currentUser
             }));
@@ -518,7 +518,7 @@ class LoadboardService
                     consigneeGuid: dispatch.vendorGuid
                 }).findById(jobBill.guid)
             );
-            allPromises.push(await sender.sendMessages({ body: lbPayload }));
+            allPromises.push(sender.sendMessages({ body: lbPayload }));
 
             await Promise.all(allPromises);
             await trx.commit();
