@@ -645,7 +645,7 @@ class OrderJob extends BaseModel
         if (this.order.isTender)
             throw new HttpError(400, 'Cannot dispatch job for tender order');
 
-        if (this.dispatches.length !== 0)
+        if (this.dispatches?.length > 0)
             throw new HttpError(400, 'Cannot dispatch job with already active load offer');
 
         if (this.bills.length === 0)

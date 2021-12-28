@@ -189,7 +189,8 @@ class LoadboardService
             {
                 job = await this.getAllPostingData(jobId, [{ loadboard: body.loadboard }], currentUser);
 
-                job.dispatches = await OrderJobDispatch.query(trx).where({ jobGuid: jobId }).where({ isPending: true, isCanceled: false }).orWhere({ isAccepted: true, isCanceled: false }).limit(1);
+                // check dispatch table for any active dispatching
+                job.dispatches = await OrderJobDispatch.query(trx).where({ jobGuid: jobId }).modify('activeDispatch');
             }
 
             job.validateJobForDispatch();
@@ -349,6 +350,7 @@ class LoadboardService
 
         try
         {
+            // get the dispatch for the current job with vendor info
             const dispatch = await OrderJobDispatch.query()
                 .select('rcgTms.orderJobDispatches.guid',
                     'rcgTms.orderJobDispatches.jobGuid',
@@ -371,62 +373,78 @@ class LoadboardService
             if (!dispatch)
                 throw new HttpError(404, 'No active offers to undispatch');
 
+            // assign current user as updated by
             dispatch.setUpdatedBy(currentUser);
+
+            // if dispatched has loadboard post guid
             if (dispatch.loadboardPostGuid != null)
             {
+                // getting all posting related to the job
                 const job = await this.getAllPostingData(jobGuid, [{ loadboard: dispatch.loadboardPost.loadboard }], currentUser);
+
+                // updating new disptach to job
                 job.dispatch = dispatch;
+
+                // composing new loadboard payload
                 const lbPayload = new loadboardClasses[`${dispatch.loadboardPost.loadboard}`](job);
+
+                // sending undisptach message to loadboards
                 const message = [lbPayload['undispatch']()];
 
+                // send message to bus que to unpost order
                 await sender.sendMessages({ body: message });
             }
-            else
-            {
-                dispatch.setToCanceled(currentUser);
 
-                await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
-                await OrderStop.query(trx)
-                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: currentUser })
-                    .whereIn('guid',
-                        OrderStopLink.query().select('stopGuid')
-                            .where({ 'jobGuid': jobGuid })
-                            .distinctOn('stopGuid')
-                    );
+            // setting disptch to canceled status
+            dispatch.setToCanceled(currentUser);
 
-                const job = Job.fromJson({
-                    vendorGuid: null,
-                    vendorAgentGuid: null,
-                    vendorContact: null,
-                    dateStarted: null,
-                    status: 'ready'
-                });
+            // updating dispatch object to canceled
+            await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
 
-                job.setUpdatedBy(currentUser);
+            // setting all stop related to job to null
+            await OrderStop.query(trx)
+                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: currentUser })
+                .whereIn('guid',
+                    OrderStopLink.query().select('stopGuid')
+                        .where({ 'jobGuid': jobGuid })
+                        .distinctOn('stopGuid')
+                );
 
-                await Job.query(trx).patch(job).findById(dispatch.jobGuid);
-                dispatch.jobStatus = 'ready';
-            }
+            // creating new job object with no vedor because we are removing them.
+            const job = Job.fromJson({
+                vendorGuid: null,
+                vendorAgentGuid: null,
+                vendorContact: null,
+                dateStarted: null,
+                status: 'ready'
+            });
 
+            job.setUpdatedBy(currentUser);
+
+            // updating orderJob with new fields
+            await Job.query(trx).patch(job).findById(dispatch.jobGuid);
+
+            // returning ready status if sucessfull
+            dispatch.jobStatus = 'ready';
+
+            // commiting transaction
             await trx.commit();
 
-            if (!dispatch.loadboardPostGuid)
-            {
-                StatusManagerHandler.registerStatus({
-                    orderGuid: dispatch.job.orderGuid,
-                    userGuid: currentUser,
-                    statusId: 12,
-                    jobGuid,
-                    extraAnnotations: {
-                        undispatchedFrom: 'internal',
-                        code: 'ready',
-                        vendorGuid: dispatch.vendor.guid,
-                        vendorAgentGuid: dispatch.vendorAgentGuid,
-                        vendorName: dispatch.vendor.name,
-                        vendorAgentName: dispatch.vendorAgent.name
-                    }
-                });
-            }
+            // updating activity logger
+            await StatusManagerHandler.registerStatus({
+                orderGuid: dispatch.job.orderGuid,
+                userGuid: currentUser,
+                statusId: 12,
+                jobGuid,
+                extraAnnotations: {
+                    undispatchedFrom: 'internal',
+                    code: 'ready',
+                    vendorGuid: dispatch.vendor.guid,
+                    vendorAgentGuid: dispatch.vendorAgentGuid,
+                    vendorName: dispatch.vendor.name,
+                    vendorAgentName: dispatch.vendorAgent.name
+                }
+            });
 
             return dispatch;
         }

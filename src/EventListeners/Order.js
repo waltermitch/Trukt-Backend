@@ -4,8 +4,8 @@ const OrderStopLinks = require('../Models/OrderStopLink');
 const OrderService = require('../Services/OrderService');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
-const listener = require('./index');
 const { raw } = require('objection');
+const listener = require('./index');
 
 listener.on('order_updated', ({ oldOrder, newOrder }) =>
 {
@@ -24,7 +24,7 @@ listener.on('order_created', (orderGuid) =>
     // set Immediate make the call async
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.calculatedDistances(orderGuid), postToSuper(orderGuid)]);
+        const proms = await Promise.allSettled([OrderService.calculatedDistances(orderGuid), createSuperOrder(orderGuid)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -152,7 +152,7 @@ listener.on('orderjob_undeleted', async ({ orderGuid, userGuid, jobGuid }) =>
     }
 });
 
-async function postToSuper(orderGuid)
+async function createSuperOrder(orderGuid)
 {
     const jobsToPost = await OrderService.getTransportJobsIds(orderGuid);
 
@@ -174,15 +174,15 @@ listener.on('orderjob_ready', (orderGuid) =>
     {
         await Promise.allSettled([
             Order.query()
-            .patch({
-                status: Order.STATUS.VERIFIED,
-                isReady: true
-            })
-            .findById(orderGuid)
-            .where({ status: Order.STATUS.SUBMITTED, isCanceled: false, isDeleted: false })
-            
-            // get the count of jobs that are ready for this order guid, if the count is above 0 then update is valid.
-            .where(raw('(SELECT count(*) FROM rcg_tms.order_jobs jobs WHERE jobs.order_guid = ? AND jobs.is_ready = true) > 0', [orderGuid]))
+                .patch({
+                    status: Order.STATUS.VERIFIED,
+                    isReady: true
+                })
+                .findById(orderGuid)
+                .where({ status: Order.STATUS.SUBMITTED, isCanceled: false, isDeleted: false })
+
+                // get the count of jobs that are ready for this order guid, if the count is above 0 then update is valid.
+                .where(raw('(SELECT count(*) FROM rcg_tms.order_jobs jobs WHERE jobs.order_guid = ? AND jobs.is_ready = true) > 0', [orderGuid]))
         ]);
 
         listener.emit('order_verified', orderGuid);
