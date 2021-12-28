@@ -260,7 +260,8 @@ class OrderJobService
                 const jobGuid = jobUpdated.value?.jobGuid;
                 const status = jobUpdated.value?.status;
                 const error = jobUpdated.value?.error;
-                response[jobGuid] = { error, status };
+                const data = jobUpdated.value?.data;
+                response[jobGuid] = { error, status, data };
                 return response;
             }, {});
 
@@ -308,10 +309,11 @@ class OrderJobService
         else if (generalBulkFunctionName)
         {
             return await OrderJobService[`${generalBulkFunctionName}Job`](jobGuid, userGuid)
-                .then(deleteResult =>
+                .then(result =>
                 {
-                    const status = deleteResult.status;
-                    return { jobGuid, error: null, status };
+                    const status = result.status;
+                    const { data } = result?.message;
+                    return { jobGuid, error: null, status, data };
                 })
                 .catch(error =>
                 {
@@ -354,8 +356,6 @@ class OrderJobService
                 return { ...statusProperties, isCanceled: true, status };
             case 'deleted':
                 return { ...statusProperties, isDeleted: true, status, deletedByGuid: userGuid };
-
-            // is this supposed to have uncanceled?
         }
     }
 
@@ -1127,19 +1127,19 @@ class OrderJobService
         try
         {
             // getting canceled job with passed guid
-            const job = await OrderJob.query(trx).select('orderGuid', 'isCanceled').findOne('guid', jobGuid);
+            const job = await OrderJob.query(trx).select('orderGuid', 'isCanceled', 'status').findOne('guid', jobGuid);
 
             if (!job)
                 throw new HttpError(400, 'Job does not exist');
 
             if (!job?.isCanceled)
-                return { status: 200 };
+                return { status: 200, message: { data: { status: job.status } } };
 
             // createing ready status to undo delete
             const payload = OrderJobService.createStatusPayload('ready', userGuid);
 
             // update orderJob to Ready state
-            await OrderJob.query(trx).patch(payload).findById(jobGuid);
+            const jobUpdated = await OrderJob.query(trx).patchAndFetchById(jobGuid, payload);
 
             // commiting transaction
             await trx.commit();
@@ -1147,7 +1147,7 @@ class OrderJobService
             // emitting event for update statys manager
             emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
 
-            return { status: 200 };
+            return { status: 200, message: { data: { status: jobUpdated.status } } };
         }
         catch (error)
         {
