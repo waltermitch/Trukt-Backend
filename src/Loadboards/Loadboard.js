@@ -4,6 +4,8 @@ const DateTime = require('luxon').DateTime;
 const states = require('us-state-codes');
 const R = require('ramda');
 const OrderStopService = require('../Services/OrderStopService');
+const Attachment = require('../Models/Attachment');
+const uuid = require('uuid');
 
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
 
@@ -259,7 +261,7 @@ class Loadboard
             .where({ 'rcgTms.loadboardPosts.externalGuid': payloadMetadata.externalGuid, stopType: response.stopType })
             .withGraphFetched('[commodities]').distinctOn('guid')
             .modifyGraph('commodities', builder => builder.select('guid').distinctOn('guid'));
-        
+
         const promises = [];
         for (const stop of stops)
         {
@@ -276,6 +278,25 @@ class Loadboard
             promises.push({ func: OrderStopService.updateStopStatus, params, body });
         }
 
+        const attachments = [];
+        for (const attachment of response.attachments)
+        {
+            attachments.push(Attachment.fromJson({
+                guid: uuid.v4(),
+                type: 'billOfLading',
+                url: attachment.attachmentUrl,
+                extension: 'application/pdf',
+                name: attachment.attachmentName,
+                parent: stops[0].jobGuid,
+                parent_table: 'jobs',
+                visibility: '{internal}',
+                createdByGuid: process.env.SYSTEM_USER
+            }));
+        }
+
+        if(attachments.length > 0)
+            await Attachment.query().insert(attachments);
+        
         await Promise.all(promises.map(async prom => prom.func(prom.params, prom.body)));
     }
 }
