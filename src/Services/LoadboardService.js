@@ -153,7 +153,8 @@ class LoadboardService
             payloads.push(lbPayload['update']());
         }
 
-        await sender.sendMessages({ body: payloads });
+        if (payloads.length != 0)
+            await sender.sendMessages({ body: payloads });
 
         return payloads;
     }

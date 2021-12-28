@@ -1,7 +1,7 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderStopLinks = require('../Models/OrderStopLink');
-const OrderService = require('./OrderService');
+const OrderService = require('../Services/OrderService');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
@@ -23,7 +23,7 @@ listener.on('order_created', (orderGuid) =>
     // set Immediate make the call async
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.calculatedDistances(orderGuid), postToSuper(orderGuid)]);
+        const proms = await Promise.allSettled([OrderService.calculatedDistances(orderGuid)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
