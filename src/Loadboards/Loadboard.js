@@ -260,7 +260,7 @@ class Loadboard
             .withGraphFetched('[commodities]').distinctOn('guid')
             .modifyGraph('commodities', builder => builder.select('guid').distinctOn('guid'));
         
-        const promies = [];
+        const promises = [];
         for (const stop of stops)
         {
             const params = {
@@ -273,10 +273,10 @@ class Loadboard
                 date: response.completedAtTime
             };
 
-            promies.push({ func: OrderStopService.updateStopStatus, params, body });
+            promises.push({ func: OrderStopService.updateStopStatus, params, body });
         }
 
-        await Promise.all(promies.map(async prom => prom.func(prom.params, prom.body)));
+        await Promise.all(promises.map(async prom => prom.func(prom.params, prom.body)));
     }
 }
 
