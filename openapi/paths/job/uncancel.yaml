@@ -13,7 +13,17 @@ responses:
   204:
     description: Job uncanceled succesfully
     content:
-      application/json: {}
+      application/json:
+        schema: 
+          type: object
+          properties:
+            data: 
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: Status on which the job is pass to, now that is uncanceled
+                  example: ready
   404:
     description: Job does not exist
     content:
