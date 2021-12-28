@@ -17,7 +17,6 @@ const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const R = require('ramda');
 
-
 const SYSUSER = process.env.SYSTEM_USER;
 
 class OrderJobService
