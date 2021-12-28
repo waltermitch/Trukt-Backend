@@ -52,7 +52,11 @@ class TerminalService
             orderbypriority.push(['name']);
 
             // split the query by spaces add wild card to the end of each word, and join them with &
-            const searchVal = (q.split(' ').map((word) => word + ':*')).join(' & ');
+            const searchVal = (q.split(' ').filter((word) =>
+            {
+                if (word.length > 0)
+                    return word + ':*';
+            })).join(' & ');
 
             qb.whereRaw('vector_name @@ to_tsquery(\'english\', ? )', [searchVal]);
         }
