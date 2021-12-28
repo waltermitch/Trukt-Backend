@@ -124,6 +124,17 @@ class Loadboard
         return { payload, payloadMetadata };
     }
 
+    manuallyAcceptDispatch()
+    {
+        const payload = { dispatch: this.acceptDispatchToJSON() };
+        const payloadMetadata = { dispatch: this.data, loadboard: this.loadboardName };
+        payloadMetadata.action = 'manuallyAcceptDispatch';
+
+        // we do not care about setting the return to because we
+        // are not concerned with getting a response back
+        return { payload, payloadMetadata };
+    }
+
     toStringDate(input)
     {
         const date = DateTime.fromISO(input).c;

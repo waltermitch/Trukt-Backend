@@ -132,8 +132,8 @@ class LoadboardController
     {
         try
         {
-            await LoadboardService.acceptDispatch(req.params.jobId, req.body.dispatchGuid, req.session.userGuid);
-            res.json({ message: 'Job dispatch accepted' });
+            const response = await LoadboardService.acceptDispatch(req.params.jobId, req.session.userGuid);
+            res.json(response);
             res.status(200);
         }
         catch (err)

@@ -15,7 +15,10 @@ class Super extends Loadboard
     {
         super(data);
         this.loadboardName = 'SUPERDISPATCH';
-        this.postObject = data.postObjects[this.loadboardName];
+        if (data.postObjects)
+        {
+            this.postObject = data.postObjects[this.loadboardName];
+        }
     }
 
     toJSON()
@@ -112,6 +115,7 @@ class Super extends Loadboard
         const payload = {
             carrier_guid: this.data.vendor.sdGuid,
             carrier_usdot: this.data.vendor.dotNumber,
+
             price: this.data.dispatch.price,
             pickup: {
                 date_type: this.setDateType(this.data.pickup.dateScheduledType),
@@ -121,6 +125,17 @@ class Super extends Loadboard
                 date_type: this.setDateType(this.data.delivery.dateScheduledType),
                 date_requested: this.data.delivery.dateScheduledStart
             }
+        };
+
+        return payload;
+    }
+
+    acceptDispatchToJSON()
+    {
+        const payload = {
+            carrier_guid: this.data.vendorSDGuid || this.data.vendor.sdGuid,
+            carrier_phone: this.data.vendorPhone || this.data.vendor.phoneNumber,
+            carrier_email: this.data.vendorEmail || this.data.vendor.email
         };
 
         return payload;
