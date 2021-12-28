@@ -467,7 +467,6 @@ class LoadboardService
                 .leftJoinRelated('loadboardPost')
                 .withGraphFetched('[vendor, vendorAgent]');
 
-            console.log(dispatch);
             if (!dispatch)
                 throw new HttpError(404, 'Dispatch not found');
 
@@ -542,7 +541,6 @@ class LoadboardService
         }
         catch (e)
         {
-            console.log('should be rolling trx back', e);
             await trx.rollback();
             throw e;
         }
