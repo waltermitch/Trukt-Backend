@@ -24,7 +24,7 @@ listener.on('order_created', (orderGuid) =>
     // set Immediate make the call async
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.calculatedDistances(orderGuid), createLoadboardOrder(orderGuid)]);
+        const proms = await Promise.allSettled([OrderService.calculatedDistances(orderGuid), createSuperOrder(orderGuid)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -152,7 +152,7 @@ listener.on('orderjob_undeleted', async ({ orderGuid, userGuid, jobGuid }) =>
     }
 });
 
-async function createLoadboardOrder(orderGuid)
+async function createSuperOrder(orderGuid)
 {
     const jobsToPost = await OrderService.getTransportJobsIds(orderGuid);
 
