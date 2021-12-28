@@ -1,7 +1,9 @@
 const LoadboardPost = require('../Models/LoadboardPost');
+const OrderStop = require('../Models/OrderStop');
 const DateTime = require('luxon').DateTime;
 const states = require('us-state-codes');
 const R = require('ramda');
+const OrderStopService = require('../Services/OrderStopService');
 
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
 
@@ -232,6 +234,38 @@ class Loadboard
 
         await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
         return;
+    }
+
+    static async handleStatusUpdate(payloadMetadata, response)
+    {
+        // get all the stops for the completed stop type coming in from
+        // the webhook response
+        const stops = await OrderStop.query()
+            .select('orderStops.*', 'links.jobGuid')
+            .leftJoinRelated('commodities')
+            .leftJoinRelated('links')
+            .leftJoin('rcgTms.loadboardPosts', 'links.jobGuid', 'rcgTms.loadboardPosts.jobGuid')
+            .where({ 'rcgTms.loadboardPosts.externalGuid': payloadMetadata.externalGuid, stopType: response.stopType })
+            .withGraphFetched('[commodities]').distinctOn('guid')
+            .modifyGraph('commodities', builder => builder.select('guid').distinctOn('guid'));
+        
+        const promies = [];
+        for (const stop of stops)
+        {
+            const params = {
+                jobGuid: stop.jobGuid,
+                stopGuid: stop.guid,
+                status: 'completed'
+            };
+            const body = {
+                commodities: stop.commodities.map(com => com.guid),
+                date: response.completedAtTime
+            };
+
+            promies.push({ func: OrderStopService.updateStopStatus, params, body });
+        }
+
+        await Promise.all(promies.map(async prom => prom.func(prom.params, prom.body)));
     }
 }
 
