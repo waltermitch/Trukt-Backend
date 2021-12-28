@@ -8,7 +8,7 @@ exports.up = function (knex)
 
         -- altering table to create generated column 
         ALTER TABLE rcg_tms.order_jobs
-        ADD rate_per_mile numeric(15,2) NOT NULL GENERATED ALWAYS AS (COALESCE(rcg_tms.order_jobs.transport_cost / COALESCE(rcg_tms.order_jobs.distance, 1), 0)) STORED;
+        ADD rate_per_mile numeric(15,2) NOT NULL GENERATED ALWAYS AS (COALESCE(rcg_tms.order_jobs.transport_cost / NULLIF(rcg_tms.order_jobs.distance, 0), 0)) STORED;
 
         -- function to calculate that cost
         CREATE OR REPLACE FUNCTION rcg_tms.sum_of_transport_jobs()

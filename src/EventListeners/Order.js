@@ -1,10 +1,11 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderStopLinks = require('../Models/OrderStopLink');
-const OrderService = require('./OrderService');
+const OrderService = require('../Services/OrderService');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
+const { raw } = require('objection');
 
 listener.on('order_updated', ({ oldOrder, newOrder }) =>
 {
@@ -166,5 +167,26 @@ async function getJobGuids(orderGuid)
 
     return jobs;
 }
+
+listener.on('orderjob_ready', (orderGuid) =>
+{
+    setImmediate(async () =>
+    {
+        await Promise.allSettled([
+            Order.query()
+            .patch({
+                status: Order.STATUS.VERIFIED,
+                isReady: true
+            })
+            .findById(orderGuid)
+            .where({ status: Order.STATUS.SUBMITTED, isCanceled: false, isDeleted: false })
+            
+            // get the count of jobs that are ready for this order guid, if the count is above 0 then update is valid.
+            .where(raw('(SELECT count(*) FROM rcg_tms.order_jobs jobs WHERE jobs.order_guid = ? AND jobs.is_ready = true) > 0', [orderGuid]))
+        ]);
+
+        listener.emit('order_verified', orderGuid);
+    });
+});
 
 module.exports = listener;
