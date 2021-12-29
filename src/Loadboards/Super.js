@@ -535,9 +535,9 @@ class Super extends Loadboard
                 }
 
                 const vendor = await SFAccount.query(trx)
-                    .findById(dispatch.vendorGuid)
+                    .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                     .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
-                    .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+                    .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                     .select('salesforce.accounts.name as vendorName',
                         'salesforce.accounts.guid as vendorGuid',
                         'salesforce.contacts.guid as agentGuid',
