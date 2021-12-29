@@ -1161,8 +1161,8 @@ class OrderJobService
                 rcg_tms.order_jobs oj
             LEFT JOIN rcg_tms.orders o
                 ON o.guid = oj.order_guid
-            WHERE oj.guid = '${jobGuid}'
-        `).then((response) =>
+            WHERE oj.guid = ?
+        `, jobGuid).then((response) =>
         {
             const statusArray = response.rows[0];
 
@@ -1173,51 +1173,47 @@ class OrderJobService
 
             if (statusArray.is_on_hold)
             {
-                p.expectedStatus = 'on hold';
+                p.expectedStatus = OrderJob.STATUS.ON_HOLD;
             }
             else if (statusArray.is_complete)
             {
-                p.expectedStatus = 'complete';
+                p.expectedStatus = OrderJob.STATUS.COMPLETED;
             }
             else if (statusArray.is_deleted)
             {
-                p.expectedStatus = 'deleted';
+                p.expectedStatus = OrderJob.STATUS.DELETED;
             }
             else if (statusArray.is_canceled)
             {
-                p.expectedStatus = 'canceled';
+                p.expectedStatus = OrderJob.STATUS.CANCELED;
             }
             else if (statusArray.is_pickedup)
             {
-                p.expectedStatus = 'picked up';
+                p.expectedStatus = OrderJob.STATUS.PICKED_UP;
             }
             else if (statusArray.is_delivered)
             {
-                p.expectedStatus = 'delivered';
+                p.expectedStatus = OrderJob.STATUS.DELIVERED;
             }
-            else if (statusArray.is_posted)
+            else if (statusArray.is_posted || statusArray.has_requests)
             {
-                p.expectedStatus = 'posted';
-            }
-            else if (statusArray.has_requests)
-            {
-                p.expectedStatus = 'posted';
+                p.expectedStatus = OrderJob.STATUS.POSTED;
             }
             else if (statusArray.is_pending)
             {
-                p.expectedStatus = 'pending';
+                p.expectedStatus = OrderJob.STATUS.PENDING;
             }
             else if (statusArray.is_declined)
             {
-                p.expectedStatus = 'declined';
+                p.expectedStatus = OrderJob.STATUS.DECLINED;
             }
             else if (statusArray.is_dispatched)
             {
-                p.expectedStatus = 'dispatched';
+                p.expectedStatus = OrderJob.STATUS.DISPATCHED;
             }
             else if (statusArray.is_ready)
             {
-                p.expectedStatus = 'ready';
+                p.expectedStatus = OrderJob.STATUS.READY;
             }
             else if (statusArray.is_tender)
             {
@@ -1225,7 +1221,7 @@ class OrderJobService
             }
             else
             {
-                p.expectedStatus = 'new';
+                p.expectedStatus = OrderJob.STATUS.NEW;
             }
 
             return p;

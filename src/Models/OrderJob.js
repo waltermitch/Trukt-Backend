@@ -20,7 +20,8 @@ class OrderJob extends BaseModel
         PICKED_UP: 'picked up',
         DELIVERED: 'delivered',
         CANCELED: 'canceled',
-        DELETED: 'deleted'
+        DELETED: 'deleted',
+        COMPLETED: 'completed'
     }
 
     static get tableName()
