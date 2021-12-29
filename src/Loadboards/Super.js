@@ -543,7 +543,7 @@ class Super extends Loadboard
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
                     statusId: 10,
@@ -635,7 +635,7 @@ class Super extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            StatusManagerHandler.registerStatus({
+            await StatusManagerHandler.registerStatus({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
                 statusId: 12,
@@ -694,7 +694,7 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 13,
@@ -758,7 +758,7 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 14,

@@ -479,7 +479,7 @@ class ShipCars extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            StatusManagerHandler.registerStatus({
+            await StatusManagerHandler.registerStatus({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
                 statusId: 12,
@@ -538,7 +538,7 @@ class ShipCars extends Loadboard
                 await Promise.all(allPromises);
                 await trx.commit();
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 13,
@@ -635,7 +635,7 @@ class ShipCars extends Loadboard
 
                 await trx.commit();
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 14,
