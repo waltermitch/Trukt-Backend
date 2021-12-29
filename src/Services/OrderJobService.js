@@ -753,37 +753,6 @@ class OrderJobService
         return res;
     }
 
-    static async markAsDeliveredOrPickedUp(jobGuid, currentUser = SYSUSER)
-    {
-        // we are not accounting for the case where delivered is true, true but picked_up is false, false. (in respect to is_complete and is_started)
-        const q = `UPDATE rcg_tms.order_jobs
-                    SET 
-                    updated_by_guid = '${currentUser}',
-                    status =
-                        CASE
-                            WHEN stops.is_completed = stops.count AND stops.is_started = stops.count THEN 'delivered'
-                            WHEN stops.is_started > 0 AND stops.is_completed != stops.count THEN 'picked up'
-                            ELSE status
-                        END
-                    FROM
-                        (SELECT count(*),
-                        SUM(case when stops.is_completed = true then 1 else 0 end) AS is_completed,
-                        SUM(case when stops.is_started = true then 1 else 0 end) AS is_started
-                        FROM rcg_tms.order_stops stops 
-                        INNER JOIN
-                            (SELECT distinct links.stop_guid, links.job_guid
-                             FROM rcg_tms.order_stop_links links 
-                             WHERE links.job_guid = '${jobGuid}') AS links
-                        ON stops.guid = links.stop_guid) AS stops
-                    WHERE guid = '${jobGuid}' RETURNING status, order_guid`;
-
-        const { rows: [{ status, order_guid: orderGuid }] } = await knex.raw(q);
-
-        // TODO: add event emitter for orderjob_delivered or orderjob_picked_up
-        status === 'delivered' ? emitter.emit('orderjob_delivered', { jobGuid, dispatcherGuid: null, orderGuid }) : null;
-        status === 'picked up' ? emitter.emit('orderjob_picked_up', { jobGuid, dispatcherGuid: null, orderGuid }) : null;
-    }
-
     static async markJobAsComplete(jobGuid, currentUser)
     {
         const job = await OrderJob.query().where(
@@ -820,6 +789,7 @@ class OrderJobService
         await OrderJob.query().patch({ 'isComplete': true, 'updatedByGuid': currentUser, 'status': 'completed' }).where('guid', jobGuid);
 
         emitter.emit('orderjob_completed', jobGuid);
+        emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: 'completed' } });
 
         return 200;
     }
@@ -832,6 +802,7 @@ class OrderJobService
             }).patch({ 'isComplete': false, 'updatedByGuid': currentUser, 'status': 'delivered' }).first();
 
         emitter.emit('orderjob_uncompleted', jobGuid);
+        emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: 'delivered' } });
 
         return 200;
     }
@@ -892,6 +863,9 @@ class OrderJobService
                 .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
 
             await trx.commit();
+
+            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: 'on hold' } });
+
             return res;
         }
         catch (e)
@@ -920,6 +894,7 @@ class OrderJobService
             }
             const job = queryRes.jobs[0];
             let res;
+
             if (job.isOnHold)
             {
                 // removing the hold before checking if the job is not on hold so that it
@@ -954,6 +929,7 @@ class OrderJobService
                 userGuid: currentUser,
                 statusId: 16
             });
+
             return res;
         }
         catch (e)
@@ -1159,13 +1135,14 @@ class OrderJobService
         }
     }
 
-    static updateStatusField(jobGuid)
+    static recalcJobStatus(jobGuid)
     {
         if (!regex.test(jobGuid))
             throw new HttpError(400, 'Not a Job UUID');
 
         return knex.raw(`
             SELECT
+                oj.status as current_status,
                 oj.is_on_hold,
                 oj.is_complete,
                 oj.is_deleted,
@@ -1188,63 +1165,94 @@ class OrderJobService
         `).then((response) =>
         {
             const statusArray = response.rows[0];
+
+            if (!statusArray)
+                throw new HttpError(400, 'Job does not exist');
+
+            const p = { currentStatus: statusArray.current_status };
+
             if (statusArray.is_on_hold)
             {
-                return 'onhold';
+                p.expectedStatus = 'onhold';
             }
             else if (statusArray.is_complete)
             {
-                return 'complete';
+                p.expectedStatus = 'complete';
             }
             else if (statusArray.is_deleted)
             {
-                return 'deleted';
+                p.expectedStatus = 'deleted';
             }
             else if (statusArray.is_canceled)
             {
-                return 'canceled';
+                p.expectedStatus = 'canceled';
             }
             else if (statusArray.is_pickedup)
             {
-                return 'pickup';
+                p.expectedStatus = 'pickup';
             }
             else if (statusArray.is_delivered)
             {
-                return 'delivered';
+                p.expectedStatus = 'delivered';
             }
             else if (statusArray.is_posted)
             {
-                return 'posted';
+                p.expectedStatus = 'posted';
             }
             else if (statusArray.has_requests)
             {
-                return 'posted';
+                p.expectedStatus = 'posted';
             }
             else if (statusArray.is_pending)
             {
-                return 'pending';
+                p.expectedStatus = 'pending';
             }
             else if (statusArray.is_declined)
             {
-                return 'declined';
+                p.expectedStatus = 'declined';
             }
             else if (statusArray.is_dispatched)
             {
-                return 'dispatched';
+                p.expectedStatus = 'dispatched';
             }
             else if (statusArray.is_ready)
             {
-                return 'ready';
+                p.expectedStatus = 'ready';
             }
             else if (statusArray.is_tender)
             {
-                return 'tender';
+                p.expectedStatus = 'tender';
             }
             else
             {
-                return 'new';
+                p.expectedStatus = 'new';
             }
+
+            return p;
+
         }).catch((error) => console.log(error));
+    }
+
+    static async updateStatusField(jobGuid, currentUser = SYSUSER)
+    {
+        // recalcuate
+        const state = await OrderJobService.recalcJobStatus(jobGuid);
+
+        // only do updates when status is different
+        if (state.currentStatus === state.expectedStatus)
+            return state.currentStatus;
+        else
+        {
+            const job = await OrderJob.query()
+                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser }))
+                .findById(jobGuid)
+                .returning('status');
+
+            // emit event
+            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: job.status } });
+
+            return job.status;
+        }
     }
 }
 

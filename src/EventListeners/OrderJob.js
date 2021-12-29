@@ -1,14 +1,15 @@
 const OrderJobService = require('../Services/OrderJobService');
+const PubSubService = require('../Services/PubSubService');
 const OrderService = require('../Services/OrderService');
 const listener = require('./index');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
-listener.on('orderjob_stop_update', (jobGuid) =>
+listener.on('orderjob_stop_update', (jobGuid, currentUser) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderJobService.markAsDeliveredOrPickedUp(jobGuid)]);
+        const proms = await Promise.allSettled([OrderJobService.updateStatusField(jobGuid, currentUser)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -93,6 +94,18 @@ listener.on('orderjob_picked_up', ({ jobGuid, dispatcherGuid = SYSUSER, orderGui
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([OrderService.markAsPickedUp(orderGuid, dispatcherGuid)]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([(PubSubService.jobUpdated(jobGuid, { currentUser, status: state.status }))]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')

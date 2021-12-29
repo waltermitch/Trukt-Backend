@@ -16,7 +16,7 @@ class OrderStopService
      * @param {string} param1.date - date value for updating stop status
      * @returns {Object} Stop - modified stop.
      */
-    static async updateStopStatus({ jobGuid, stopGuid, status }, { commodities, date })
+    static async updateStopStatus({ jobGuid, stopGuid, status }, { commodities, date }, currentUser)
     {
         // combining commodities for hstore string
         const hstoreValue = commodities.map((value) => { return `${value} => 1`; });
@@ -101,7 +101,6 @@ class OrderStopService
         // Throw error when clearing pickup location if delivery is completed
         if (date == null && illegalPickUp.rows[0] != undefined)
         {
-
             throw new HttpError(400, `Pickup/Delivery stop ${illegalPickUp.rows[0].stop_guid} cannot clear status ${status} because the commodity '${illegalPickUp.rows[0].commodity_guid}' is marked as delivered`);
         }
 
@@ -117,31 +116,33 @@ class OrderStopService
             // stopLink query builder
             const StopLinksQuery = OrderStopLinks.query(trx);
 
+            const stopLinksUpdate = { 'updatedByGuid': currentUser };
+
             // updating or clearing job stop links depending on status
             if (status === 'started' && date == null)
-                StopLinksQuery.patch({ 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
+                Object.assign(stopLinksUpdate, { 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
             else if (status === 'started' && date != null)
-                StopLinksQuery.patch({ 'isStarted': true, 'dateStarted': date });
+                Object.assign(stopLinksUpdate, { 'isStarted': true, 'dateStarted': date });
             else if (status === 'completed' && date == null)
-                StopLinksQuery.patch({ 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
+                Object.assign(stopLinksUpdate, { 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
             else if (status === 'completed' && date != null)
-                StopLinksQuery.patch({ 'isStarted': true, 'dateStarted': date, 'isCompleted': true, 'dateCompleted': date });
+                Object.assign(stopLinksUpdate, { 'isStarted': true, 'dateStarted': date, 'isCompleted': true, 'dateCompleted': date });
 
             // updating job stop link
-            await StopLinksQuery.modify('jobStop', jobGuid, stopGuid).whereIn('commodityGuid', commodities);
+            await StopLinksQuery.modify('jobStop', jobGuid, stopGuid).whereIn('commodityGuid', commodities).patch(stopLinksUpdate);
 
             // validate order stop links and stop that has been updated
-            await OrderStopService.validatestopLinksandStop([stopGuid], jobGuid, commodities, trx);
+            await OrderStopService.validatestopLinksandStop([stopGuid], jobGuid, commodities, trx, currentUser);
 
             // TODO: make it an event
             // update all commodities to pick up or delivered
-            await OrderStopService.updateCommoditiesStatus(orderGuid, commodities, trx);
+            await OrderStopService.updateCommoditiesStatus(orderGuid, commodities, trx, currentUser);
 
             // commit transaction
             await trx.commit();
 
             // we emit event that stop has been updated
-            emitter.emit('orderjob_stop_update', jobGuid, jobStop, stopGuid);
+            emitter.emit('orderjob_stop_update', jobGuid, currentUser, jobStop, stopGuid);
         }
         catch (error)
         {
@@ -164,7 +165,7 @@ class OrderStopService
      * @param {Object} trx - transaction object.
      * @returns
      */
-    static async validatestopLinksandStop(stopGuids, jobGuid, commodities, trx)
+    static async validatestopLinksandStop(stopGuids, jobGuid, commodities, trx, currentUser)
     {
         // array to hold multiple executions
         const promiseArrays = [];
@@ -173,7 +174,10 @@ class OrderStopService
         for (const stopGuid of stopGuids)
         {
             // connect all the update stings into one string
-            const updateQuery = OrderStopService.updateOrderStopLinks(stopGuid, jobGuid, commodities) + OrderStopService.updateOrderStop(stopGuid) + OrderStopService.updateStopStatusField(stopGuid);
+            const updateQuery =
+                OrderStopService.updateOrderStopLinks(stopGuid, jobGuid, commodities, currentUser)
+                + OrderStopService.updateOrderStop(stopGuid, currentUser)
+                + OrderStopService.updateStopStatusField(stopGuid, currentUser);
 
             // push knex raw with transaction into the array
             promiseArrays.push(knex.raw(updateQuery).transacting(trx));
@@ -198,11 +202,13 @@ class OrderStopService
      * @returns {String} QueryString
      */
 
-    static updateOrderStopLinks(stopGuid, jobGuid, commodities)
+    static updateOrderStopLinks(stopGuid, jobGuid, commodities, currentUser)
     {
         return `
         UPDATE rcg_tms.order_stop_links AS link
-            SET is_started = (
+            SET 
+            updated_by_guid = '${currentUser}',
+            is_started = (
             						SELECT 
             						CASE WHEN count(*) >= 1 then
             							cast ( 1 AS BOOLEAN)
@@ -254,11 +260,13 @@ class OrderStopService
      * @param {uuid} stopGuid - uuid of the stop
      * @returns {String} QueryString
      */
-    static updateOrderStop(stopGuid)
+    static updateOrderStop(stopGuid, currentUser)
     {
         return `
         UPDATE rcg_tms.order_stops as stop 
-            SET is_started = (
+            SET
+            updated_by_guid = '${currentUser}',
+            is_started = (
             						SELECT 
             						CASE WHEN count(*) >= 1 then
             							cast ( 1 AS BOOLEAN)
@@ -301,11 +309,12 @@ class OrderStopService
      * @param {uuid} stopGuid
      * @returns {String} QueryString
      */
-    static updateStopStatusField(stopGuid)
+    static updateStopStatusField(stopGuid, currentUser)
     {
         return `
             UPDATE rcg_tms.order_stops as stop
             SET
+                updated_by_guid = '${currentUser}',
             	status = CASE 
             				WHEN is_started = false AND is_completed = false then NULL
             				WHEN stop_type = 'pickup' AND is_started = true AND is_completed = true THEN 'picked up'
@@ -328,11 +337,13 @@ class OrderStopService
      * @param {[uuid]} commodities - list of commodity guid's
      * @param {Object} trx - transaction that will be passed in
      */
-    static async updateCommoditiesStatus(orderGuid, commodities, trx)
+    static async updateCommoditiesStatus(orderGuid, commodities, trx, currentUser)
     {
         await knex.raw(`
         UPDATE rcg_tms.commodities
-            SET delivery_status =
+            SET
+            updated_by_guid = '${currentUser}', 
+            delivery_status =
                 CASE
                     WHEN completed = count THEN 'delivered'::rcg_tms.delivery_status_types
                     WHEN completed != count AND started > 0 THEN 'picked up'::rcg_tms.delivery_status_types

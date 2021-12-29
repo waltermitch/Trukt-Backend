@@ -75,12 +75,6 @@ const myMessageHandler = async (message) =>
                 if (!status)
                     throw error;
 
-                // updating the job status field
-                await OrderJob.query()
-                    .patch(OrderJob.fromJson({ status }))
-                    .findById(jobGuid)
-                    .returning('status');
-
                 // publishing status and post to posting group
                 await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts, status } });
             }

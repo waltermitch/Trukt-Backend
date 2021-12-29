@@ -20,7 +20,7 @@ class OrderJobController
     {
         try
         {
-            const result = await OrderStopService.updateStopStatus(req.params, req.body);
+            const result = await OrderStopService.updateStopStatus(req.params, req.body, req.session.userGuid);
             if (result)
             {
                 res.status(200).json(result);
