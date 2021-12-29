@@ -382,7 +382,7 @@ class ShipCars extends Loadboard
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
-                        vendorAgentName: vendor.vendorAgentName,
+                        vendorAgentName: vendor.agentName,
                         code: 'pending'
                     }
                 });
@@ -396,7 +396,7 @@ class ShipCars extends Loadboard
         }
         catch (e)
         {
-            trx.rollback();
+            await trx.rollback();
             throw new Error(e.message);
         }
     }
