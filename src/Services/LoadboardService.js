@@ -405,57 +405,63 @@ class LoadboardService
                 // send message to bus que to unpost order
                 await sender.sendMessages({ body: message });
             }
+            else
+            {
+                // setting disptch to canceled status
+                dispatch.setToCanceled(currentUser);
 
-            // setting disptch to canceled status
-            dispatch.setToCanceled(currentUser);
+                // updating dispatch object to canceled
+                await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
 
-            // updating dispatch object to canceled
-            await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
+                // setting all stop related to job to null
+                await OrderStop.query(trx)
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: currentUser })
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid')
+                            .where({ 'jobGuid': jobGuid })
+                            .distinctOn('stopGuid')
+                    );
 
-            // setting all stop related to job to null
-            await OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: currentUser })
-                .whereIn('guid',
-                    OrderStopLink.query().select('stopGuid')
-                        .where({ 'jobGuid': jobGuid })
-                        .distinctOn('stopGuid')
-                );
+                // creating new job object with no vedor because we are removing them.
+                const job = Job.fromJson({
+                    vendorGuid: null,
+                    vendorAgentGuid: null,
+                    vendorContact: null,
+                    dateStarted: null,
+                    status: 'ready'
+                });
 
-            // creating new job object with no vedor because we are removing them.
-            const job = Job.fromJson({
-                vendorGuid: null,
-                vendorAgentGuid: null,
-                vendorContact: null,
-                dateStarted: null,
-                status: 'ready'
-            });
+                job.setUpdatedBy(currentUser);
 
-            job.setUpdatedBy(currentUser);
+                // updating orderJob with new fields
+                await Job.query(trx).patch(job).findById(dispatch.jobGuid);
 
-            // updating orderJob with new fields
-            await Job.query(trx).patch(job).findById(dispatch.jobGuid);
-
-            // returning ready status if sucessfull
-            dispatch.jobStatus = 'ready';
+                // returning ready status if sucessfull
+                dispatch.jobStatus = 'ready';
+            }
 
             // commiting transaction
             await trx.commit();
 
-            // updating activity logger
-            await StatusManagerHandler.registerStatus({
-                orderGuid: dispatch.job.orderGuid,
-                userGuid: currentUser,
-                statusId: 12,
-                jobGuid,
-                extraAnnotations: {
-                    undispatchedFrom: 'internal',
-                    code: 'ready',
-                    vendorGuid: dispatch.vendor.guid,
-                    vendorAgentGuid: dispatch.vendorAgentGuid,
-                    vendorName: dispatch.vendor.name,
-                    vendorAgentName: dispatch.vendorAgent.name
-                }
-            });
+            // due to the nature of the code, we have to write redundant code to handle edge cases xD
+            if (!dispatch.loadboardPostGuid)
+            {
+                // updating activity logger
+                await StatusManagerHandler.registerStatus({
+                    orderGuid: dispatch.job.orderGuid,
+                    userGuid: currentUser,
+                    statusId: 12,
+                    jobGuid,
+                    extraAnnotations: {
+                        undispatchedFrom: 'internal',
+                        code: 'ready',
+                        vendorGuid: dispatch.vendor.guid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: dispatch.vendor.name,
+                        vendorAgentName: dispatch.vendorAgent.name
+                    }
+                });
+            }
 
             return dispatch;
         }
