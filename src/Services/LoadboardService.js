@@ -308,6 +308,16 @@ class LoadboardService
             // compose response that can be useful for client
             dispatch.vendor = carrier;
             dispatch.vendorAgent = carrierContact;
+            dispatch.pickup = {
+                dateScheduledType: job.pickup.dateScheduledType,
+                dateScheduledStart: job.pickup.dateScheduledStart,
+                dateScheduledEnd: job.pickup.dateScheduledEnd
+            };
+            dispatch.delivery = {
+                dateScheduledType: job.delivery.dateScheduledType,
+                dateScheduledStart: job.delivery.dateScheduledStart,
+                dateScheduledEnd: job.delivery.dateScheduledEnd
+            };
 
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
