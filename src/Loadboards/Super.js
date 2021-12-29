@@ -624,9 +624,9 @@ class Super extends Loadboard
             allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid));
 
             const vendor = await SFAccount.query(trx)
-                .findById(dispatch.vendor.guid)
+                .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                 .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
-                .where({ 'salesforce.contacts.guid': dispatch.vendorAgent.guid })
+                .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                 .select('salesforce.accounts.name as vendorName',
                     'salesforce.accounts.guid as vendorGuid',
                     'salesforce.contacts.guid as agentGuid',
