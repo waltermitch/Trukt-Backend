@@ -1173,7 +1173,7 @@ class OrderJobService
 
             if (statusArray.is_on_hold)
             {
-                p.expectedStatus = 'onhold';
+                p.expectedStatus = 'on hold';
             }
             else if (statusArray.is_complete)
             {
@@ -1189,7 +1189,7 @@ class OrderJobService
             }
             else if (statusArray.is_pickedup)
             {
-                p.expectedStatus = 'pickup';
+                p.expectedStatus = 'picked up';
             }
             else if (statusArray.is_delivered)
             {
