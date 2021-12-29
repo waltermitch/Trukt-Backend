@@ -251,53 +251,66 @@ class Loadboard
 
     static async handleStatusUpdate(payloadMetadata, response)
     {
-        // get all the stops for the completed stop type coming in from
-        // the webhook response
-        const stops = await OrderStop.query()
-            .select('orderStops.*', 'links.jobGuid')
-            .leftJoinRelated('commodities')
-            .leftJoinRelated('links')
-            .leftJoin('rcgTms.loadboardPosts', 'links.jobGuid', 'rcgTms.loadboardPosts.jobGuid')
-            .where({ 'rcgTms.loadboardPosts.externalGuid': payloadMetadata.externalGuid, stopType: response.stopType })
-            .withGraphFetched('[commodities]').distinctOn('guid')
-            .modifyGraph('commodities', builder => builder.select('guid').distinctOn('guid'));
-
-        const promises = [];
-        for (const stop of stops)
+        const trx = await OrderStop.startTransaction();
+        try
         {
-            const params = {
-                jobGuid: stop.jobGuid,
-                stopGuid: stop.guid,
-                status: 'completed'
-            };
-            const body = {
-                commodities: stop.commodities.map(com => com.guid),
-                date: response.completedAtTime
-            };
+            // get all the stops for the completed stop type coming in from
+            // the webhook response
+            const stops = await OrderStop.query(trx)
+                .select('orderStops.*', 'links.jobGuid')
+                .leftJoinRelated('commodities')
+                .leftJoinRelated('links')
+                .leftJoin('rcgTms.loadboardPosts', 'links.jobGuid', 'rcgTms.loadboardPosts.jobGuid')
+                .where({ 'rcgTms.loadboardPosts.externalGuid': payloadMetadata.externalGuid, stopType: response.stopType })
+                .withGraphFetched('[commodities]').distinctOn('guid')
+                .modifyGraph('commodities', builder => builder.select('guid').distinctOn('guid'));
 
-            promises.push({ func: OrderStopService.updateStopStatus, params, body });
+            const promises = [];
+            for (const stop of stops)
+            {
+                const params = {
+                    jobGuid: stop.jobGuid,
+                    stopGuid: stop.guid,
+                    status: 'completed'
+                };
+                const body = {
+                    commodities: stop.commodities.map(com => com.guid),
+                    date: response.completedAtTime
+                };
+
+                promises.push({ func: OrderStopService.updateStopStatus, params, body });
+            }
+
+            const attachments = [];
+            for (const attachment of response.attachments)
+            {
+                attachments.push(Attachment.fromJson({
+                    guid: uuid.v4(),
+                    type: 'billOfLading',
+                    url: attachment.attachmentUrl,
+                    extension: 'application/pdf',
+                    name: attachment.attachmentName,
+                    parent: stops[0].jobGuid,
+                    parent_table: 'jobs',
+                    visibility: '{internal}',
+                    createdByGuid: process.env.SYSTEM_USER
+                }));
+            }
+
+            if (attachments.length > 0)
+                await Attachment.query(trx).insert(attachments);
+
+            // why are promises being executed this way? Because of Javascript
+            // https://rcglogistics.atlassian.net/wiki/spaces/DTT/pages/1431175315/How-to+JS
+            await Promise.allSettled(promises.map(async prom => prom.func(prom.params, prom.body)));
+
+            await trx.commit();
         }
-
-        const attachments = [];
-        for (const attachment of response.attachments)
+        catch (error)
         {
-            attachments.push(Attachment.fromJson({
-                guid: uuid.v4(),
-                type: 'billOfLading',
-                url: attachment.attachmentUrl,
-                extension: 'application/pdf',
-                name: attachment.attachmentName,
-                parent: stops[0].jobGuid,
-                parent_table: 'jobs',
-                visibility: '{internal}',
-                createdByGuid: process.env.SYSTEM_USER
-            }));
+            await trx.rollback();
+            throw error;
         }
-
-        if(attachments.length > 0)
-            await Attachment.query().insert(attachments);
-        
-        await Promise.all(promises.map(async prom => prom.func(prom.params, prom.body)));
     }
 }
 
