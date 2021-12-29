@@ -753,6 +753,42 @@ class OrderJobService
         return res;
     }
 
+    static async markAsDeliveredOrPickedUp(jobGuid, currentUser = SYSUSER)
+    {
+        // we are not accounting for the case where delivered is true, true but picked_up is false, false. (in respect to is_complete and is_started)
+        const q = `UPDATE rcg_tms.order_jobs
+                    SET 
+                    updated_by_guid = '${currentUser}',
+                    is_ready = true,
+                    is_canceled = false,
+                    is_on_hold = false,
+                    is_deleted = false,
+                    status =
+                        CASE
+                            WHEN stops.is_completed = stops.count AND stops.is_started = stops.count THEN 'delivered'
+                            WHEN stops.is_started > 0 AND stops.is_completed != stops.count THEN 'picked up'
+                            ELSE status
+                        END
+                    FROM
+                        (SELECT count(*),
+                        SUM(case when stops.is_completed = true then 1 else 0 end) AS is_completed,
+                        SUM(case when stops.is_started = true then 1 else 0 end) AS is_started
+                        FROM rcg_tms.order_stops stops 
+                        INNER JOIN
+                            (SELECT distinct links.stop_guid, links.job_guid
+                             FROM rcg_tms.order_stop_links links 
+                             WHERE links.job_guid = '${jobGuid}') AS links
+                        ON stops.guid = links.stop_guid) AS stops
+                    WHERE guid = '${jobGuid}' RETURNING status, order_guid`;
+
+        const { rows: [{ status, order_guid: orderGuid }] } = await knex.raw(q);
+
+        status === 'delivered' ? emitter.emit('orderjob_delivered', { jobGuid, dispatcherGuid: currentUser, orderGuid }) : null;
+        status === 'picked up' ? emitter.emit('orderjob_picked_up', { jobGuid, dispatcherGuid: currentUser, orderGuid }) : null;
+
+        return status;
+    }
+
     static async markJobAsComplete(jobGuid, currentUser)
     {
         const job = await OrderJob.query().where(
@@ -1088,7 +1124,7 @@ class OrderJobService
 
         const [job, jobIsDispatched] = await Promise.all(jobStatus);
         if (!job)
-            throw new HttpError(400, 'Job does not exist');
+            throw new HttpError(404, 'Job does not exist');
 
         if (job?.isDeleted)
             throw new HttpError(400, 'This Order is deleted and can not be canceled.');
@@ -1249,6 +1285,74 @@ class OrderJobService
 
             return job.status;
         }
+    }
+
+    static async deliverJob(jobGuid, userGuid)
+    {
+        await OrderJobService.checkJobToDeliver(jobGuid);
+        const jobStatus = await OrderJobService.markAsDeliveredOrPickedUp(jobGuid, userGuid);
+
+        if (jobStatus === 'delivered')
+            return { status: 204 };
+
+        throw new HttpError(400, 'Job Could Not Be Mark as Delivered, Please Check All Stops Are Delivered');
+    }
+
+    static async checkJobToDeliver(jobGuid)
+    {
+        const job = await OrderJob.query()
+            .select('orderGuid', 'isTransport', 'vendorGuid', 'status')
+            .findById(jobGuid)
+            .withGraphFetched('commodities.[vehicle]');
+
+        if (!job)
+            throw new HttpError(404, 'Job does not exist');
+        if (job?.isDeleted)
+            throw new HttpError(400, 'Job Is Deleted And Can Not Be Mark As Delivered.');
+        if (job?.isCanceled)
+            throw new HttpError(400, 'Job Is Canceled And Can Not Be Mark As Delivered.');
+        if (!job.vendorGuid)
+            throw new HttpError(400, 'Job Has No Vendor Assigned');
+
+        for (const commodity of job.commodities)
+            if (commodity.deliveryStatus !== 'delivered')
+            {
+                const { make, model, year } = commodity.vehicle;
+                const commodityId = make && model && year ? `${make}-${model}-${year}` : commodity.vehicleId;
+                throw new HttpError(400, `Job's Commodity ${commodityId} Has Not Been Delivered`);
+            }
+
+        return job;
+    }
+
+    static async checkJobToUndeliver(jobGuid)
+    {
+        const job = await OrderJob.query()
+            .select('orderGuid', 'status')
+            .findById(jobGuid);
+
+        if (!job)
+            throw new HttpError(404, 'Job does not exist');
+        if (job?.isDeleted)
+            throw new HttpError(400, 'Job Is Deleted And Can Not Be Mark As Delivered.');
+        if (job?.isCanceled)
+            throw new HttpError(400, 'Job Is Canceled And Can Not Be Mark As Delivered.');
+        if (job.status !== 'delivered' && job.status !== 'picked up')
+            throw new HttpError(400, 'Job Must First Be Delivered');
+
+        return job;
+    }
+
+    // Sets job as pick up
+    static async undeliverJob(jobGuid, userGuid)
+    {
+        await OrderJobService.checkJobToUndeliver(jobGuid);
+        const jobStatus = await OrderJobService.markAsDeliveredOrPickedUp(jobGuid, userGuid);
+
+        if (jobStatus === 'picked up')
+            return { status: 204 };
+
+        throw new HttpError(400, 'Job Could Not Be Mark as Pick Up, Please Check All Stops Are Pick Up');
     }
 }
 

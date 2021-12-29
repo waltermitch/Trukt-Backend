@@ -17,6 +17,8 @@ router
     .delete(`${prefix}/:jobGuid(${uuidRegexStr})`, controller.deleteJob)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/undelete`, controller.undeleteJob)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/cancel`, controller.cancelJob)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/uncancel`, controller.uncancelJob);
+    .put(`${prefix}/:jobGuid(${uuidRegexStr})/uncancel`, controller.uncancelJob)
+    .put(`${prefix}/:jobGuid(${uuidRegexStr})/deliver`, controller.deliveredJob)
+    .put(`${prefix}/:jobGuid(${uuidRegexStr})/undeliver`, controller.undeliverJob);
 
 module.exports = router;

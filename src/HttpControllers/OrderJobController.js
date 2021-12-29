@@ -183,6 +183,32 @@ class OrderJobController
             next(error);
         }
     }
+
+    static async deliveredJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.deliverJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async undeliverJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.undeliverJob(req.params.jobGuid, req.session.userGuid);
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = OrderJobController;

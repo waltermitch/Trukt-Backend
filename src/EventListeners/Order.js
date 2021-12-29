@@ -189,4 +189,30 @@ listener.on('orderjob_ready', (orderGuid) =>
     });
 });
 
+listener.on('order_delivered', ({ orderGuid, userGuid, jobGuid }) =>
+{
+    setImmediate(async () =>
+    {
+        await StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 28
+        });
+    });
+});
+
+listener.on('order_undelivered', ({ orderGuid, userGuid, jobGuid }) =>
+{
+    setImmediate(async () =>
+    {
+        await StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 30
+        });
+    });
+});
+
 module.exports = listener;
