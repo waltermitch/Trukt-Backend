@@ -1,11 +1,11 @@
-const LoadboardPost = require('../Models/LoadboardPost');
-const OrderStop = require('../Models/OrderStop');
-const DateTime = require('luxon').DateTime;
-const states = require('us-state-codes');
-const R = require('ramda');
 const OrderStopService = require('../Services/OrderStopService');
+const LoadboardPost = require('../Models/LoadboardPost');
 const Attachment = require('../Models/Attachment');
+const OrderStop = require('../Models/OrderStop');
+const states = require('us-state-codes');
+const { DateTime } = require('luxon');
 const uuid = require('uuid');
+const R = require('ramda');
 
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
 
@@ -300,9 +300,7 @@ class Loadboard
             if (attachments.length > 0)
                 await Attachment.query(trx).insert(attachments);
 
-            // why are promises being executed this way? Because of Javascript
-            // https://rcglogistics.atlassian.net/wiki/spaces/DTT/pages/1431175315/How-to+JS
-            await Promise.allSettled(promises.map(async prom => prom.func(prom.params, prom.body)));
+            await Promise.all(promises.map(async (prom) => await prom.func(prom.params, prom.body)));
 
             await trx.commit();
         }
