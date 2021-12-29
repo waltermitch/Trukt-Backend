@@ -119,9 +119,9 @@ listener.on('orderjob_booked', ({ jobGuid, currentUser }) =>
     {
         const proms = await Promise.allSettled([(OrderJobService.updateStatusField(jobGuid, currentUser))]);
 
-        for (const p of proms)
-            if (p.status === 'rejected')
-                console.log(p.reason?.response?.data || p.reason);
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
     });
 });
 
