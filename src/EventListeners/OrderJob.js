@@ -113,4 +113,16 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
     });
 });
 
+listener.on('orderjob_booked', ({ jobGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([(OrderJobService.updateStatusField(jobGuid, currentUser))]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
 module.exports = listener;

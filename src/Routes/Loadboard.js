@@ -11,6 +11,7 @@ router
     .delete(`${prefix}/:jobId(${uuidRegexStr})`, controller.constructor.unpostJob)
     .post(`${prefix}/:jobId(${uuidRegexStr})/dispatch`, controller.constructor.dispatchJob)
     .put(`${prefix}/:jobId(${uuidRegexStr})/dispatch`, controller.constructor.cancelDispatch)
-    .put(`${prefix}/:jobId(${uuidRegexStr})/accept`, controller.constructor.acceptDispatch);
+    .put(`${prefix}/:jobId(${uuidRegexStr})/accept`, controller.constructor.acceptDispatch)
+    .post(`${prefix}/posting/booked`, controller.constructor.postingBooked);
 
 module.exports = router;

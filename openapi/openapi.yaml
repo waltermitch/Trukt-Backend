@@ -240,6 +240,9 @@ paths:
   /loadboard/requests/{requestGuid}/decline:
     put:
       $ref: paths/loadboard/requests/decline.yaml
+  /loadboard/posting/booked:
+    post:
+      $ref: paths/loadboard/dispatch/booked.yaml
   /note/{object}/{objectGuid}:
     post:
       $ref: paths/notes/post.yaml

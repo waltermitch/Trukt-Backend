@@ -1,0 +1,43 @@
+summary: Loadboard Booked By Carrier
+operationId: postingBooked
+description: This is called by a webhook, when a "pre-approved" carrier self-assigns a job posting.
+tags:
+  - Loadboard
+# the required fields are carrierSFId, externalPostingGuid, and loadboard
+requestBody:
+  content:
+    application/json:
+      schema:
+        properties:
+          carrierSFId:
+            type: string
+          carrierExternalId:
+            type: string
+          externalPostingGuid:
+            type: string
+          loadboard:
+            type: string
+        required:
+          - externalPostingGuid
+          - loadboard
+responses:
+  200:
+    description: Booked Successfully
+    content:
+      application/json: {}
+  404:
+    description: Posting Not Found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            status:
+              type: number
+              example: 404
+            data:
+              type: object
+              properties:
+                detail:
+                  type: string
+                  example: Not Found
