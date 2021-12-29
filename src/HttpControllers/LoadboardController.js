@@ -147,7 +147,6 @@ class LoadboardController
     {
         try
         {
-
             const carrierGuid = req.body?.carrierSFId || req.body?.carrierExternalId;
 
             // do some validation
