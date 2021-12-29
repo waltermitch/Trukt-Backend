@@ -3223,10 +3223,12 @@ class OrderService
         else if (order.status !== 'picked up')
             throw new HttpError(400, 'Order Must First Be Picked Up');
 
-        // make sure vendor is assigned to all transport jobs
+        // make sure vendor is assigned to all transport jobs and all jobs are delivered
         for (const job of order.jobs)
-            if (job.isTransport && !job.vendorGuid)
+            if ((job.isTransport && !job.vendorGuid))
                 throw new HttpError(400, `Order's Job ${job.number} Has No Vendor Assigned`);
+            else if (job.status !== 'delivered')
+                throw new HttpError(400, `Order's Job ${job.number} Is Not Delivered`);
 
         // make sure all commodities are marked as delivered
         for (const commodity of order.commodities)
@@ -3234,18 +3236,10 @@ class OrderService
                 throw new HttpError(400, `Order's Commodity ${commodity.vehicle.name} Has Not Been Delivered`);
 
         // if we got here mark all jobs delivered and the order delivered
-        await Promise.all(
-            [
-                ...order.jobs.map(async (job) =>
-                {
-                    OrderJobService.markAsDeliveredOrPickedUp(job.guid, currentUser);
-                }),
-                Order.query().patch({
-                    'status': 'delivered',
-                    'updatedByGuid': currentUser
-                }).where('guid', order.guid)
-            ]
-        );
+        Order.query().patch({
+            'status': 'delivered',
+            'updatedByGuid': currentUser
+        }).where('guid', order.guid);
 
         emitter.emit('order_delivered', orderGuid);
 
