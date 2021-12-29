@@ -860,9 +860,17 @@ class OrderJobService
 
             const res = await OrderJob.query(trx)
                 .patch({ status: 'on hold', isOnHold: true, isReady: false, updatedByGuid: currentUser })
-                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady', 'orderGuid');
 
             await trx.commit();
+
+            // updated activity for on hold
+            await StatusManagerHandler.registerStatus({
+                orderGuid: res.orderGuid,
+                jobGuid: job.guid,
+                userGuid: currentUser,
+                statusId: 22
+            });
 
             emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: 'on hold' } });
 
@@ -982,7 +990,15 @@ class OrderJobService
             // commiting transactions
             await trx.commit();
 
-            // emitting event to update status manager
+            // Register job deleted
+            await StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                jobGuid: jobGuid,
+                userGuid: userGuid,
+                statusId: 17
+            });
+
+            // emitting event to update status manager 17
             emitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
 
             return { status: 200 };
@@ -1023,7 +1039,15 @@ class OrderJobService
             // commiting transaction
             await trx.commit();
 
-            // emit the event to register with status manager
+            // Register job undeleted first
+            await StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                jobGuid: jobGuid,
+                userGuid: userGuid,
+                statusId: 18
+            });
+
+            // emit the event to register with status manager Will randomly update ORDER TO DELETED INCORRECT
             emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
 
             return { status: 200 };
@@ -1064,6 +1088,13 @@ class OrderJobService
             ]);
 
             await trx.commit();
+
+            await StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                jobGuid: jobGuid,
+                userGuid: userGuid,
+                statusId: 23
+            });
 
             // setting off an event to update status manager
             emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
@@ -1122,6 +1153,13 @@ class OrderJobService
 
             // commiting transaction
             await trx.commit();
+
+            await StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                jobGuid: jobGuid,
+                userGuid: userGuid,
+                statusId: 24
+            });
 
             // emitting event for update statys manager
             emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
@@ -1187,13 +1225,13 @@ class OrderJobService
             {
                 p.expectedStatus = 'canceled';
             }
-            else if (statusArray.is_pickedup)
-            {
-                p.expectedStatus = 'picked up';
-            }
             else if (statusArray.is_delivered)
             {
                 p.expectedStatus = 'delivered';
+            }
+            else if (statusArray.is_pickedup)
+            {
+                p.expectedStatus = 'picked up';
             }
             else if (statusArray.is_posted)
             {
