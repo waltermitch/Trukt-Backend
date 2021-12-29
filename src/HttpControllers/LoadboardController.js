@@ -1,3 +1,4 @@
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LoadboardService = require('../Services/LoadboardService');
 
 // this is imported here because the file needs to be imported somewhere
@@ -135,6 +136,31 @@ class LoadboardController
             const response = await LoadboardService.acceptDispatch(req.params.jobId, req.session.userGuid);
             res.json(response);
             res.status(200);
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async postingBooked(req, res, next)
+    {
+        try
+        {
+
+            const carrierGuid = req.body?.carrierSFId || req.body?.carrierExternalId;
+
+            // do some validation
+            if (!req.body.externalPostingGuid)
+                throw new HttpError(400, 'Missing external posting guid');
+            else if (!req.body.loadboard)
+                throw new HttpError(400, 'Missing loadboard name');
+            else if (!carrierGuid)
+                throw new HttpError(400, 'Carrier External Id or SF Id is missing');
+
+            await LoadboardService.postingBooked(req.body.externalPostingGuid, carrierGuid, req.body.loadboard);
+
+            res.status(200).send();
         }
         catch (err)
         {
