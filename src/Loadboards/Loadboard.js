@@ -1,6 +1,10 @@
+const OrderStopService = require('../Services/OrderStopService');
 const LoadboardPost = require('../Models/LoadboardPost');
-const DateTime = require('luxon').DateTime;
+const Attachment = require('../Models/Attachment');
+const OrderStop = require('../Models/OrderStop');
 const states = require('us-state-codes');
+const { DateTime } = require('luxon');
+const uuid = require('uuid');
 const R = require('ramda');
 
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
@@ -243,6 +247,68 @@ class Loadboard
 
         await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
         return;
+    }
+
+    static async handleStatusUpdate(payloadMetadata, response)
+    {
+        const trx = await OrderStop.startTransaction();
+        try
+        {
+            // get all the stops for the completed stop type coming in from
+            // the webhook response
+            const stops = await OrderStop.query(trx)
+                .select('orderStops.*', 'links.jobGuid')
+                .leftJoinRelated('commodities')
+                .leftJoinRelated('links')
+                .leftJoin('rcgTms.loadboardPosts', 'links.jobGuid', 'rcgTms.loadboardPosts.jobGuid')
+                .where({ 'rcgTms.loadboardPosts.externalGuid': payloadMetadata.externalGuid, stopType: response.stopType })
+                .withGraphFetched('[commodities]').distinctOn('guid')
+                .modifyGraph('commodities', builder => builder.select('guid').distinctOn('guid'));
+
+            const promises = [];
+            for (const stop of stops)
+            {
+                const params = {
+                    jobGuid: stop.jobGuid,
+                    stopGuid: stop.guid,
+                    status: 'completed'
+                };
+                const body = {
+                    commodities: stop.commodities.map(com => com.guid),
+                    date: response.completedAtTime
+                };
+
+                promises.push({ func: OrderStopService.updateStopStatus, params, body });
+            }
+
+            const attachments = [];
+            for (const attachment of response.attachments)
+            {
+                attachments.push(Attachment.fromJson({
+                    guid: uuid.v4(),
+                    type: 'billOfLading',
+                    url: attachment.attachmentUrl,
+                    extension: 'application/pdf',
+                    name: attachment.attachmentName,
+                    parent: stops[0].jobGuid,
+                    parent_table: 'jobs',
+                    visibility: '{internal}',
+                    createdByGuid: process.env.SYSTEM_USER
+                }));
+            }
+
+            if (attachments.length > 0)
+                await Attachment.query(trx).insert(attachments);
+
+            await Promise.all(promises.map(async (prom) => await prom.func(prom.params, prom.body)));
+
+            await trx.commit();
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
     }
 }
 

@@ -93,7 +93,7 @@ listener.on('orderjob_picked_up', ({ jobGuid, dispatcherGuid = SYSUSER, orderGui
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markAsPickedUp(orderGuid, dispatcherGuid)]);
+        // const proms = await Promise.allSettled([OrderService.markAsPickedUp(orderGuid, dispatcherGuid)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
