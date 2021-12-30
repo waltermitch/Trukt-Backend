@@ -104,7 +104,7 @@ const myMessageHandler = async (message) =>
                 const job = (await OrderJobDispatch.query()
                     .leftJoinRelated('job')
                     .select(
-                        'job.guid',
+                        'job.guid as jobGuid',
                         'job.status'
                     ).where({ 'jobGuid': jobGuid })
                     .andWhere(builder =>
@@ -132,7 +132,7 @@ const myMessageHandler = async (message) =>
                     job.delivery = { datedScheduledType: null, dateScheduledStart: null, dateScheduledEnd: null };
                 }
 
-                await pubsub.publishToGroup(jobGuid, { object: 'undispatch', data: { job } });
+                await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
             }
             else
             {
