@@ -1,0 +1,29 @@
+summary: Deliver job
+operationId: deliverJob
+description: Marks a Job as Deliver
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+responses:
+  204:
+    description: Job Marked Succesfully
+    content:
+      application/json: {}
+  404:
+    description: Job does not exist
+    content:
+      application/json:
+        schema:
+          type: string
+          example: Job does not exist
+  400: 
+    description: Job Can Not Be Mark as Delivered
+    content:
+        application/json:
+          schema:
+            type: string

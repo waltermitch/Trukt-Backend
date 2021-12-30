@@ -158,6 +158,30 @@
             "category": "Order",
             "name": "Order Uncanceled",
             "order_filter_label": "Order Uncanceled On"
+        },
+        {
+            "id": 27,
+            "category": "job",
+            "name": "Job Delivered",
+            "order_filter_label": "Job Delivered On"
+        },
+        {
+            "id": 28,
+            "category": "Order",
+            "name": "Order Delivered",
+            "order_filter_label": "Order Delivered On"
+        },
+        {
+            "id": 29,
+            "category": "job",
+            "name": "Job Pick Up",
+            "order_filter_label": "Job Pick Up On"
+        },
+        {
+            "id": 30,
+            "category": "Order",
+            "name": "Order Pick Up",
+            "order_filter_label": "Order Pick Up On"
         }
     ]
 }

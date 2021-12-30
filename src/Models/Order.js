@@ -20,7 +20,16 @@ class Order extends BaseModel
     static STATUS = {
         NEW: 'new',
         SUBMITTED: 'submitted',
-        VERIFIED: 'verified'
+        VERIFIED: 'verified',
+        READY: 'ready',
+        ON_HOLD: 'on hold',
+        SCHEDULED: 'scheduled',
+        PICKED_UP: 'picked up',
+        DELIVERED: 'delivered',
+        CANCELED: 'canceled',
+        DELETED: 'deleted',
+        COMPLETED: 'completed'
+
     };
 
     static get relationMappings()
