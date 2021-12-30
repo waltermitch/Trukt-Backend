@@ -2,6 +2,7 @@ const SFAccount = require('../Models/SFAccount');
 const HTTPS = require('../AuthController');
 const Carrier = require('./Carrier');
 const Client = require('./Client');
+const DB = require('../Mongo');
 
 // SD singleton
 let sd;
@@ -23,7 +24,7 @@ class Super
             };
 
             // get token
-            const token = await HTTPS.getSecret({ 'name': options.tokenName });
+            const token = await DB.getSecret({ 'name': options.tokenName });
 
             if (!sd?.instance)
             {

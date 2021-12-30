@@ -1,8 +1,11 @@
-const VariableService = require('../Services/VariableService');
 const CarrierBankAccount = require('./CarrierBankAccount');
 const HTTPS = require('../AuthController');
 const Carrier = require('./Carrier');
 const Bill = require('./Bill');
+const DB = require('../Mongo');
+
+const url = process.env['triumph.apiUrl'];
+const tokenName = 'triumph_access_token';
 
 let triumph;
 
@@ -14,11 +17,11 @@ class Triumph
         {
             const opts =
             {
-                url: process.env['triumph.apiUrl'],
-                tokenName: process.env['triumph.tokenName']
+                url,
+                tokenName
             };
 
-            const token = await HTTPS.getSecret({ name: opts.tokenName });
+            const token = await DB.getSecret({ name: opts.tokenName });
 
             if (!triumph?.instance)
             {
@@ -49,35 +52,6 @@ class Triumph
 
             await api.post('/APISubmitPayor/PayeeBankAccount', bankInfo);
         }
-    }
-
-    static async refreshToken()
-    {
-        const api = await Triumph.connect();
-
-        // remove auth header
-        delete api.defaults.headers.common['Authorization'];
-
-        const payload =
-        {
-            'api_key': process.env['triumph.apiKey'],
-            'password': process.env['triumph.password'],
-            'username': process.env['triumph.username']
-        };
-
-        const res = await api.post('/APILogin/BasicAuthentication', payload);
-
-        console.log(res.data);
-
-        const data =
-        {
-            name: 'triumph_access_token',
-            value: res.data.access_token,
-            exp: HTTPS.setExpTime(60 * 60 * 24)
-        };
-
-        // save token to pg
-        await VariableService.update(data.name, data);
     }
 
     static async upsertBill(data)

@@ -1,0 +1,107 @@
+summary: Accept dispatch
+operationId: putAcceptDispatch
+description: Accept a job dispatch
+tags:
+  - Loadboard
+parameters:
+  - in: path
+    name: jobId
+    schema:
+      $ref: '../../../components/schemas/Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: accepted dispatch
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            jobGuid:
+              $ref: '../../../components/schemas/Common.yaml#/guid'
+            status:
+              type: string
+              example: 'dispatched'
+            vendor:
+              type: object
+              properties:
+                guid:
+                  $ref: '../../../components/schemas/Common.yaml#/guid'
+                name:
+                  type: string
+                  description: vendor name
+                  example: 'Carrier 123'
+                dotNumber:
+                  type: string
+                  description: vendor dot number
+                  example: 'Carrier 123'
+                billingStreet:
+                  type: string
+                  example: '123 Tech Center Dr'
+                billingCity:
+                  type: string
+                  example: 'Sacramento'
+                billingState:
+                  type: string
+                  example: 'CA'
+                billingPostalCode:
+                  type: string
+                  example: '95826'
+                phoneNumber:
+                  type: string
+                  example: '1652569969'
+                email:
+                  type: string
+                  example: 'brad@rcglogistics.com'
+            vendorAgent:
+              type: object
+              properties:
+                accountId:
+                  $ref: ../../../components/schemas/SFID.yaml
+                email:
+                  type: string
+                guid:
+                  $ref: '../../../components/schemas/Common.yaml#/guid'
+                mobileNumber: 
+                  type: string
+                  example: '1652569969'
+                name:
+                  type: string
+                  example: 'Driver 123'
+                phoneNumber:
+                  type: string
+                  example: '1652569969'
+  400:
+    description: error in sent values
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            errors:
+              type: array
+              description: error messages list
+              items:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: error message
+                    example: 'Invalid dispatch guid'
+  404:
+    description: dispatch or job not found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            errors:
+              type: array
+              description: error messages list
+              items:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: error message
+                    example: 'Job not found'

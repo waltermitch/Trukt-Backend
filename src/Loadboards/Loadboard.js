@@ -1,11 +1,13 @@
+const OrderStopService = require('../Services/OrderStopService');
 const LoadboardPost = require('../Models/LoadboardPost');
-const DateTime = require('luxon').DateTime;
+const Attachment = require('../Models/Attachment');
+const OrderStop = require('../Models/OrderStop');
 const states = require('us-state-codes');
+const { DateTime } = require('luxon');
+const uuid = require('uuid');
 const R = require('ramda');
 
-const anonUser = '00000000-0000-0000-0000-000000000000';
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
-const loadboardName = '';
 
 class Loadboard
 {
@@ -24,7 +26,7 @@ class Loadboard
         this.data.pickup.dateScheduledStart = DateTime.fromISO(this.data.pickup.dateScheduledStart).toUTC();
         this.data.pickup.dateScheduledEnd = this.data.pickup.dateScheduledType == 'estimated' ? DateTime.fromISO(this.data.pickup.dateScheduledEnd).toUTC() : this.data.pickup.dateScheduledStart;
         this.data.pickup.terminal.state = this.getStateCode(this.data.pickup.terminal.state);
-        if(this.data.pickup.primaryContact)
+        if (this.data.pickup.primaryContact)
         {
             this.data.pickup.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.phoneNumber);
             this.data.pickup.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.pickup?.primaryContact?.mobileNumber);
@@ -35,7 +37,7 @@ class Loadboard
         this.data.delivery.dateScheduledStart = DateTime.fromISO(this.data.delivery.dateScheduledStart).toUTC();
         this.data.delivery.dateScheduledEnd = this.data.delivery.dateScheduledType == 'estimated' ? DateTime.fromISO(this.data.delivery.dateScheduledEnd).toUTC() : this.data.delivery.dateScheduledStart;
         this.data.delivery.terminal.state = this.getStateCode(this.data.delivery.terminal.state);
-        if(this.data.delivery.primaryContact)
+        if (this.data.delivery.primaryContact)
         {
             this.data.delivery.primaryContact.phoneNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.phoneNumber);
             this.data.delivery.primaryContact.mobileNumber = this.cleanUpPhoneNumber(this.data.delivery?.primaryContact?.mobileNumber);
@@ -116,10 +118,31 @@ class Loadboard
         return { payload, payloadMetadata };
     }
 
+    remove(userGuid)
+    {
+        const payload = { guid: this.postObject.externalGuid };
+        const payloadMetadata = { post: this.postObject, loadboard: this.loadboardName, userGuid };
+        payloadMetadata.action = 'remove';
+        payloadMetadata.user = returnTo;
+
+        return { payload, payloadMetadata };
+    }
+
+    manuallyAcceptDispatch()
+    {
+        const payload = { dispatch: this.acceptDispatchToJSON() };
+        const payloadMetadata = { dispatch: this.data, loadboard: this.loadboardName };
+        payloadMetadata.action = 'manuallyAcceptDispatch';
+
+        // we do not care about setting the return to because we
+        // are not concerned with getting a response back
+        return { payload, payloadMetadata };
+    }
+
     toStringDate(input)
     {
         const date = DateTime.fromISO(input).c;
-        
+
         return input ? date.year + '-' + date.month + '-' + date.day : null;
     }
 
@@ -144,7 +167,7 @@ class Loadboard
         return date ? DateTime.fromISO(date).plus({ [`${type}`]: amount }).toString() : null;
     }
 
-    adjustDates(payload){ return payload; }
+    adjustDates(payload) { return payload; }
 
     getDifferencefromToday(date)
     {
@@ -195,9 +218,97 @@ class Loadboard
         return phone;
     }
 
-    static async handleCreate(post, response)
+    static async handleCreate(post)
     {
         return LoadboardPost.fromJson(post);
+    }
+
+    static async handleRemove(payloadMetadata, response)
+    {
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+        if (response.hasErrors)
+        {
+            objectionPost.isSynced = false;
+            objectionPost.isPosted = false;
+            objectionPost.hasError = true;
+            objectionPost.apiError = response.errors;
+            objectionPost.updatedByGuid = payloadMetadata.userGuid;
+        }
+        else
+        {
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'removed';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = false;
+            objectionPost.isCreated = false;
+            objectionPost.isDeleted = true;
+            objectionPost.deletedByGuid = payloadMetadata.userGuid;
+        }
+
+        await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
+        return;
+    }
+
+    static async handleStatusUpdate(payloadMetadata, response)
+    {
+        const trx = await OrderStop.startTransaction();
+        try
+        {
+            // get all the stops for the completed stop type coming in from
+            // the webhook response
+            const stops = await OrderStop.query(trx)
+                .select('orderStops.*', 'links.jobGuid')
+                .leftJoinRelated('commodities')
+                .leftJoinRelated('links')
+                .leftJoin('rcgTms.loadboardPosts', 'links.jobGuid', 'rcgTms.loadboardPosts.jobGuid')
+                .where({ 'rcgTms.loadboardPosts.externalGuid': payloadMetadata.externalGuid, stopType: response.stopType })
+                .withGraphFetched('[commodities]').distinctOn('guid')
+                .modifyGraph('commodities', builder => builder.select('guid').distinctOn('guid'));
+
+            const promises = [];
+            for (const stop of stops)
+            {
+                const params = {
+                    jobGuid: stop.jobGuid,
+                    stopGuid: stop.guid,
+                    status: 'completed'
+                };
+                const body = {
+                    commodities: stop.commodities.map(com => com.guid),
+                    date: response.completedAtTime
+                };
+
+                promises.push({ func: OrderStopService.updateStopStatus, params, body });
+            }
+
+            const attachments = [];
+            for (const attachment of response.attachments)
+            {
+                attachments.push(Attachment.fromJson({
+                    guid: uuid.v4(),
+                    type: 'billOfLading',
+                    url: attachment.attachmentUrl,
+                    extension: 'application/pdf',
+                    name: attachment.attachmentName,
+                    parent: stops[0].jobGuid,
+                    parent_table: 'jobs',
+                    visibility: '{internal}',
+                    createdByGuid: process.env.SYSTEM_USER
+                }));
+            }
+
+            if (attachments.length > 0)
+                await Attachment.query(trx).insert(attachments);
+
+            await Promise.all(promises.map(async (prom) => await prom.func(prom.params, prom.body)));
+
+            await trx.commit();
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
     }
 }
 

@@ -72,6 +72,14 @@ class LoadboardPost extends BaseModel
                     .whereIn('loadboard', loadboardNames)
                     .whereNot({ externalGuid: null, hasError: true })
                     .andWhere({ isSynced: true });
+            },
+
+            getNotDeleted(builder)
+            {
+                builder.where(builder =>
+                {
+                    builder.whereNot({ status: 'removed' }).whereNot({ isDeleted: true });
+                });
             }
         };
     }

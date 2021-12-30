@@ -1,73 +1,39 @@
 const validatorErrors = require('express-openapi-validator').error;
 const HttpError = require('./Exceptions/HttpError');
+const telemetryClient = require('./Insights');
 
 /* eslint-disable */
-module.exports = (err, request, response, next) =>
+module.exports = (errors, request, response, next) =>
 {
-    let status;
-    let data;
-
-    // handle openapi validator errors
-    if (err?.constructor?.name in validatorErrors)
+    if(!Array.isArray(errors))
     {
-        response.status(err.status);
-        response.json({
-            errors: err.errors
-        });
-        return;
-    } else if (err instanceof HttpError)
-    {
-        response.status(err.status)
-        response.json({
-            errors: [ err.toJson() ]
-        })
-        return;
+        errors = [errors];
     }
-    // this is to catch weirdo errors everyone keep inventing.
-    if (err.status)
+    let status = 500;
+    let data = {
+        errors: []
+    };
+    for(const e of errors)
     {
-        if (typeof err.error === 'string')
+        // handle openapi validator errors
+        if (e?.constructor?.name in validatorErrors)
         {
-            err.message = err.error;
-            delete err.error;
+            response.status(e.status);
+            response.json({
+                errors: e.errors
+            });
+            return;
+        } else if (e.constructor.name == 'HttpError')
+        {
+            status = 400;
+            data.errors.push(e.toJson());
+        } else 
+        {
+            status = e.status || status;
+            data.errors.push({message: e.message || e.data.message});
         }
-        response.status(err.status);
-        delete err.status;
-        response.json({
-            errors: [err]
-        });
-        return;
     }
-    if (err?.response?.data)
-    {
-        status = err.response.status;
-        data = err.response.data;
-    }
-    else if (err?.reason?.response)
-    {
-        status = err.reason?.response?.status;
-        data = err.reason?.response?.data;
-    }
-    else if (err?.reason)
-    {
-        data = err.reason;
-    }
-    else if (err?.status && err.data)
-    {
-        status = err.status;
-        data = err.data;
-    }
-    else if (err?.errors || err?.error)
-    {
-        status = 500;
-        data = err;
-    }
-    else
-    {
-        status = err.status || 500;
-        data = err.toString();
-    }
-    console.log(err);
+    console.log(...errors);
     response.status(status);
     response.send(data);
 };

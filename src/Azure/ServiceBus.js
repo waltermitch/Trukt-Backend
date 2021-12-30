@@ -1,4 +1,5 @@
 const HTTPS = require('../AuthController');
+const DB = require('../Mongo');
 
 // config
 const opts =
@@ -17,7 +18,7 @@ class ServiceBus
         if (!api?.expCheck())
         {
             // get token
-            const token = await HTTPS.getSecret({ 'name': opts.tokenName });
+            const token = await DB.getSecret({ 'name': opts.tokenName });
 
             if (!api?.instance)
             {

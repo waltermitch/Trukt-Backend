@@ -45,6 +45,8 @@ paths:
   /order/{guid}:
     get:
       $ref: paths/order/get.yaml
+    delete:
+      $ref: paths/order/deleteOrder.yaml
   /order/find_by_vin/{vin}:
     get:
       $ref: paths/order/findByVin.yaml
@@ -77,6 +79,42 @@ paths:
       $ref: paths/job/addHold.yaml
     delete:
       $ref: paths/job/removeHold.yaml
+  /job/{jobGuid}/ready:
+    put:
+      $ref: paths/job/setToReady.yaml
+  /job/{jobGuid}/complete:
+    put:
+      $ref: paths/job/setToComplete.yaml
+  /job/{jobGuid}/uncomplete:
+    put:
+      $ref: paths/job/setToUncomplete.yaml
+  /order/{orderGuid}/hold:
+    put:
+      $ref: paths/order/markOnHold.yaml
+  /order/{orderGuid}/unhold:
+    put:
+      $ref: paths/order/removeHold.yaml
+  /order/{orderGuid}/complete:
+    put:
+      $ref: paths/order/markComplete.yaml
+  /order/{orderGuid}/uncomplete:
+    put:
+      $ref: paths/order/markUncomplete.yaml
+  /order/{orderGuid}/undelete:
+    put:
+      $ref: paths/order/undeleteOrder.yaml
+  /order/{orderGuid}/delivered:
+    put:
+      $ref: paths/order/markDelivered.yaml
+  /order/{orderGuid}/undelivered:
+    put:
+      $ref: paths/order/markUndelivered.yaml
+  /order/{orderGuid}/cancel:
+    put:
+      $ref: paths/order/cancelOrder.yaml
+  /order/{orderGuid}/uncancel:
+    put:
+      $ref: paths/order/uncancelOrder.yaml
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml
@@ -115,6 +153,9 @@ paths:
       $ref: paths/loadboard/dispatch/post.yaml
     put:
       $ref: paths/loadboard/dispatch/put.yaml
+  /loadboard/{jobId}/accept:
+    put:
+      $ref: paths/loadboard/dispatch/accept.yaml
   /invoice/{invoiceGuid}:
     get:
       $ref: paths/invoice/get.yaml
@@ -199,6 +240,9 @@ paths:
   /loadboard/requests/{requestGuid}/decline:
     put:
       $ref: paths/loadboard/requests/decline.yaml
+  /loadboard/posting/booked:
+    post:
+      $ref: paths/loadboard/dispatch/booked.yaml
   /note/{object}/{objectGuid}:
     post:
       $ref: paths/notes/post.yaml
@@ -218,7 +262,7 @@ paths:
       $ref: paths/job/updateStopStatus.yaml
   /job/statuses:
     get:
-      $ref: paths/job/getStatuses.yaml    
+      $ref: paths/job/getStatuses.yaml
   /bulk/order/users:
     put:
       $ref: paths/bulk/updateOrderUsers.yaml
@@ -234,6 +278,27 @@ paths:
   /bulk/job/prices:
     put:
       $ref: paths/bulk/updateJobPrices.yaml
+  /bulk/job/status/ready:
+    put:
+      $ref: paths/bulk/setJobReady.yaml
   /job/{jobGuid}/dispatch/carrier:
     get:
       $ref: paths/job/getCarrier.yaml
+  /job/{jobGuid}:
+    delete:
+      $ref: paths/job/delete.yaml
+  /job/{jobGuid}/undelete:
+    put:
+      $ref: paths/job/undelete.yaml
+  /job/{jobGuid}/cancel:
+    put:
+      $ref: paths/job/cancel.yaml
+  /job/{jobGuid}/uncancel:
+    put:
+      $ref: paths/job/uncancel.yaml
+  /job/{jobGuid}/deliver:
+    put:
+      $ref: paths/job/deliver.yaml
+  /job/{jobGuid}/undeliver:
+    put:
+      $ref: paths/job/undeliver.yaml

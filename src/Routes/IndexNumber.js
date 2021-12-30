@@ -4,7 +4,7 @@ const router = require('express').Router();
 const prefix = '/index';
 
 router
-    .get(`${prefix}/order/number`, controller.constructor.nextOrderNumber)
-    .get(`${prefix}/job/number`, controller.constructor.nextJobNumber);
+    .get(`${prefix}/order/number`, controller.nextOrderNumber)
+    .get(`${prefix}/job/number`, controller.nextJobNumber);
 
 module.exports = router;

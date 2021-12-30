@@ -1,6 +1,5 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
-const Commodity = require('./Commodity');
 
 class OrderStopLink extends BaseModel
 {
@@ -57,13 +56,13 @@ class OrderStopLink extends BaseModel
         {
             query.whereNull('jobGuid');
         },
-        commoditiesIn: (queryBuilder, commodities) => { queryBuilder.whereIn('commodityGuid', commodities); },
-        orderStop: (queryBuilder, orderGuid, stopGuid) => { queryBuilder.where({ 'orderGuid': orderGuid, 'stopGuid': stopGuid }); },
         jobStop: (queryBuilder, jobGuid, stopGuid) => { queryBuilder.where({ 'jobGuid': jobGuid, 'stopGuid': stopGuid }); }
     }
 
     static toStops(stopLinks)
     {
+        const Commodity = require('./Commodity');
+
         // not to have recursive requires
         const OrderStop = require('./OrderStop');
         const stopCache = {};

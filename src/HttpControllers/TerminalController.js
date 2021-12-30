@@ -96,5 +96,4 @@ class TerminalController
     }
 }
 
-const controller = new TerminalController();
-module.exports = controller;
+module.exports = TerminalController;

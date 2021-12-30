@@ -15,6 +15,7 @@ class ArcgisClient
                 baseURL: BASE_URL,
                 httpsAgent: new https.Agent({ keepAlive })
             });
+
         this.tokenPath = NODE_ENV != 'local' ? `&token=${API_KEY}` : '';
         this.findAddressPath = '/findAddressCandidates';
         this.score = 95;

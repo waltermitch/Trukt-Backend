@@ -28,6 +28,47 @@ class LoadboardRequest extends BaseModel
         return relations;
     }
 
+    static get modifiers()
+    {
+        return {
+            accepted(builder)
+            {
+                builder.where({ isValid: true, isAccepted: true });
+            },
+            validActive(builder)
+            {
+                builder.where({ 'loadboardRequests.isValid': true, 'loadboardRequests.isSynced': true, 'loadboardRequests.isDeleted': false });
+            }
+        };
+    }
+
+    static createStatusPayload(userGuid)
+    {
+        return {
+            deleted: {
+                status: 'deleted',
+                isValid: false,
+                isAccepted: false,
+                isDeclined: false,
+                isCanceled: false,
+                isSynced: false,
+                isDeleted: true,
+                deletedByGuid: userGuid
+            },
+            canceled: {
+                status: 'canceled',
+                isValid: false,
+                isAccepted: false,
+                isDeclined: false,
+                isCanceled: true,
+                isSynced: false,
+                isDeleted: false,
+                updatedByGuid: userGuid
+            }
+        };
+    }
+
 }
+
 Object.assign(LoadboardRequest.prototype, RecordAuthorMixin);
 module.exports = LoadboardRequest;

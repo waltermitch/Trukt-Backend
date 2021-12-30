@@ -10,7 +10,6 @@ require('./src/HttpControllers/HttpRouteController');
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
-const domain = require('./src/Domain');
 const KnexSessionStore = require('connect-session-knex')(session);
 const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
@@ -32,10 +31,12 @@ async function run()
     {
         await PGListener.listen();
         await Mongo.connect();
+        registerEventListeners();
     }
     catch (error)
     {
         console.error(`Start error: ${error.message || error}`);
+        console.error(error);
     }
 
     const store = new KnexSessionStore
@@ -73,7 +74,7 @@ async function run()
     }
 
     const app = express();
-    app.use(domain);
+
     app.use(corsMiddleware());
     app.use(session(sessionConfig));
     app.use(express.json());
@@ -152,4 +153,12 @@ function corsMiddleware()
     {
         throw new Error('Missing CORS_ORIGINS env var.');
     }
+}
+
+function registerEventListeners()
+{
+    const filepaths = fs.readdirSync('./src/EventListeners').filter(x => x.match(/(?<!index)\.js$/i));
+
+    for (const filepath of filepaths)
+        require(`./src/EventListeners/${filepath}`);
 }

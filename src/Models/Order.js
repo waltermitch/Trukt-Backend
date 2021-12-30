@@ -1,8 +1,6 @@
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
-const OrderJobType = require('./OrderJobType');
 const BaseModel = require('./BaseModel');
 const currency = require('currency.js');
-const OrderJob = require('./OrderJob');
 const { DateTime } = require('luxon');
 
 class Order extends BaseModel
@@ -16,6 +14,21 @@ class Order extends BaseModel
     {
         return 'guid';
     }
+
+    static STATUS = {
+        NEW: 'new',
+        SUBMITTED: 'submitted',
+        VERIFIED: 'verified',
+        READY: 'ready',
+        ON_HOLD: 'on hold',
+        SCHEDULED: 'scheduled',
+        PICKED_UP: 'picked up',
+        DELIVERED: 'delivered',
+        CANCELED: 'canceled',
+        DELETED: 'deleted',
+        COMPLETED: 'completed'
+
+    };
 
     static get relationMappings()
     {
@@ -270,6 +283,9 @@ class Order extends BaseModel
 
     static filterJobCategories(query, jobCategories = [])
     {
+        const OrderJobType = require('./OrderJobType');
+        const OrderJob = require('./OrderJob');
+
         if (jobCategories.length > 0)
         {
             const ordersWithJobsByCategory = Order.query().select('guid').whereIn('guid',
@@ -353,6 +369,27 @@ class Order extends BaseModel
         }
     }
 
+    static createStatusPayload(userGuid)
+    {
+        return {
+            deleted: {
+                status: 'deleted',
+                isOnHold: false,
+                isReady: false,
+                is_canceled: false,
+                isDeleted: true,
+                deletedByGuid: userGuid
+            },
+            undeleted: {
+                status: 'ready',
+                isOnHold: false,
+                isReady: true,
+                is_canceled: false,
+                isDeleted: false,
+                updated_by_guid: userGuid
+            }
+        };
+    }
 }
 
 Object.assign(Order.prototype, RecordAuthorMixin);

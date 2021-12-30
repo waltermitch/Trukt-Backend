@@ -4,10 +4,10 @@ const User = require('../Models/User');
 const { DateTime } = require('luxon');
 const Mongo = require('../Mongo');
 
-const clientId = process.env['azure.ad.appId'];
 const clientSecret = process.env['azure.ad.appSecret'];
 const username = process.env['azure.ad.TMSusername'];
 const password = process.env['azure.ad.TMSpassword'];
+const clientId = process.env['azure.ad.appId'];
 
 class SystemManagementService
 {
@@ -48,7 +48,9 @@ class SystemManagementService
         while (dbUsers.size > 0)
         {
             const value = dbUsers.values().next().value;
+
             dbUsers.delete(value.guid);
+
             await User.query().patchAndFetchById(value.guid, { is_deleted: true });
         }
     }

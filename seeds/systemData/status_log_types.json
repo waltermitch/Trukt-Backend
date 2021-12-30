@@ -92,6 +92,96 @@
             "category": "jobDispatch",
             "name": "Self Assigned",
             "order_filter_label": "Self Assigned On"
+        },
+        {
+            "id": 16,
+            "category": "job",
+            "name": "Set To Ready",
+            "order_filter_label": "Set To Ready On"
+        },
+        {
+            "id": 17,
+            "category": "job",
+            "name": "Job Deleted",
+            "order_filter_label": "Job Deleted On"
+        },
+        {
+            "id": 18,
+            "category": "job",
+            "name": "Job Undeleted",
+            "order_filter_label": "Job Undeleted On"
+        },
+        {
+            "id": 19,
+            "category": "order",
+            "name": "Order Deleted",
+            "order_filter_label": "Order Deleted On"
+        },
+        {
+            "id": 20,
+            "category": "Order",
+            "name": "Order Undeleted",
+            "order_filter_label": "Order Undeleted On"
+        },
+        {
+            "id": 21,
+            "category": "Order",
+            "name": "Removed from",
+            "order_filter_label": "Removed On"
+        },
+        {
+            "id": 22,
+            "category": "job",
+            "name": "Job Set On Hold",
+            "order_filter_label": "Set On Hold On"
+        },
+        {
+            "id": 23,
+            "category": "job",
+            "name": "Job Canceled",
+            "order_filter_label": "Job Canceled On"
+        },
+        {
+            "id": 24,
+            "category": "job",
+            "name": "Job Uncanceled",
+            "order_filter_label": "Job Uncanceled On"
+        },
+        {
+            "id": 25,
+            "category": "order",
+            "name": "Order Canceled",
+            "order_filter_label": "Order Canceled On"
+        },
+        {
+            "id": 26,
+            "category": "Order",
+            "name": "Order Uncanceled",
+            "order_filter_label": "Order Uncanceled On"
+        },
+        {
+            "id": 27,
+            "category": "job",
+            "name": "Job Delivered",
+            "order_filter_label": "Job Delivered On"
+        },
+        {
+            "id": 28,
+            "category": "Order",
+            "name": "Order Delivered",
+            "order_filter_label": "Order Delivered On"
+        },
+        {
+            "id": 29,
+            "category": "job",
+            "name": "Job Pick Up",
+            "order_filter_label": "Job Pick Up On"
+        },
+        {
+            "id": 30,
+            "category": "Order",
+            "name": "Order Pick Up",
+            "order_filter_label": "Order Pick Up On"
         }
     ]
 }

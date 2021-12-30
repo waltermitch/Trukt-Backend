@@ -218,9 +218,11 @@
     },
     "Terminal": {
         "hide": {
+            "database": {
+                "into": ["vectorName"]
+            },
             "external": {
                 "into": [
-                    "isResolved",
                     "isDeleted",
                     "dateDeleted",
                     "dateCreated",
@@ -230,7 +232,8 @@
                     "updatedByGuid",
                     "primaryContactGuid",
                     "alternativeContactGuid",
-                    "resolvedTimes"
+                    "resolvedTimes",
+                    "vectorName"
                 ]
             }
         }

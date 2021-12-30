@@ -1,7 +1,7 @@
+const LoadboardPost = require('../Models/LoadboardPost');
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
-const DateTime = require('luxon').DateTime;
-const LoadboardPost = require('../Models/LoadboardPost');
+const { DateTime } = require('luxon');
 
 class Truckstop extends Loadboard
 {
@@ -37,6 +37,10 @@ class Truckstop extends Loadboard
 
     toJSON()
     {
+        if (this.data.pickup.notes.length > 250 || this.data.delivery.notes.length > 250)
+        {
+            throw new Error('First pickup and last delivery stop notes must be less than 250 characters');
+        }
         const payload = {
             postAsUserId: this.postObject.values.contact.externalId,
             equipmentAttributes:
@@ -159,7 +163,7 @@ class Truckstop extends Loadboard
                 objectionPost.isPosted = true;
                 objectionPost.hasError = false;
                 objectionPost.apiError = null;
-
+                objectionPost.isDeleted = false;
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
@@ -209,6 +213,31 @@ class Truckstop extends Loadboard
         }
     }
 
+    static async handleRemove(payloadMetadata, response)
+    {
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+        if (response.hasErrors)
+        {
+            objectionPost.isSynced = false;
+            objectionPost.isPosted = false;
+            objectionPost.hasError = true;
+            objectionPost.apiError = response.errors;
+            objectionPost.updatedByGuid = payloadMetadata.userGuid;
+        }
+        else
+        {
+            objectionPost.externalPostGuid = null;
+            objectionPost.status = 'removed';
+            objectionPost.isSynced = true;
+            objectionPost.isPosted = false;
+            objectionPost.isCreated = false;
+            objectionPost.isDeleted = true;
+            objectionPost.deletedByGuid = payloadMetadata.userGuid;
+        }
+
+        await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
+        return;
+    }
 }
 
 module.exports = Truckstop;
