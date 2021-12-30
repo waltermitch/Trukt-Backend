@@ -515,7 +515,7 @@ class ShipCars extends Loadboard
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
-                
+
                 objectionDispatch.setToAccepted();
                 objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
