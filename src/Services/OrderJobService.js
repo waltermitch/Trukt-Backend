@@ -1181,7 +1181,12 @@ class OrderJobService
                 oj.is_complete,
                 oj.is_deleted,
                 oj.is_canceled,
-                ( SELECT bool_and(links.is_completed) FROM rcg_tms.order_stop_links links LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid WHERE links.job_guid = oj.guid AND stop.stop_type = 'pickup' ) AS is_pickedup,
+
+                ( SELECT bool_or(links.is_completed) 
+                FROM rcg_tms.order_stop_links links
+                LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid
+                WHERE links.job_guid = oj.guid AND stop.stop_type = 'pickup' ) AS is_pickedup,
+                
                 ( SELECT bool_and(links.is_completed) FROM rcg_tms.order_stop_links links LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid WHERE links.job_guid = oj.guid AND stop.stop_type = 'delivery' ) AS is_delivered,
                 ( SELECT count(*) > 0 FROM rcg_tms.loadboard_posts lbp WHERE lbp.job_guid = oj.guid AND lbp.is_posted) AS is_posted,
                 ( SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
