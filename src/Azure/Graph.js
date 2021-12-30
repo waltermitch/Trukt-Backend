@@ -1,4 +1,5 @@
 const HTTPS = require('../AuthController');
+const DB = require('../Mongo');
 
 const opts =
 {
@@ -15,7 +16,7 @@ class Graph
         if (!api?.expCheck())
         {
             // get token
-            const token = await HTTPS.getSecret({ 'name': opts.tokenName });
+            const token = await DB.getSecret({ 'name': opts.tokenName });
 
             // check for instance
             if (!api?.instance)

@@ -3,7 +3,7 @@ const QBPaymentTerm = require('../Models/QBPaymentTerm');
 const QBAccount = require('../Models/QBAccount');
 const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
-const Mongo = require('../Mongo');
+const DB = require('../Mongo');
 
 const url = process.env['quickbooks.apiUrl'];
 const tokenName = 'qb_access_token';
@@ -21,7 +21,7 @@ class QBO
         {
             const opts = { url, tokenName };
 
-            const token = await Mongo.getSecret(tokenName);
+            const token = await DB.getSecret(tokenName);
 
             if (!token)
                 throw { 'data': 'No QBO Access Token Found' };

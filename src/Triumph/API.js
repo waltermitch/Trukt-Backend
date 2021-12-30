@@ -3,6 +3,7 @@ const CarrierBankAccount = require('./CarrierBankAccount');
 const HTTPS = require('../AuthController');
 const Carrier = require('./Carrier');
 const Bill = require('./Bill');
+const DB = require('../Mongo');
 
 let triumph;
 
@@ -18,7 +19,7 @@ class Triumph
                 tokenName: process.env['triumph.tokenName']
             };
 
-            const token = await HTTPS.getSecret({ name: opts.tokenName });
+            const token = await DB.getSecret({ name: opts.tokenName });
 
             if (!triumph?.instance)
             {

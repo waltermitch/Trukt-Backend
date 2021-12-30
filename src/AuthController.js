@@ -17,11 +17,6 @@ class HTTPController
     }
     /* eslint-enable */
 
-    async getSecret(query)
-    {
-        return await HTTPController.getSecret(query);
-    }
-
     connect(keepAlive = true)
     {
         this.instance = axios.create(
