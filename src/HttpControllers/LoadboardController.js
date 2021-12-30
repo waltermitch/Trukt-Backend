@@ -168,6 +168,4 @@ class LoadboardController
     }
 }
 
-const controller = new LoadboardController();
-
-module.exports = controller;
+module.exports = LoadboardController;

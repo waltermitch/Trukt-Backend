@@ -5,6 +5,7 @@ class LoadboardRequestController
     static async getByJobGuid(req, res)
     {
         const result = await LoadboardRequestService.getbyJobID(req?.params?.jobGuid);
+
         if (result)
         {
             res.status(200);
@@ -21,6 +22,7 @@ class LoadboardRequestController
         try
         {
             const result = await LoadboardRequestService.createRequest(req?.body, req.session.userGuid);
+
             res.status(200);
             res.json(result);
         }
@@ -28,7 +30,6 @@ class LoadboardRequestController
         {
             if (err.message == 'Posting Doesn\'t Exist')
             {
-                console.log(err.message);
                 res.status(404);
                 res.json(err.message);
             }
@@ -44,6 +45,7 @@ class LoadboardRequestController
         try
         {
             await LoadboardRequestService.cancelRequests(req?.body, req.session.userGuid);
+
             res.status(200);
             res.json('Payload Canceled');
         }
@@ -51,7 +53,6 @@ class LoadboardRequestController
         {
             if (err.message == 'Posting Doesn\'t Exist')
             {
-                console.log(err.message);
                 res.status(404);
                 res.json(err.message);
             }
@@ -69,6 +70,7 @@ class LoadboardRequestController
             if (req?.params?.requestGuid)
             {
                 const result = await LoadboardRequestService.acceptRequest(req?.params?.requestGuid, req.session.userGuid);
+
                 res.status(200);
                 res.json(result);
             }
@@ -91,6 +93,7 @@ class LoadboardRequestController
             if (req?.body)
             {
                 const result = await LoadboardRequestService.declineRequest(req?.params?.requestGuid, req.body, req.session.userGuid);
+
                 res.status(204);
                 res.json(result);
             }
@@ -107,6 +110,4 @@ class LoadboardRequestController
     }
 }
 
-const controller = new LoadboardRequestController();
-
-module.exports = controller;
+module.exports = LoadboardRequestController;

@@ -17,5 +17,4 @@ class StatusManagerController
     }
 }
 
-const controller = new StatusManagerController();
-module.exports = controller;
+module.exports = StatusManagerController;
