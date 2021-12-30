@@ -211,8 +211,6 @@ listener.on('orderjob_activity_updated', ({ jobGuid, state }) =>
             .modifyGraph('status', builder => builder.select('id', 'name'))
             .andWhere('jobGuid', jobGuid);
 
-        console.log('Current Activity', currentActivity);
-
         const proms = await Promise.allSettled([(PubSubService.jobActivityUpdate(jobGuid, currentActivity))]);
 
         // for (const p of proms)
