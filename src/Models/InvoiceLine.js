@@ -1,8 +1,5 @@
 const { RecordAuthorMixin, isNotDeleted, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
-const InvoiceBill = require('../Models/InvoiceBill');
-const Invoice = require('../Models/Invoice');
-const Bill = require('../Models/Bill');
 
 class InvoiceLine extends BaseModel
 {
@@ -160,6 +157,9 @@ class InvoiceLine extends BaseModel
 
     linkBill(bill)
     {
+        const InvoiceBill = require('./InvoiceBill');
+        const Bill = require('./Bill');
+
         if (bill instanceof Bill)
         {
             this.invoiceGuid = bill.billGuid;
@@ -172,6 +172,9 @@ class InvoiceLine extends BaseModel
 
     linkInvoice(invoice)
     {
+        const InvoiceBill = require('../Models/InvoiceBill');
+        const Invoice = require('./Invoice');
+
         if (invoice instanceof Invoice)
         {
             this.invoiceGuid = invoice.invoiceGuid;
