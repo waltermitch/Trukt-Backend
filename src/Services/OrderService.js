@@ -3202,7 +3202,7 @@ class OrderService
         }
     }
 
-    static async markOrderDelivered(orderGuid, currentUser, jobGuidTrigger)
+    static async markOrderDelivered(orderGuid, currentUser, jobGuid)
     {
         const [order] = await Promise.all([
             Order.query()
@@ -3241,7 +3241,8 @@ class OrderService
             'updatedByGuid': currentUser
         }).where('guid', order.guid);
 
-        emitter.emit('order_delivered', { orderGuid, jobGuid: jobGuidTrigger, currentUser });
+        emitter.emit('order_delivered', { orderGuid, jobGuid, currentUser });
+
         return 200;
     }
 
@@ -3274,6 +3275,7 @@ class OrderService
         });
 
         emitter.emit('order_undelivered', orderGuid);
+
         return 200;
     }
 
