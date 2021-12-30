@@ -386,6 +386,10 @@ class LoadboardService
             if (!dispatch)
                 throw new HttpError(404, 'No active offers to undispatch');
 
+            // this is temporary fix, should make it data driven eventually
+            if ([Job.STATUS.PICKED_UP, Job.STATUS.DELIVERED, Job.STATUS.COMPLETED].includes(dispatch.job.status))
+                throw new HttpError(400, 'Can not cancel dispatch for a job that has already been picked up or delivered');
+
             // assign current user as updated by
             dispatch.setUpdatedBy(currentUser);
 
