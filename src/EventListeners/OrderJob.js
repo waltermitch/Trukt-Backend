@@ -6,7 +6,6 @@ const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
