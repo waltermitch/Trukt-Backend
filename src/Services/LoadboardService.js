@@ -3,6 +3,7 @@ const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardContact = require('../Models/LoadboardContact');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const LoadboardRequest = require('../Models/LoadboardRequest');
 const { ServiceBusClient } = require('@azure/service-bus');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
@@ -15,7 +16,6 @@ const OrderStop = require('../Models/OrderStop');
 const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
-const { raw } = require('objection');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -903,6 +903,7 @@ class LoadboardService
             // create an order job dispatch &
             // update the job with vendor
             await Promise.all([
+                LoadboardRequest.query().patch({ 'isValid': false, 'isDeclined': true }).where('externalPostGuid', postingGuid),
                 LoadboardService.unpostPostings(posting.job.guid, posting.job.loadboardPosts, SYSUSER),
                 Job.query(trx).patch({ 'vendorGuid': vendor.guid }).where('guid', posting.job.guid),
                 OrderJobDispatch.query(trx).insert({

@@ -5,7 +5,6 @@ const QUEUE_NAME = process.env['azure.servicebus.statusManager.queueName'];
 
 class StatusManagerHandler
 {
-
     static async checkStatus()
     {
         const res = await Queue.pop(QUEUE_NAME);

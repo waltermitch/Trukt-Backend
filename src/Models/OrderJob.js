@@ -1,9 +1,7 @@
-const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
-const OrderJobType = require('./OrderJobType');
-const BaseModel = require('./BaseModel');
-const { ref, raw } = require('objection');
-const Order = require('./Order');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
+const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const { ref, raw } = require('objection');
+const BaseModel = require('./BaseModel');
 
 const jobTypeFields = ['category', 'type'];
 
@@ -272,6 +270,8 @@ class OrderJob extends BaseModel
 
     static filterJobCategories(query, jobCategories = [])
     {
+        const OrderJobType = require('./OrderJobType');
+
         if (jobCategories.length > 0)
             return query.whereIn('typeId', OrderJobType.getJobTypesByCategories(jobCategories));
         return query;
@@ -392,8 +392,18 @@ class OrderJob extends BaseModel
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
         globalSearch: this.globalSearch,
-        transportJob: (queryBuilder) => { queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['transport'])); },
-        serviceJob: (queryBuilder) => { queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['service'])); },
+        transportJob: (queryBuilder) =>
+        {
+            const OrderJobType = require('./OrderJobType');
+
+            queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['transport']));
+        },
+        serviceJob: (queryBuilder) =>
+        {
+            const OrderJobType = require('./OrderJobType');
+
+            queryBuilder.whereIn('typeId', OrderJobType.getJobTypesByCategories(['service']));
+        },
         statusActive: (queryBuilder) =>
         {
             const Order = require('./Order');

@@ -12,6 +12,7 @@ class OrderController
             try
             {
                 const orderPayload = await OrderService.getOrderByGuid(req.params.orderGuid);
+
                 if (orderPayload)
                 {
                     res.status(200);

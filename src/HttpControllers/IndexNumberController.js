@@ -81,5 +81,4 @@ class IndexNumberController
     }
 }
 
-const controller = new IndexNumberController();
-module.exports = controller;
+module.exports = IndexNumberController;

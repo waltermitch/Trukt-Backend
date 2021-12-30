@@ -1,8 +1,6 @@
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
-const OrderJobType = require('./OrderJobType');
 const BaseModel = require('./BaseModel');
 const currency = require('currency.js');
-const OrderJob = require('./OrderJob');
 const { DateTime } = require('luxon');
 
 class Order extends BaseModel
@@ -285,6 +283,9 @@ class Order extends BaseModel
 
     static filterJobCategories(query, jobCategories = [])
     {
+        const OrderJobType = require('./OrderJobType');
+        const OrderJob = require('./OrderJob');
+
         if (jobCategories.length > 0)
         {
             const ordersWithJobsByCategory = Order.query().select('guid').whereIn('guid',

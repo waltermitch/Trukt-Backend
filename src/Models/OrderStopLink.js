@@ -1,6 +1,5 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
-const Commodity = require('./Commodity');
 
 class OrderStopLink extends BaseModel
 {
@@ -62,6 +61,8 @@ class OrderStopLink extends BaseModel
 
     static toStops(stopLinks)
     {
+        const Commodity = require('./Commodity');
+
         // not to have recursive requires
         const OrderStop = require('./OrderStop');
         const stopCache = {};

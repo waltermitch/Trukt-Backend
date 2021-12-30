@@ -1,6 +1,6 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
-const DateTime = require('luxon').DateTime;
+const { DateTime } = require('luxon');
 
 class OrderJobDispatch extends BaseModel
 {
