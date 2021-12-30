@@ -1,8 +1,11 @@
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const OrderJobService = require('../Services/OrderJobService');
 const PubSubService = require('../Services/PubSubService');
 const OrderService = require('../Services/OrderService');
+const StatusLog = require('../Models/StatusLog');
+const OrderJob = require('../Models/OrderJob');
+const Order = require('../Models/Order');
 const listener = require('./index');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
@@ -137,6 +140,77 @@ listener.on('orderjob_booked', ({ jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([(OrderJobService.updateStatusField(jobGuid, currentUser))]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+listener.on('orderjob_deleted', async ({ orderGuid, userGuid, jobGuid }) =>
+{
+    setImmediate(async () =>
+    {
+        const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
+        if (jobsOrder?.deleteorder)
+        {
+            const deleteStatusPayload = Order.createStatusPayload(userGuid).deleted;
+            await Promise.allSettled([
+                Order.query().patch(deleteStatusPayload).findById(orderGuid),
+
+                // Register order deleted
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    jobGuid,
+                    userGuid,
+                    statusId: 19
+                })
+            ]);
+        }
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+listener.on('orderjob_undeleted', async ({ orderGuid, userGuid, jobGuid }) =>
+{
+    setImmediate(async () =>
+    {
+        // Register order undeleted
+        await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid,
+                statusId: 20
+            })
+        ]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+listener.on('orderjob_activity_updated', ({ jobGuid, state }) =>
+{
+    setImmediate(async () =>
+    {
+        const currentActivity = await StatusLog.query().select([
+            'id',
+            'orderGuid',
+            'dateCreated',
+            'extraAnnotations',
+            'jobGuid'
+        ])
+            .findById(state.id)
+            .withGraphFetched({ user: true, status: true })
+            .modifyGraph('status', builder => builder.select('id', 'name'))
+            .andWhere('jobGuid', jobGuid);
+
+        const proms = await Promise.allSettled([(PubSubService.jobActivityUpdate(jobGuid, currentActivity))]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
