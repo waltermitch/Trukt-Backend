@@ -677,5 +677,4 @@ class EDIController
     }
 }
 
-const controller = new EDIController();
-module.exports = controller;
+module.exports = EDIController;
