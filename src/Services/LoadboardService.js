@@ -19,6 +19,8 @@ const { raw } = require('objection');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
+const SYSUSER = process.env.SYSTEM_USER;
+
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
 
@@ -861,6 +863,66 @@ class LoadboardService
         delete job.loadboardPosts;
 
         return job;
+    }
+
+    static async postingBooked(postingGuid, carrierGuid, loadboard)
+    {
+        const trx = await LoadboardPost.transaction();
+
+        try
+        {
+            // Get the posting and get the vendor
+            const [posting, vendor] =
+                await Promise.all([
+                    LoadboardPost.query().where('loadboardPosts.externalPostGuid', postingGuid)
+                        .withGraphJoined('job.[loadboardPosts]').first(),
+                    SFAccount.query().where((builder) =>
+                    {
+                        if (loadboard === 'SUPERDISPATCH')
+                            builder.where('sdGuid', carrierGuid);
+                        else if (loadboard === 'SHIPCARS')
+                            builder.where('scId', carrierGuid);
+                    }).orWhere('sfId', carrierGuid).first()
+                ]);
+
+            if (!posting)
+                throw new HttpError(404, 'Posting Not Found');
+            else if (!vendor)
+                throw new HttpError(404, 'Vendor Not Found');
+
+            // make sure the job is still in the correct status
+            if (posting.job.vendorGuid)
+                throw new HttpError(400, 'Can not book a job that has already been booked');
+
+            // if vendor and posting are valid
+            // unpost the posting &
+            // create an order job dispatch &
+            // update the job with vendor
+            await Promise.all([
+                LoadboardService.unpostPostings(posting.job.guid, posting.job.loadboardPosts, SYSUSER),
+                Job.query(trx).patch({ 'vendorGuid': vendor.guid }).where('guid', posting.job.guid),
+                OrderJobDispatch.query(trx).insert({
+                    jobGuid: posting.job.guid,
+                    loadboardPostGuid: posting.guid,
+                    vendorGuid: vendor.guid,
+                    isAccepted: true,
+                    isPending: false,
+                    createdByGuid: SYSUSER
+                })
+            ]);
+
+            // fire event orderjob_booked
+            emitter.emit('orderjob_booked', { jobGuid: posting.job.guid, userGuid: SYSUSER });
+
+            await trx.commit();
+
+            return;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
     }
 }
 

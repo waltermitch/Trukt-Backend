@@ -6,6 +6,7 @@ const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
@@ -73,11 +74,20 @@ listener.on('orderjob_delivered', ({ jobGuid, dispatcherGuid = SYSUSER, orderGui
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markOrderDelivered(orderGuid, dispatcherGuid)]);
+        const proms = await Promise.allSettled([
+            OrderService.markOrderDelivered(orderGuid, dispatcherGuid, jobGuid),
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid: dispatcherGuid,
+                statusId: 27
+            })
+        ]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        // Log the reason why the order was not set as delivered
+        for (const p of proms)
+            if (p.status === 'rejected')
+                console.log(p.reason?.response?.data || p.reason);
     });
 });
 
@@ -97,11 +107,20 @@ listener.on('orderjob_picked_up', ({ jobGuid, dispatcherGuid = SYSUSER, orderGui
 {
     setImmediate(async () =>
     {
-        // const proms = await Promise.allSettled([OrderService.markAsPickedUp(orderGuid, dispatcherGuid)]);
+        const proms = await Promise.allSettled([
+            OrderService.markOrderUndelivered(orderGuid, dispatcherGuid, jobGuid),
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid: dispatcherGuid,
+                statusId: 29
+            })
+        ]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        // Log the reason why the order was not set as pick up
+        for (const p of proms)
+            if (p.status === 'rejected')
+                console.log(p.reason?.response?.data || p.reason);
     });
 });
 
@@ -110,6 +129,18 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([(PubSubService.jobUpdated(jobGuid, { currentUser, status: state.status }))]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+listener.on('orderjob_booked', ({ jobGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([(OrderJobService.updateStatusField(jobGuid, currentUser))]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')

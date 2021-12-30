@@ -90,27 +90,73 @@ listener.on('orderjob_status', (orderGuid) =>
     });
 });
 
-async function createSuperOrder(orderGuid)
+listener.on('orderjob_deleted', async ({ orderGuid, userGuid, jobGuid }) =>
 {
-    const jobsToPost = await OrderService.getTransportJobsIds(orderGuid);
+    try
+    {
+        // Register job deleted first
+        await StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 17
+        });
 
-    await Promise.allSettled(jobsToPost?.map(({ guid, createdByGuid }) =>
-        LoadboardService.createPostings(guid, [{ loadboard: 'SUPERDISPATCH' }], createdByGuid)
-    ));
-}
+        const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
+        if (jobsOrder?.deleteorder)
+        {
+            const deleteStatusPayload = Order.createStatusPayload(userGuid).deleted;
+            await Promise.allSettled([
+                Order.query().patch(deleteStatusPayload).findById(orderGuid),
 
-async function getJobGuids(orderGuid)
+                // Register order deleted
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    jobGuid,
+                    userGuid,
+                    statusId: 19
+                })
+            ]);
+        }
+    }
+    catch (error)
+    {
+        console.error(`Error: Order ${orderGuid} could not be marked as deleted!!. ${error?.message || error}`);
+    }
+
+});
+
+listener.on('orderjob_undeleted', async ({ orderGuid, userGuid, jobGuid }) =>
 {
-    const jobs = await OrderJob.query().select('guid').where('orderGuid', orderGuid);
+    try
+    {
+        // Register job undeleted first
+        await StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 18
+        });
 
-    return jobs;
-}
+        // Register order undeleted
+        StatusManagerHandler.registerStatus({
+            orderGuid,
+            jobGuid,
+            userGuid,
+            statusId: 20
+        });
+    }
+    catch (error)
+    {
+        console.error(`Error: Order ${orderGuid} could not be marked as undeleted!!. ${error?.message || error}`);
+    }
+});
 
 listener.on('orderjob_ready', (orderGuid) =>
 {
     setImmediate(async () =>
     {
-        await Promise.allSettled([
+        const proms = await Promise.allSettled([
             Order.query()
                 .patch({
                     status: Order.STATUS.VERIFIED,
@@ -126,5 +172,51 @@ listener.on('orderjob_ready', (orderGuid) =>
         listener.emit('order_verified', orderGuid);
     });
 });
+
+listener.on('order_delivered', ({ orderGuid, userGuid, jobGuid }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid,
+                statusId: 28
+            })
+        ]);
+    });
+});
+
+listener.on('order_undelivered', ({ orderGuid, userGuid, jobGuid }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid,
+                statusId: 30
+            })
+        ]);
+    });
+});
+
+async function createSuperOrder(orderGuid)
+{
+    const jobsToPost = await OrderService.getTransportJobsIds(orderGuid);
+
+    await Promise.allSettled(jobsToPost?.map(({ guid, createdByGuid }) =>
+        LoadboardService.createPostings(guid, [{ loadboard: 'SUPERDISPATCH' }], createdByGuid)
+    ));
+}
+
+async function getJobGuids(orderGuid)
+{
+    const jobs = await OrderJob.query().select('guid').where('orderGuid', orderGuid);
+
+    return jobs;
+}
 
 module.exports = listener;
