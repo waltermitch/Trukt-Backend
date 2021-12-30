@@ -671,8 +671,9 @@ class Super extends Loadboard
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
+                
                 objectionDispatch.setToAccepted();
-                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
+                objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
