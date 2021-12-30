@@ -6,7 +6,7 @@ const { uuidRegexStr } = require('../Utils/Regexes');
 const prefix = '/statusmanager';
 
 router
-    .get(`${prefix}/:orderGuid(${uuidRegexStr})`, controller.constructor.getStatusLog)
-    .get(`${prefix}/:orderGuid(${uuidRegexStr})/:jobGuid(${uuidRegexStr})`, controller.constructor.getStatusLog);
+    .get(`${prefix}/:orderGuid(${uuidRegexStr})`, controller.getStatusLog)
+    .get(`${prefix}/:orderGuid(${uuidRegexStr})/:jobGuid(${uuidRegexStr})`, controller.getStatusLog);
 
 module.exports = router;
