@@ -34,8 +34,6 @@ const cache = {
 
 class StatusCacheManager
 {
-    constructor() { }
-
     // maping of all status counters
     static statusMap = {
         'active': 'statusActive',

@@ -1,7 +1,6 @@
 const { DateTime } = require('luxon');
 const axios = require('axios');
 const https = require('https');
-const DB = require('./Mongo');
 
 const jHeaders = { 'Content-Type': 'application/json' };
 
@@ -21,16 +20,6 @@ class HTTPController
     async getSecret(query)
     {
         return await HTTPController.getSecret(query);
-    }
-
-    static async getSecret(query)
-    {
-        return await DB.getSecret(query);
-    }
-
-    async updateSecret(key, data)
-    {
-        return await DB.updateSecret(key, data);
     }
 
     connect(keepAlive = true)

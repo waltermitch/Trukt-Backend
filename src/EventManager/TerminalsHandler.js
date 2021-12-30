@@ -1,5 +1,5 @@
-const ArcgisClient = require('../ArcgisClient');
 const Terminal = require('../Services/TerminalService');
+const ArcgisClient = require('../ArcgisClient');
 
 const { SYSTEM_USER } = process.env;
 
