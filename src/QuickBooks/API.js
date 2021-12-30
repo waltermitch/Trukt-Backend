@@ -4,21 +4,9 @@ const QBAccount = require('../Models/QBAccount');
 const HTTPS = require('../AuthController');
 const NodeCache = require('node-cache');
 const Mongo = require('../Mongo');
-const axios = require('axios');
 
-const authConfig =
-{
-    headers:
-    {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': process.env['quickbooks.basicAuth']
-    }
-};
-
-const authUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const url = process.env['quickbooks.apiUrl'];
 const tokenName = 'qb_access_token';
-const refreshTokenName = 'qb_refresh_token';
 
 // store client types (for now)
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 60 * 60 * 24 });
@@ -211,34 +199,6 @@ class QBO
         const res = await api.get('/query?query=Select * from Account maxresults 1000');
 
         return res.data.QueryResponse.Account;
-    }
-
-    static async refreshToken()
-    {
-        // get refrsh token
-        const refreshToken = await Mongo.getSecret(refreshTokenName);
-
-        const payload = `grant_type=refresh_token&refresh_token=${refreshToken.value}`;
-
-        // ask for new stuff
-        const res = await axios.post(authUrl, payload, authConfig);
-
-        // update old access tkn and refresh tokn
-        const ATData =
-        {
-            'name': tokenName,
-            'value': res.data.access_token,
-            'exp': HTTPS.setExpTime(30)
-        };
-
-        const RTData =
-        {
-            'name': 'qb_refresh_token',
-            'value': res.data.refresh_token,
-            'exp': HTTPS.setExpTime(60 * 24 * 30)
-        };
-
-        await Promise.all([Mongo.updateSecret(ATData.name, ATData), Mongo.updateSecret(RTData.name, RTData)]);
     }
 }
 
