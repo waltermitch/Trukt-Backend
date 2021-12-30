@@ -152,27 +152,11 @@ listener.on('orderjob_undeleted', async ({ orderGuid, userGuid, jobGuid }) =>
     }
 });
 
-async function createSuperOrder(orderGuid)
-{
-    const jobsToPost = await OrderService.getTransportJobsIds(orderGuid);
-
-    await Promise.allSettled(jobsToPost?.map(({ guid, createdByGuid }) =>
-        LoadboardService.createPostings(guid, [{ loadboard: 'SUPERDISPATCH' }], createdByGuid)
-    ));
-}
-
-async function getJobGuids(orderGuid)
-{
-    const jobs = await OrderJob.query().select('guid').where('orderGuid', orderGuid);
-
-    return jobs;
-}
-
 listener.on('orderjob_ready', (orderGuid) =>
 {
     setImmediate(async () =>
     {
-        await Promise.allSettled([
+        const proms = await Promise.allSettled([
             Order.query()
                 .patch({
                     status: Order.STATUS.VERIFIED,
@@ -193,12 +177,14 @@ listener.on('order_delivered', ({ orderGuid, userGuid, jobGuid }) =>
 {
     setImmediate(async () =>
     {
-        await StatusManagerHandler.registerStatus({
-            orderGuid,
-            jobGuid,
-            userGuid,
-            statusId: 28
-        });
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid,
+                statusId: 28
+            })
+        ]);
     });
 });
 
@@ -206,13 +192,31 @@ listener.on('order_undelivered', ({ orderGuid, userGuid, jobGuid }) =>
 {
     setImmediate(async () =>
     {
-        await StatusManagerHandler.registerStatus({
-            orderGuid,
-            jobGuid,
-            userGuid,
-            statusId: 30
-        });
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid,
+                statusId: 30
+            })
+        ]);
     });
 });
+
+async function createSuperOrder(orderGuid)
+{
+    const jobsToPost = await OrderService.getTransportJobsIds(orderGuid);
+
+    await Promise.allSettled(jobsToPost?.map(({ guid, createdByGuid }) =>
+        LoadboardService.createPostings(guid, [{ loadboard: 'SUPERDISPATCH' }], createdByGuid)
+    ));
+}
+
+async function getJobGuids(orderGuid)
+{
+    const jobs = await OrderJob.query().select('guid').where('orderGuid', orderGuid);
+
+    return jobs;
+}
 
 module.exports = listener;
