@@ -936,6 +936,15 @@ class OrderJobService
                 {
                     res = await OrderJob.query(trx).patch(OrderJobService.createStatusPayload('ready', currentUser))
                         .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+
+                    const post = await LoadboardPost.query(trx).select('externalGuid')
+                        .findOne({ loadboard: 'SUPERDISPATCH', jobGuid: res.guid });
+
+                    const { status } = await Loadboards.rollbackManualSDStatusChange(post.externalGuid);
+                    if (status == 200)
+                    {
+                        throw new HttpError(status, 'Could not remove hold from order on Superdispatch');
+                    }
                 }
                 else if (readyResult instanceof HttpError)
                 {
