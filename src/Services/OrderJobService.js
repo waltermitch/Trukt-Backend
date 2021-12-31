@@ -941,7 +941,7 @@ class OrderJobService
                         .findOne({ loadboard: 'SUPERDISPATCH', jobGuid: res.guid });
 
                     const { status } = await Loadboards.rollbackManualSDStatusChange(post.externalGuid);
-                    if (status == 200)
+                    if (status !== 200)
                     {
                         throw new HttpError(status, 'Could not remove hold from order on Superdispatch');
                     }
