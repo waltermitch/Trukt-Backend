@@ -867,7 +867,12 @@ class OrderJobService
                 const { status } = await Loadboards.putSDOrderOnHold(superdispatchPost.externalGuid);
                 if (status == 204)
                 {
-                    await LoadboardPost.query(trx).patch({ isPosted: false, status: 'unposted' }).findById(superdispatchPost.guid);
+                    await LoadboardPost.query(trx).patch({
+                        externalPostGuid: null,
+                        isPosted: false,
+                        status: 'unposted',
+                        updatedByGuid: currentUser
+                    }).findById(superdispatchPost.guid);
                 }
                 else
                 {
