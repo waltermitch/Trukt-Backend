@@ -1320,6 +1320,24 @@ class OrderJobService
                 .findById(jobGuid)
                 .returning('status');
 
+            const superJobQuery = OrderJob.query().select('loadboardPosts.externalGuid')
+                .leftJoinRelated('loadboardPosts')
+                .where({ 'loadboardPosts.loadboard': 'SUPERDISPATCH' })
+                .findById(jobGuid);
+
+            if (job.status == OrderJob.STATUS.PICKED_UP && state.currentStatus == OrderJob.STATUS.DISPATCHED)
+            {
+                const superJob = await superJobQuery.withGraphJoined('stops')
+                    .modifyGraph('stops', builder => builder.select('stopType', 'dateCompleted')
+                        .where({ stopType: 'pickup', isCompleted: true }));
+                await Loadboards.setSDOrderToPickedUp(superJob.externalGuid, superJob.stops[0].dateCompleted);
+            }
+            if (job.status == OrderJob.STATUS.DISPATCHED && state.currentStatus == OrderJob.STATUS.PICKED_UP)
+            {
+                const superJob = await superJobQuery;
+                await Loadboards.rollbackManualSDStatusChange(superJob.externalGuid);
+            }
+
             // emit event
             emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: job.status } });
 
