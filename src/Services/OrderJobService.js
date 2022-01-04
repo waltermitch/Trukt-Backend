@@ -882,7 +882,7 @@ class OrderJobService
 
             const res = await OrderJob.query(trx)
                 .patch({ status: OrderJob.STATUS.ON_HOLD, isOnHold: true, isReady: false, updatedByGuid: currentUser })
-                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady', 'orderGuid');
 
             await trx.commit();
 
