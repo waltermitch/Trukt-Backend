@@ -1321,7 +1321,7 @@ class OrderJobService
                 .returning('status');
 
             // emit event
-            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: job.status } });
+            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: job.status, oldStatus: state.currentStatus } });
 
             return {};
         }
