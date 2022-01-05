@@ -24,25 +24,25 @@
         {
             "id": 4,
             "category": "loadRequest",
-            "name": "Created",
+            "name": "Request Created",
             "order_filter_label": null
         },
         {
             "id": 5,
             "category": "loadRequest",
-            "name": "Canceled",
+            "name": "Request Canceled",
             "order_filter_label": null
         },
         {
             "id": 6,
             "category": "loadRequest",
-            "name": "Accpeted",
+            "name": "Request Accpeted",
             "order_filter_label": null
         },
         {
             "id": 7,
             "category": "loadRequest",
-            "name": "Declined",
+            "name": "Request Declined",
             "order_filter_label": null
         },
         {
