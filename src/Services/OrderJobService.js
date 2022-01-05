@@ -573,7 +573,7 @@ class OrderJobService
         await Promise.allSettled(res.acceptedJobs.map(item =>
             StatusManagerHandler.registerStatus({
                 orderGuid: item.orderGuid,
-                jobGuid: item.jobGuid,
+                jobGuid: item.guid,
                 userGuid: currentUser,
                 statusId: 16
             })));
