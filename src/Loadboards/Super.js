@@ -829,7 +829,9 @@ class Super extends Loadboard
             .where({ 'loadboardPosts.loadboard': 'SUPERDISPATCH' })
             .findById(jobGuid);
 
-        if (newStatus == OrderJob.STATUS.PICKED_UP && oldStatus == OrderJob.STATUS.DISPATCHED)
+        if ((newStatus == OrderJob.STATUS.PICKED_UP && oldStatus == OrderJob.STATUS.DISPATCHED) ||
+            (newStatus == OrderJob.STATUS.PICKED_UP && oldStatus == OrderJob.STATUS.DELIVERED)
+        )
         {
             const superJob = await superJobQuery.withGraphJoined('stops')
                 .modifyGraph('stops', builder => builder.select('stopType', 'dateCompleted')
@@ -840,6 +842,15 @@ class Super extends Loadboard
         {
             const superJob = await superJobQuery;
             await Loadboards.rollbackManualSDStatusChange(superJob.externalGuid);
+        }
+        if (newStatus == OrderJob.STATUS.DELIVERED && oldStatus == OrderJob.STATUS.PICKED_UP)
+        {
+            const superJob = await superJobQuery.withGraphJoined('stops')
+                .modifyGraph('stops', builder => builder.select('stopType', 'dateCompleted', 'sequence')
+                    .where({ isCompleted: true }));
+            superJob.stops = OrderStop.firstAndLast(superJob.stops);
+
+            await Loadboards.setSDOrderToDelivered(superJob.externalGuid, superJob.stops[0].dateCompleted, superJob.stops[superJob.stops.length - 1].dateCompleted);
         }
     }
 }
