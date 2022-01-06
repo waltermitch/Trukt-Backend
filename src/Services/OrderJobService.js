@@ -1121,13 +1121,6 @@ class OrderJobService
 
             await trx.commit();
 
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: userGuid,
-                statusId: 23
-            });
-
             // setting off an event to update status manager
             emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
 
@@ -1153,13 +1146,10 @@ class OrderJobService
 
         if (!job)
             throw new HttpError(404, 'Job does not exist');
-
-        if (job?.isDeleted)
+        if (job.isDeleted)
             throw new HttpError(400, 'This Order is deleted and can not be canceled.');
-
         if (job && jobIsDispatched)
             throw new HttpError(400, 'Please un-dispatch the Order before deleting');
-
         return job;
     }
 
@@ -1174,8 +1164,7 @@ class OrderJobService
 
             if (!job)
                 throw new HttpError(400, 'Job does not exist');
-
-            if (!job?.isCanceled)
+            if (!job.isCanceled)
                 return { status: 200, message: { data: { status: job.status } } };
 
             // createing ready status to undo delete
@@ -1186,13 +1175,6 @@ class OrderJobService
 
             // commiting transaction
             await trx.commit();
-
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: userGuid,
-                statusId: 24
-            });
 
             // emitting event for update statys manager
             emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
@@ -1323,7 +1305,7 @@ class OrderJobService
             // emit event
             emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: job.status, oldStatus: state.currentStatus } });
 
-            return {};
+            return state.expectedStatus;
         }
     }
 
@@ -1337,11 +1319,11 @@ class OrderJobService
 
         // verify state of data
         if (!job)
-            throw new HttpError(404, 'Job does not exist');
-        if (job?.isDeleted)
-            throw new HttpError(400, 'Job Is Deleted And Can Not Be Mark As Delivered.');
-        if (job?.isCanceled)
-            throw new HttpError(400, 'Job Is Canceled And Can Not Be Mark As Delivered.');
+            throw new HttpError(404, 'Job Does Not Exist');
+        if (job.isDeleted)
+            throw new HttpError(400, 'Job Is Deleted And Can Not Be Marked As Delivered.');
+        if (job.isCanceled)
+            throw new HttpError(400, 'Job Is Canceled And Can Not Be Marked As Delivered.');
         if (!job.vendorGuid)
             throw new HttpError(400, 'Job Has No Vendor Assigned');
 
@@ -1378,10 +1360,10 @@ class OrderJobService
         // verify state of data
         if (!job)
             throw new HttpError(404, 'Job does not exist');
-        if (job?.isDeleted)
-            throw new HttpError(400, 'Job Is Deleted And Can Not Be Mark As Delivered.');
-        if (job?.isCanceled)
-            throw new HttpError(400, 'Job Is Canceled And Can Not Be Mark As Delivered.');
+        if (job.isDeleted)
+            throw new HttpError(400, 'Job Is Deleted And Can Not Be Marked As Delivered.');
+        if (job.isCanceled)
+            throw new HttpError(400, 'Job Is Canceled And Can Not Be Marked As Delivered.');
         if (job.status !== OrderJob.STATUS.DELIVERED && job.status !== OrderJob.STATUS.PICKED_UP)
             throw new HttpError(400, 'Job Must First Be Delivered');
 
@@ -1396,7 +1378,7 @@ class OrderJobService
         }
 
         // if we are here, we failed to update status
-        throw new HttpError(400, 'Job Could Not Be Mark as Pick Up, Please Check All Stops Are Pick Up');
+        throw new HttpError(400, 'Job Could Not Be Marked as Picked Up, Please Check All Stops Are Picked Up');
     }
 }
 

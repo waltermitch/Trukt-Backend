@@ -770,6 +770,7 @@ class LoadboardService
             throw errors;
     }
 
+    // TODO: this method is on the OrderStops model, use it from there
     // recieves all the stops for a job and returns the first and last stops based on stop sequence
     static async getFirstAndLastStops(stops)
     {
@@ -829,8 +830,10 @@ class LoadboardService
     static async deletePostings(jobId, posts, userGuid)
     {
         const job = await LoadboardService.getNotDeletedPosts(jobId, posts);
+
         const payloads = [];
         let lbPayload;
+
         try
         {
             // Only send for non deleted loadboards
@@ -854,16 +857,17 @@ class LoadboardService
     static async getNotDeletedPosts(jobId, posts)
     {
         const loadboardNames = posts.map((post) => { return post.loadboard; });
-        const job = await Job.query().findById(jobId).withGraphFetched(`[
-            loadboardPosts(getExistingFromList, getNotDeleted)
-        ]`).modifiers({
-            getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
-        });
+
+        const job = await Job.query().findById(jobId)
+            .withGraphFetched('[loadboardPosts(getExistingFromList, getNotDeleted)]').modifiers({
+                getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
+            });
 
         if (!job)
             throw new Error('Job not found');
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+
         delete job.loadboardPosts;
 
         return job;
