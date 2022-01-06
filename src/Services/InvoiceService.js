@@ -332,7 +332,7 @@ class InvoiceService
         // query to get all the orders with related objects
         const qb = Order.query().whereIn('guid', arr);
 
-        qb.withGraphFetched('[invoices.[consignee, lines(isNotPaid).[commodity.[stops.[terminal]], item.qbAccount, vehicle]], client]');
+        qb.withGraphFetched('[invoices.[consignee, lines(isNotPaid).[commodity.[stops.[terminal], vehicle], item.qbAccount]], client]');
 
         // get all the orders
         const orders = await qb;
