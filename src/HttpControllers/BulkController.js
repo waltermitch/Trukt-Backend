@@ -1,5 +1,7 @@
 const OrderJobSerivce = require('../services/OrderJobService');
 const OrderService = require('../services/OrderService');
+const billController = require('../HttpControllers/BillController');
+const invoiceController = require('../HttpControllers/InvoiceController');
 const emitter = require('../EventListeners/index');
 
 class BulkController
@@ -70,6 +72,18 @@ class BulkController
             next(error);
         }
 
+    }
+
+    static async exportBills(req, res)
+    {
+        const results = await billController.bulkExportBill(req.body.orders);
+        res.status(200).json(results);
+    }
+
+    static async exportInvocies(req, res)
+    {
+        const results = await invoiceController.bulkExportInvoices(req.body.orders);
+        res.status(200).json(results);
     }
 }
 

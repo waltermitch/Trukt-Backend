@@ -145,6 +145,22 @@ class BillController
             }
         }
     }
+
+    static async bulkExportBill(orders)
+    {
+        const ordersExportPromises = orders.map(orderGuid => BillService.exportBills([orderGuid]));
+        const ordersExported = await Promise.allSettled(ordersExportPromises);
+
+        const response = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
+        {
+            const orderGuid = orders[arrayIndex];
+            reduceResponse[orderGuid] = orderExported.value;
+
+            return reduceResponse;
+        }, {});
+
+        return response;
+    }
 }
 
 module.exports = BillController;

@@ -280,6 +280,22 @@ class InvoiceController
             res.json({ 'error': 'Missing Query Parameter' });
         }
     }
+
+    static async bulkExportInvoices(orders)
+    {
+        const ordersExportPromises = orders.map(orderGuid => InvoiceService.exportInvoices([orderGuid]));
+        const ordersExported = await Promise.allSettled(ordersExportPromises);
+
+        const response = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
+        {
+            const orderGuid = orders[arrayIndex];
+            reduceResponse[orderGuid] = orderExported.value;
+
+            return reduceResponse;
+        }, {});
+
+        return response;
+    }
 }
 
 module.exports = InvoiceController;
