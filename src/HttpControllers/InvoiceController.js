@@ -7,6 +7,7 @@ class InvoiceController
     static async getInvoice(req, res)
     {
         const result = await InvoiceService.getInvoice(req.params.invoiceGuid);
+
         if (!result)
         {
             res.status(404);
@@ -26,10 +27,12 @@ class InvoiceController
         const currentUser = req.session.userGuid;
         const line = InvoiceLine.fromJson(req.body);
         delete line.billGuid;
+
         try
         {
             const result = await InvoiceService.addInvoiceLine(invoiceGuid, billGuid, line, currentUser);
-            res.status(200);
+
+            res.status(200).json;
             res.json(result);
         }
         catch (error)
@@ -52,9 +55,11 @@ class InvoiceController
         const invoiceGuid = req.params.invoiceGuid;
         const lineGuid = req.params.lineGuid;
         const line = InvoiceLine.fromJson(req.body);
+
         try
         {
             const result = await InvoiceService.updateInvoiceLine(invoiceGuid, lineGuid, line);
+
             res.status(200);
             res.json(result);
         }
@@ -69,9 +74,11 @@ class InvoiceController
     {
         const invoiceGuid = req.params.invoiceGuid;
         const lineGuid = req.params.lineGuid;
+
         try
         {
             const result = await InvoiceService.deleteInvoiceLine(invoiceGuid, lineGuid);
+
             res.status(200);
             res.json(result);
         }
@@ -86,9 +93,11 @@ class InvoiceController
     {
         const invoiceGuid = req.params.invoiceGuid;
         const lineGuids = req.body;
+
         try
         {
             await InvoiceService.deleteInvoiceLines(invoiceGuid, lineGuids);
+
             res.status(200).send();
         }
         catch (error)
@@ -103,6 +112,7 @@ class InvoiceController
         try
         {
             await InvoiceService.LinkLines(req.params.line1Guid, req.params.line2Guid);
+
             res.status(200).send();
         }
         catch (error)
@@ -117,6 +127,7 @@ class InvoiceController
         try
         {
             await InvoiceService.UnLinkLines(req.params.line1Guid, req.params.line2Guid);
+
             res.status(200).send();
         }
         catch (error)
@@ -137,14 +148,19 @@ class InvoiceController
             {
                 // get Order Guid
                 const result = await OrderJob.query().findById(req.params.jobGuid);
+
                 if (!result)
                 {
                     res.status(404).send(`Job with Guid ${req.params.jobGuid} not found.`);
+
                     return;
                 }
+
                 orderGuid = result.orderGuid;
             }
+
             const result = await InvoiceService.getOrderInvoicesandBills(orderGuid);
+
             if (!result)
             {
                 res.status(404);
@@ -173,14 +189,19 @@ class InvoiceController
             {
                 // get Order Guid
                 const result = await OrderJob.query().findById(req.params.jobGuid);
+
                 if (!result)
                 {
                     res.status(404).send(`Job with Guid ${req.params.jobGuid} not found.`);
+
                     return;
                 }
+
                 orderGuid = result.orderGuid;
             }
+
             const result = await InvoiceService.getJobOrderFinances(orderGuid, type);
+
             if (!result)
             {
                 res.status(404);

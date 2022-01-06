@@ -2,9 +2,7 @@ const SystemManagementService = require('../Services/SystemManagementService');
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusCacheManager = require('../EventManager/StatusCacheManager');
 const TerminalsHandler = require('../EventManager/TerminalsHandler');
-const CoupaManager = require('../EventManager/CoupaManager');
 const QBO = require('../QuickBooks/API');
-const Super = require('../Super/API');
 const Cron = require('node-cron');
 
 const expressions =
@@ -28,6 +26,7 @@ const expressions =
 Cron.schedule(expressions.fiveMinutes, async () =>
 {
     await StatusCacheManager.updateStatus();
+
     // await CoupaManager.checkCoupaQueue();
 });
 
@@ -49,9 +48,6 @@ Cron.schedule(expressions.hourly, async () =>
 // daily
 Cron.schedule(expressions.daily, async () =>
 {
-    // kick off job but don't wait for it
-    Super.retryCarrierUpdates();
-
     // get triumph token
     await QBO.syncListsToDB();
 });

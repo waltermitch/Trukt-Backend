@@ -1,6 +1,5 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
-const Contact = require('./TerminalContact');
 const BaseModel = require('./BaseModel');
 const { eqProps } = require('ramda');
 
@@ -21,6 +20,7 @@ class Terminal extends BaseModel
 
     static get relationMappings()
     {
+        const Contact = require('./TerminalContact');
 
         return {
             contacts: {

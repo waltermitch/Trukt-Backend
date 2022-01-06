@@ -1,10 +1,10 @@
-const { DateTime } = require('luxon');
-const currency = require('currency.js');
-const R = require('ramda');
 const OrderService = require('../Services/OrderService');
-const Order = require('../Models/Order');
-const EDIData = require('../Models/EDIData');
 const OrderJob = require('../Models/OrderJob');
+const EDIData = require('../Models/EDIData');
+const Order = require('../Models/Order');
+const currency = require('currency.js');
+const { DateTime } = require('luxon');
+const R = require('ramda');
 
 const SCAC_CODE = 'RCGQ';
 
@@ -677,5 +677,4 @@ class EDIController
     }
 }
 
-const controller = new EDIController();
-module.exports = controller;
+module.exports = EDIController;

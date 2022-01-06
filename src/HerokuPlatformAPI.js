@@ -1,25 +1,25 @@
-const Axios = require('axios');
-const https = require('https');
+const HTTPS = require('./AuthController');
 
-const baseURL = 'https://api.heroku.com';
-const headers = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/vnd.heroku+json; version=3',
-    'Authorization': `Bearer ${process.env['heroku.accessToken']}`
+const herokuAccessToken = process.env['heroku.accessToken'];
+const opts =
+{
+    url: 'https://api.heroku.com',
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.heroku+json; version=3',
+        'Authorization': `Bearer ${herokuAccessToken}`
+    }
 };
 
-// Stores the active axios http client
-let api;
+const api = new HTTPS(opts).connect(false);
 
 class Heroku
 {
     static async getConfig()
     {
-        // ensure connection
-        Heroku.connect();
-
         // search for config
         const res = await api.get(`/apps/${process.env['heroku.appId']}/config-vars`);
+
         if (res.data?.DATABASE_URL)
         {
             return res.data;
@@ -37,21 +37,6 @@ class Heroku
                 }
             }
         }
-    }
-
-    static connect(opts)
-    {
-        // Client doesnt need to keep-alive because fetching only the config and thats it.
-        if (!api)
-        {
-            api = Axios.create({
-                baseURL,
-                headers,
-                httpsAgent: new https.Agent(opts)
-            });
-        }
-
-        return api;
     }
 }
 

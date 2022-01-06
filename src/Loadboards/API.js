@@ -22,6 +22,27 @@ class LoadboardsFunc
 
         return res.data;
     }
+
+    static async putSDOrderOnHold(sdGuid)
+    {
+        const res = await conn.put('/setOnHold', { sdGuid });
+
+        return { data: res.data, status: res.status };
+    }
+
+    static async rollbackManualSDStatusChange(sdGuid)
+    {
+        const res = await conn.put('/rollbackManualStatusChange', { sdGuid });
+
+        return { data: res.data, status: res.status };
+    }
+
+    static async setSDOrderToPickedUp(sdGuid, adjustedDate)
+    {
+        const res = await conn.put('/setPickedUp', { sdGuid, adjustedDate });
+
+        return { data: res.data, status: res.status };
+    }
 }
 
 module.exports = LoadboardsFunc;

@@ -364,9 +364,9 @@ class ShipCars extends Loadboard
                 allPromises.push(...commodityPromises);
 
                 const vendor = await SFAccount.query(trx)
-                    .findById(dispatch.vendorGuid)
+                    .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                     .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
-                    .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+                    .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                     .select('salesforce.accounts.name as vendorName',
                         'salesforce.accounts.guid as vendorGuid',
                         'salesforce.contacts.guid as agentGuid',
@@ -382,7 +382,7 @@ class ShipCars extends Loadboard
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
-                        vendorAgentName: vendor.vendorAgentName,
+                        vendorAgentName: vendor.agentName,
                         code: 'pending'
                     }
                 });
@@ -396,7 +396,7 @@ class ShipCars extends Loadboard
         }
         catch (e)
         {
-            trx.rollback();
+            await trx.rollback();
             throw new Error(e.message);
         }
     }
@@ -463,16 +463,14 @@ class ShipCars extends Loadboard
             }
             allPromises.push(...commodityPromises);
 
-            delete dispatch.job;
-
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
 
             allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid));
 
             const vendor = await SFAccount.query(trx)
-                .findById(dispatch.vendorGuid)
+                .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                 .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
-                .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+                .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                 .select('salesforce.accounts.name as vendorName',
                     'salesforce.accounts.guid as vendorGuid',
                     'salesforce.contacts.guid as agentGuid',
@@ -481,7 +479,7 @@ class ShipCars extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            StatusManagerHandler.registerStatus({
+            await StatusManagerHandler.registerStatus({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
                 statusId: 12,
@@ -517,8 +515,9 @@ class ShipCars extends Loadboard
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
+
                 objectionDispatch.setToAccepted();
-                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
+                objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
@@ -540,7 +539,7 @@ class ShipCars extends Loadboard
                 await Promise.all(allPromises);
                 await trx.commit();
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 13,
@@ -637,7 +636,7 @@ class ShipCars extends Loadboard
 
                 await trx.commit();
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 14,

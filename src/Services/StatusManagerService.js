@@ -1,4 +1,5 @@
 const StatusLogType = require('../Models/StatusLogType');
+const emitter = require('../EventListeners/index');
 const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
@@ -19,7 +20,6 @@ class StatusManagerService
     static async createStatusLog({ userGuid, orderGuid, statusId, extraAnnotations, jobGuid })
     {
         const trx = await StatusLog.startTransaction();
-
         try
         {
             StatusManagerService.validateCreateStatusLogInput({ userGuid, orderGuid, statusId, jobGuid });
@@ -39,6 +39,8 @@ class StatusManagerService
                 }).returning('id');
 
             await trx.commit();
+
+            emitter.emit('orderjob_activity_updated', { jobGuid, state: { id: id } });
 
             return { id };
         }

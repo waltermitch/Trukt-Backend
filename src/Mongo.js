@@ -89,7 +89,9 @@ class Mongo
             query = { name: query };
 
         const db = await Mongo.getDB();
+
         const res = await db.collection('secrets').findOne(query, { projection: { _id: 0 } });
+
         return res;
     }
 

@@ -1,6 +1,3 @@
-const OrderJob = require('./OrderJob');
-const Order = require('./Order');
-
 class Expense
 {
     /**
@@ -48,6 +45,8 @@ class Expense
 
     static fromInvoiceLine(orderjob, invoice, line)
     {
+        const OrderJob = require('./OrderJob');
+        const Order = require('./Order');
         let accountType;
         let job;
         if (orderjob instanceof Order)

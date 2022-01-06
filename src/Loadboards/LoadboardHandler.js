@@ -3,6 +3,8 @@ const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJobService = require('../Services/OrderJobService');
 const OrderJob = require('../Models/OrderJob');
+const knex = require('../Models/BaseModel').knex();
+const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const R = require('ramda');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
@@ -49,21 +51,86 @@ const myMessageHandler = async (message) =>
             // should be listening on messages posted to the group
             if (
                 pubsubAction == 'dispatch' ||
-                pubsubAction == 'undispatch' ||
-                pubsubAction == 'carrierAcceptDispatch' ||
+                pubsubAction == 'carrierAcceptDispatch')
+            {
+                const job = await OrderJobDispatch.query()
+                    .withGraphJoined('[vendor, vendorAgent]')
+                    .modifyGraph('vendor', builder =>
+                    {
+                        builder.select(
+                            'dotNumber',
+                            'email',
+                            'phoneNumber',
+                            'billingStreet',
+                            'billingCity',
+                            'billingPostalCode',
+                            'billingState',
+                            'billingCountry');
+                    })
+                    .modifyGraph('vendorAgent', builder =>
+                    {
+                        builder.select(
+                            'name',
+                            'email',
+                            'phoneNumber');
+                    })
+                    .leftJoinRelated('job')
+                    .select(
+                        'orderJobDispatches.guid as dispatchGuid',
+                        'job.guid as jobGuid',
+                        'job.status'
+                    ).findOne({ 'jobGuid': jobGuid, isValid: true })
+                    .andWhere(builder => builder.where({ isPending: true }).orWhere({
+                        isAccepted: true
+                    }));
+                const [pickup, delivery] = (await knex.raw(`
+                        select distinct(os.guid), os.stop_type, os.date_scheduled_type, os.date_scheduled_start, os.date_scheduled_end 
+                        from rcg_tms.order_job_dispatches ojd 
+                        left join rcg_tms.order_stop_links osl 
+                        on ojd.job_guid = osl.job_guid
+                        left join rcg_tms.order_stops os 
+                        on osl.stop_guid = os.guid 
+                        where ojd.guid = ?
+                        and (os.stop_type = 'pickup' or os.stop_type = 'delivery')
+                        and os.date_scheduled_type is not null;`, [job.dispatchGuid])).rows;
+                job.pickup = pickup;
+                job.delivery = delivery;
+                
+                await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
+            }
+            if (pubsubAction == 'undispatch' ||
                 pubsubAction == 'carrierDeclineDispatch')
             {
-                const job = await OrderJob.query().leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
-                    .findOne({ 'rcgTms.orderJobs.guid': jobGuid })
+                const job = (await OrderJobDispatch.query()
+                    .leftJoinRelated('job')
                     .select(
-                        'rcgTms.OrderJobs.status as jobStatus',
-                        'vendor.name as vendorName',
-                        'vendor.dotNumber',
-                        'vendor.email as vendorEmail',
-                        'vendor.phoneNumber as vendorPhone',
-                        'vendorAgent.name as agentName',
-                        'vendorAgent.email as agentEmail',
-                        'vendorAgent.phoneNumber as agentPhone');
+                        'job.guid as jobGuid',
+                        'job.status'
+                    ).where({ 'jobGuid': jobGuid })
+                    .andWhere(builder =>
+                        builder.where({ 'orderJobDispatches.isCanceled': true })
+                            .orWhere({ isDeclined: true }))
+                    .limit(1))[0];
+                if (job)
+                {
+                    job.vendor = {
+                        dotNumber: null,
+                        email: null,
+                        phone: null,
+                        billingStreet: null,
+                        billingCity: null,
+                        billingPostalCode: null,
+                        billingState: null,
+                        billingCountry: null
+                    };
+                    job.vendorAgent = {
+                        name: null,
+                        email: null,
+                        phone: null
+                    };
+                    job.pickup = { datedScheduledType: null, dateScheduledStart: null, dateScheduledEnd: null };
+                    job.delivery = { datedScheduledType: null, dateScheduledStart: null, dateScheduledEnd: null };
+                }
 
                 await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
             }
@@ -74,12 +141,6 @@ const myMessageHandler = async (message) =>
 
                 if (!status)
                     throw error;
-
-                // updating the job status field
-                await OrderJob.query()
-                    .patch(OrderJob.fromJson({ status }))
-                    .findById(jobGuid)
-                    .returning('status');
 
                 // publishing status and post to posting group
                 await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts, status } });

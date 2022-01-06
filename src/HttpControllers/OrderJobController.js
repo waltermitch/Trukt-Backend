@@ -20,11 +20,10 @@ class OrderJobController
     {
         try
         {
-            const result = await OrderStopService.updateStopStatus(req.params, req.body);
+            const result = await OrderStopService.updateStopStatus(req.params, req.body, req.session.userGuid);
+
             if (result)
-            {
                 res.status(200).json(result);
-            }
         }
         catch (error)
         {
@@ -37,6 +36,7 @@ class OrderJobController
         try
         {
             const result = await StatusCacheManager.returnUpdatedCache();
+
             if (result)
             {
                 res.status(200);
@@ -54,6 +54,7 @@ class OrderJobController
     static async getCarrier(req, res)
     {
         const { status, data } = await OrderJobService.getJobCarrier(req.params.jobGuid);
+
         res.status(status).json(data);
     }
 
@@ -72,6 +73,7 @@ class OrderJobController
         const jobGuid = req.params.jobGuid;
         const func = value ? OrderJobService.addHold : OrderJobService.removeHold;
         const eventEmitted = value ? 'orderjob_hold_added' : 'orderjob_hold_removed';
+
         try
         {
             const response = await func(jobGuid, req.session.userGuid);
@@ -138,6 +140,7 @@ class OrderJobController
         try
         {
             const { status, message } = await OrderJobService.deleteJob(req.params.jobGuid, req.session.userGuid);
+
             res.status(status).send(message);
         }
         catch (error)
@@ -150,6 +153,7 @@ class OrderJobController
         try
         {
             const { status, message } = await OrderJobService.undeleteJob(req.params.jobGuid, req.session.userGuid);
+
             res.status(status).send(message);
         }
         catch (error)
@@ -163,6 +167,7 @@ class OrderJobController
         try
         {
             const { status, message } = await OrderJobService.cancelJob(req.params.jobGuid, req.session.userGuid);
+
             res.status(status).send(message);
         }
         catch (error)
@@ -176,6 +181,35 @@ class OrderJobController
         try
         {
             const { status, message } = await OrderJobService.uncancelJob(req.params.jobGuid, req.session.userGuid);
+
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async deliveredJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.deliverJob(req.params.jobGuid, req.session.userGuid);
+
+            res.status(status).send(message);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async undeliverJob(req, res, next)
+    {
+        try
+        {
+            const { status, message } = await OrderJobService.undeliverJob(req.params.jobGuid, req.session.userGuid);
+
             res.status(status).send(message);
         }
         catch (error)

@@ -5,9 +5,12 @@ const OrderStopLink = require('../Models/OrderStopLink');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
+const OrderJob = require('../Models/OrderJob');
 const Job = require('../Models/OrderJob');
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
+
+const Loadboards = require('./API');
 
 class Super extends Loadboard
 {
@@ -535,15 +538,15 @@ class Super extends Loadboard
                 }
 
                 const vendor = await SFAccount.query(trx)
-                    .findById(dispatch.vendorGuid)
+                    .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                     .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
-                    .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid })
+                    .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                     .select('salesforce.accounts.name as vendorName',
                         'salesforce.accounts.guid as vendorGuid',
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
                     statusId: 10,
@@ -624,9 +627,9 @@ class Super extends Loadboard
             allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(payloadMetadata.dispatch.guid));
 
             const vendor = await SFAccount.query(trx)
-                .findById(dispatch.vendor.guid)
+                .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                 .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
-                .where({ 'salesforce.contacts.guid': dispatch.vendorAgent.guid })
+                .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                 .select('salesforce.accounts.name as vendorName',
                     'salesforce.accounts.guid as vendorGuid',
                     'salesforce.contacts.guid as agentGuid',
@@ -635,7 +638,7 @@ class Super extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            StatusManagerHandler.registerStatus({
+            await StatusManagerHandler.registerStatus({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
                 statusId: 12,
@@ -671,8 +674,9 @@ class Super extends Loadboard
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
+
                 objectionDispatch.setToAccepted();
-                dispatch.setUpdatedBy(process.env.SYSTEM_USER);
+                objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
@@ -694,7 +698,7 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 13,
@@ -758,7 +762,7 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 14,
@@ -815,6 +819,27 @@ class Super extends Loadboard
                 newCommodities.shift(i);
                 break;
             }
+        }
+    }
+
+    static async updateStatus(jobGuid, oldStatus, newStatus)
+    {
+        const superJobQuery = OrderJob.query().select('loadboardPosts.externalGuid')
+            .leftJoinRelated('loadboardPosts')
+            .where({ 'loadboardPosts.loadboard': 'SUPERDISPATCH' })
+            .findById(jobGuid);
+
+        if (newStatus == OrderJob.STATUS.PICKED_UP && oldStatus == OrderJob.STATUS.DISPATCHED)
+        {
+            const superJob = await superJobQuery.withGraphJoined('stops')
+                .modifyGraph('stops', builder => builder.select('stopType', 'dateCompleted')
+                    .where({ stopType: 'pickup', isCompleted: true }));
+            await Loadboards.setSDOrderToPickedUp(superJob.externalGuid, superJob.stops[0].dateCompleted);
+        }
+        if (newStatus == OrderJob.STATUS.DISPATCHED && oldStatus == OrderJob.STATUS.PICKED_UP)
+        {
+            const superJob = await superJobQuery;
+            await Loadboards.rollbackManualSDStatusChange(superJob.externalGuid);
         }
     }
 }

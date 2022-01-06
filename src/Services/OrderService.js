@@ -3202,7 +3202,7 @@ class OrderService
         }
     }
 
-    static async markOrderDelivered(orderGuid, currentUser)
+    static async markOrderDelivered(orderGuid, currentUser, jobGuid)
     {
         const [order] = await Promise.all([
             Order.query()
@@ -3223,44 +3223,35 @@ class OrderService
         else if (order.status !== 'picked up')
             throw new HttpError(400, 'Order Must First Be Picked Up');
 
-        // make sure vendor is assigned to all transport jobs
+        // make sure vendor is assigned to all transport jobs and all jobs are delivered
         for (const job of order.jobs)
-            if (job.isTransport && !job.vendorGuid)
+            if ((job.isTransport && !job.vendorGuid))
                 throw new HttpError(400, `Order's Job ${job.number} Has No Vendor Assigned`);
+            else if (job.status !== 'delivered')
+                throw new HttpError(400, `Order's Job ${job.number} Is Not Delivered`);
 
         // make sure all commodities are marked as delivered
         for (const commodity of order.commodities)
             if (commodity.deliveryStatus !== 'delivered')
                 throw new HttpError(400, `Order's Commodity ${commodity.vehicle.name} Has Not Been Delivered`);
 
-        // if we got here mark all jobs delivered and the order delivered
-        await Promise.all(
-            [
-                ...order.jobs.map(async (job) =>
-                {
-                    OrderJobService.markAsDeliveredOrPickedUp(job.guid, currentUser);
-                }),
-                Order.query().patch({
-                    'status': 'delivered',
-                    'updatedByGuid': currentUser
-                }).where('guid', order.guid)
-            ]
-        );
+        // if we got here mark order as delivered
+        await Order.query().patch({
+            'status': 'delivered',
+            'updatedByGuid': currentUser
+        }).where('guid', order.guid);
 
-        emitter.emit('order_delivered', orderGuid);
+        emitter.emit('order_delivered', { orderGuid, jobGuid, currentUser });
 
         return 200;
     }
 
     static async markOrderUndelivered(orderGuid, currentUser)
     {
-        const [trx, order] = await Promise.all([
-            Order.startTransaction(),
-            Order.query()
-                .where({ 'orders.guid': orderGuid })
-                .withGraphJoined('jobs')
-                .first()
-        ]);
+        const order = await Order.query()
+            .where({ 'orders.guid': orderGuid })
+            .withGraphJoined('jobs')
+            .first();
 
         if (!order)
             throw new HttpError(404, 'Order Not Found');
@@ -3273,37 +3264,19 @@ class OrderService
         else if (order.status !== 'delivered')
             throw new HttpError(400, 'Order Must First Be Delivered');
 
-        // if we got here mark all jobs undelivered and the order undelivered
-        try
-        {
-            await Promise.all(
-                [
-                    ...order.jobs.map(async (job) =>
-                    {
-                        // since the job doesn't have explicit undelivered method, because it's not defined in func spec
-                        // leaving this as is, until further development
-                        await OrderJob.query(trx).patch({
-                            'status': 'picked up',
-                            'updatedByGuid': currentUser
-                        }).where('guid', job.guid);
-                    }),
-                    Order.query(trx).patch({
-                        'status': 'picked up',
-                        'updatedByGuid': currentUser
-                    })
-                ]);
+        for (const job of order.jobs)
+            if (job.status !== 'pick up')
+                throw new HttpError(400, `Job ${job.guid} Is Not Pick Up`);
 
-            await trx.commit();
+        // if we got here mark the order undelivered
+        await Order.query().patch({
+            'status': 'picked up',
+            'updatedByGuid': currentUser
+        });
 
-            emitter.emit('order_undelivered', orderGuid);
+        emitter.emit('order_undelivered', orderGuid);
 
-            return 200;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw err;
-        }
+        return 200;
     }
 
     static async cancelOrder(orderGuid, currentUser)

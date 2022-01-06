@@ -3,6 +3,7 @@ const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardContact = require('../Models/LoadboardContact');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const LoadboardRequest = require('../Models/LoadboardRequest');
 const { ServiceBusClient } = require('@azure/service-bus');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
@@ -15,10 +16,11 @@ const OrderStop = require('../Models/OrderStop');
 const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
-const { raw } = require('objection');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
+const SYSUSER = process.env.SYSTEM_USER;
+
 const sbClient = new ServiceBusClient(connectionString);
 const sender = sbClient.createSender(queueName);
 
@@ -308,6 +310,16 @@ class LoadboardService
             // compose response that can be useful for client
             dispatch.vendor = carrier;
             dispatch.vendorAgent = carrierContact;
+            dispatch.pickup = {
+                dateScheduledType: job.pickup.dateScheduledType,
+                dateScheduledStart: job.pickup.dateScheduledStart,
+                dateScheduledEnd: job.pickup.dateScheduledEnd
+            };
+            dispatch.delivery = {
+                dateScheduledType: job.delivery.dateScheduledType,
+                dateScheduledStart: job.delivery.dateScheduledStart,
+                dateScheduledEnd: job.delivery.dateScheduledEnd
+            };
 
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
@@ -374,6 +386,10 @@ class LoadboardService
             if (!dispatch)
                 throw new HttpError(404, 'No active offers to undispatch');
 
+            // this is temporary fix, should make it data driven eventually
+            if ([Job.STATUS.PICKED_UP, Job.STATUS.DELIVERED, Job.STATUS.COMPLETED].includes(dispatch.job.status))
+                throw new HttpError(400, 'Can not cancel dispatch for a job that has already been picked up or delivered');
+
             // assign current user as updated by
             dispatch.setUpdatedBy(currentUser);
 
@@ -395,57 +411,63 @@ class LoadboardService
                 // send message to bus que to unpost order
                 await sender.sendMessages({ body: message });
             }
+            else
+            {
+                // setting disptch to canceled status
+                dispatch.setToCanceled(currentUser);
 
-            // setting disptch to canceled status
-            dispatch.setToCanceled(currentUser);
+                // updating dispatch object to canceled
+                await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
 
-            // updating dispatch object to canceled
-            await OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid);
+                // setting all stop related to job to null
+                await OrderStop.query(trx)
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: currentUser })
+                    .whereIn('guid',
+                        OrderStopLink.query().select('stopGuid')
+                            .where({ 'jobGuid': jobGuid })
+                            .distinctOn('stopGuid')
+                    );
 
-            // setting all stop related to job to null
-            await OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: currentUser })
-                .whereIn('guid',
-                    OrderStopLink.query().select('stopGuid')
-                        .where({ 'jobGuid': jobGuid })
-                        .distinctOn('stopGuid')
-                );
+                // creating new job object with no vedor because we are removing them.
+                const job = Job.fromJson({
+                    vendorGuid: null,
+                    vendorAgentGuid: null,
+                    vendorContact: null,
+                    dateStarted: null,
+                    status: 'ready'
+                });
 
-            // creating new job object with no vedor because we are removing them.
-            const job = Job.fromJson({
-                vendorGuid: null,
-                vendorAgentGuid: null,
-                vendorContact: null,
-                dateStarted: null,
-                status: 'ready'
-            });
+                job.setUpdatedBy(currentUser);
 
-            job.setUpdatedBy(currentUser);
+                // updating orderJob with new fields
+                await Job.query(trx).patch(job).findById(dispatch.jobGuid);
 
-            // updating orderJob with new fields
-            await Job.query(trx).patch(job).findById(dispatch.jobGuid);
-
-            // returning ready status if sucessfull
-            dispatch.jobStatus = 'ready';
+                // returning ready status if sucessfull
+                dispatch.jobStatus = 'ready';
+            }
 
             // commiting transaction
             await trx.commit();
 
-            // updating activity logger
-            await StatusManagerHandler.registerStatus({
-                orderGuid: dispatch.job.orderGuid,
-                userGuid: currentUser,
-                statusId: 12,
-                jobGuid,
-                extraAnnotations: {
-                    undispatchedFrom: 'internal',
-                    code: 'ready',
-                    vendorGuid: dispatch.vendor.guid,
-                    vendorAgentGuid: dispatch.vendorAgentGuid,
-                    vendorName: dispatch.vendor.name,
-                    vendorAgentName: dispatch.vendorAgent.name
-                }
-            });
+            // due to the nature of the code, we have to write redundant code to handle edge cases xD
+            if (!dispatch.loadboardPostGuid)
+            {
+                // updating activity logger
+                await StatusManagerHandler.registerStatus({
+                    orderGuid: dispatch.job.orderGuid,
+                    userGuid: currentUser,
+                    statusId: 12,
+                    jobGuid,
+                    extraAnnotations: {
+                        undispatchedFrom: 'internal',
+                        code: 'ready',
+                        vendorGuid: dispatch.vendor.guid,
+                        vendorAgentGuid: dispatch.vendorAgentGuid,
+                        vendorName: dispatch.vendor.name,
+                        vendorAgentName: dispatch.vendorAgent.name
+                    }
+                });
+            }
 
             return dispatch;
         }
@@ -845,6 +867,67 @@ class LoadboardService
         delete job.loadboardPosts;
 
         return job;
+    }
+
+    static async postingBooked(postingGuid, carrierGuid, loadboard)
+    {
+        const trx = await LoadboardPost.transaction();
+
+        try
+        {
+            // Get the posting and get the vendor
+            const [posting, vendor] =
+                await Promise.all([
+                    LoadboardPost.query().where('loadboardPosts.externalPostGuid', postingGuid)
+                        .withGraphJoined('job.[loadboardPosts]').first(),
+                    SFAccount.query().where((builder) =>
+                    {
+                        if (loadboard === 'SUPERDISPATCH')
+                            builder.where('sdGuid', carrierGuid);
+                        else if (loadboard === 'SHIPCARS')
+                            builder.where('scId', carrierGuid);
+                    }).orWhere('sfId', carrierGuid).first()
+                ]);
+
+            if (!posting)
+                throw new HttpError(404, 'Posting Not Found');
+            else if (!vendor)
+                throw new HttpError(404, 'Vendor Not Found');
+
+            // make sure the job is still in the correct status
+            if (posting.job.vendorGuid)
+                throw new HttpError(400, 'Can not book a job that has already been booked');
+
+            // if vendor and posting are valid
+            // unpost the posting &
+            // create an order job dispatch &
+            // update the job with vendor
+            await Promise.all([
+                LoadboardRequest.query().patch({ 'isValid': false, 'isDeclined': true }).where('externalPostGuid', postingGuid),
+                LoadboardService.unpostPostings(posting.job.guid, posting.job.loadboardPosts, SYSUSER),
+                Job.query(trx).patch({ 'vendorGuid': vendor.guid }).where('guid', posting.job.guid),
+                OrderJobDispatch.query(trx).insert({
+                    jobGuid: posting.job.guid,
+                    loadboardPostGuid: posting.guid,
+                    vendorGuid: vendor.guid,
+                    isAccepted: true,
+                    isPending: false,
+                    createdByGuid: SYSUSER
+                })
+            ]);
+
+            // fire event orderjob_booked
+            emitter.emit('orderjob_booked', { jobGuid: posting.job.guid, userGuid: SYSUSER });
+
+            await trx.commit();
+
+            return;
+        }
+        catch (e)
+        {
+            await trx.rollback();
+            throw e;
+        }
     }
 }
 

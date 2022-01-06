@@ -5,7 +5,7 @@ const { uuidRegexStr } = require('../Utils/Regexes');
 const prefix = '/terminal';
 
 router
-    .get(`${prefix}/:terminalGuid(${uuidRegexStr})`, controller.constructor.getByGuid)
-    .get(`${prefix}`, controller.constructor.search);
+    .get(`${prefix}/:terminalGuid(${uuidRegexStr})`, controller.getByGuid)
+    .get(`${prefix}`, controller.search);
 
 module.exports = router;

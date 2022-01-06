@@ -12,9 +12,12 @@
 
 4. When trying to debug an event, `grep` the event name in the `EventListeners` folder
    i.e `grep ./src/EventListeners -rnw -e 'order_updated'`
-   i.e. `grep 'order_updated' -rn ./src/EventListeners`   
+   i.e. `grep 'order_updated' -rn ./src/EventListeners`
 
 5. Event Emitters can be found in multiple places, this is normal.
+
+6. For an event to be emitted and received, it needs to be linked to the same EventEmitter instance.
+   This is done by using the ./index.js which holds an EventEmitter singleton.
 
 ## Event Enumeration
 
@@ -24,7 +27,7 @@ The following is a list of all the events that are being emitted.
 # Example of a Listener
 
 ```javascript
-const {EventEmitter} = require('events');
+const { EventEmitter } = require("events");
 
 const listener = new EventEmitter();
 

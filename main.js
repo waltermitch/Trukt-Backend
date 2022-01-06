@@ -10,7 +10,6 @@ require('./src/HttpControllers/HttpRouteController');
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
-const domain = require('./src/Domain');
 const KnexSessionStore = require('connect-session-knex')(session);
 const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
@@ -75,7 +74,7 @@ async function run()
     }
 
     const app = express();
-    app.use(domain);
+
     app.use(corsMiddleware());
     app.use(session(sessionConfig));
     app.use(express.json());
