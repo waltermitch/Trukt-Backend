@@ -43,6 +43,13 @@ class LoadboardsFunc
 
         return { data: res.data, status: res.status };
     }
+
+    static async setSDOrderToDelivered(sdGuid, adjustedPickupDate, adjustedDeliveryDate)
+    {
+        const res = await conn.put('/setDelivered', { sdGuid, adjustedPickupDate, adjustedDeliveryDate });
+
+        return { data: res.data, status: res.status };
+    }
 }
 
 module.exports = LoadboardsFunc;
