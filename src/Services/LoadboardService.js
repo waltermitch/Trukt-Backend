@@ -211,9 +211,6 @@ class LoadboardService
             // first check if the contact exists based off guid that was passed in
             if (!carrierContact?.guid)
             {
-                if (driver.name == null || driver.email == null || driver.phoneNumber == null)
-                    throw new Error('Please pass in valid driver object that includes a proper name, email, and phone');
-
                 carrierContact = SFContact.fromJson({
                     name: driver.name,
                     email: driver.email,
@@ -228,13 +225,17 @@ class LoadboardService
                     throw new Error('Please pass in valid driver for carrier');
             }
 
+            // updating invoice bills with proper payments methods
             await InvoiceBill.query(trx).patch({ paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job?.bills[0]?.guid);
+
+            // evenly split a price across provided commodities
             const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
             for (const line of lines)
                 line.transacting(trx);
 
             allPromises.push(...lines);
 
+            // update scheduled dates on stops
             job.pickup.setScheduledDates(body.pickup.dateType, body.pickup.startDate, body.pickup.endDate);
             job.pickup.setUpdatedBy(currentUser);
             allPromises.push(OrderStop.query(trx).patch(job.pickup).findById(job.pickup.guid));
@@ -243,12 +244,13 @@ class LoadboardService
             job.delivery.setUpdatedBy(currentUser);
             allPromises.push(OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid));
 
-            if (job.delivery.dateScheduledStart < job.pickup.dateScheduledStart ||
-                job.delivery.dateScheduledEnd < job.pickup.dateScheduledEnd)
+            // validating that pick date is before delivery
+            if (job.delivery.dateScheduledStart < job.pickup.dateScheduledStart || job.delivery.dateScheduledEnd < job.pickup.dateScheduledEnd)
             {
                 throw new Error('Pickup dates should be before delivery date');
             }
 
+            // update job status to pending and started date
             const jobForUpdate = Job.fromJson({
                 dateStarted: DateTime.utc(),
                 status: Job.STATUS.PENDING
@@ -268,6 +270,7 @@ class LoadboardService
                 throw `Loadboard Post for ${body.loadboard} is out of sync. Please fix the job and the resync the loadboard post before dispatching`;
             }
 
+            // composing dispatch object
             const dispatch = OrderJobDispatch.fromJson({
                 jobGuid: job.guid,
                 loadboardPostGuid: lbPost,
@@ -305,7 +308,7 @@ class LoadboardService
             // until the job is completely dispatched and a successful response is returned
             const posts = await LoadboardPost.query(trx).select('loadboard').where({ status: 'posted', isPosted: true, isSynced: true, jobGuid: jobId });
 
-            this.unpostPostings(jobId, posts, currentUser);
+            await LoadboardService.unpostPostings(jobId, posts, currentUser);
 
             // compose response that can be useful for client
             dispatch.vendor = carrier;
@@ -324,7 +327,7 @@ class LoadboardService
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,
                     statusId: 10,
@@ -770,6 +773,7 @@ class LoadboardService
             throw errors;
     }
 
+    // TODO: this method is on the OrderStops model, use it from there
     // recieves all the stops for a job and returns the first and last stops based on stop sequence
     static async getFirstAndLastStops(stops)
     {
@@ -829,8 +833,10 @@ class LoadboardService
     static async deletePostings(jobId, posts, userGuid)
     {
         const job = await LoadboardService.getNotDeletedPosts(jobId, posts);
+
         const payloads = [];
         let lbPayload;
+
         try
         {
             // Only send for non deleted loadboards
@@ -854,16 +860,17 @@ class LoadboardService
     static async getNotDeletedPosts(jobId, posts)
     {
         const loadboardNames = posts.map((post) => { return post.loadboard; });
-        const job = await Job.query().findById(jobId).withGraphFetched(`[
-            loadboardPosts(getExistingFromList, getNotDeleted)
-        ]`).modifiers({
-            getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
-        });
+
+        const job = await Job.query().findById(jobId)
+            .withGraphFetched('[loadboardPosts(getExistingFromList, getNotDeleted)]').modifiers({
+                getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
+            });
 
         if (!job)
             throw new Error('Job not found');
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+
         delete job.loadboardPosts;
 
         return job;

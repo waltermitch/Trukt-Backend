@@ -155,7 +155,7 @@ mainResponsePayload:
       example: 'Becasuse you are cheap.'
     extraExternalData:
       $ref: '#/extraExternalData'
-    isActive:
+    isValid:
       type: boolean
       example: true
     isAccepted:
@@ -167,36 +167,3 @@ mainResponsePayload:
     isCanceled:
       type: boolean
       example: true
-    isSynced:
-      type: boolean
-      example: true
-    isDeleted:
-      type: boolean
-      example: false
-    hasError:
-      type: boolean
-      example: false
-    externalError:
-      type: string
-      example: null
-    dateCreated:
-      type: string
-      format: date-time
-      nullable: true
-      example: '2021-09-14T14:00:00.000Z'
-    dateUpdated:
-      type: string
-      format: date-time
-      nullable: true
-      example: '2021-09-14T14:00:00.000Z'
-    dateDeleted:
-      type: string
-      format: date-time
-      nullable: true
-      example: '2021-09-14T14:00:00.000Z'
-    createdByGuid:
-      $ref: Common.yaml#/createdByGuid
-    updatedByGuid:
-      $ref: Common.yaml#/updatedByGuid
-    deletedByGuid:
-      $ref: Common.yaml#/deletedByGuid

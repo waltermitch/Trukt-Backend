@@ -18,6 +18,8 @@ const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const R = require('ramda');
 
+const Loadboards = require('../Loadboards/API');
+
 const regex = new RegExp(uuidRegexStr);
 
 const SYSUSER = process.env.SYSTEM_USER;
@@ -571,7 +573,7 @@ class OrderJobService
         await Promise.allSettled(res.acceptedJobs.map(item =>
             StatusManagerHandler.registerStatus({
                 orderGuid: item.orderGuid,
-                jobGuid: item.jobGuid,
+                jobGuid: item.guid,
                 userGuid: currentUser,
                 statusId: 16
             })));
@@ -821,7 +823,9 @@ class OrderJobService
                 .select('guid', 'number')
                 .findById(jobGuid)
                 .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
-                .modifyGraph('loadboardPosts', builder => builder.select('loadboardPosts.guid', 'loadboard'))
+                .modifyGraph('loadboardPosts', builder => builder
+                    .select('loadboardPosts.guid', 'loadboard', 'externalGuid')
+                    .orWhere({ loadboard: 'SUPERDISPATCH' }))
                 .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
                 .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
 
@@ -847,14 +851,38 @@ class OrderJobService
             })
                 .whereIn('loadboardPostGuid', loadboardPostGuids);
 
+            // we need to unpost from all loadboards, but we need to set the order in superdispatch
+            // to on hold as well, so that is why we need to extract the superdispatch post
+            // and use its external guid to set the order on hold later in this function
+            const notSuperdispatchPosts = job.loadboardPosts.filter(post => post.loadboard !== 'SUPERDISPATCH');
+            const superdispatchPost = (job.loadboardPosts.filter(post => post.loadboard == 'SUPERDISPATCH'))[0];
+
             // unpost the load from all loadboards
             // unposting from loadboards automatically cancels any requests on the
             // loadboards end so we only have to cancel them on our end
-            await LoadboardService.unpostPostings(job.guid, job.loadboardPosts, currentUser);
+            await LoadboardService.unpostPostings(job.guid, notSuperdispatchPosts, currentUser);
+
+            if (superdispatchPost)
+            {
+                const { status } = await Loadboards.putSDOrderOnHold(superdispatchPost.externalGuid);
+                if (status == 204)
+                {
+                    await LoadboardPost.query(trx).patch({
+                        externalPostGuid: null,
+                        isPosted: false,
+                        status: 'unposted',
+                        updatedByGuid: currentUser
+                    }).findById(superdispatchPost.guid);
+                }
+                else
+                {
+                    throw new HttpError(400, 'Job could not be set On Hold in Superdispatch');
+                }
+            }
 
             const res = await OrderJob.query(trx)
                 .patch({ status: OrderJob.STATUS.ON_HOLD, isOnHold: true, isReady: false, updatedByGuid: currentUser })
-                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+                .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady', 'orderGuid');
 
             await trx.commit();
 
@@ -913,6 +941,15 @@ class OrderJobService
                 {
                     res = await OrderJob.query(trx).patch(OrderJobService.createStatusPayload('ready', currentUser))
                         .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+
+                    const post = await LoadboardPost.query(trx).select('externalGuid')
+                        .findOne({ loadboard: 'SUPERDISPATCH', jobGuid: res.guid });
+
+                    const { status } = await Loadboards.rollbackManualSDStatusChange(post.externalGuid);
+                    if (status !== 200)
+                    {
+                        throw new HttpError(status, 'Could not remove hold from order on Superdispatch');
+                    }
                 }
                 else if (readyResult instanceof HttpError)
                 {
@@ -1084,13 +1121,6 @@ class OrderJobService
 
             await trx.commit();
 
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: userGuid,
-                statusId: 23
-            });
-
             // setting off an event to update status manager
             emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
 
@@ -1116,13 +1146,10 @@ class OrderJobService
 
         if (!job)
             throw new HttpError(404, 'Job does not exist');
-
-        if (job?.isDeleted)
+        if (job.isDeleted)
             throw new HttpError(400, 'This Order is deleted and can not be canceled.');
-
         if (job && jobIsDispatched)
             throw new HttpError(400, 'Please un-dispatch the Order before deleting');
-
         return job;
     }
 
@@ -1137,8 +1164,7 @@ class OrderJobService
 
             if (!job)
                 throw new HttpError(400, 'Job does not exist');
-
-            if (!job?.isCanceled)
+            if (!job.isCanceled)
                 return { status: 200, message: { data: { status: job.status } } };
 
             // createing ready status to undo delete
@@ -1149,13 +1175,6 @@ class OrderJobService
 
             // commiting transaction
             await trx.commit();
-
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: userGuid,
-                statusId: 24
-            });
 
             // emitting event for update statys manager
             emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
@@ -1284,9 +1303,9 @@ class OrderJobService
                 .returning('status');
 
             // emit event
-            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: job.status } });
+            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: job.status, oldStatus: state.currentStatus } });
 
-            return {};
+            return state.expectedStatus;
         }
     }
 
@@ -1300,11 +1319,11 @@ class OrderJobService
 
         // verify state of data
         if (!job)
-            throw new HttpError(404, 'Job does not exist');
-        if (job?.isDeleted)
-            throw new HttpError(400, 'Job Is Deleted And Can Not Be Mark As Delivered.');
-        if (job?.isCanceled)
-            throw new HttpError(400, 'Job Is Canceled And Can Not Be Mark As Delivered.');
+            throw new HttpError(404, 'Job Does Not Exist');
+        if (job.isDeleted)
+            throw new HttpError(400, 'Job Is Deleted And Can Not Be Marked As Delivered.');
+        if (job.isCanceled)
+            throw new HttpError(400, 'Job Is Canceled And Can Not Be Marked As Delivered.');
         if (!job.vendorGuid)
             throw new HttpError(400, 'Job Has No Vendor Assigned');
 
@@ -1341,10 +1360,10 @@ class OrderJobService
         // verify state of data
         if (!job)
             throw new HttpError(404, 'Job does not exist');
-        if (job?.isDeleted)
-            throw new HttpError(400, 'Job Is Deleted And Can Not Be Mark As Delivered.');
-        if (job?.isCanceled)
-            throw new HttpError(400, 'Job Is Canceled And Can Not Be Mark As Delivered.');
+        if (job.isDeleted)
+            throw new HttpError(400, 'Job Is Deleted And Can Not Be Marked As Delivered.');
+        if (job.isCanceled)
+            throw new HttpError(400, 'Job Is Canceled And Can Not Be Marked As Delivered.');
         if (job.status !== OrderJob.STATUS.DELIVERED && job.status !== OrderJob.STATUS.PICKED_UP)
             throw new HttpError(400, 'Job Must First Be Delivered');
 
@@ -1359,7 +1378,7 @@ class OrderJobService
         }
 
         // if we are here, we failed to update status
-        throw new HttpError(400, 'Job Could Not Be Mark as Pick Up, Please Check All Stops Are Pick Up');
+        throw new HttpError(400, 'Job Could Not Be Marked as Picked Up, Please Check All Stops Are Picked Up');
     }
 }
 
