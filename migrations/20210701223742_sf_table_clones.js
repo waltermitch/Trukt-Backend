@@ -91,7 +91,9 @@ exports.up = function (knex)
             type as type,
             user_role__c as user_role,
             vendor_type__c as vendor_type,
-            website as website
+            website as website,
+            icp_gp__c as icp_gp,
+            icp_multiplier__c as icp_multiplier
             FROM salesforce.account;
             
             CREATE OR REPLACE VIEW salesforce.contacts AS
