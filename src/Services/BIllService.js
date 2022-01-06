@@ -189,7 +189,7 @@ class BillService
         // query to get all the orders with related objects
         const qb = Order.query().whereIn('guid', arr);
 
-        qb.withGraphFetched('[jobs.[bills.[lines.[commodity.[stops.[terminal]], item.qbAccount]], vendor]]');
+        qb.withGraphFetched('[jobs.[bills.[lines.[commodity.[stops.[terminal], vehicle], item.qbAccount]], vendor]]');
 
         // get all the orders
         const orders = await qb;
