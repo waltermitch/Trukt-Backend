@@ -11,7 +11,7 @@ parameters:
     required: true
 responses:
   204:
-    description: Request has been decline
+    description: Request has been declined
     content:
       application/json: {}
       

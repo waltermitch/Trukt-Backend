@@ -36,7 +36,7 @@
         {
             "id": 6,
             "category": "loadRequest",
-            "name": "Request Accpeted",
+            "name": "Request Accepted",
             "order_filter_label": null
         },
         {

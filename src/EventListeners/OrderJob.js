@@ -25,8 +25,6 @@ listener.on('orderjob_stop_update', (jobGuid, currentUser) =>
 
 listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
 {
-    console.log(jobGuid, currentUser, orderGuid, body);
-
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([OrderService.markAsScheduled(orderGuid, currentUser), LoadboardService.dispatchJob(jobGuid, body, currentUser)]);
@@ -131,7 +129,7 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([(PubSubService.jobUpdated(jobGuid, { currentUser, status: state.status })), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
+        const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, { currentUser, status: state.status }), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
