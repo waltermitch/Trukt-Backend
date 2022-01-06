@@ -5,9 +5,12 @@ const OrderStopLink = require('../Models/OrderStopLink');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
+const OrderJob = require('../Models/OrderJob');
 const Job = require('../Models/OrderJob');
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
+
+const Loadboards = require('./API');
 
 class Super extends Loadboard
 {
@@ -671,7 +674,7 @@ class Super extends Loadboard
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
-                
+
                 objectionDispatch.setToAccepted();
                 objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
@@ -816,6 +819,27 @@ class Super extends Loadboard
                 newCommodities.shift(i);
                 break;
             }
+        }
+    }
+
+    static async updateStatus(jobGuid, oldStatus, newStatus)
+    {
+        const superJobQuery = OrderJob.query().select('loadboardPosts.externalGuid')
+            .leftJoinRelated('loadboardPosts')
+            .where({ 'loadboardPosts.loadboard': 'SUPERDISPATCH' })
+            .findById(jobGuid);
+
+        if (newStatus == OrderJob.STATUS.PICKED_UP && oldStatus == OrderJob.STATUS.DISPATCHED)
+        {
+            const superJob = await superJobQuery.withGraphJoined('stops')
+                .modifyGraph('stops', builder => builder.select('stopType', 'dateCompleted')
+                    .where({ stopType: 'pickup', isCompleted: true }));
+            await Loadboards.setSDOrderToPickedUp(superJob.externalGuid, superJob.stops[0].dateCompleted);
+        }
+        if (newStatus == OrderJob.STATUS.DISPATCHED && oldStatus == OrderJob.STATUS.PICKED_UP)
+        {
+            const superJob = await superJobQuery;
+            await Loadboards.rollbackManualSDStatusChange(superJob.externalGuid);
         }
     }
 }

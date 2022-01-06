@@ -7,6 +7,7 @@ const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
+const SuperDispatch = require('../Loadboards/Super');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
@@ -130,7 +131,7 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([(PubSubService.jobUpdated(jobGuid, { currentUser, status: state.status }))]);
+        const proms = await Promise.allSettled([(PubSubService.jobUpdated(jobGuid, { currentUser, status: state.status })), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')

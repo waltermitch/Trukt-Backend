@@ -18,6 +18,8 @@ const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const R = require('ramda');
 
+const Loadboards = require('../Loadboards/API');
+
 const regex = new RegExp(uuidRegexStr);
 
 const SYSUSER = process.env.SYSTEM_USER;
@@ -821,7 +823,9 @@ class OrderJobService
                 .select('guid', 'number')
                 .findById(jobGuid)
                 .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
-                .modifyGraph('loadboardPosts', builder => builder.select('loadboardPosts.guid', 'loadboard'))
+                .modifyGraph('loadboardPosts', builder => builder
+                    .select('loadboardPosts.guid', 'loadboard', 'externalGuid')
+                    .orWhere({ loadboard: 'SUPERDISPATCH' }))
                 .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
                 .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
 
@@ -847,10 +851,34 @@ class OrderJobService
             })
                 .whereIn('loadboardPostGuid', loadboardPostGuids);
 
+            // we need to unpost from all loadboards, but we need to set the order in superdispatch
+            // to on hold as well, so that is why we need to extract the superdispatch post
+            // and use its external guid to set the order on hold later in this function
+            const notSuperdispatchPosts = job.loadboardPosts.filter(post => post.loadboard !== 'SUPERDISPATCH');
+            const superdispatchPost = (job.loadboardPosts.filter(post => post.loadboard == 'SUPERDISPATCH'))[0];
+
             // unpost the load from all loadboards
             // unposting from loadboards automatically cancels any requests on the
             // loadboards end so we only have to cancel them on our end
-            await LoadboardService.unpostPostings(job.guid, job.loadboardPosts, currentUser);
+            await LoadboardService.unpostPostings(job.guid, notSuperdispatchPosts, currentUser);
+
+            if (superdispatchPost)
+            {
+                const { status } = await Loadboards.putSDOrderOnHold(superdispatchPost.externalGuid);
+                if (status == 204)
+                {
+                    await LoadboardPost.query(trx).patch({
+                        externalPostGuid: null,
+                        isPosted: false,
+                        status: 'unposted',
+                        updatedByGuid: currentUser
+                    }).findById(superdispatchPost.guid);
+                }
+                else
+                {
+                    throw new HttpError(400, 'Job could not be set On Hold in Superdispatch');
+                }
+            }
 
             const res = await OrderJob.query(trx)
                 .patch({ status: OrderJob.STATUS.ON_HOLD, isOnHold: true, isReady: false, updatedByGuid: currentUser })
@@ -913,6 +941,15 @@ class OrderJobService
                 {
                     res = await OrderJob.query(trx).patch(OrderJobService.createStatusPayload('ready', currentUser))
                         .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+
+                    const post = await LoadboardPost.query(trx).select('externalGuid')
+                        .findOne({ loadboard: 'SUPERDISPATCH', jobGuid: res.guid });
+
+                    const { status } = await Loadboards.rollbackManualSDStatusChange(post.externalGuid);
+                    if (status !== 200)
+                    {
+                        throw new HttpError(status, 'Could not remove hold from order on Superdispatch');
+                    }
                 }
                 else if (readyResult instanceof HttpError)
                 {
@@ -1284,7 +1321,7 @@ class OrderJobService
                 .returning('status');
 
             // emit event
-            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: job.status } });
+            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: job.status, oldStatus: state.currentStatus } });
 
             return {};
         }
