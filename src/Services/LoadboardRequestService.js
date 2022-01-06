@@ -2,6 +2,7 @@ const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardRequest = require('../Models/LoadboardRequest');
 const LoadboardPost = require('../Models/LoadboardPost');
 const emitter = require('../EventListeners/index');
+const SFAccount = require('../Models/SFAccount');
 const { ref } = require('objection');
 const axios = require('axios');
 const https = require('https');
@@ -156,6 +157,7 @@ class LoadboardRequestService
             isAccepted: true,
             isDeclined: false,
             isCanceled: false,
+            isValid: false,
             updatedByGuid: currentUser
         });
 
@@ -172,31 +174,64 @@ class LoadboardRequestService
             queryRequest.externalError = response;
         }
 
-        // update  status of request and TODO: change user createdBY
-        await StatusManagerHandler.registerStatus({
-            orderGuid: queryRequest.orderGuid,
-            userGuid: currentUser,
+        // payload to send dispatch job
+        const acceptPayload = {
+            loadboard: queryRequest.loadboard,
+            carrier: {
+                guid: null
+            },
+            driver: {
+                guid: null
+            },
             jobGuid: queryRequest.jobGuid,
-            statusId: 6,
-            extraAnnotations: {
-                loadboard: queryRequest.loadboard,
-                carrier: {
-                    guid: queryRequest.extraExternalData.guid,
-                    name: queryRequest.extraExternalData.name
-                }
-            }
-        });
+            orderGuid: queryRequest.orderGuid,
+            pickup: {
+                dateType: 'exactly',
+                startDate: queryRequest.datePickupStart,
+                endDate: queryRequest.datePickupEnd
+            },
+            delivery: {
+                dateType: 'exactly',
+                startDate: queryRequest.dateDeliveryStart,
+                endDate: queryRequest.dateDeliveryEnd
+            },
+            paymentTerm: 4,
+            paymentMethod: 17,
+            price: queryRequest.price
+        };
 
         // remove fields that do not exist to update table correctly
         delete queryRequest.jobGuid;
         delete queryRequest.orderGuid;
 
-        // search RCG data base by the guid and update to accepted
-        await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
+        // update the loadRequest to be accepted and set to invalid
+        // get carrier information for disptaching job
+        // update status manager with Load request accepted
+        const [result, carrierInfo] = await Promise.all([
+            LoadboardRequest.query().patchAndFetchById(requestGuid, queryRequest),
+            SFAccount.query().modify('externalIdandDot', queryRequest.extraExternalData.carrierInfo.guid, queryRequest.carrierIdentifier),
+            StatusManagerHandler.registerStatus({
+                orderGuid: queryRequest.orderGuid,
+                userGuid: currentUser,
+                jobGuid: queryRequest.jobGuid,
+                statusId: 6,
+                extraAnnotations: {
+                    loadboard: queryRequest.loadboard,
+                    carrier: {
+                        guid: queryRequest.extraExternalData.guid,
+                        name: queryRequest.extraExternalData.name
+                    }
+                }
+            })
+        ]);
 
-        emitter.emit('orderjob_dispatch_offer_accepted', { jobGuid: queryRequest.jobGuid, dispatcherGuid: currentUser, orderGuid: queryRequest.orderGuid });
+        // assign carrier sfid to payload
+        acceptPayload.carrier.guid = carrierInfo.sfId;
 
-        return queryRequest;
+        // hit event to update to pending and remove all postings
+        emitter.emit('orderjob_dispatch_offer_accepted', { jobGuid: acceptPayload.jobGuid, currentUser: currentUser, orderGuid: acceptPayload.orderGuid, body: acceptPayload });
+
+        return result;
     }
 
     // functions trigged by the TMS user
@@ -215,6 +250,7 @@ class LoadboardRequestService
             isAccepted: false,
             isDeclined: true,
             isCanceled: false,
+            isValid: false,
             declineReason: payload?.reason,
             updatedByGuid: currentUser
         });
@@ -247,6 +283,10 @@ class LoadboardRequestService
             }
         });
 
+        // to pass it on to the event
+        const jobGuid = queryRequest.jobGuid;
+        const orderGuid = queryRequest.orderGuid;
+
         // remove fields that do not exist to update table correctly
         delete queryRequest.jobGuid;
         delete queryRequest.orderGuid;
@@ -254,9 +294,9 @@ class LoadboardRequestService
         // search data base by the guid that super provides and update to canceled
         await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
 
-        emitter.emit('orderjob_dispatch_offer_declined', { jobGuid: queryRequest.jobGuid, dispatcherGuid: currentUser, orderGuid: queryRequest.orderGuid });
+        emitter.emit('orderjob_dispatch_offer_declined', { jobGuid: jobGuid, dispatcherGuid: currentUser, orderGuid: orderGuid });
 
-        return queryRequest;
+        return;
     }
 }
 

@@ -219,7 +219,9 @@
     "Terminal": {
         "hide": {
             "database": {
-                "into": ["vectorName"]
+                "into": [
+                    "vectorName"
+                ]
             },
             "external": {
                 "into": [
@@ -291,7 +293,11 @@
     "User": {
         "hide": {
             "external": {
-                "into": ["dateCreated", "dateUpdated", "dateDeleted"]
+                "into": [
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted"
+                ]
             }
         }
     },
@@ -332,7 +338,11 @@
     "Attachment": {
         "hide": {
             "external": {
-                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid"
+                ]
             }
         }
     },
@@ -392,14 +402,38 @@
     "InvoicePaymentMethod": {
         "hide": {
             "external": {
-                "into": ["externalId", "externalSource"]
+                "into": [
+                    "externalId",
+                    "externalSource"
+                ]
             }
         }
     },
     "InvoicePaymentTerm": {
         "hide": {
             "external": {
-                "into": ["externalId", "externalSource"]
+                "into": [
+                    "externalId",
+                    "externalSource"
+                ]
+            }
+        }
+    },
+    "LoadboardRequest": {
+        "hide": {
+            "external": {
+                "into": [
+                    "isSynced",
+                    "isDeleted",
+                    "hasError",
+                    "externalError",
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid"
+                ]
             }
         }
     }

@@ -100,6 +100,15 @@ class SFAccount extends BaseModel
             {
                 builder.orWhere('guid', id).orWhere('salesforce.accounts.sfId', id);
             });
+        },
+        externalIdandDot(query, id, dot)
+        {
+            query.findOne((builder) =>
+            {
+                builder
+                    .orWhere({ 'sdGuid': id, 'dotNumber': dot })
+                    .orWhere({ 'scId': id, 'dotNumber': dot });
+            });
         }
     }
 

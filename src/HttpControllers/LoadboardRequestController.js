@@ -92,10 +92,8 @@ class LoadboardRequestController
         {
             if (req?.body)
             {
-                const result = await LoadboardRequestService.declineRequest(req?.params?.requestGuid, req.body, req.session.userGuid);
-
-                res.status(204);
-                res.json(result);
+                await LoadboardRequestService.declineRequest(req?.params?.requestGuid, req.body, req.session.userGuid);
+                res.status(204).send();
             }
             else
             {
