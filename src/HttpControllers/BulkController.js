@@ -1,7 +1,7 @@
 const OrderJobSerivce = require('../services/OrderJobService');
 const OrderService = require('../services/OrderService');
-const billController = require('../HttpControllers/BillController');
-const invoiceController = require('../HttpControllers/InvoiceController');
+const BillService = require('../Services/BillService');
+const InvoiceService = require('../Services/InvoiceService');
 const emitter = require('../EventListeners/index');
 
 class BulkController
@@ -76,13 +76,35 @@ class BulkController
 
     static async exportBills(req, res)
     {
-        const results = await billController.bulkExportBill(req.body.orders);
+        const orders = req.body.orders;
+        const ordersExportPromises = orders.map(orderGuid => BillService.exportBills([orderGuid]));
+        const ordersExported = await Promise.allSettled(ordersExportPromises);
+
+        const results = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
+        {
+            const orderGuid = orders[arrayIndex];
+            reduceResponse[orderGuid] = orderExported.value;
+
+            return reduceResponse;
+        }, {});
+
         res.status(200).json(results);
     }
 
     static async exportInvocies(req, res)
     {
-        const results = await invoiceController.bulkExportInvoices(req.body.orders);
+        const orders = req.body.orders;
+        const ordersExportPromises = orders.map(orderGuid => InvoiceService.exportInvoices([orderGuid]));
+        const ordersExported = await Promise.allSettled(ordersExportPromises);
+
+        const results = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
+        {
+            const orderGuid = orders[arrayIndex];
+            reduceResponse[orderGuid] = orderExported.value;
+
+            return reduceResponse;
+        }, {});
+
         res.status(200).json(results);
     }
 }
