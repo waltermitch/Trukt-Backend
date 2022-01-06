@@ -273,6 +273,8 @@ class QuickBooksService
         {
             if (commodity.description)
                 description += commodity.description + '\n';
+            if (commodity.vehicle?.name)
+                description += commodity.vehicle.name + '\n';
             if (commodity.identifier)
                 description += `VIN: ${commodity.identifier}`;
         }
