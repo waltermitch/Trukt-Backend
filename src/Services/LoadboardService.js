@@ -932,6 +932,37 @@ class LoadboardService
             throw e;
         }
     }
+
+    /**
+     * @description This function is meant to be used after a order with jobs with a pending dispatch offer
+     *  has been been updated. This function will return an array of queries that will update the
+     *  current active offers price because since the price for the job has changed,
+     *  this new value will be the price the dispatch offer is accepted or canceled for.
+     * @param {OrderJob []} jobs An array of order jobs with a hopefully updated actualExpense field and a guid
+     * @returns An array of OrderJobDispatch queries that should update only pending dispatch offers
+     */
+    static updateDispatchPrice(jobs)
+    {
+        const dispatches = [];
+        for (const job of jobs)
+        {
+            dispatches.push(OrderJobDispatch.query().patch({
+                price: job.actualExpense,
+                dateUpdated: job.dateUpdated,
+                updatedByGuid: job.updatedByGuid
+            })
+                .where({
+                    jobGuid: job.guid,
+                    isPending: true,
+                    isValid: true,
+                    isAccepted: false,
+                    isDeclined: false,
+                    isCanceled: false
+
+                }));
+        }
+        return dispatches;
+    }
 }
 
 module.exports = LoadboardService;
