@@ -469,9 +469,7 @@ class LoadboardService
                 });
 
                 emitter.emit('orderjob_dispatch_offer_canceled_or_declined', {
-                    jobGuid,
-                    dispatchGuid: dispatch.guid,
-                    dispatchData: dispatch
+                    jobGuid
                 });
             }
 
