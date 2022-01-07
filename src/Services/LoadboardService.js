@@ -333,7 +333,7 @@ class LoadboardService
                     statusId: 10,
                     jobGuid: jobId,
                     extraAnnotations: {
-                        dispatchedTo: 'internal',
+                        dispatchedTo: 'TRUKT',
                         code: 'pending',
                         vendorGuid: dispatch.vendor.guid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
@@ -462,7 +462,7 @@ class LoadboardService
                     statusId: 12,
                     jobGuid,
                     extraAnnotations: {
-                        undispatchedFrom: 'internal',
+                        undispatchedFrom: 'TRUKT',
                         code: 'ready',
                         vendorGuid: dispatch.vendor.guid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
