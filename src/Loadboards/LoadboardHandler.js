@@ -96,7 +96,7 @@ const myMessageHandler = async (message) =>
                         on osl.stop_guid = os.guid 
                         where ojd.guid = ?
                         and (os.stop_type = 'pickup' or os.stop_type = 'delivery')
-                        and os.date_scheduled_type is not null;`, [job.dispatchGuid])).rows;
+                        and os.date_scheduled_type is not null order by os.sequence;`, [job.dispatchGuid])).rows;
 
                 // postgres does not do camel case so we need to transform all the keys
                 // to camel case
