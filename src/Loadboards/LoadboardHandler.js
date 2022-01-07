@@ -2,7 +2,7 @@ const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-b
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJobService = require('../Services/OrderJobService');
-const OrderJob = require('../Models/OrderJob');
+const PicklistService = require('../Services/PicklistService');
 const knex = require('../Models/BaseModel').knex();
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const R = require('ramda');
@@ -83,8 +83,12 @@ const myMessageHandler = async (message) =>
                     .andWhere(builder => builder.where({ isPending: true }).orWhere({
                         isAccepted: true
                     }));
-                const [pickup, delivery] = (await knex.raw(`
-                        select distinct(os.guid), os.stop_type, os.date_scheduled_type, os.date_scheduled_start, os.date_scheduled_end 
+
+                // we need to get the stops that are associated with this dispatch
+                // and since jobs and stops have a weird relationship, it is easier to do
+                // a raw query that gets the data.
+                const stops = (await knex.raw(`
+                        select distinct(os.guid), os.stop_type, os.date_scheduled_type, os.date_scheduled_start, os.date_scheduled_end, os.sequence
                         from rcg_tms.order_job_dispatches ojd 
                         left join rcg_tms.order_stop_links osl 
                         on ojd.job_guid = osl.job_guid
@@ -93,9 +97,24 @@ const myMessageHandler = async (message) =>
                         where ojd.guid = ?
                         and (os.stop_type = 'pickup' or os.stop_type = 'delivery')
                         and os.date_scheduled_type is not null;`, [job.dispatchGuid])).rows;
-                job.pickup = pickup;
-                job.delivery = delivery;
-                
+
+                // postgres does not do camel case so we need to transform all the keys
+                // to camel case
+                for (const stop of stops)
+                {
+                    for (const key of Object.keys(stop))
+                    {
+                        const k = PicklistService.cleanUpSnakeCase(key);
+                        if (k == key)
+                            continue;
+                        stop[k] = stop[key];
+                        delete stop[key];
+                    }
+                }
+
+                job.pickup = stops[0];
+                job.delivery = stops[1];
+
                 await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
             }
             if (pubsubAction == 'undispatch' ||
