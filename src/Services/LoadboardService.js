@@ -341,15 +341,12 @@ class LoadboardService
                         vendorAgentName: dispatch.vendorAgent.name
                     }
                 });
+                emitter.emit('orderjob_dispatch_offer_sent_or_accepted', { jobGuid: jobId });
             }
 
             await Promise.all(allPromises);
             await trx.commit();
 
-            emitter.emit('orderjob_dispatch_offer_sent', {
-                jobGuid: job.guid,
-                dispatchGuid: job.dispatch.guid
-            });
             dispatch.jobStatus = Job.STATUS.PENDING;
             return dispatch;
         }
@@ -469,6 +466,12 @@ class LoadboardService
                         vendorName: dispatch.vendor.name,
                         vendorAgentName: dispatch.vendorAgent.name
                     }
+                });
+
+                emitter.emit('orderjob_dispatch_offer_canceled_or_declined', {
+                    jobGuid,
+                    dispatchGuid: dispatch.guid,
+                    dispatchData: dispatch
                 });
             }
 
