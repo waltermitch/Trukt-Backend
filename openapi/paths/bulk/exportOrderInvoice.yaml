@@ -29,4 +29,18 @@ responses:
           type: object
           properties:
             orderGuid:
-              $ref: ../../components/schemas/Finances.yaml#/Invoice
+              type: object
+              description: This is key value pair of orderGuid
+              properties:
+                error:
+                  $ref: ../../components/schemas/Finances.yaml#/Error
+                status:
+                  type: number
+                  description: Signifies the status of this specific order export. 204 means All Invoices Already Paid For This Order
+                  enum:
+                    - 400
+                    - 200
+                    - 500
+                    - 204
+                data:
+                  $ref: ../../components/schemas/Finances.yaml#/Invoice
