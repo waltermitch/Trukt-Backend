@@ -64,7 +64,10 @@ class ArcgisClient
 
     isSetuped()
     {
-        return API_KEY && BASE_URL ? true : false;
+        if (NODE_ENV === 'local')
+            return BASE_URL ? true : false;
+        else
+            return API_KEY && BASE_URL ? true : false;
     }
 
     isAddressFound(arcgisAddress)
