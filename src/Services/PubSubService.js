@@ -141,7 +141,7 @@ class PubSubService
                 job.delivery = { datedScheduledType: null, dateScheduledStart: null, dateScheduledEnd: null };
             }
         }
-        console.log(job);
+
         await PubSub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
     }
 }
