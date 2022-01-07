@@ -1,0 +1,32 @@
+summary: Bulk Operation to Export Orders Bill
+operationId: bulkExportBills
+description: Export all the bills for all the jobs on this orders
+tags:
+  - Bill
+  - Order
+  - Bulk
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        description: List of Orders guids
+        properties:
+          orders:
+            type: array
+            items:
+              description: Order guid
+              $ref: '../../components/schemas/Common.yaml#/guid'
+            minItems: 1
+        required:
+          - orders
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            orderGuid:
+              $ref: ../../components/schemas/Finances.yaml#/Bill
