@@ -495,7 +495,7 @@ class LoadboardService
                         isValid: true,
                         isPending: true
                     }).count().as('validDispatchesCount')
-                ]).withGraphFetched('[bills, commodities]');
+                ]);
 
             if (!job)
                 throw new HttpError(404, 'Job not found');
@@ -544,10 +544,6 @@ class LoadboardService
                 status: Job.STATUS.DISPATCHED,
                 updatedByGuid: currentUser
             }));
-
-            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, dispatch.price, currentUser);
-            for (const line of lines) line.transacting(trx);
-            allPromises.push(...lines);
 
             const jobBill = await dispatch.$query(trx)
                 .joinRelated('job.bills')
