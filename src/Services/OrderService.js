@@ -1517,10 +1517,8 @@ class OrderService
             ...orderData
         } = orderInput;
 
-        // wrapping in try catch to roll back transaction
         try
         {
-
             await OrderService.handleDeletes(guid, jobs, commodities, stops, trx);
 
             const [
@@ -1531,32 +1529,30 @@ class OrderService
                 invoiceBills,
                 orderInvoices,
                 referencesChecked
-            ] = await Promise.all([
-                clientContact
-                    ? SFRecordType.query(trx)
-                        .modify('byType', 'contact')
-                        .modify('byName', 'account contact')
-                    : null,
-                client?.guid
-                    ? OrderService.findSFClient(client.guid, trx)
-                    : undefined,
-                commodities.length > 0 ? CommodityType.query(trx) : null,
-                jobs.length > 0 ? OrderJobType.query(trx) : null,
-                OrderService.getInvoiceBills(jobs),
-                OrderService.getOrderInvoices(guid),
-                OrderService.validateReferencesBeforeUpdate(
-                    clientContact,
-                    guid,
-                    stops,
-                    terminals
-                )
-            ]);
+            ] = await Promise.all(
+                [
+                    clientContact
+                        ? SFRecordType.query(trx)
+                            .modify('byType', 'contact')
+                            .modify('byName', 'account contact')
+                        : null,
+                    client?.guid
+                        ? OrderService.findSFClient(client.guid, trx)
+                        : undefined,
+                    commodities.length > 0 ? CommodityType.query(trx) : null,
+                    jobs.length > 0 ? OrderJobType.query(trx) : null,
+                    OrderService.getJobBills(jobs),
+                    OrderService.getOrderInvoices(guid),
+                    OrderService.validateReferencesBeforeUpdate(
+                        clientContact,
+                        guid,
+                        stops,
+                        terminals
+                    )
+                ]);
 
-            /**
-             * terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
-             */
-            const { newOrderContactChecked, terminalsChecked, stopsChecked } =
-                referencesChecked;
+            // terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
+            const { newOrderContactChecked, terminalsChecked, stopsChecked } = referencesChecked;
 
             /**
              * Updates or creates OrderContact, Commodities and Terminals
@@ -1575,7 +1571,7 @@ class OrderService
                     trx
                 );
 
-            // Create stop contacts using terminals and return an object to faciliatet access, it uses the action from stopsChecked
+            // Create stop contacts using terminals and return an object to facilitate access, it uses the action from stopsChecked
             const stopContactsGraphMap =
                 await OrderService.createStopContactsMap(
                     stopsChecked,
@@ -1723,7 +1719,7 @@ class OrderService
         }
     }
 
-    static async getInvoiceBills(jobs)
+    static async getJobBills(jobs)
     {
         const jobsGuids = jobs.map(job => job.guid);
         const allInvoiceBills = await InvoiceBill.query().select('*')
@@ -2638,10 +2634,10 @@ class OrderService
             job.bills = [];
             const jobBillsWithLinesToUpdate = new Map();
 
-            job.commodities?.map(commoditieWithExpense =>
+            job.commodities?.map(commWithExpense =>
             {
                 let lineFound = false;
-                const commodity = commoditiesMap[commoditieWithExpense.index];
+                const commodity = commoditiesMap[commWithExpense.index];
 
                 // If commodity is not found, must be a typo on the commodity index sent by the caller
                 if (commodity)
@@ -2655,10 +2651,10 @@ class OrderService
                             if (invocieLineFound)
                             {
                                 lineFound = true;
-                                invocieLineFound.amount = commoditieWithExpense.expense;
+                                invocieLineFound.amount = commWithExpense.expense;
                                 invocieLineFound.setUpdatedBy(currentUser);
 
-                                invocieLineFound.link[0].amount = commoditieWithExpense.revenue;
+                                invocieLineFound.link[0].amount = commWithExpense.revenue;
                                 invocieLineFound.link[0].setUpdatedBy(currentUser);
 
                                 // Add bill to jobToUpdate
@@ -2673,8 +2669,8 @@ class OrderService
                 if (!lineFound && commodity)
                 {
                     const itemId = 1;
-                    const commodityRevenue = commoditieWithExpense.revenue;
-                    const commodityExpense = commoditieWithExpense.expense;
+                    const commodityRevenue = commWithExpense.revenue;
+                    const commodityExpense = commWithExpense.expense;
 
                     const orderInvoiceLineToCreate = OrderService.createInvoiceLineGraph(
                         commodityRevenue,
@@ -2689,11 +2685,11 @@ class OrderService
                         itemId,
                         currentUser
                     );
+
                     jobInvoiceLineToCreate.graphLink('commodity', commodity);
                     jobInvoiceLineToCreate.link = { '#ref': orderInvoiceLineToCreate['#id'] };
 
                     const bill = invoiceBills.find(bill => bill.job?.guid === job.guid);
-                    bill.lines?.push(jobInvoiceLineToCreate);
 
                     if (!bill)
                         throw new HttpError(500, 'Job Is Missing Bill');
@@ -2712,6 +2708,7 @@ class OrderService
                 delete job.commodities;
                 job.bills.push(billData);
             }
+
             return job;
         });
 
