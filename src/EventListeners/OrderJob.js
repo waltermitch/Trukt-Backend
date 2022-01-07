@@ -1,4 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const LoadboardService = require('../Services/LoadboardService');
 const OrderJobService = require('../Services/OrderJobService');
 const PubSubService = require('../Services/PubSubService');
 const OrderService = require('../Services/OrderService');
@@ -22,11 +23,11 @@ listener.on('orderjob_stop_update', (jobGuid, currentUser) =>
     });
 });
 
-listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, dispatcherGuid, orderGuid }) =>
+listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markAsScheduled(orderGuid, dispatcherGuid)]);
+        const proms = await Promise.allSettled([OrderService.markAsScheduled(orderGuid, currentUser), LoadboardService.dispatchJob(jobGuid, body, currentUser)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -34,11 +35,11 @@ listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, dispatcherGuid, orde
     });
 });
 
-listener.on('orderjob_dispatch_offer_canceled', ({ jobGuid, dispatcherGuid, orderGuid }) =>
+listener.on('orderjob_dispatch_offer_canceled', ({ jobGuid, currentUser, orderGuid }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, dispatcherGuid)]);
+        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -46,11 +47,11 @@ listener.on('orderjob_dispatch_offer_canceled', ({ jobGuid, dispatcherGuid, orde
     });
 });
 
-listener.on('orderjob_dispatch_offer_declined', ({ jobGuid, dispatcherGuid, orderGuid }) =>
+listener.on('orderjob_dispatch_offer_declined', ({ jobGuid, currentUser, orderGuid }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, dispatcherGuid)]);
+        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -58,11 +59,11 @@ listener.on('orderjob_dispatch_offer_declined', ({ jobGuid, dispatcherGuid, orde
     });
 });
 
-listener.on('orderjob_dispatch_canceled', ({ jobGuid, dispatcherGuid, orderGuid }) =>
+listener.on('orderjob_dispatch_canceled', ({ jobGuid, currentUser, orderGuid }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, dispatcherGuid)]);
+        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -70,16 +71,16 @@ listener.on('orderjob_dispatch_canceled', ({ jobGuid, dispatcherGuid, orderGuid 
     });
 });
 
-listener.on('orderjob_delivered', ({ jobGuid, dispatcherGuid = SYSUSER, orderGuid }) =>
+listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }) =>
 {
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            OrderService.markOrderDelivered(orderGuid, dispatcherGuid, jobGuid),
+            OrderService.markOrderDelivered(orderGuid, currentUser, jobGuid),
             StatusManagerHandler.registerStatus({
                 orderGuid,
                 jobGuid,
-                userGuid: dispatcherGuid,
+                userGuid: currentUser,
                 statusId: 27
             })
         ]);
@@ -91,11 +92,11 @@ listener.on('orderjob_delivered', ({ jobGuid, dispatcherGuid = SYSUSER, orderGui
     });
 });
 
-listener.on('orderjob_undelivered', ({ jobGuid, dispatcherGuid = SYSUSER, orderGuid }) =>
+listener.on('orderjob_undelivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markOrderUndelivered(orderGuid, dispatcherGuid)]);
+        const proms = await Promise.allSettled([OrderService.markOrderUndelivered(orderGuid, currentUser)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -103,16 +104,16 @@ listener.on('orderjob_undelivered', ({ jobGuid, dispatcherGuid = SYSUSER, orderG
     });
 });
 
-listener.on('orderjob_picked_up', ({ jobGuid, dispatcherGuid = SYSUSER, orderGuid }) =>
+listener.on('orderjob_picked_up', ({ jobGuid, currentUser = SYSUSER, orderGuid }) =>
 {
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            OrderService.markOrderUndelivered(orderGuid, dispatcherGuid, jobGuid),
+            OrderService.markOrderUndelivered(orderGuid, currentUser, jobGuid),
             StatusManagerHandler.registerStatus({
                 orderGuid,
                 jobGuid,
-                userGuid: dispatcherGuid,
+                userGuid: currentUser,
                 statusId: 29
             })
         ]);
@@ -128,7 +129,7 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([(PubSubService.jobUpdated(jobGuid, { currentUser, status: state.status })), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
+        const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, { currentUser, status: state.status }), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -212,6 +213,45 @@ listener.on('orderjob_activity_updated', ({ jobGuid, state }) =>
             .andWhere('jobGuid', jobGuid);
 
         const proms = await Promise.allSettled([(PubSubService.jobActivityUpdate(jobGuid, currentActivity))]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+listener.on('orderjob_canceled', ({ orderGuid, userGuid, jobGuid }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid: orderGuid,
+                jobGuid: jobGuid,
+                userGuid: userGuid,
+                statusId: 23
+            })
+        ]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+listener.on('orderjob_uncanceled', ({ orderGuid, userGuid, jobGuid }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([
+            LoadboardService.createPostings(jobGuid, [{ loadboard: 'SUPERDISPATCH' }], userGuid),
+            StatusManagerHandler.registerStatus({
+                orderGuid: orderGuid,
+                jobGuid: jobGuid,
+                userGuid: userGuid,
+                statusId: 24
+            })
+        ]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
