@@ -2104,8 +2104,9 @@ class OrderService
                 // Create new unresolved terminal
                 else
                 {
-                    // No use terminal guid if provided
-                    const { guid, ...terminalDataNoGuid } = terminalData;
+                    // No use terminal guid if provided, and remove latitude and longitude to avoid posible constraint error, only for UNRESOLVED terminals
+                    // eslint-disable-next-line no-unused-vars
+                    const { guid, latitude, longitude, ...terminalDataNoGuid } = terminalData;
                     const terminalToCreate =
                         Terminal.fromJson(terminalDataNoGuid);
                     terminalToCreate.setCreatedBy(currentUser);
