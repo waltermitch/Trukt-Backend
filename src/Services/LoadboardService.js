@@ -333,7 +333,7 @@ class LoadboardService
                     statusId: 10,
                     jobGuid: jobId,
                     extraAnnotations: {
-                        dispatchedTo: 'internal',
+                        dispatchedTo: 'TRUKT',
                         code: 'pending',
                         vendorGuid: dispatch.vendor.guid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
@@ -462,7 +462,7 @@ class LoadboardService
                     statusId: 12,
                     jobGuid,
                     extraAnnotations: {
-                        undispatchedFrom: 'internal',
+                        undispatchedFrom: 'TRUKT',
                         code: 'ready',
                         vendorGuid: dispatch.vendor.guid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
@@ -495,7 +495,7 @@ class LoadboardService
                         isValid: true,
                         isPending: true
                     }).count().as('validDispatchesCount')
-                ]).withGraphFetched('[bills, commodities]');
+                ]);
 
             if (!job)
                 throw new HttpError(404, 'Job not found');
@@ -544,10 +544,6 @@ class LoadboardService
                 status: Job.STATUS.DISPATCHED,
                 updatedByGuid: currentUser
             }));
-
-            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, dispatch.price, currentUser);
-            for (const line of lines) line.transacting(trx);
-            allPromises.push(...lines);
 
             const jobBill = await dispatch.$query(trx)
                 .joinRelated('job.bills')
@@ -935,6 +931,37 @@ class LoadboardService
             await trx.rollback();
             throw e;
         }
+    }
+
+    /**
+     * @description This function is meant to be used after a order with jobs with a pending dispatch offer
+     *  has been been updated. This function will return an array of queries that will update the
+     *  current active offers price because since the price for the job has changed,
+     *  this new value will be the price the dispatch offer is accepted or canceled for.
+     * @param {OrderJob []} jobs An array of order jobs with a hopefully updated actualExpense field and a guid
+     * @returns An array of OrderJobDispatch queries that should update only pending dispatch offers
+     */
+    static updateDispatchPrice(jobs)
+    {
+        const dispatches = [];
+        for (const job of jobs)
+        {
+            dispatches.push(OrderJobDispatch.query().patch({
+                price: job.actualExpense,
+                dateUpdated: job.dateUpdated,
+                updatedByGuid: job.updatedByGuid
+            })
+                .where({
+                    jobGuid: job.guid,
+                    isPending: true,
+                    isValid: true,
+                    isAccepted: false,
+                    isDeclined: false,
+                    isCanceled: false
+
+                }));
+        }
+        return dispatches;
     }
 }
 
