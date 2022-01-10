@@ -341,7 +341,8 @@ class LoadboardService
                         vendorAgentName: dispatch.vendorAgent.name
                     }
                 });
-                emitter.emit('orderjob_dispatch_offer_sent_or_accepted', { jobGuid: jobId });
+
+                emitter.emit('orderjob_dispatch_offer_sent', { jobGuid: jobId });
             }
 
             await Promise.all(allPromises);
@@ -468,9 +469,7 @@ class LoadboardService
                     }
                 });
 
-                emitter.emit('orderjob_dispatch_offer_canceled_or_declined', {
-                    jobGuid
-                });
+                emitter.emit('orderjob_dispatch_offer_canceled', { jobGuid });
             }
 
             return dispatch;
