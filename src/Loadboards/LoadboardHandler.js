@@ -3,7 +3,7 @@ const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJobService = require('../Services/OrderJobService');
 const R = require('ramda');
-const emitter = require('../EventListeners/index');
+const PubSubService = require('../Services/PubSubService');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const topicName = 'loadboard_incoming';
@@ -45,31 +45,30 @@ const myMessageHandler = async (message) =>
         {
             const pubsubAction = responses[0].payloadMetadata.action;
 
-            // publish to a group that is named after the the jobGuid which
-            // should be listening on messages posted to the group
-            if (
-                pubsubAction == 'dispatch' ||
-                pubsubAction == 'carrierAcceptDispatch')
+            switch (pubsubAction)
             {
-                emitter.emit('orderjob_dispatch_offer_sent_or_accepted', { jobGuid });
-            }
-            if (pubsubAction == 'undispatch' ||
-                pubsubAction == 'carrierDeclineDispatch')
-            {
-                emitter.emit('orderjob_dispatch_offer_canceled_or_declined', { jobGuid });
-            }
-            else
-            {
-                // getting status field by current state data is in, and active post that belongs to the post
-                const [{ value: status, reason: error }, posts] = await Promise.allSettled([OrderJobService.updateStatusField(jobGuid), LoadboardService.getAllLoadboardPosts(jobGuid)]);
+                case 'dispatch':
+                case 'carrierAcceptDispatch':
+                case 'undispatch':
+                case 'carrierDeclineDispatch':
+                    const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
+                    await Promise.allSettled([PubSubService.jobUpdated(jobGuid, jobPayload)]);
+                    break;
+                case 'post':
+                case 'unpost':
+                case 'update':
+                default:
+                    // getting status field by current state data is in, and active post that belongs to the post
+                    const [{ value: status, reason: error }, posts] = await Promise.allSettled([OrderJobService.updateStatusField(jobGuid), LoadboardService.getAllLoadboardPosts(jobGuid)]);
 
-                if (!status)
-                    throw error;
+                    if (!status)
+                        throw error;
 
-                // publishing status and post to posting group
-                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts, status } });
+                    // publishing status and post to posting group
+                    await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts, status } });
+                    break;
+
             }
-
         }
     }
     catch (e)
