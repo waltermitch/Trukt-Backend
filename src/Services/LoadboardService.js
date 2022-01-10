@@ -975,16 +975,20 @@ class LoadboardService
         // create blank info if no valid dispatches
         if (!job)
         {
-            job = (await OrderJobDispatch.query()
-                .leftJoinRelated('job')
+            job = await OrderJobDispatch.query()
+                .withGraphJoined('[job.[bills.lines, stops(distinct)]]')
                 .select(
-                    'job.guid as jobGuid',
-                    'job.status'
-                ).where({ 'jobGuid': jobGuid })
+                    'orderJobDispatches.guid as dispatchGuid'
+                )
+                .modifyGraph('job', builder =>
+                {
+                    builder.select('guid', 'status');
+                })
+                .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
                 .andWhere(builder =>
                     builder.where({ 'orderJobDispatches.isCanceled': true })
-                        .orWhere({ isDeclined: true }))
-                .limit(1))[0];
+                        .orWhere({ isDeclined: true }));
+
             if (job)
             {
                 job.vendor = {
@@ -1002,8 +1006,6 @@ class LoadboardService
                     email: null,
                     phone: null
                 };
-                job.stops = [];
-                job.bills = [];
             }
         }
 
