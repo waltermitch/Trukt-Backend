@@ -1,18 +1,21 @@
 const listener = require('./index');
+const LoadboardService = require('../Services/LoadboardService');
 const PubSubService = require('../Services/PubSubService');
 
-listener.on('orderjob_dispatch_offer_sent_or_accepted', async ({ jobGuid, dispatchGuid }) =>
+listener.on('orderjob_dispatch_offer_sent', async ({ jobGuid }) =>
 {
-    const proms = await Promise.allSettled([PubSubService.jobDispatchUpdate(jobGuid, true)]);
+    const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
+    const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, jobPayload)]);
 
     // for (const p of proms)
     //     if (p.status === 'rejected')
     //         console.log(p.reason?.response?.data || p.reason);
 });
 
-listener.on('orderjob_dispatch_offer_canceled_or_declined', async ({ jobGuid, dispatchGuid }) =>
+listener.on('orderjob_dispatch_offer_canceled', async ({ jobGuid }) =>
 {
-    const proms = await Promise.allSettled([PubSubService.jobDispatchUpdate(jobGuid, false)]);
+    const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
+    const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, jobPayload)]);
 
     // for (const p of proms)
     //     if (p.status === 'rejected')
