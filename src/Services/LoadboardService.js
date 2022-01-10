@@ -937,6 +937,79 @@ class LoadboardService
             throw e;
         }
     }
+
+    static async getJobDispatchData(jobGuid)
+    {
+        let job = await OrderJobDispatch.query()
+            .withGraphJoined('[vendor, vendorAgent, job.[bills.lines, stops(distinct)]]')
+            .modifyGraph('vendor', builder =>
+            {
+                builder.select(
+                    'dotNumber',
+                    'email',
+                    'phoneNumber',
+                    'billingStreet',
+                    'billingCity',
+                    'billingPostalCode',
+                    'billingState',
+                    'billingCountry');
+            })
+            .modifyGraph('vendorAgent', builder =>
+            {
+                builder.select(
+                    'name',
+                    'email',
+                    'phoneNumber');
+            })
+            .modifyGraph('job', builder =>
+            {
+                builder.select('guid', 'status');
+            })
+            .select(
+                'orderJobDispatches.guid as dispatchGuid'
+            )
+            .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid, 'rcgTms.orderJobDispatches.isValid': true })
+            .andWhere(builder => builder.where({ isPending: true }).orWhere({
+                isAccepted: true
+            }));
+
+        // create blank info if no valid dispatches
+        if (!job)
+        {
+            job = (await OrderJobDispatch.query()
+                .leftJoinRelated('job')
+                .select(
+                    'job.guid as jobGuid',
+                    'job.status'
+                ).where({ 'jobGuid': jobGuid })
+                .andWhere(builder =>
+                    builder.where({ 'orderJobDispatches.isCanceled': true })
+                        .orWhere({ isDeclined: true }))
+                .limit(1))[0];
+            if (job)
+            {
+                job.vendor = {
+                    dotNumber: null,
+                    email: null,
+                    phone: null,
+                    billingStreet: null,
+                    billingCity: null,
+                    billingPostalCode: null,
+                    billingState: null,
+                    billingCountry: null
+                };
+                job.vendorAgent = {
+                    name: null,
+                    email: null,
+                    phone: null
+                };
+                job.stops = [];
+                job.bills = [];
+            }
+        }
+
+        return job;
+    }
 }
 
 module.exports = LoadboardService;
