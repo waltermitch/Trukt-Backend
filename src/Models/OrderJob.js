@@ -617,7 +617,8 @@ class OrderJob extends BaseModel
                     'job.isCanceled': false
                 });
         },
-        areAllOrderJobsDeleted: this.areAllOrderJobsDeleted
+        areAllOrderJobsDeleted: this.areAllOrderJobsDeleted,
+        filterAccounting: this.filterAccounting
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
@@ -697,6 +698,63 @@ class OrderJob extends BaseModel
     static areAllOrderJobsDeleted(query, orderGuid)
     {
         return query.select(raw('bool_and(is_deleted) as deleteOrder')).where('orderGuid', orderGuid);
+    }
+
+    static filterAccounting(query, accountingType)
+    {
+        const Bill = require('./Bill');
+        const InvoiceLine = require('./InvoiceLine');
+        const InvoiceBill = require('./InvoiceBill');
+
+        switch (accountingType)
+        {
+            case 'not_invoiced':
+                return query.where(builder =>
+                    OrderJob.baseFilterAccounting(builder).whereIn('job.guid',
+                        Bill.query().select('jobGuid').whereIn('billGuid',
+                            InvoiceLine.query().select('invoiceGuid').where('isPaid', false)
+                        )
+                    )
+                );
+            case 'invoiced':
+                const jobsGroupByLinesPaid = Bill.query().select('jobGuid', raw('bool_and(is_paid = true) as all_paid'))
+                    .innerJoin('rcg_tms.invoiceBillLines', 'billGuid', 'invoiceGuid')
+                    .groupBy('jobGuid');
+
+                const jobsFullyPaid = OrderJob.query().with('jobsFullPaid', jobsGroupByLinesPaid).innerJoin('jobsFullPaid', 'guid', 'jobGuid')
+                    .select('guid').where('all_paid', true);
+
+                return query.where(builder =>
+                    OrderJob.baseFilterAccounting(builder).whereIn('job.guid', jobsFullyPaid)
+                );
+            case 'billed':
+                const jobsGroupByBillsPaid = Bill.query().select('jobGuid', raw('bool_and(is_paid = true) as all_paid'))
+                    .innerJoin('rcg_tms.invoiceBills', 'billGuid', 'guid')
+                    .groupBy('jobGuid');
+
+                const jobsFullPaid = OrderJob.query().with('jobsFullPaid', jobsGroupByBillsPaid).innerJoin('jobsFullPaid', 'guid', 'jobGuid')
+                    .select('guid').where('all_paid', true);
+
+                return query.where(builder =>
+                    OrderJob.baseFilterAccounting(builder).whereIn('job.guid', jobsFullPaid)
+                );
+            case 'not_billed':
+                return query.where(builder =>
+                    OrderJob.baseFilterAccounting(builder).whereIn('job.guid',
+                        Bill.query().select('jobGuid').whereIn('billGuid',
+                            InvoiceBill.query().select('guid').where('isPaid', false)
+                        )
+                    )
+                );
+            default:
+                return query;
+        }
+    }
+
+    static baseFilterAccounting(query)
+    {
+        return query.where(builder => builder.where('job.typeId', 1).andWhere('job.status', 'delivered')
+            .orWhere(builder => builder.andWhereNot('job.typeId', 1).andWhere('job.isTransport', false).andWhere('job.status', 'completed')));
     }
 }
 
