@@ -1044,6 +1044,7 @@ class OrderService
         const order = Order.fromJson({});
         order.setClientNote(body.note, currentUser);
         order.setUpdatedBy(currentUser);
+
         const numOfUpdatedOrders = await Order.query().patch(order).findById(orderGuid);
         if (numOfUpdatedOrders == 0)
         {
@@ -1519,8 +1520,9 @@ class OrderService
 
         try
         {
-            await OrderService.handleDeletes(guid, jobs, commodities, stops, trx);
+            await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
 
+            // create new order
             const [
                 contactRecordType,
                 clientFound,
@@ -1541,8 +1543,8 @@ class OrderService
                         : undefined,
                     commodities.length > 0 ? CommodityType.query(trx) : null,
                     jobs.length > 0 ? OrderJobType.query(trx) : null,
-                    OrderService.getJobBills(jobs),
-                    OrderService.getOrderInvoices(guid),
+                    OrderService.getJobBills(jobs, trx),
+                    OrderService.getOrderInvoices(guid, trx),
                     OrderService.validateReferencesBeforeUpdate(
                         clientContact,
                         guid,
@@ -1652,7 +1654,7 @@ class OrderService
         }
     }
 
-    static async handleDeletes(orderGuid, jobs, commodities, stops, trx)
+    static async handleDeletes(orderGuid, jobs, commodities, stops, trx, currentUser)
     {
         const delProms = [];
         for (const job of jobs || [])
@@ -1661,6 +1663,7 @@ class OrderService
 
             // remove delete object from OrderJob as it will messup the upsert.
             delete job.delete;
+
             if (toDelete)
             {
                 for (const key of Object.keys(toDelete))
@@ -1691,7 +1694,7 @@ class OrderService
 
                                 if (modified.stops)
                                 {
-                                    emitter.emit('orderstop_status_update', modified.stops);
+                                    emitter.emit('orderstop_status_update', { stops: modified.stops, currentUser });
                                 }
 
                             });
@@ -1719,30 +1722,30 @@ class OrderService
         }
     }
 
-    static async getJobBills(jobs)
+    static async getJobBills(jobs, trx)
     {
         const jobsGuids = jobs.map(job => job.guid);
-        const allInvoiceBills = await InvoiceBill.query().select('*')
+        const allInvoiceBills = await InvoiceBill.query(trx).select('*')
             .whereIn(
                 'guid',
-                Bill.query().select('billGuid').whereIn('jobGuid', jobsGuids)
+                Bill.query(trx).select('billGuid').whereIn('jobGuid', jobsGuids)
             );
 
-        return InvoiceBill.fetchGraph(allInvoiceBills, '[lines.link, job]')
+        return InvoiceBill.fetchGraph(allInvoiceBills, '[lines.link, job]', { transaction: trx })
             .modifyGraph('job', (builder) =>
                 builder.select('guid')
             );
     }
 
-    static async getOrderInvoices(orderGuid)
+    static async getOrderInvoices(orderGuid, trx)
     {
-        const allInvoices = await InvoiceBill.query().select('*')
+        const allInvoices = await InvoiceBill.query(trx).select('*')
             .whereIn(
                 'guid',
-                Invoice.query().select('invoiceGuid').where('orderGuid', orderGuid)
+                Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
             );
 
-        return InvoiceBill.fetchGraph(allInvoices, '[lines.link]');
+        return InvoiceBill.fetchGraph(allInvoices, '[lines.link]', { transaction: trx });
     }
 
     // If contactObject is null -> reference should be removed
