@@ -562,6 +562,7 @@ class OrderJobService
             }
         }
 
+        // patch every job and set fields to ready status
         res.acceptedJobs = await OrderJob.query().patch({
             status: OrderJob.STATUS.READY,
             isReady: true,
@@ -570,13 +571,22 @@ class OrderJobService
             updatedByGuid: currentUser
         }).findByIds(res.acceptedJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
 
-        await Promise.allSettled(res.acceptedJobs.map(item =>
-            StatusManagerHandler.registerStatus({
-                orderGuid: item.orderGuid,
-                jobGuid: item.guid,
+        const promiseArray = [];
+
+        // update activity on every job
+        for (const job of res.acceptedJobs)
+        {
+            promiseArray.push(StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                jobGuid: job.guid,
                 userGuid: currentUser,
                 statusId: 16
-            })));
+            }));
+            promiseArray.push(OrderJobService.updateStatusField(job.guid, currentUser));
+        }
+
+        await Promise.allSettled(promiseArray);
+
         return res;
     }
 
@@ -880,20 +890,15 @@ class OrderJobService
                 }
             }
 
+            // update status to hold and return fields
             const res = await OrderJob.query(trx)
                 .patch({ status: OrderJob.STATUS.ON_HOLD, isOnHold: true, isReady: false, updatedByGuid: currentUser })
                 .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady', 'orderGuid');
 
             await trx.commit();
 
-            // updated activity for on hold
-            await StatusManagerHandler.registerStatus({
-                orderGuid: res.orderGuid,
-                jobGuid: job.guid,
-                userGuid: currentUser,
-                statusId: 22
-            });
-
+            // emit event to update status field and activity
+            emitter.emit('orderjob_hold_added', { orderGuid: res.orderGuid, jobGuid, currentUser });
             emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: OrderJob.STATUS.ON_HOLD } });
 
             return res;
@@ -940,7 +945,7 @@ class OrderJobService
                 if (typeof readyResult == 'string')
                 {
                     res = await OrderJob.query(trx).patch(OrderJobService.createStatusPayload('ready', currentUser))
-                        .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+                        .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady', 'orderGuid');
 
                     const post = await LoadboardPost.query(trx).select('externalGuid')
                         .findOne({ loadboard: 'SUPERDISPATCH', jobGuid: res.guid });
@@ -963,12 +968,9 @@ class OrderJobService
 
             await trx.commit();
 
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                statusId: 16
-            });
+            // emmit event to update activity and status field
+            emitter.emit('orderjob_hold_removed', { orderGuid: res.orderGuid, jobGuid, currentUser });
+            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: OrderJob.STATUS.READY } });
 
             return res;
         }
@@ -979,7 +981,7 @@ class OrderJobService
         }
     }
 
-    static async deleteJob(jobGuid, userGuid)
+    static async deleteJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
 
@@ -1004,13 +1006,13 @@ class OrderJobService
             const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
 
             // updating postings to be deleted
-            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, userGuid);
+            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, currentUser);
 
             // marking job as deleted
-            const payload = OrderJobService.createStatusPayload('deleted', userGuid);
+            const payload = OrderJobService.createStatusPayload('deleted', currentUser);
 
             // creating payload for requests to deleted
-            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).deleted;
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(currentUser).deleted;
 
             // mark all orderJob and and requrests as deleted
             await Promise.all([
@@ -1022,16 +1024,8 @@ class OrderJobService
             // commiting transactions
             await trx.commit();
 
-            // Register job deleted
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: userGuid,
-                statusId: 17
-            });
-
             // emitting event to update status manager 17
-            emitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
             return { status: 200 };
         }
@@ -1048,7 +1042,7 @@ class OrderJobService
      * @param {uuid} userGuid
      * @returns
      */
-    static async undeleteJob(jobGuid, userGuid)
+    static async undeleteJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
 
@@ -1063,7 +1057,7 @@ class OrderJobService
                 return { status: 200 };
 
             // setting order back to ready status
-            const payload = OrderJobService.createStatusPayload('ready', userGuid);
+            const payload = OrderJobService.createStatusPayload('ready', currentUser);
 
             // udpating orderJob in data base
             await OrderJob.query(trx).patch(payload).findById(jobGuid);
@@ -1071,16 +1065,8 @@ class OrderJobService
             // commiting transaction
             await trx.commit();
 
-            // Register job undeleted first
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: userGuid,
-                statusId: 18
-            });
-
             // emit the event to register with status manager Will randomly update ORDER TO DELETED INCORRECT
-            emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
             return { status: 200 };
         }
@@ -1091,7 +1077,7 @@ class OrderJobService
         }
     }
 
-    static async cancelJob(jobGuid, userGuid)
+    static async cancelJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
 
@@ -1104,13 +1090,13 @@ class OrderJobService
             const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
 
             // deleted all postings attached to the job
-            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, userGuid);
+            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, currentUser);
 
             // setting up canceled payload
-            const payload = OrderJobService.createStatusPayload('canceled', userGuid);
+            const payload = OrderJobService.createStatusPayload('canceled', currentUser);
 
             // creating canceled request payload
-            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).canceled;
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(currentUser).canceled;
 
             // updating tables
             await Promise.all([
@@ -1118,11 +1104,10 @@ class OrderJobService
                 LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
                     LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
             ]);
-
             await trx.commit();
 
             // setting off an event to update status manager
-            emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
             return { status: 200 };
         }
@@ -1153,7 +1138,7 @@ class OrderJobService
         return job;
     }
 
-    static async uncancelJob(jobGuid, userGuid)
+    static async uncancelJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
 
@@ -1168,7 +1153,7 @@ class OrderJobService
                 return { status: 200, message: { data: { status: job.status } } };
 
             // createing ready status to undo delete
-            const payload = OrderJobService.createStatusPayload('ready', userGuid);
+            const payload = OrderJobService.createStatusPayload('ready', currentUser);
 
             // update orderJob to Ready state
             const jobUpdated = await OrderJob.query(trx).patchAndFetchById(jobGuid, payload);
@@ -1177,7 +1162,7 @@ class OrderJobService
             await trx.commit();
 
             // emitting event for update statys manager
-            emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
             return { status: 200, message: { data: { status: jobUpdated.status } } };
         }
@@ -1294,7 +1279,12 @@ class OrderJobService
 
         // only do updates when status is different
         if (state.currentStatus === state.expectedStatus)
+        {
+            // emit event
+            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: state.expectedStatus, oldStatus: state.currentStatus } });
+
             return state.currentStatus;
+        }
         else
         {
             const job = await OrderJob.query()
