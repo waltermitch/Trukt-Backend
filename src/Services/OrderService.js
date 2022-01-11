@@ -2490,13 +2490,16 @@ class OrderService
         const stopLinksByJob = OrderService.createJobStopLinksObjects(
             jobs,
             stopsFromInput,
-            commoditiesMap
+            commoditiesMap,
+            orderGuid
         );
+
         const stopLinksByStops = OrderService.createStopLinksObjects(
             stopsFromInput,
             commoditiesMap,
             orderGuid
         );
+
         return [...stopLinksByStops, ...stopLinksByJob].map((stopLinkData) =>
             OrderService.updateOrCreateStopLink(stopLinkData, currentUser, trx)
         );
@@ -2505,6 +2508,7 @@ class OrderService
     static async updateOrCreateStopLink(stopLinkData, currentUser, trx)
     {
         const { orderGuid, commodityGuid, stopGuid } = stopLinkData;
+
         const stopLinkFound = await OrderStopLink.query(trx).findOne({
             orderGuid,
             stopGuid,
@@ -2560,7 +2564,7 @@ class OrderService
     }
 
     // This methode is similar to createStopLinksObjects, but it was separated to facilitate readability
-    static createJobStopLinksObjects(jobs, stopsFromInput, commoditiesMap)
+    static createJobStopLinksObjects(jobs, stopsFromInput, commoditiesMap, orderGuid)
     {
         return (
             jobs?.reduce((stopLinks, { guid: jobGuid, stops: jobStops }) =>
@@ -2594,7 +2598,7 @@ class OrderService
                                         stopLinks.push({
                                             stopGuid,
                                             commodityGuid,
-                                            orderGuid: null,
+                                            orderGuid,
                                             jobGuid,
                                             ...stopLinkData
                                         });
