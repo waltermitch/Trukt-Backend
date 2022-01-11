@@ -112,9 +112,18 @@ class OrderJobService
                     }
 
                     return Promise.all([
-                        // delete the commodities that are not linked to a stopLink that is only attached to an Order
-                        InvoiceLine.query(trx).whereIn('commodityGuid', commodities).delete().returning('guid'),
+                        // delete related line items if the commodity is not attached to any other job
+                        InvoiceLine.query(trx).whereIn('commodityGuid', commodities)
+                            .whereNotExists(
+
+                                // where a link between another job doesnt exist
+                                OrderStopLink.query(trx)
+                                    .whereIn('commodityGuid', commodities)
+                                    .where('orderGuid', orderGuid)
+                                    .whereNotNull('jobGuid')).delete().returning('guid'),
                         Promise.all(deleteLooseOrderStopLinks),
+
+                        // delete the commodities that are not linked to a stopLink that is only attached to an Order
                         Commodity.query(trx)
                             .whereIn('guid', commodities)
                             .whereNotExists(

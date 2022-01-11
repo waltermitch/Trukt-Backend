@@ -1594,6 +1594,7 @@ class OrderService
                 jobTypes,
                 currentUser
             );
+
             const stopLinksToUpdate = OrderService.updateCreateStopLinks(
                 stopsChecked,
                 jobs,
@@ -1604,6 +1605,7 @@ class OrderService
             );
 
             const jobCompleteBills = await OrderService.createMissingJobBills(invoiceBills, jobsToUpdate, currentUser, trx);
+
             const { jobsToUpdateWithExpenses, orderInvoicesToUpdate } = OrderService.updateExpensesGraph(
                 commoditiesMap,
                 jobCompleteBills,
