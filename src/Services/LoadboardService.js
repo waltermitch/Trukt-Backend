@@ -67,6 +67,7 @@ class LoadboardService
         {
             throw new Error(e.toString());
         }
+        console.log('Created again', payloads);
 
         // sending all payloads as one big object so one big response can be returned
         // and handler can then use one big transaction to update all records rather
@@ -832,6 +833,7 @@ class LoadboardService
 
         const payloads = [];
         let lbPayload;
+        const activeExternalLBNames = [];
 
         try
         {
@@ -840,11 +842,13 @@ class LoadboardService
             {
                 lbPayload = new loadboardClasses[`${lbName}`](job);
                 payloads.push(lbPayload['remove'](userGuid));
+                activeExternalLBNames.push({ loadboard: `${lbName}` });
             }
+
             if (payloads?.length)
             {
                 await sender.sendMessages({ body: payloads });
-                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, userGuid, 21, jobId);
+                LoadboardService.registerLoadboardStatusManager(activeExternalLBNames, job.orderGuid, userGuid, 21, jobId);
             }
         }
         catch (e)
