@@ -1,6 +1,5 @@
 const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
-const OrderStopLinks = require('../Models/OrderStopLink');
 const OrderService = require('../Services/OrderService');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
@@ -41,19 +40,6 @@ listener.on('order_client_notes_updated', (orderGuid) =>
         // for (const p of proms)
         //     if (p.status === 'rejected')
         //         console.log(p.reason?.response?.data || p.reason);
-    });
-});
-
-listener.on('orderstop_status_update', (stopGuids) =>
-{
-    const OrderStopService = require('./OrderStopService');
-
-    // this will kick it off on the next loop iteration.
-    setImmediate(async () =>
-    {
-        const trx = await OrderStopLinks.startTransaction();
-        await OrderStopService.validateStopLinks(stopGuids, '', trx);
-        await trx.commit();
     });
 });
 

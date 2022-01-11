@@ -83,7 +83,16 @@ class BulkController
         const results = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
         {
             const orderGuid = orders[arrayIndex];
-            reduceResponse[orderGuid] = orderExported.value;
+
+            const result = orderExported.value?.[0];
+            if (!result)
+                reduceResponse[orderGuid] = { status: 404, error: 'Order Not Found', data: null };
+            else if (result?.error)
+                reduceResponse[orderGuid] = { status: 400, error: orderExported.value, data: null };
+            else if (result?.success)
+                reduceResponse[orderGuid] = { status: 204, error: null, data: orderExported.value };
+            else
+                reduceResponse[orderGuid] = { status: 200, error: null, data: orderExported.value };
 
             return reduceResponse;
         }, {});
@@ -100,7 +109,16 @@ class BulkController
         const results = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
         {
             const orderGuid = orders[arrayIndex];
-            reduceResponse[orderGuid] = orderExported.value;
+
+            const result = orderExported.value?.[0];
+            if (!result)
+                reduceResponse[orderGuid] = { status: 500, error: 'Internal Server Error', data: null };
+            else if (result?.error)
+                reduceResponse[orderGuid] = { status: 400, error: orderExported.value, data: null };
+            else if (result?.success)
+                reduceResponse[orderGuid] = { status: 204, error: null, data: orderExported.value };
+            else
+                reduceResponse[orderGuid] = { status: 200, error: null, data: orderExported.value };
 
             return reduceResponse;
         }, {});
