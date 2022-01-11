@@ -63,7 +63,7 @@ class BulkController
             }
             for (const job of results.acceptedGuids)
             {
-                emitter.emit('orderjob_status', job.orderGuid);
+                emitter.emit('order_ready', job.orderGuid);
             }
             res.status(202).json(results);
         }
