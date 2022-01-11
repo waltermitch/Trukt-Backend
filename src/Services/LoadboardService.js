@@ -67,7 +67,6 @@ class LoadboardService
         {
             throw new Error(e.toString());
         }
-        console.log('Created again', payloads);
 
         // sending all payloads as one big object so one big response can be returned
         // and handler can then use one big transaction to update all records rather
