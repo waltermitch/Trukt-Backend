@@ -13,24 +13,30 @@ const listener = require('./index');
 const SYSUSER = process.env.SYSTEM_USER;
 
 // I don't understand the purpose of this
-listener.on('orderjob_ready', (orderGuid) =>
+listener.on('orderjob_ready', ({ orderGuid, currentUser }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([
-            Order.query()
-                .patch({
-                    status: Order.STATUS.VERIFIED,
-                    isReady: true
-                })
-                .findById(orderGuid)
-                .where({ status: Order.STATUS.SUBMITTED, isCanceled: false, isDeleted: false })
+        const proms = await Promise.allSettled([OrderService.markOrderReady(orderGuid, currentUser)]);
 
-                // get the count of jobs that are ready for this order guid, if the count is above 0 then update is valid.
-                .where(raw('(SELECT count(*) FROM rcg_tms.order_jobs jobs WHERE jobs.order_guid = ? AND jobs.is_ready = true) > 0', [orderGuid]))
-        ]);
+        // This doesn't make any sense so I uncommented it for now
+        // Order.query()
+        //     .patch({
+        //         status: Order.STATUS.VERIFIED,
+        //         isReady: true
+        //     })
+        //     .findById(orderGuid)
+        //     .where({ status: Order.STATUS.SUBMITTED, isCanceled: false, isDeleted: false })
 
+        //     // get the count of jobs that are ready for this order guid, if the count is above 0 then update is valid.
+        //     .where(raw('(SELECT count(*) FROM rcg_tms.order_jobs jobs WHERE jobs.order_guid = ? AND jobs.is_ready = true) > 0', [orderGuid]))
+
+        // this doesn't exists
         listener.emit('order_verified', orderGuid);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
     });
 });
 
