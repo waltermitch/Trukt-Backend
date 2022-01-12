@@ -12,6 +12,7 @@ const listener = require('./index');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
+// I don't understand the purpose of this
 listener.on('orderjob_ready', (orderGuid) =>
 {
     setImmediate(async () =>
@@ -231,7 +232,7 @@ listener.on('orderjob_booked', ({ jobGuid, currentUser }) =>
     });
 });
 
-listener.on('orderjob_deleted', async ({ orderGuid, currentUser, jobGuid }) =>
+listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
 {
     /**
      * Validate if all jobs are deleted on the order, then update activity that order is deleted
@@ -271,7 +272,7 @@ listener.on('orderjob_deleted', async ({ orderGuid, currentUser, jobGuid }) =>
     });
 });
 
-listener.on('orderjob_undeleted', async ({ orderGuid, currentUser, jobGuid }) =>
+listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
 {
     /**
      * Register job and order as deleted for activities
@@ -387,128 +388,76 @@ listener.on('orderjob_activity_updated', ({ jobGuid, state }) =>
     });
 });
 
-listener.on('orderjob_ready', (orderGuid) =>
+listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
 {
+    /**
+     * Validate if all jobs are deleted on the order, then update activity that order is deleted
+     * update activity for job to be deleted
+     * and validate status field
+     */
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([
-            Order.query()
-                .patch({
-                    status: Order.STATUS.VERIFIED,
-                    isReady: true
+        const orderUpdatePromise = [];
+        const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
+        if (jobsOrder?.deleteorder)
+        {
+            const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
+            orderUpdatePromise.push(
+                Order.query().patch(deleteStatusPayload).findById(orderGuid),
+                StatusManagerHandler.registerStatus({
+                    orderGuid,
+                    jobGuid,
+                    userGuid: currentUser,
+                    statusId: 19
                 })
-                .findById(orderGuid)
-                .where({ status: Order.STATUS.SUBMITTED, isCanceled: false, isDeleted: false })
+            );
+        }
 
-                // get the count of jobs that are ready for this order guid, if the count is above 0 then update is valid.
-                .where(raw('(SELECT count(*) FROM rcg_tms.order_jobs jobs WHERE jobs.order_guid = ? AND jobs.is_ready = true) > 0', [orderGuid]))
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid: currentUser,
+                statusId: 17
+            }),
+            OrderJobService.updateStatusField(jobGuid, currentUser),
+            ...orderUpdatePromise
         ]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
         //         console.log(p.reason?.response?.data || p.reason);
-
-        // THERE IS NO LISTENER FOR THIS EVENT in Order.js
-        listener.emit('order_verified', orderGuid);
     });
 });
 
-listener.on('orderjob_status', (orderGuid) =>
+listener.on('orderjob_undeleted', async ({ orderGuid, currentUser, jobGuid }) =>
 {
-    // TODO: wrap this in promise.allsettled
+    /**
+     * Register job and order as deleted for activities
+     * validate job status field and trigger event if needed
+     */
     setImmediate(async () =>
     {
-        const trx = await Order.startTransaction();
-        try
-        {
-            // Get the number of jobs that are ready for this order guid.
-            // Knex returns this query as an array of objects with a count property.
-            const readyJobsCount = (await OrderJob.query(trx).count('guid').where({ orderGuid, isReady: true }))[0].count;
+        await Promise.allSettled([
+            OrderJobService.updateStatusField(jobGuid, currentUser),
+            StatusManagerHandler.registerStatus({
+                orderGuid: orderGuid,
+                jobGuid: jobGuid,
+                userGuid: currentUser,
+                statusId: 18
+            }),
+            StatusManagerHandler.registerStatus({
+                orderGuid: orderGuid,
+                jobGuid: jobGuid,
+                userGuid: currentUser,
+                statusId: 20
+            })
+        ]);
 
-            // WARNING: The COUNT() query in knex with pg returns the count as a string, so
-            // the following comparison only works because of javascript magic
-            if (readyJobsCount >= 1)
-            {
-                await Order.query(trx).patch({
-                    isReady: true,
-                    status: 'ready'
-                }).findById(orderGuid);
-            }
-
-            await trx.commit();
-
-            listener.emit('order_status', { orderGuid, status: 'ready' });
-        }
-        catch (e)
-        {
-            await trx.rollback();
-        }
-
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
     });
-});
-
-listener.on('orderjob_deleted', async ({ orderGuid, userGuid, jobGuid }) =>
-{
-    // TODO: wrap in promise.allsettled
-    try
-    {
-        // Register job deleted first
-        await StatusManagerHandler.registerStatus({
-            orderGuid,
-            jobGuid,
-            userGuid,
-            statusId: 17
-        });
-
-        const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
-        if (jobsOrder?.deleteorder)
-        {
-            const deleteStatusPayload = Order.createStatusPayload(userGuid).deleted;
-            await Promise.allSettled([
-                Order.query().patch(deleteStatusPayload).findById(orderGuid),
-
-                // Register order deleted
-                StatusManagerHandler.registerStatus({
-                    orderGuid,
-                    jobGuid,
-                    userGuid,
-                    statusId: 19
-                })
-            ]);
-        }
-    }
-    catch (error)
-    {
-        console.error(`Error: Order ${orderGuid} could not be marked as deleted!!. ${error?.message || error}`);
-    }
-
-});
-
-listener.on('orderjob_undeleted', async ({ orderGuid, userGuid, jobGuid }) =>
-{
-    // TODO: wrap in promise.allsettled
-    try
-    {
-        // Register job undeleted first
-        await StatusManagerHandler.registerStatus({
-            orderGuid,
-            jobGuid,
-            userGuid,
-            statusId: 18
-        });
-
-        // Register order undeleted
-        StatusManagerHandler.registerStatus({
-            orderGuid,
-            jobGuid,
-            userGuid,
-            statusId: 20
-        });
-    }
-    catch (error)
-    {
-        console.error(`Error: Order ${orderGuid} could not be marked as undeleted!!. ${error?.message || error}`);
-    }
 });
 
 module.exports = listener;
