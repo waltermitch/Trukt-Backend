@@ -17,7 +17,7 @@ class PubSubService
             'object': 'job',
             'data': payload
         };
-
+        console.log('publishing status change ', data);
         await PubSub.publishToGroup(jobGuid, data);
     }
 
@@ -31,6 +31,22 @@ class PubSubService
         const data =
         {
             'object': 'activity',
+            'data': payload
+        };
+
+        await PubSub.publishToGroup(jobGuid, data);
+    }
+
+    static async publishJobPostings(jobGuid, payload)
+    {
+        if (!jobGuid)
+            throw new Error('jobGuid is required to publish to job updates to pubsub');
+        else if (Object.keys(payload).length === 0)
+            throw new Error('non-empty payload is required to publish to job updates to pubsub, received: ' + JSON.stringify(payload));
+
+        const data =
+        {
+            'object': 'posting',
             'data': payload
         };
 
