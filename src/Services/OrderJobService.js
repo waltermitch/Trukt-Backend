@@ -593,13 +593,30 @@ class OrderJobService
 
     static async getJobForReadyCheck(jobGuids)
     {
+        const exceptions = [];
+
+        // first we must find which guids are actually present in the database
+        const found = R.pluck('guid', await OrderJob.query().select('guid').findByIds(jobGuids));
+        
+        // if there are guids that are not found, create human readable exceptions for each missing guid
+        if (found.length != jobGuids.length)
+        {
+            for (let i = 0; i < jobGuids.length; i++)
+            {
+                if (found.indexOf(jobGuids[i]) == -1)
+                {
+                    exceptions.push(new HttpError(404, `Job with guid ${jobGuids[i]} cannot be found`));
+                }
+            }
+        }
+
         // this array of question marks is meant to be used for the prepared
         // statement in the following raw query. Because Knex does not support
         // passing in an array of strings as a parameter, you must supply it
         // the raw list with a question mark for every item in the list you
         // are passing in.
         const questionMarks = [];
-        for (let i = 0; i < jobGuids.length; i++)
+        for (let i = 0; i < found.length; i++)
         {
             questionMarks.push('?');
         }
@@ -609,13 +626,13 @@ class OrderJobService
         // having matching commodities, and stops that at least
         // have a requested start date
         const rows = (await knex.raw(`
-            select distinct os.guid "stopGuid", 
-                    osl.commodity_guid "commodityGuid", 
-                    os.stop_type first_stop_type, 
-                    os2.stop_type second_stop_type, 
-                    os."sequence" pickup_sequence, 
-                    os2."sequence" delivery_sequence, 
-                    os.date_requested_start, 
+            select distinct os.guid "stopGuid",
+                    osl.commodity_guid "commodityGuid",
+                    os.stop_type first_stop_type,
+                    os2.stop_type second_stop_type,
+                    os."sequence" pickup_sequence,
+                    os2."sequence" delivery_sequence,
+                    os.date_requested_start,
                     os2.date_requested_start,
                     osl.job_guid 
             from rcg_tms.order_stop_links osl
@@ -641,21 +658,20 @@ class OrderJobService
                 os.date_requested_start, 
                 os2.date_requested_start,
                 osl.job_guid
-            order by pickup_sequence`, jobGuids)).rows;
+            order by pickup_sequence`, found)).rows;
 
         // Since the previous query only returns some data, we need to know which guids
         // passed the query and which ones did not so we can tell the client which guids
         // did not pass the first test.
         const setGoodGuids = new Set(rows.map(row => row.job_guid));
-        const exceptions = [];
 
-        if (jobGuids.length != setGoodGuids.size)
+        if (found.length != setGoodGuids.size)
         {
-            for (const guid of jobGuids)
+            for (const guid of found)
             {
-                if (!setGoodGuids.has(jobGuids))
+                if (!setGoodGuids.has(found))
                 {
-                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, is missing requested dates, or cannot be found`));
+                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, or is missing requested dates`));
                 }
             }
         }
