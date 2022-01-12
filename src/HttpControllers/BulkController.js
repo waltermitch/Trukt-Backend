@@ -50,7 +50,7 @@ class BulkController
             // throw all the exceptions in the exceptions list
             // otherwise convert all the exceptions into readable json formats
             // so the client can have both the successes and the failures
-            if (results.acceptedGuids.length == 0)
+            if (results.acceptedJobs.length == 0)
             {
                 throw results.exceptions;
             }
@@ -61,7 +61,7 @@ class BulkController
                     return error.toJson();
                 });
             }
-            for (const job of results.acceptedGuids)
+            for (const job of results.acceptedJobs)
             {
                 emitter.emit('orderjob_status', job.orderGuid);
             }
