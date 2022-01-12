@@ -63,7 +63,7 @@ class BulkController
             }
             for (const job of results.acceptedGuids)
             {
-                emitter.emit('order_ready', { orderGuid: job.orderGuid, currentUser: req.session.userGuid });
+                emitter.emit('orderjob_ready', { orderGuid: job.orderGuid, currentUser: req.session.userGuid });
             }
             res.status(202).json(results);
         }
