@@ -260,19 +260,21 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
     setImmediate(async () =>
     {
         const orderUpdatePromise = [];
-
         const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
         if (jobsOrder?.deleteorder)
         {
             const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
-            orderUpdatePromise.push(Order.query().patch(deleteStatusPayload).findById(orderGuid),
+            orderUpdatePromise.push(
+                Order.query().patch(deleteStatusPayload).findById(orderGuid),
                 StatusManagerHandler.registerStatus({
                     orderGuid,
                     jobGuid,
                     userGuid: currentUser,
                     statusId: 19
-                }));
+                })
+            );
         }
+
         const proms = await Promise.allSettled([
             StatusManagerHandler.registerStatus({
                 orderGuid,
@@ -399,78 +401,6 @@ listener.on('orderjob_activity_updated', ({ jobGuid, state }) =>
             .andWhere('jobGuid', jobGuid);
 
         const proms = await Promise.allSettled([(PubSubService.jobActivityUpdate(jobGuid, currentActivity))]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
-    });
-});
-
-listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
-{
-    /**
-     * Validate if all jobs are deleted on the order, then update activity that order is deleted
-     * update activity for job to be deleted
-     * and validate status field
-     */
-    setImmediate(async () =>
-    {
-        const orderUpdatePromise = [];
-        const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
-        if (jobsOrder?.deleteorder)
-        {
-            const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
-            orderUpdatePromise.push(
-                Order.query().patch(deleteStatusPayload).findById(orderGuid),
-                StatusManagerHandler.registerStatus({
-                    orderGuid,
-                    jobGuid,
-                    userGuid: currentUser,
-                    statusId: 19
-                })
-            );
-        }
-
-        const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
-                orderGuid,
-                jobGuid,
-                userGuid: currentUser,
-                statusId: 17
-            }),
-            OrderJobService.updateStatusField(jobGuid, currentUser),
-            ...orderUpdatePromise
-        ]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
-    });
-});
-
-listener.on('orderjob_undeleted', async ({ orderGuid, currentUser, jobGuid }) =>
-{
-    /**
-     * Register job and order as deleted for activities
-     * validate job status field and trigger event if needed
-     */
-    setImmediate(async () =>
-    {
-        await Promise.allSettled([
-            OrderJobService.updateStatusField(jobGuid, currentUser),
-            StatusManagerHandler.registerStatus({
-                orderGuid: orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                statusId: 18
-            }),
-            StatusManagerHandler.registerStatus({
-                orderGuid: orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                statusId: 20
-            })
-        ]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
