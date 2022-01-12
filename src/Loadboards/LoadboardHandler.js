@@ -66,7 +66,7 @@ const myMessageHandler = async (message) =>
 
                     // since the status update message is being sent in the updateStatusField function called earlier,
                     // we just need to send the updated posts
-                    PubSubService.publishJobPostings(jobGuid, posts);
+                    PubSubService.publishJobPostings(jobGuid, posts.value);
                     break;
 
             }
