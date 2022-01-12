@@ -17,7 +17,7 @@ class PubSubService
             'object': 'job',
             'data': payload
         };
-        console.log('publishing status change ', data);
+
         await PubSub.publishToGroup(jobGuid, data);
     }
 
