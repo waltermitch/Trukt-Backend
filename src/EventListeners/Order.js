@@ -43,35 +43,15 @@ listener.on('order_client_notes_updated', (orderGuid) =>
     });
 });
 
-listener.on('order_ready', (orderGuid) =>
+listener.on('order_ready', ({ orderGuid, currentUser }) =>
 {
     setImmediate(async () =>
     {
-        const trx = await Order.startTransaction();
-        try
-        {
-            // Get the number of jobs that are ready for this order guid.
-            // Knex returns this query as an array of objects with a count property.
-            const readyJobsCount = (await OrderJob.query(trx).count('guid').where({ orderGuid, isReady: true }))[0].count;
+        const proms = await Promise.allSettled([OrderService.markOrderReady(orderGuid, currentUser)]);
 
-            // WARNING: The COUNT() query in knex with pg returns the count as a string, so
-            // the following comparison only works because of javascript magic
-            if (readyJobsCount >= 1)
-            {
-                await Order.query(trx).patch({
-                    isReady: true,
-                    status: 'ready'
-                }).findById(orderGuid);
-            }
-
-            await trx.commit();
-
-        }
-        catch (e)
-        {
-            await trx.rollback();
-        }
-
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
     });
 });
 
