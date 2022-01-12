@@ -841,7 +841,7 @@ class LoadboardService
             {
                 lbPayload = new loadboardClasses[`${lbName}`](job);
                 payloads.push(lbPayload['remove'](userGuid));
-                activeExternalLBNames.push({ loadboard: `${lbName}` });
+                activeExternalLBNames.push({ loadboard: lbName });
             }
 
             if (payloads?.length)
