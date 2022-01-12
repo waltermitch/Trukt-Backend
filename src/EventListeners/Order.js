@@ -2,6 +2,7 @@ const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderService = require('../Services/OrderService');
 const OrderJob = require('../Models/OrderJob');
+const Order = require('../Models/Order');
 const listener = require('./index');
 
 listener.on('order_updated', ({ oldOrder, newOrder }) =>
@@ -35,6 +36,18 @@ listener.on('order_client_notes_updated', (orderGuid) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([getJobGuids(orderGuid).then(jobGuids => jobGuids.map(jobGuid => LoadboardService.updatePostings(jobGuid.guid)))]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+listener.on('order_ready', ({ orderGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
