@@ -33,7 +33,7 @@ class EDIData extends BaseModel
         return {
             loadTender(builder)
             {
-                builder.where('documentNumber', '200');
+                builder.where('documentNumber', '204');
             },
             loadTenderResponse(builder)
             {
