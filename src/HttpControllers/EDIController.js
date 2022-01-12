@@ -265,7 +265,7 @@ class EDIController
             const order = await OrderService.create(orderObj, req.session.userGuid);
 
             await EDIData.query().insert({
-                documentNumber: 200,
+                documentNumber: 204,
                 orderGuid: order.guid,
                 data: ediData
             });

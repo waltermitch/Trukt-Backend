@@ -323,8 +323,33 @@ class OrderStopService
             				WHEN stop_type IS NULL and is_started = true AND is_completed = false THEN 'started'
             				WHEN stop_type IS NULL and is_started = true AND is_completed = true THEN 'completed'
             			END 
-            WHERE guid = '${stopGuid}';        
+            WHERE guid = '${stopGuid}';
         `;
+    }
+
+    static async validateStops(stopGuids, currentUser)
+    {
+        // init transaction
+        const trx = await knex.transaction();
+
+        try
+        {
+
+            await Promise.all(
+                stopGuids.map(async (guid) =>
+                {
+                    await trx.raw(OrderStopService.updateOrderStop(guid, currentUser));
+                    await trx.raw(OrderStopService.updateStopStatusField(guid, currentUser));
+                })
+            );
+
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
     }
 
     /**
