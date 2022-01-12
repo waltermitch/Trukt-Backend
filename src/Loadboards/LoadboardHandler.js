@@ -64,8 +64,9 @@ const myMessageHandler = async (message) =>
                     if (!status)
                         throw error;
 
-                    // publishing status and post to posting group
-                    await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts, status } });
+                    // since the status update message is being sent in the updateStatusField function called earlier,
+                    // we just need to send the updated posts
+                    PubSubService.publishJobPostings(jobGuid, posts);
                     break;
 
             }
