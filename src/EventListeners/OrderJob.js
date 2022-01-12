@@ -23,6 +23,16 @@ listener.on('orderjob_stop_update', (jobGuid, currentUser) =>
     });
 });
 
+listener.on('orderjob_dispatch_offer_sent', async ({ jobGuid }) =>
+{
+    const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
+    const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, jobPayload)]);
+
+    // for (const p of proms)
+    //     if (p.status === 'rejected')
+    //         console.log(p.reason?.response?.data || p.reason);
+});
+
 listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
 {
     setImmediate(async () =>
@@ -39,7 +49,8 @@ listener.on('orderjob_dispatch_offer_canceled', ({ jobGuid, currentUser, orderGu
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser)]);
+        const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
+        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, jobPayload)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -51,7 +62,8 @@ listener.on('orderjob_dispatch_offer_declined', ({ jobGuid, currentUser, orderGu
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser)]);
+        const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
+        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, jobPayload)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
