@@ -748,9 +748,9 @@ class OrderJobService
         if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
         {
             if (job.typeCategory == 'transport' && job.jobType == 'transport')
-                res = new HttpError(409, `Carrier ${job.vendorName} for ${job.number} must be undispatched before it can transition to ready.`);
+                res = new HttpError(409, `Carrier ${job.vendorName}  must be undispatched from job ${job.number} before it can transition to ready.`);
             else if (job.typeCategory == 'service')
-                res = new HttpError(409, `Vendor ${job.vendorName} for ${job.number} must be unassigned before it can transition to ready.`);
+                res = new HttpError(409, `Vendor ${job.vendorName} must be unassigned from job ${job.number} before it can transition to ready.`);
         }
 
         // The job cannot have any active loadboard requests
