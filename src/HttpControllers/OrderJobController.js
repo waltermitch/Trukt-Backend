@@ -108,7 +108,7 @@ class OrderJobController
             }
             for (const job of results.acceptedJobs)
             {
-                emitter.emit('order_ready', job.orderGuid);
+                emitter.emit('order_ready', { orderGuid: job.orderGuid, currentUser: req.session.userGuid });
             }
             res.status(202).json(results);
         }
