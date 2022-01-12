@@ -596,7 +596,7 @@ class OrderJobService
             promiseArray.push(OrderJobService.updateStatusField(job.guid, currentUser));
         }
 
-        await Promise.allSettled(promiseArray);
+        Promise.allSettled(promiseArray);
 
         return res;
     }
