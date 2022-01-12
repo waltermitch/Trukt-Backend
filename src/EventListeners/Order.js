@@ -47,7 +47,7 @@ listener.on('order_ready', ({ orderGuid, currentUser }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markOrderReady(orderGuid, currentUser)]);
+        const proms = await Promise.allSettled([]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
