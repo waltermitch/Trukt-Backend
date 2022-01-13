@@ -7,12 +7,12 @@ const SuperDispatch = require('../Loadboards/Super');
 const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
-const { raw } = require('objection');
 const listener = require('./index');
+
+// const { raw } = require('objection');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
-// I don't understand the purpose of this
 listener.on('orderjob_ready', ({ orderGuid, currentUser }) =>
 {
     setImmediate(async () =>
@@ -126,19 +126,23 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop 
 
 listener.on('orderjob_dispatch_offer_sent', async ({ jobGuid }) =>
 {
-    const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
-    const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, jobPayload)]);
+    setImmediate(async () =>
+    {
+        const job = await OrderJobService.getJobData(jobGuid);
+        const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, job)]);
 
-    // for (const p of proms)
-    //     if (p.status === 'rejected')
-    //         console.log(p.reason?.response?.data || p.reason);
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
 });
 
-listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
+listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, currentUser, orderGuid }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markAsScheduled(orderGuid, currentUser), LoadboardService.dispatchJob(jobGuid, body, currentUser)]);
+        const job = await OrderJobService.getJobData(jobGuid);
+        const proms = await Promise.allSettled([OrderService.markAsScheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -150,8 +154,8 @@ listener.on('orderjob_dispatch_offer_canceled', ({ jobGuid, currentUser, orderGu
 {
     setImmediate(async () =>
     {
-        const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
-        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, jobPayload)]);
+        const job = await OrderJobService.getJobData(jobGuid);
+        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -163,8 +167,8 @@ listener.on('orderjob_dispatch_offer_declined', ({ jobGuid, currentUser, orderGu
 {
     setImmediate(async () =>
     {
-        const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
-        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, jobPayload)]);
+        const job = await OrderJobService.getJobData(jobGuid);
+        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -177,6 +181,19 @@ listener.on('orderjob_dispatch_canceled', ({ jobGuid, currentUser, orderGuid }) 
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser)]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+// this is for request, temp will change as names get impoved
+listener.on('orderjob_dispatch_offer_request_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([LoadboardService.dispatchJob(jobGuid, body, currentUser)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
