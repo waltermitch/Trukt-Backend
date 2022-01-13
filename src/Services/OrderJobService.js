@@ -603,13 +603,30 @@ class OrderJobService
 
     static async getJobForReadyCheck(jobGuids)
     {
+        const exceptions = [];
+
+        // first we must find which guids are actually present in the database
+        const found = R.pluck('guid', await OrderJob.query().select('guid').findByIds(jobGuids));
+
+        // if there are guids that are not found, create human readable exceptions for each missing guid
+        if (found.length != jobGuids.length)
+        {
+            for (let i = 0; i < jobGuids.length; i++)
+            {
+                if (found.indexOf(jobGuids[i]) == -1)
+                {
+                    exceptions.push(new HttpError(404, `Job with guid ${jobGuids[i]} cannot be found`));
+                }
+            }
+        }
+
         // this array of question marks is meant to be used for the prepared
         // statement in the following raw query. Because Knex does not support
         // passing in an array of strings as a parameter, you must supply it
         // the raw list with a question mark for every item in the list you
         // are passing in.
         const questionMarks = [];
-        for (let i = 0; i < jobGuids.length; i++)
+        for (let i = 0; i < found.length; i++)
         {
             questionMarks.push('?');
         }
@@ -619,13 +636,13 @@ class OrderJobService
         // having matching commodities, and stops that at least
         // have a requested start date
         const rows = (await knex.raw(`
-            select distinct os.guid "stopGuid", 
-                    osl.commodity_guid "commodityGuid", 
-                    os.stop_type first_stop_type, 
-                    os2.stop_type second_stop_type, 
-                    os."sequence" pickup_sequence, 
-                    os2."sequence" delivery_sequence, 
-                    os.date_requested_start, 
+            select distinct os.guid "stopGuid",
+                    osl.commodity_guid "commodityGuid",
+                    os.stop_type first_stop_type,
+                    os2.stop_type second_stop_type,
+                    os."sequence" pickup_sequence,
+                    os2."sequence" delivery_sequence,
+                    os.date_requested_start,
                     os2.date_requested_start,
                     osl.job_guid 
             from rcg_tms.order_stop_links osl
@@ -651,21 +668,42 @@ class OrderJobService
                 os.date_requested_start, 
                 os2.date_requested_start,
                 osl.job_guid
-            order by pickup_sequence`, jobGuids)).rows;
+            order by pickup_sequence`, found)).rows;
+
+        const missingDates = (await knex.raw(`
+            select distinct(oj."number"), oj.guid "jobGuid", os.stop_type 
+            from rcg_tms.order_stop_links osl 
+            left join rcg_tms.order_stops os 
+            on osl.stop_guid = os.guid 
+            left join rcg_tms.order_jobs oj 
+            on osl.job_guid = oj.guid 
+            where os.date_requested_start is null
+            and osl.order_guid is null
+            and oj.guid in (${questionMarks});
+        `, found)).rows;
+
+        for (const missingDate of missingDates)
+        {
+            const index = found.indexOf(missingDate.jobGuid);
+            if (index > -1)
+            {
+                exceptions.push(new HttpError(409, `${R.toUpper(missingDate.stop_type)} for job ${missingDate.number} is missing requested dates`));
+                found.splice(index, 1);
+            }
+        }
 
         // Since the previous query only returns some data, we need to know which guids
         // passed the query and which ones did not so we can tell the client which guids
         // did not pass the first test.
         const setGoodGuids = new Set(rows.map(row => row.job_guid));
-        const exceptions = [];
 
-        if (jobGuids.length != setGoodGuids.size)
+        if (found.length != setGoodGuids.size)
         {
-            for (const guid of jobGuids)
+            for (const guid of found)
             {
-                if (!setGoodGuids.has(jobGuids))
+                if (!setGoodGuids.has(guid))
                 {
-                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, is missing requested dates, or cannot be found`));
+                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, please ensure each commodity has a pickup and delivery.`));
                 }
             }
         }
@@ -742,9 +780,9 @@ class OrderJobService
         if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
         {
             if (job.typeCategory == 'transport' && job.jobType == 'transport')
-                res = new HttpError(409, `Carrier ${job.vendorName} for ${job.number} must be undispatched before it can transition to ready.`);
+                res = new HttpError(409, `Carrier ${job.vendorName}  must be undispatched from job ${job.number} before it can transition to ready.`);
             else if (job.typeCategory == 'service')
-                res = new HttpError(409, `Vendor ${job.vendorName} for ${job.number} must be unassigned before it can transition to ready.`);
+                res = new HttpError(409, `Vendor ${job.vendorName} must be unassigned from job ${job.number} before it can transition to ready.`);
         }
 
         // The job cannot have any active loadboard requests
