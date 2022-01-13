@@ -16,6 +16,7 @@ const OrderStop = require('../Models/OrderStop');
 const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
+const R = require('ramda');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -40,6 +41,16 @@ class LoadboardService
 
         if (!posts)
             throw new Error('Job not found');
+
+        return posts;
+    }
+
+    static async getLoadboardPostsForJob(jobGuid, loadboardNames)
+    {
+        const posts = (await LoadboardPost.query().where({ jobGuid }).whereIn('loadboard', loadboardNames)).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+
+        if (R.isEmpty(posts))
+            throw new HttpError(404, 'Job not found');
 
         return posts;
     }
