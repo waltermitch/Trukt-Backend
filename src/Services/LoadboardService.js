@@ -35,22 +35,23 @@ let dbLoadboardNames;
 
 class LoadboardService
 {
-    static async getAllLoadboardPosts(jobId)
+    static async getLoadboardPosts(jobGuid, loadboardNames = [])
     {
-        const posts = (await LoadboardPost.query().where({ jobGuid: jobId })).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
-
-        if (!posts)
-            throw new Error('Job not found');
-
-        return posts;
-    }
-
-    static async getLoadboardPostsForJob(jobGuid, loadboardNames)
-    {
-        const posts = (await LoadboardPost.query().where({ jobGuid }).whereIn('loadboard', loadboardNames)).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
-
+        const postQuery = LoadboardPost.query().where({ jobGuid });
+        let posts;
+        if (R.isEmpty(loadboardNames))
+        {
+            posts = await postQuery;
+        }
+        else
+        {
+            posts = await postQuery.whereIn('loadboard', loadboardNames);
+        }
+        
         if (R.isEmpty(posts))
             throw new HttpError(404, 'Job not found');
+            
+        posts = posts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
         return posts;
     }
