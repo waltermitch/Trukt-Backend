@@ -597,7 +597,7 @@ class OrderJobService
 
         // first we must find which guids are actually present in the database
         const found = R.pluck('guid', await OrderJob.query().select('guid').findByIds(jobGuids));
-        
+
         // if there are guids that are not found, create human readable exceptions for each missing guid
         if (found.length != jobGuids.length)
         {
@@ -660,6 +660,28 @@ class OrderJobService
                 osl.job_guid
             order by pickup_sequence`, found)).rows;
 
+        const missingDates = (await knex.raw(`
+            select distinct(oj."number"), oj.guid "jobGuid", os.stop_type 
+            from rcg_tms.order_stop_links osl 
+            left join rcg_tms.order_stops os 
+            on osl.stop_guid = os.guid 
+            left join rcg_tms.order_jobs oj 
+            on osl.job_guid = oj.guid 
+            where os.date_requested_start is null
+            and osl.order_guid is null
+            and oj.guid in (${questionMarks});
+        `, found)).rows;
+
+        for (const missingDate of missingDates)
+        {
+            const index = found.indexOf(missingDate.jobGuid);
+            if (index > -1)
+            {
+                exceptions.push(new HttpError(409, `${R.toUpper(missingDate.stop_type)} for job ${missingDate.number} is missing requested dates`));
+                found.splice(index, 1);
+            }
+        }
+
         // Since the previous query only returns some data, we need to know which guids
         // passed the query and which ones did not so we can tell the client which guids
         // did not pass the first test.
@@ -669,9 +691,9 @@ class OrderJobService
         {
             for (const guid of found)
             {
-                if (!setGoodGuids.has(found))
+                if (!setGoodGuids.has(guid))
                 {
-                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, or is missing requested dates`));
+                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, please ensure each commodity has a pickup and delivery.`));
                 }
             }
         }
