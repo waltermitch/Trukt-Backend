@@ -35,6 +35,14 @@ let dbLoadboardNames;
 
 class LoadboardService
 {
+    /**
+     * Gets either all the loadboard posts for a job, or the loadboard posts for the
+     * loadboards specified in the loadboardNames array.
+     * @param {UUID} jobGuid
+     * @param {Array<string>} loadboardNames
+     * @returns Object with a jobs loadboard posts with the keys being the loadboard name
+     * and the values being the loadboard posts
+     */
     static async getLoadboardPosts(jobGuid, loadboardNames = [])
     {
         const postQuery = LoadboardPost.query().where({ jobGuid });
@@ -47,10 +55,10 @@ class LoadboardService
         {
             posts = await postQuery.whereIn('loadboard', loadboardNames);
         }
-        
+
         if (R.isEmpty(posts))
             throw new HttpError(404, 'Job not found');
-            
+
         posts = posts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
         return posts;
