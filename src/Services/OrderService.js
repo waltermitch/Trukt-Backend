@@ -1580,12 +1580,13 @@ class OrderService
                     trx
                 );
 
-            const stopsToUpdate = OrderService.createStopsGraph(
+            const stopsGraphs = OrderService.createStopsGraph(
                 stopsChecked,
                 terminalsMap,
                 stopContactsGraphMap,
                 currentUser
             );
+            const { stopsForStopLinks, stopsGraphsToUpdate } = await OrderService.createMissingStops(stopsGraphs, stopsChecked, trx);
 
             const jobsToUpdate = OrderService.createJobsGraph(
                 jobs,
@@ -1593,7 +1594,7 @@ class OrderService
                 currentUser
             );
             const stopLinksToUpdate = OrderService.updateCreateStopLinks(
-                stopsChecked,
+                stopsForStopLinks,
                 jobs,
                 guid,
                 commoditiesMap,
@@ -1622,7 +1623,7 @@ class OrderService
                 clientGuid: client?.guid,
                 instructions,
                 clientContactGuid: orderContactCreated,
-                stops: stopsToUpdate,
+                stops: stopsGraphsToUpdate,
                 invoices: orderInvoicesToUpdate,
                 jobs: jobsToUpdateWithExpenses,
                 ...orderData
@@ -2391,7 +2392,10 @@ class OrderService
     {
         const { primaryContact, alternativeContact } = contacts;
         const stop = OrderStop.fromJson({ ...stopInput, terminalGuid });
-        stop.setUpdatedBy(currentUser);
+        if (stopInput.guid)
+            stop.setUpdatedBy(currentUser);
+        else
+            stop.setCreatedBy(currentUser);
 
         if (OrderService.isTerminalContactToBeDeleted(primaryContact))
             stop.primaryContactGuid = null;
@@ -2500,6 +2504,31 @@ class OrderService
         return [...stopLinksByStops, ...stopLinksByJob].map((stopLinkData) =>
             OrderService.updateOrCreateStopLink(stopLinkData, currentUser, trx)
         );
+    }
+
+    /**
+     * Creates the new stops and adds the guid to the stopsGraphs an stopsForStopLinks.
+     * Both stops arrays are base on the same list, so they have the same positioning
+     * @param {*} stopsToUpdateOrCreate
+     * @param {*} stopsForLinksCreation
+     * @param {*} trx
+     * @returns
+     */
+    static async createMissingStops(stopsGraphs, stopsForStopLinks, trx)
+    {
+        for (const stopToUpdateIndex in stopsGraphs)
+        {
+            if (!stopsGraphs[stopToUpdateIndex].guid)
+            {
+                const stopsToCreate = stopsGraphs[stopToUpdateIndex];
+                const stopCreated = await OrderStop.query(trx).insert(stopsToCreate, { relate: true });
+
+                stopsForStopLinks[stopToUpdateIndex].guid = stopCreated.guid;
+                stopsGraphs[stopToUpdateIndex].guid = stopCreated.guid;
+            }
+        }
+
+        return { stopsForStopLinks, stopsGraphsToUpdate: stopsGraphs };
     }
 
     static async updateOrCreateStopLink(stopLinkData, currentUser, trx)
