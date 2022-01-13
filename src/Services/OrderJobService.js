@@ -26,6 +26,44 @@ const SYSUSER = process.env.SYSTEM_USER;
 
 class OrderJobService
 {
+    static async getJobData(jobGuid)
+    {
+        // grabing job with all required fields
+        const myjob = await OrderJob
+            .query()
+            .skipUndefined()
+            .findById(jobGuid)
+            .withGraphFetched('[vendor,vendorAgent,vendorContact,dispatcher,jobType,stopLinks.[commodity.[vehicle,commType],stop.[terminal,primaryContact,alternativeContact]], bills]');
+
+        // terminal cache for storing terminals
+        const terminalCache = {};
+
+        // translating stop links into stops then removing from payload
+        myjob.stops = OrderStopLink.toStops(myjob.stopLinks);
+        delete myjob.stopLinks;
+
+        // append terminals and commodities to stops
+        for (const stop of myjob.stops)
+        {
+            if (!(stop.terminal.guid in terminalCache))
+            {
+                terminalCache[stop.terminal.guid] = stop.terminal;
+            }
+
+            for (const commodity of stop.commodities)
+            {
+                const { amount, link = [] } = myjob.findInvocieLineByCommodityAndType(commodity.guid, 1);
+                commodity.expense = amount || null;
+                commodity.revenue = link[0]?.amount || null;
+            }
+        }
+
+        // get rid of bills
+        delete myjob.bills;
+
+        return myjob;
+    }
+
     static async bulkUpdateUsers({ jobs = [], dispatcher = undefined })
     {
         const results = {};
