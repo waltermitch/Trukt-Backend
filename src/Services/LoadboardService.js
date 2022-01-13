@@ -592,7 +592,7 @@ class LoadboardService
         const loadboardNames = posts.map((post) => { return post.loadboard; });
         const job = await Job.query().findById(jobId).withGraphFetched(`[
             commodities(distinct, isNotDeleted).[vehicle, commType],
-            order.[client, clientContact, dispatcher, invoices.lines.item],
+            order.[client, clientContact, dispatcher, invoices.lines(isNotDeleted, transportOnly).item],
             stops(distinct).[primaryContact, terminal], 
             loadboardPosts(getExistingFromList),
             equipmentType, 
@@ -659,12 +659,13 @@ class LoadboardService
     static async getjobDataForUpdate(jobId)
     {
         const job = await Job.query().findById(jobId).withGraphFetched(`[
-            commodities(distinct).[vehicle, commType], 
+            commodities(distinct, isNotDeleted).[vehicle, commType], 
             order.[client, clientContact, invoices.lines(transportOnly).item],
             stops(distinct).[primaryContact, terminal], 
             loadboardPosts(getExistingFromList),
             equipmentType, 
             bills.lines(isNotDeleted, transportOnly).item,
+            dispatcher
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getValid')
         });
