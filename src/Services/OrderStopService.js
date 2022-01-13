@@ -142,7 +142,7 @@ class OrderStopService
             await trx.commit();
 
             // we emit event that stop has been updated
-            emitter.emit('orderjob_stop_update', jobGuid, currentUser, jobStop, stopGuid);
+            emitter.emit('orderjob_stop_update', { orderGuid, jobGuid, currentUser, jobStop: jobStop.rows[0], stopGuid });
         }
         catch (error)
         {

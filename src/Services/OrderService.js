@@ -3343,6 +3343,7 @@ class OrderService
             Order.startTransaction(),
             Order.query()
                 .where({ 'orders.guid': orderGuid })
+                .withGraphJoined('jobs')
                 .first()
         ]);
 
@@ -3358,13 +3359,10 @@ class OrderService
         {
             await Promise.all(
                 [
-                    // this needs to be done throug OrderJobService once TBE-285 is resolved
-                    await OrderJob.query(trx).patch({
-                        'isCanceled': false,
-                        'status': 'new',
-                        'updatedByGuid': currentUser
-                    }).where('order_guid', order.guid)
-                    ,
+                    ...order.jobs.map(async (job) =>
+                    {
+                        OrderJobService.uncancelJob(job.guid, currentUser);
+                    }),
                     Order.query(trx).patch({
                         'isCanceled': false,
                         'status': 'new',
@@ -3384,6 +3382,32 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static async markOrderReady(orderGuid, currentUser)
+    {
+        try
+        {
+            // Get the number of jobs that are ready for this order guid.
+            // Knex returns this query as an array of objects with a count property.
+            const readyJobsCount = (await OrderJob.query().count('guid').where({ orderGuid, isReady: true }))[0].count;
+
+            // WARNING: The COUNT() query in knex with pg returns the count as a string, so
+            // the following comparison only works because of javascript magic
+            if (readyJobsCount >= 1)
+            {
+                await Order.query().patch({
+                    isReady: true,
+                    status: 'ready',
+                    'updatedByGuid': currentUser
+                }).findById(orderGuid);
+            }
+        }
+        catch (error)
+        {
+            throw new HttpError(400, 'Order Cannot be set to ready.');
+        }
+
     }
 }
 
