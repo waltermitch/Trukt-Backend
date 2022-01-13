@@ -324,6 +324,9 @@ class LoadboardService
                 dateScheduledEnd: job.delivery.dateScheduledEnd
             };
 
+            await Promise.all(allPromises);
+            await trx.commit();
+
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
@@ -344,9 +347,6 @@ class LoadboardService
 
                 emitter.emit('orderjob_dispatch_offer_sent', { jobGuid: jobId });
             }
-
-            await Promise.all(allPromises);
-            await trx.commit();
 
             dispatch.jobStatus = Job.STATUS.PENDING;
             return dispatch;
@@ -576,6 +576,7 @@ class LoadboardService
                 }
             });
 
+            emitter.emit('orderjob_dispatch_offer_accepted', { jobGuid: job.guid, currentUser });
             return dispatch;
         }
         catch (e)
