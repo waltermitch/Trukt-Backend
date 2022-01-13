@@ -16,6 +16,7 @@ const OrderStop = require('../Models/OrderStop');
 const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
+const R = require('ramda');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -34,12 +35,31 @@ let dbLoadboardNames;
 
 class LoadboardService
 {
-    static async getAllLoadboardPosts(jobId)
+    /**
+     * Gets either all the loadboard posts for a job, or the loadboard posts for the
+     * loadboards specified in the loadboardNames array.
+     * @param {UUID} jobGuid
+     * @param {Array<string>} loadboardNames
+     * @returns Object with a jobs loadboard posts with the keys being the loadboard name
+     * and the values being the loadboard posts
+     */
+    static async getLoadboardPosts(jobGuid, loadboardNames = [])
     {
-        const posts = (await LoadboardPost.query().where({ jobGuid: jobId })).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        const postQuery = LoadboardPost.query().where({ jobGuid });
+        let posts;
+        if (R.isEmpty(loadboardNames))
+        {
+            posts = await postQuery;
+        }
+        else
+        {
+            posts = await postQuery.whereIn('loadboard', loadboardNames);
+        }
 
-        if (!posts)
-            throw new Error('Job not found');
+        if (R.isEmpty(posts))
+            throw new HttpError(404, 'Job not found');
+
+        posts = posts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
         return posts;
     }
