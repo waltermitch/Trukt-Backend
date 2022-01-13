@@ -703,48 +703,50 @@ class OrderJob extends BaseModel
     static filterAccounting(query, accountingType)
     {
         const Bill = require('./Bill');
-        const InvoiceLine = require('./InvoiceLine');
         const InvoiceBill = require('./InvoiceBill');
         const Invoice = require('./Invoice');
+        const Order = require('./Order');
 
         switch (accountingType)
         {
             case 'not_invoiced':
                 const ordersWithInvoicesNotFullPaid = OrderJob.accountingNotFullPaid(Invoice, InvoiceBill, 'orderGuid', 'invoiceGuid', 'guid');
-                const ordersWithLinesNotFullPaid = OrderJob.accountingNotFullPaid(Invoice, InvoiceLine, 'orderGuid', 'invoiceGuid', 'invoiceGuid');
 
-                return query.where(builder =>
-                    OrderJob.jobsDeliveredOrCompleted(builder)
-                        .whereIn('job.orderGuid', ordersWithInvoicesNotFullPaid)
-                        .orWhereIn('job.orderGuid', ordersWithLinesNotFullPaid)
-                );
+                return query.whereIn('job.orderGuid', ordersWithInvoicesNotFullPaid);
             case 'invoiced':
                 const ordersWithAllInvoicesFullPaid = OrderJob.ordersWithInvoicesPaidQuery(Invoice);
                 const ordersWithAllLinesFullPaid = OrderJob.ordersWithLinesPaidQuery(Invoice);
 
-                return query.where(builder =>
-                    OrderJob.jobsDeliveredOrCompleted(builder)
-                        .whereIn('job.guid', ordersWithAllInvoicesFullPaid)
-                        .whereIn('job.guid', ordersWithAllLinesFullPaid)
-                );
+                return query.whereIn('job.guid', ordersWithAllInvoicesFullPaid)
+                    .whereIn('job.guid', ordersWithAllLinesFullPaid);
             case 'billed':
                 const jobsWithAllBillsFullPaid = OrderJob.jobsWithBillsPaidQuery(Bill);
                 const jobsWithAllLinesFullPaid = OrderJob.jobsWithLinesPaidQuery(Bill);
 
-                return query.where(builder =>
-                    OrderJob.jobsDeliveredOrCompleted(builder)
-                        .whereIn('job.guid', jobsWithAllBillsFullPaid)
-                        .whereIn('job.guid', jobsWithAllLinesFullPaid)
-                );
+                return query.whereIn('job.guid', jobsWithAllBillsFullPaid)
+                    .whereIn('job.guid', jobsWithAllLinesFullPaid);
             case 'not_billed':
                 const jobsWithBillsNotFullPaid = OrderJob.accountingNotFullPaid(Bill, InvoiceBill, 'jobGuid', 'billGuid', 'guid');
-                const jobsWithLinesNotFullPaid = OrderJob.accountingNotFullPaid(Bill, InvoiceLine, 'jobGuid', 'billGuid', 'invoiceGuid');
 
-                return query.where(builder =>
-                    OrderJob.jobsDeliveredOrCompleted(builder)
-                        .whereIn('job.guid', jobsWithBillsNotFullPaid)
-                        .orWhereIn('job.guid', jobsWithLinesNotFullPaid)
+                return query.whereIn('job.guid', jobsWithBillsNotFullPaid);
+            case 'part_invoiced':
+                const ordersWithPartialPaidInvoices = Order.query().select('guid').whereIn('guid',
+                    Invoice.query().select('orderGuid').whereIn('invoiceGuid',
+                        InvoiceBill.query().select('IB.guid').alias('IB')
+                            .innerJoin('rcgTms.invoiceBillLines as IBL', 'IB.guid', 'invoiceGuid')
+                            .where('IBL.isPaid', false)
+                            .andWhere('IB.isPaid', true)
+                    )
                 );
+
+                return query.whereIn('job.orderGuid', ordersWithPartialPaidInvoices);
+            case 'part_billed':
+                const jobsWithPartialPaidBills = OrderJob.relatedQuery('bills').alias('B').select('jobGuid').where('isPaid', true)
+                    .whereExists(
+                        InvoiceBill.relatedQuery('lines').where('isPaid', false)
+                    );
+
+                return query.whereIn('job.guid', jobsWithPartialPaidBills);
             default:
                 return query;
         }
@@ -755,12 +757,6 @@ class OrderJob extends BaseModel
         return BaseModel.query().select(baseColumn).whereIn(matchingColumn,
             InnerModel.query().select(innerColumn).where('isPaid', false)
         );
-    }
-
-    static jobsDeliveredOrCompleted(query)
-    {
-        return query.where(builder => builder.where('job.typeId', 1).andWhere('job.status', 'delivered')
-            .orWhere(builder => builder.andWhereNot('job.typeId', 1).andWhere('job.isTransport', false).andWhere('job.status', 'completed')));
     }
 
     static baseAccountingGroupByAllPaid(Model, keyColumn, innerTable, leftColumn, rightColumn)

@@ -146,9 +146,9 @@ requestBody:
                 type: array
                 items:
                   type: string
-                minItems: 1
+                  minItems: 1
               accountingType:
-                description: Filter to select jobs that have one of the categories selected plus are type Transport and are consider Delivered or type Service and considered Completed.
+                description: Filter to select jobs that have one of the categories selected
                 type: string
                 nullable: true
                 enum:
@@ -156,6 +156,8 @@ requestBody:
                   - not_billed
                   - invoiced
                   - not_invoiced
+                  - part_invoiced
+                  - part_billed
           sort:
             description: Sort results by field provided
             type: object
