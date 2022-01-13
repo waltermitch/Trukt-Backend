@@ -88,6 +88,7 @@ class OrderJobService
 
                     // if the commodity only exists for the order, delete the commodity
                     const deleteLooseOrderStopLinks = [];
+
                     for (const stopGuid of stopGuids)
                     {
                         deleteLooseOrderStopLinks.push(
@@ -111,6 +112,17 @@ class OrderJobService
                     }
 
                     return Promise.all([
+                        // delete related line items if the commodity is not attached to any other job
+                        InvoiceLine.query(trx).whereIn('commodityGuid', commodities)
+                            .whereNotExists(
+
+                                // where a link between another job doesnt exist
+                                OrderStopLink.query(trx)
+                                    .whereIn('commodityGuid', commodities)
+                                    .where('orderGuid', orderGuid)
+                                    .whereNotNull('jobGuid')).delete().returning('guid'),
+                        Promise.all(deleteLooseOrderStopLinks),
+
                         // delete the commodities that are not linked to a stopLink that is only attached to an Order
                         Commodity.query(trx)
                             .whereIn('guid', commodities)
@@ -122,13 +134,12 @@ class OrderJobService
                                     .where('orderGuid', orderGuid)
                                     .whereNotNull('jobGuid'))
                             .delete()
-                            .returning('guid'),
-                        Promise.all(deleteLooseOrderStopLinks)
+                            .returning('guid')
                     ]).then((numDeletes) =>
                     {
-                        const deletedComms = numDeletes[0].map(it => it.guid);
+                        const deletedComms = numDeletes[2].map(it => it.guid);
 
-                        // if the there is a stop that is not attached to an order, delete the stop
+                        // if there is a stop that is not attached to an order, delete the stop
                         return OrderStop.query(trx)
                             .whereIn('guid', stopGuids)
                             .whereNotIn('guid', OrderStopLink.query(trx).select('stopGuid'))
@@ -562,6 +573,7 @@ class OrderJobService
             }
         }
 
+        // patch every job and set fields to ready status
         res.acceptedJobs = await OrderJob.query().patch({
             status: OrderJob.STATUS.READY,
             isReady: true,
@@ -570,25 +582,51 @@ class OrderJobService
             updatedByGuid: currentUser
         }).findByIds(res.acceptedJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
 
-        await Promise.allSettled(res.acceptedJobs.map(item =>
-            StatusManagerHandler.registerStatus({
-                orderGuid: item.orderGuid,
-                jobGuid: item.guid,
+        const promiseArray = [];
+
+        // update activity on every job
+        for (const job of res.acceptedJobs)
+        {
+            promiseArray.push(StatusManagerHandler.registerStatus({
+                orderGuid: job.orderGuid,
+                jobGuid: job.guid,
                 userGuid: currentUser,
                 statusId: 16
-            })));
+            }));
+            promiseArray.push(OrderJobService.updateStatusField(job.guid, currentUser));
+        }
+
+        Promise.allSettled(promiseArray);
+
         return res;
     }
 
     static async getJobForReadyCheck(jobGuids)
     {
+        const exceptions = [];
+
+        // first we must find which guids are actually present in the database
+        const found = R.pluck('guid', await OrderJob.query().select('guid').findByIds(jobGuids));
+
+        // if there are guids that are not found, create human readable exceptions for each missing guid
+        if (found.length != jobGuids.length)
+        {
+            for (let i = 0; i < jobGuids.length; i++)
+            {
+                if (found.indexOf(jobGuids[i]) == -1)
+                {
+                    exceptions.push(new HttpError(404, `Job with guid ${jobGuids[i]} cannot be found`));
+                }
+            }
+        }
+
         // this array of question marks is meant to be used for the prepared
         // statement in the following raw query. Because Knex does not support
         // passing in an array of strings as a parameter, you must supply it
         // the raw list with a question mark for every item in the list you
         // are passing in.
         const questionMarks = [];
-        for (let i = 0; i < jobGuids.length; i++)
+        for (let i = 0; i < found.length; i++)
         {
             questionMarks.push('?');
         }
@@ -598,13 +636,13 @@ class OrderJobService
         // having matching commodities, and stops that at least
         // have a requested start date
         const rows = (await knex.raw(`
-            select distinct os.guid "stopGuid", 
-                    osl.commodity_guid "commodityGuid", 
-                    os.stop_type first_stop_type, 
-                    os2.stop_type second_stop_type, 
-                    os."sequence" pickup_sequence, 
-                    os2."sequence" delivery_sequence, 
-                    os.date_requested_start, 
+            select distinct os.guid "stopGuid",
+                    osl.commodity_guid "commodityGuid",
+                    os.stop_type first_stop_type,
+                    os2.stop_type second_stop_type,
+                    os."sequence" pickup_sequence,
+                    os2."sequence" delivery_sequence,
+                    os.date_requested_start,
                     os2.date_requested_start,
                     osl.job_guid 
             from rcg_tms.order_stop_links osl
@@ -630,21 +668,42 @@ class OrderJobService
                 os.date_requested_start, 
                 os2.date_requested_start,
                 osl.job_guid
-            order by pickup_sequence`, jobGuids)).rows;
+            order by pickup_sequence`, found)).rows;
+
+        const missingDates = (await knex.raw(`
+            select distinct(oj."number"), oj.guid "jobGuid", os.stop_type 
+            from rcg_tms.order_stop_links osl 
+            left join rcg_tms.order_stops os 
+            on osl.stop_guid = os.guid 
+            left join rcg_tms.order_jobs oj 
+            on osl.job_guid = oj.guid 
+            where os.date_requested_start is null
+            and osl.order_guid is null
+            and oj.guid in (${questionMarks});
+        `, found)).rows;
+
+        for (const missingDate of missingDates)
+        {
+            const index = found.indexOf(missingDate.jobGuid);
+            if (index > -1)
+            {
+                exceptions.push(new HttpError(409, `${R.toUpper(missingDate.stop_type)} for job ${missingDate.number} is missing requested dates`));
+                found.splice(index, 1);
+            }
+        }
 
         // Since the previous query only returns some data, we need to know which guids
         // passed the query and which ones did not so we can tell the client which guids
         // did not pass the first test.
         const setGoodGuids = new Set(rows.map(row => row.job_guid));
-        const exceptions = [];
 
-        if (jobGuids.length != setGoodGuids.size)
+        if (found.length != setGoodGuids.size)
         {
-            for (const guid of jobGuids)
+            for (const guid of found)
             {
-                if (!setGoodGuids.has(jobGuids))
+                if (!setGoodGuids.has(guid))
                 {
-                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, is missing requested dates, or cannot be found`));
+                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, please ensure each commodity has a pickup and delivery.`));
                 }
             }
         }
@@ -721,9 +780,9 @@ class OrderJobService
         if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
         {
             if (job.typeCategory == 'transport' && job.jobType == 'transport')
-                res = new HttpError(409, `Carrier ${job.vendorName} for ${job.number} must be undispatched before it can transition to ready.`);
+                res = new HttpError(409, `Carrier ${job.vendorName}  must be undispatched from job ${job.number} before it can transition to ready.`);
             else if (job.typeCategory == 'service')
-                res = new HttpError(409, `Vendor ${job.vendorName} for ${job.number} must be unassigned before it can transition to ready.`);
+                res = new HttpError(409, `Vendor ${job.vendorName} must be unassigned from job ${job.number} before it can transition to ready.`);
         }
 
         // The job cannot have any active loadboard requests
@@ -880,20 +939,15 @@ class OrderJobService
                 }
             }
 
+            // update status to hold and return fields
             const res = await OrderJob.query(trx)
                 .patch({ status: OrderJob.STATUS.ON_HOLD, isOnHold: true, isReady: false, updatedByGuid: currentUser })
                 .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady', 'orderGuid');
 
             await trx.commit();
 
-            // updated activity for on hold
-            await StatusManagerHandler.registerStatus({
-                orderGuid: res.orderGuid,
-                jobGuid: job.guid,
-                userGuid: currentUser,
-                statusId: 22
-            });
-
+            // emit event to update status field and activity
+            emitter.emit('orderjob_hold_added', { orderGuid: res.orderGuid, jobGuid, currentUser });
             emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: OrderJob.STATUS.ON_HOLD } });
 
             return res;
@@ -940,7 +994,7 @@ class OrderJobService
                 if (typeof readyResult == 'string')
                 {
                     res = await OrderJob.query(trx).patch(OrderJobService.createStatusPayload('ready', currentUser))
-                        .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady');
+                        .findById(jobGuid).returning('guid', 'number', 'status', 'isOnHold', 'isReady', 'orderGuid');
 
                     const post = await LoadboardPost.query(trx).select('externalGuid')
                         .findOne({ loadboard: 'SUPERDISPATCH', jobGuid: res.guid });
@@ -963,12 +1017,9 @@ class OrderJobService
 
             await trx.commit();
 
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                statusId: 16
-            });
+            // emmit event to update activity and status field
+            emitter.emit('orderjob_hold_removed', { orderGuid: res.orderGuid, jobGuid, currentUser });
+            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: OrderJob.STATUS.READY } });
 
             return res;
         }
@@ -979,7 +1030,7 @@ class OrderJobService
         }
     }
 
-    static async deleteJob(jobGuid, userGuid)
+    static async deleteJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
 
@@ -1004,13 +1055,13 @@ class OrderJobService
             const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
 
             // updating postings to be deleted
-            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, userGuid);
+            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, currentUser);
 
             // marking job as deleted
-            const payload = OrderJobService.createStatusPayload('deleted', userGuid);
+            const payload = OrderJobService.createStatusPayload('deleted', currentUser);
 
             // creating payload for requests to deleted
-            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).deleted;
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(currentUser).deleted;
 
             // mark all orderJob and and requrests as deleted
             await Promise.all([
@@ -1022,16 +1073,8 @@ class OrderJobService
             // commiting transactions
             await trx.commit();
 
-            // Register job deleted
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: userGuid,
-                statusId: 17
-            });
-
             // emitting event to update status manager 17
-            emitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_deleted', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
             return { status: 200 };
         }
@@ -1048,7 +1091,7 @@ class OrderJobService
      * @param {uuid} userGuid
      * @returns
      */
-    static async undeleteJob(jobGuid, userGuid)
+    static async undeleteJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
 
@@ -1063,7 +1106,7 @@ class OrderJobService
                 return { status: 200 };
 
             // setting order back to ready status
-            const payload = OrderJobService.createStatusPayload('ready', userGuid);
+            const payload = OrderJobService.createStatusPayload('ready', currentUser);
 
             // udpating orderJob in data base
             await OrderJob.query(trx).patch(payload).findById(jobGuid);
@@ -1071,16 +1114,8 @@ class OrderJobService
             // commiting transaction
             await trx.commit();
 
-            // Register job undeleted first
-            await StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: jobGuid,
-                userGuid: userGuid,
-                statusId: 18
-            });
-
             // emit the event to register with status manager Will randomly update ORDER TO DELETED INCORRECT
-            emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
             return { status: 200 };
         }
@@ -1091,7 +1126,7 @@ class OrderJobService
         }
     }
 
-    static async cancelJob(jobGuid, userGuid)
+    static async cancelJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
 
@@ -1104,13 +1139,13 @@ class OrderJobService
             const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
 
             // deleted all postings attached to the job
-            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, userGuid);
+            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, currentUser);
 
             // setting up canceled payload
-            const payload = OrderJobService.createStatusPayload('canceled', userGuid);
+            const payload = OrderJobService.createStatusPayload('canceled', currentUser);
 
             // creating canceled request payload
-            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(userGuid).canceled;
+            const loadboardRequestPayload = LoadboardRequest.createStatusPayload(currentUser).canceled;
 
             // updating tables
             await Promise.all([
@@ -1118,11 +1153,10 @@ class OrderJobService
                 LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
                     LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
             ]);
-
             await trx.commit();
 
             // setting off an event to update status manager
-            emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
             return { status: 200 };
         }
@@ -1153,7 +1187,7 @@ class OrderJobService
         return job;
     }
 
-    static async uncancelJob(jobGuid, userGuid)
+    static async uncancelJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
 
@@ -1168,7 +1202,7 @@ class OrderJobService
                 return { status: 200, message: { data: { status: job.status } } };
 
             // createing ready status to undo delete
-            const payload = OrderJobService.createStatusPayload('ready', userGuid);
+            const payload = OrderJobService.createStatusPayload('ready', currentUser);
 
             // update orderJob to Ready state
             const jobUpdated = await OrderJob.query(trx).patchAndFetchById(jobGuid, payload);
@@ -1177,7 +1211,7 @@ class OrderJobService
             await trx.commit();
 
             // emitting event for update statys manager
-            emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, userGuid, jobGuid });
+            emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
             return { status: 200, message: { data: { status: jobUpdated.status } } };
         }
@@ -1294,7 +1328,12 @@ class OrderJobService
 
         // only do updates when status is different
         if (state.currentStatus === state.expectedStatus)
+        {
+            // emit event
+            emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: state.expectedStatus, oldStatus: state.currentStatus } });
+
             return state.currentStatus;
+        }
         else
         {
             const job = await OrderJob.query()

@@ -1,0 +1,46 @@
+summary: Bulk Operation to Export Orders Invoice
+operationId: bulkExportInvoice
+description: Export all the invoices of this orders
+tags:
+  - Invoice
+  - Order
+  - Bulk
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        description: List of Orders guids
+        properties:
+          orders:
+            type: array
+            items:
+              description: Order guid
+              $ref: '../../components/schemas/Common.yaml#/guid'
+            minItems: 1
+        required:
+          - orders
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            orderGuid:
+              type: object
+              description: This is key value pair of orderGuid
+              properties:
+                error:
+                  $ref: ../../components/schemas/Finances.yaml#/Error
+                status:
+                  type: number
+                  description: Signifies the status of this specific order export. 204 means All Invoices Already Paid For This Order
+                  enum:
+                    - 400
+                    - 200
+                    - 500
+                    - 204
+                data:
+                  $ref: ../../components/schemas/Finances.yaml#/Invoice

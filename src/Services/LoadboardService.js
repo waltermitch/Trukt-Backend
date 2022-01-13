@@ -333,7 +333,7 @@ class LoadboardService
                     statusId: 10,
                     jobGuid: jobId,
                     extraAnnotations: {
-                        dispatchedTo: 'internal',
+                        dispatchedTo: 'TRUKT',
                         code: 'pending',
                         vendorGuid: dispatch.vendor.guid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
@@ -341,15 +341,13 @@ class LoadboardService
                         vendorAgentName: dispatch.vendorAgent.name
                     }
                 });
+
+                emitter.emit('orderjob_dispatch_offer_sent', { jobGuid: jobId });
             }
 
             await Promise.all(allPromises);
             await trx.commit();
 
-            emitter.emit('orderjob_dispatch_offer_sent', {
-                jobGuid: job.guid,
-                dispatchGuid: job.dispatch.guid
-            });
             dispatch.jobStatus = Job.STATUS.PENDING;
             return dispatch;
         }
@@ -462,7 +460,7 @@ class LoadboardService
                     statusId: 12,
                     jobGuid,
                     extraAnnotations: {
-                        undispatchedFrom: 'internal',
+                        undispatchedFrom: 'TRUKT',
                         code: 'ready',
                         vendorGuid: dispatch.vendor.guid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
@@ -470,6 +468,8 @@ class LoadboardService
                         vendorAgentName: dispatch.vendorAgent.name
                     }
                 });
+
+                emitter.emit('orderjob_dispatch_offer_canceled', { jobGuid });
             }
 
             return dispatch;
@@ -495,7 +495,7 @@ class LoadboardService
                         isValid: true,
                         isPending: true
                     }).count().as('validDispatchesCount')
-                ]).withGraphFetched('[bills, commodities]');
+                ]);
 
             if (!job)
                 throw new HttpError(404, 'Job not found');
@@ -544,10 +544,6 @@ class LoadboardService
                 status: Job.STATUS.DISPATCHED,
                 updatedByGuid: currentUser
             }));
-
-            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, dispatch.price, currentUser);
-            for (const line of lines) line.transacting(trx);
-            allPromises.push(...lines);
 
             const jobBill = await dispatch.$query(trx)
                 .joinRelated('job.bills')
@@ -836,6 +832,7 @@ class LoadboardService
 
         const payloads = [];
         let lbPayload;
+        const activeExternalLBNames = [];
 
         try
         {
@@ -844,11 +841,13 @@ class LoadboardService
             {
                 lbPayload = new loadboardClasses[`${lbName}`](job);
                 payloads.push(lbPayload['remove'](userGuid));
+                activeExternalLBNames.push({ loadboard: lbName });
             }
+
             if (payloads?.length)
             {
                 await sender.sendMessages({ body: payloads });
-                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, userGuid, 21, jobId);
+                LoadboardService.registerLoadboardStatusManager(activeExternalLBNames, job.orderGuid, userGuid, 21, jobId);
             }
         }
         catch (e)
@@ -935,6 +934,112 @@ class LoadboardService
             await trx.rollback();
             throw e;
         }
+    }
+
+    static async getJobDispatchData(jobGuid)
+    {
+        let job = await OrderJobDispatch.query()
+            .withGraphJoined('[vendor, vendorAgent, job.[bills.lines, stops(distinct)]]')
+            .modifyGraph('vendor', builder =>
+            {
+                builder.select(
+                    'dotNumber',
+                    'email',
+                    'phoneNumber',
+                    'billingStreet',
+                    'billingCity',
+                    'billingPostalCode',
+                    'billingState',
+                    'billingCountry');
+            })
+            .modifyGraph('vendorAgent', builder =>
+            {
+                builder.select(
+                    'name',
+                    'email',
+                    'phoneNumber');
+            })
+            .modifyGraph('job', builder =>
+            {
+                builder.select('guid', 'status');
+            })
+            .select(
+                'orderJobDispatches.guid as dispatchGuid'
+            )
+            .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid, 'rcgTms.orderJobDispatches.isValid': true })
+            .andWhere(builder => builder.where({ isPending: true }).orWhere({
+                isAccepted: true
+            }));
+
+        // create blank info if no valid dispatches
+        if (!job)
+        {
+            job = await OrderJobDispatch.query()
+                .withGraphJoined('[job.[bills.lines, stops(distinct)]]')
+                .select(
+                    'orderJobDispatches.guid as dispatchGuid'
+                )
+                .modifyGraph('job', builder =>
+                {
+                    builder.select('guid', 'status');
+                })
+                .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
+                .andWhere(builder =>
+                    builder.where({ 'orderJobDispatches.isCanceled': true })
+                        .orWhere({ isDeclined: true }));
+
+            if (job)
+            {
+                job.vendor = {
+                    dotNumber: null,
+                    email: null,
+                    phone: null,
+                    billingStreet: null,
+                    billingCity: null,
+                    billingPostalCode: null,
+                    billingState: null,
+                    billingCountry: null
+                };
+                job.vendorAgent = {
+                    name: null,
+                    email: null,
+                    phone: null
+                };
+            }
+        }
+
+        return job;
+    }
+
+    /**
+     * @description This function is meant to be used after a order with jobs with a pending dispatch offer
+     *  has been been updated. This function will return an array of queries that will update the
+     *  current active offers price because since the price for the job has changed,
+     *  this new value will be the price the dispatch offer is accepted or canceled for.
+     * @param {OrderJob []} jobs An array of order jobs with a hopefully updated actualExpense field and a guid
+     * @returns An array of OrderJobDispatch queries that should update only pending dispatch offers
+     */
+    static updateDispatchPrice(jobs)
+    {
+        const dispatches = [];
+        for (const job of jobs)
+        {
+            dispatches.push(OrderJobDispatch.query().patch({
+                price: job.actualExpense,
+                dateUpdated: job.dateUpdated,
+                updatedByGuid: job.updatedByGuid
+            })
+                .where({
+                    jobGuid: job.guid,
+                    isPending: true,
+                    isValid: true,
+                    isAccepted: false,
+                    isDeclined: false,
+                    isCanceled: false
+
+                }));
+        }
+        return dispatches;
     }
 }
 

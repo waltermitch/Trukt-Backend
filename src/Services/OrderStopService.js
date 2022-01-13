@@ -142,7 +142,7 @@ class OrderStopService
             await trx.commit();
 
             // we emit event that stop has been updated
-            emitter.emit('orderjob_stop_update', jobGuid, currentUser, jobStop, stopGuid);
+            emitter.emit('orderjob_stop_update', { orderGuid, jobGuid, currentUser, jobStop: jobStop.rows[0], stopGuid });
         }
         catch (error)
         {
@@ -323,8 +323,33 @@ class OrderStopService
             				WHEN stop_type IS NULL and is_started = true AND is_completed = false THEN 'started'
             				WHEN stop_type IS NULL and is_started = true AND is_completed = true THEN 'completed'
             			END 
-            WHERE guid = '${stopGuid}';        
+            WHERE guid = '${stopGuid}';
         `;
+    }
+
+    static async validateStops(stopGuids, currentUser)
+    {
+        // init transaction
+        const trx = await knex.transaction();
+
+        try
+        {
+
+            await Promise.all(
+                stopGuids.map(async (guid) =>
+                {
+                    await trx.raw(OrderStopService.updateOrderStop(guid, currentUser));
+                    await trx.raw(OrderStopService.updateStopStatusField(guid, currentUser));
+                })
+            );
+
+            await trx.commit();
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
     }
 
     /**
