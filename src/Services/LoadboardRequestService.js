@@ -229,7 +229,7 @@ class LoadboardRequestService
         acceptPayload.carrier.guid = carrierInfo.sfId;
 
         // hit event to update to pending and remove all postings
-        emitter.emit('orderjob_dispatch_offer_accepted', { jobGuid: acceptPayload.jobGuid, currentUser: currentUser, orderGuid: acceptPayload.orderGuid, body: acceptPayload });
+        emitter.emit('orderjob_dispatch_offer_request_accepted', { jobGuid: acceptPayload.jobGuid, currentUser: currentUser, orderGuid: acceptPayload.orderGuid, body: acceptPayload });
 
         return result;
     }
