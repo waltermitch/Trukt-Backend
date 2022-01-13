@@ -51,8 +51,8 @@ const myMessageHandler = async (message) =>
                 case 'carrierAcceptDispatch':
                 case 'undispatch':
                 case 'carrierDeclineDispatch':
-                    const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
-                    await Promise.allSettled([PubSubService.jobUpdated(jobGuid, jobPayload)]);
+                    const job = await OrderJobService.getJobData(jobGuid);
+                    await Promise.allSettled([PubSubService.jobUpdated(jobGuid, job)]);
                     break;
                 case 'post':
                 case 'unpost':
