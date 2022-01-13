@@ -72,13 +72,10 @@ class OrderJobController
     {
         const jobGuid = req.params.jobGuid;
         const func = value ? OrderJobService.addHold : OrderJobService.removeHold;
-        const eventEmitted = value ? 'orderjob_hold_added' : 'orderjob_hold_removed';
 
         try
         {
             const response = await func(jobGuid, req.session.userGuid);
-
-            emitter.emit(eventEmitted, jobGuid);
             res.status(200);
             res.json(response);
         }
@@ -111,7 +108,7 @@ class OrderJobController
             }
             for (const job of results.acceptedJobs)
             {
-                emitter.emit('orderjob_status', job.orderGuid);
+                emitter.emit('orderjob_ready', { orderGuid: job.orderGuid, currentUser: req.session.userGuid });
             }
             res.status(202).json(results);
         }

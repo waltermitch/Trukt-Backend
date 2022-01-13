@@ -126,7 +126,7 @@
         {
             "id": 21,
             "category": "Order",
-            "name": "Removed from",
+            "name": "Removed Order from",
             "order_filter_label": "Removed On"
         },
         {
@@ -182,6 +182,12 @@
             "category": "Order",
             "name": "Order Pick Up",
             "order_filter_label": "Order Pick Up On"
+        },
+        {
+            "id": 31,
+            "category": "job",
+            "name": "Job Manually Dispatched",
+            "order_filter_label": "Job Manually Dispatched"
         }
     ]
 }
