@@ -344,6 +344,9 @@ class LoadboardService
                 dateScheduledEnd: job.delivery.dateScheduledEnd
             };
 
+            await Promise.all(allPromises);
+            await trx.commit();
+
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
@@ -364,9 +367,6 @@ class LoadboardService
 
                 emitter.emit('orderjob_dispatch_offer_sent', { jobGuid: jobId });
             }
-
-            await Promise.all(allPromises);
-            await trx.commit();
 
             dispatch.jobStatus = Job.STATUS.PENDING;
             return dispatch;
@@ -596,6 +596,7 @@ class LoadboardService
                 }
             });
 
+            emitter.emit('orderjob_dispatch_offer_accepted', { jobGuid: job.guid, currentUser });
             return dispatch;
         }
         catch (e)
@@ -955,81 +956,6 @@ class LoadboardService
             await trx.rollback();
             throw e;
         }
-    }
-
-    static async getJobDispatchData(jobGuid)
-    {
-        let job = await OrderJobDispatch.query()
-            .withGraphJoined('[vendor, vendorAgent, job.[bills.lines, stops(distinct)]]')
-            .modifyGraph('vendor', builder =>
-            {
-                builder.select(
-                    'dotNumber',
-                    'email',
-                    'phoneNumber',
-                    'billingStreet',
-                    'billingCity',
-                    'billingPostalCode',
-                    'billingState',
-                    'billingCountry');
-            })
-            .modifyGraph('vendorAgent', builder =>
-            {
-                builder.select(
-                    'name',
-                    'email',
-                    'phoneNumber');
-            })
-            .modifyGraph('job', builder =>
-            {
-                builder.select('guid', 'status');
-            })
-            .select(
-                'orderJobDispatches.guid as dispatchGuid'
-            )
-            .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid, 'rcgTms.orderJobDispatches.isValid': true })
-            .andWhere(builder => builder.where({ isPending: true }).orWhere({
-                isAccepted: true
-            }));
-
-        // create blank info if no valid dispatches
-        if (!job)
-        {
-            job = await OrderJobDispatch.query()
-                .withGraphJoined('[job.[bills.lines, stops(distinct)]]')
-                .select(
-                    'orderJobDispatches.guid as dispatchGuid'
-                )
-                .modifyGraph('job', builder =>
-                {
-                    builder.select('guid', 'status');
-                })
-                .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
-                .andWhere(builder =>
-                    builder.where({ 'orderJobDispatches.isCanceled': true })
-                        .orWhere({ isDeclined: true }));
-
-            if (job)
-            {
-                job.vendor = {
-                    dotNumber: null,
-                    email: null,
-                    phone: null,
-                    billingStreet: null,
-                    billingCity: null,
-                    billingPostalCode: null,
-                    billingState: null,
-                    billingCountry: null
-                };
-                job.vendorAgent = {
-                    name: null,
-                    email: null,
-                    phone: null
-                };
-            }
-        }
-
-        return job;
     }
 
     /**
