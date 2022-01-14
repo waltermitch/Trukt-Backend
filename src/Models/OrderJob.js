@@ -355,37 +355,40 @@ class OrderJob extends BaseModel
         const Vehicle = require('./Vehicle');
         const Order = require('./Order');
 
-        query
+        query.where(
+            builder =>
+            {
+                // search by job number
+                builder.orWhere('job.number', 'ilike', `%${keyword}%`)
 
-            // search by job number
-            .orWhere('job.number', 'ilike', `%${keyword}%`)
+                    // search stoplink
+                    .orWhereIn('job.guid', OrderStopLink.query().select('jobGuid')
 
-            // search stoplink
-            .orWhereIn('job.guid', OrderStopLink.query().select('jobGuid')
+                        // search stop
+                        .whereIn('stopGuid', OrderStop.query().select('guid')
 
-                // search stop
-                .whereIn('stopGuid', OrderStop.query().select('guid')
+                            // search terminal
+                            .whereIn('terminalGuid', Terminal.query().select('guid')
+                                .where('city', 'ilike', `%${keyword}%`)
+                                .orWhere('state', 'ilike', `%${keyword}%`)
+                                .orWhere('zipCode', 'ilike', `%${keyword}%`)))
 
-                    // search terminal
-                    .whereIn('terminalGuid', Terminal.query().select('guid')
-                        .where('city', 'ilike', `%${keyword}%`)
-                        .orWhere('state', 'ilike', `%${keyword}%`)
-                        .orWhere('zipCode', 'ilike', `%${keyword}%`)))
+                        // search commodity and vehicle
+                        .orWhereIn('commodityGuid', Commodity.query().select('guid')
+                            .where('identifier', 'ilike', `%${keyword}%`)
+                            .orWhereIn('vehicleId', Vehicle.query().select('id')
+                                .where('name', 'ilike', `%${keyword}%`))))
 
-                // search commodity and vehicle
-                .orWhereIn('commodityGuid', Commodity.query().select('guid')
-                    .where('identifier', 'ilike', `%${keyword}%`)
-                    .orWhereIn('vehicleId', Vehicle.query().select('id')
-                        .where('name', 'ilike', `%${keyword}%`))))
+                    // search vendor attributes
+                    .orWhereIn('vendorGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
 
-            // search vendor attributes
-            .orWhereIn('vendorGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
-
-            // search client and client contact attributes
-            .orWhereIn('orderGuid', Order.query().select('guid')
-                .whereIn('clientContactGuid', SFContact.query().select('guid').where('email', 'ilike', `%${keyword}%`))
-                .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
-                .orWhere('referenceNumber', 'ilike', `%${keyword}%`));
+                    // search client and client contact attributes
+                    .orWhereIn('orderGuid', Order.query().select('guid')
+                        .whereIn('clientContactGuid', SFContact.query().select('guid').where('email', 'ilike', `%${keyword}%`))
+                        .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
+                        .orWhere('referenceNumber', 'ilike', `%${keyword}%`));
+            }
+        );
     }
 
     static modifiers = {
