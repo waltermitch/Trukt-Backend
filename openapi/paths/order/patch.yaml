@@ -187,7 +187,6 @@ requestBody:
             type: array
             items:
               allOf:
-                - $ref: '../../components/schemas/Common.yaml#/guidObject'
                 - $ref: '../../components/schemas/Common.yaml#/indexObject'
                 - anyOf:
                     - type: object
