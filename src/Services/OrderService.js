@@ -77,7 +77,8 @@ class OrderService
             dispatcher,
             salesperson,
             dates,
-            jobCategory
+            jobCategory,
+            accountingType
         },
         page,
         rowCount,
@@ -109,14 +110,17 @@ class OrderService
             delivery
         );
 
-        for (const s of status)
+        baseOrderQuery.where(baseQueryAnd =>
         {
-            baseOrderQuery.orWhere(builder =>
+            for (const s of status)
             {
-                if (s in OrderService.statusMap)
-                    builder.modify(OrderService.statusMap[s]);
-            });
-        }
+                baseQueryAnd.orWhere(baseQueryOr =>
+                {
+                    if (s in OrderService.statusMap)
+                        baseQueryOr.modify(OrderService.statusMap[s]);
+                });
+            }
+        });
 
         const queryFilterCustomer = OrderService.addFilterCustomer(
             baseOrderQuery,
@@ -145,7 +149,7 @@ class OrderService
 
         const queryAllFilters = OrderService.addFilterModifiers(
             queryFilterDates,
-            { jobCategory, sort }
+            { jobCategory, sort, accountingType }
         );
 
         const queryWithGraphModifiers = OrderService.addGraphModifiers(
@@ -1446,9 +1450,10 @@ class OrderService
 
     static addFilterModifiers(baseQuery, filters)
     {
-        const { jobCategory, sort } = filters;
+        const { jobCategory, sort, accountingType } = filters;
         return baseQuery
             .modify('filterJobCategories', jobCategory)
+            .modify('filterAccounting', accountingType)
             .modify('sorted', sort);
     }
 
@@ -1582,12 +1587,13 @@ class OrderService
                     trx
                 );
 
-            const stopsToUpdate = OrderService.createStopsGraph(
+            const stopsGraphs = OrderService.createStopsGraph(
                 stopsChecked,
                 terminalsMap,
                 stopContactsGraphMap,
                 currentUser
             );
+            const { stopsForStopLinks, stopsGraphsToUpdate } = await OrderService.createMissingStops(stopsGraphs, stopsChecked, trx);
 
             const jobsToUpdate = OrderService.createJobsGraph(
                 jobs,
@@ -1596,7 +1602,7 @@ class OrderService
             );
 
             const stopLinksToUpdate = OrderService.updateCreateStopLinks(
-                stopsChecked,
+                stopsForStopLinks,
                 jobs,
                 guid,
                 commoditiesMap,
@@ -1626,7 +1632,7 @@ class OrderService
                 clientGuid: client?.guid,
                 instructions,
                 clientContactGuid: orderContactCreated,
-                stops: stopsToUpdate,
+                stops: stopsGraphsToUpdate,
                 invoices: orderInvoicesToUpdate,
                 jobs: jobsToUpdateWithExpenses,
                 ...orderData
@@ -2396,7 +2402,10 @@ class OrderService
     {
         const { primaryContact, alternativeContact } = contacts;
         const stop = OrderStop.fromJson({ ...stopInput, terminalGuid });
-        stop.setUpdatedBy(currentUser);
+        if (stopInput.guid)
+            stop.setUpdatedBy(currentUser);
+        else
+            stop.setCreatedBy(currentUser);
 
         if (OrderService.isTerminalContactToBeDeleted(primaryContact))
             stop.primaryContactGuid = null;
@@ -2508,6 +2517,33 @@ class OrderService
         return [...stopLinksByStops, ...stopLinksByJob].map((stopLinkData) =>
             OrderService.updateOrCreateStopLink(stopLinkData, currentUser, trx)
         );
+    }
+
+    /**
+     * @description Creates the new stops and adds the guid to the stopsGraphs an stopsForStopLinks.
+     * Both stops arrays are base on the same list, so they have the same positioning
+     * @param {OrderStop []} stopsGraphs List of order stops checked for update into DB
+     * @param {OrderStop []} stopsForStopLinks List of order stops as they came from user input.
+     * This is use due to the index property that stopGraph does not have,
+     * @param {transaction} trx Model transaction
+     * @returns {{stopsForStopLinks: OrderStop[], stopsGraphsToUpdate: OrderStop[]}} Same OrderStops as the input, with the adition of
+     * the new stop guid that was created (If it is requires to created it)
+     */
+    static async createMissingStops(stopsGraphs, stopsForStopLinks, trx)
+    {
+        for (const stopToUpdateIndex in stopsGraphs)
+        {
+            if (!stopsGraphs[stopToUpdateIndex].guid)
+            {
+                const stopsToCreate = stopsGraphs[stopToUpdateIndex];
+                const stopCreated = await OrderStop.query(trx).insert(stopsToCreate, { relate: true });
+
+                stopsForStopLinks[stopToUpdateIndex].guid = stopCreated.guid;
+                stopsGraphs[stopToUpdateIndex].guid = stopCreated.guid;
+            }
+        }
+
+        return { stopsForStopLinks, stopsGraphsToUpdate: stopsGraphs };
     }
 
     static async updateOrCreateStopLink(stopLinkData, currentUser, trx)

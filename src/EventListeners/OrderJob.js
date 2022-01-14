@@ -7,12 +7,12 @@ const SuperDispatch = require('../Loadboards/Super');
 const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
-const { raw } = require('objection');
 const listener = require('./index');
+
+// const { raw } = require('objection');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
-// I don't understand the purpose of this
 listener.on('orderjob_ready', ({ orderGuid, currentUser }) =>
 {
     setImmediate(async () =>
@@ -126,19 +126,23 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop 
 
 listener.on('orderjob_dispatch_offer_sent', async ({ jobGuid }) =>
 {
-    const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
-    const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, jobPayload)]);
+    setImmediate(async () =>
+    {
+        const job = await OrderJobService.getJobData(jobGuid);
+        const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, job)]);
 
-    // for (const p of proms)
-    //     if (p.status === 'rejected')
-    //         console.log(p.reason?.response?.data || p.reason);
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
 });
 
-listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
+listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, currentUser, orderGuid }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markAsScheduled(orderGuid, currentUser), LoadboardService.dispatchJob(jobGuid, body, currentUser)]);
+        const job = await OrderJobService.getJobData(jobGuid);
+        const proms = await Promise.allSettled([OrderService.markAsScheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -150,8 +154,8 @@ listener.on('orderjob_dispatch_offer_canceled', ({ jobGuid, currentUser, orderGu
 {
     setImmediate(async () =>
     {
-        const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
-        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, jobPayload)]);
+        const job = await OrderJobService.getJobData(jobGuid);
+        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -163,8 +167,8 @@ listener.on('orderjob_dispatch_offer_declined', ({ jobGuid, currentUser, orderGu
 {
     setImmediate(async () =>
     {
-        const jobPayload = await LoadboardService.getJobDispatchData(jobGuid);
-        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, jobPayload)]);
+        const job = await OrderJobService.getJobData(jobGuid);
+        const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -177,6 +181,19 @@ listener.on('orderjob_dispatch_canceled', ({ jobGuid, currentUser, orderGuid }) 
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser)]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
+// this is for request, temp will change as names get impoved
+listener.on('load_request_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([LoadboardService.dispatchJob(jobGuid, body, currentUser)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
@@ -260,19 +277,21 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
     setImmediate(async () =>
     {
         const orderUpdatePromise = [];
-
         const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
         if (jobsOrder?.deleteorder)
         {
             const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
-            orderUpdatePromise.push(Order.query().patch(deleteStatusPayload).findById(orderGuid),
+            orderUpdatePromise.push(
+                Order.query().patch(deleteStatusPayload).findById(orderGuid),
                 StatusManagerHandler.registerStatus({
                     orderGuid,
                     jobGuid,
                     userGuid: currentUser,
                     statusId: 19
-                }));
+                })
+            );
         }
+
         const proms = await Promise.allSettled([
             StatusManagerHandler.registerStatus({
                 orderGuid,
@@ -399,78 +418,6 @@ listener.on('orderjob_activity_updated', ({ jobGuid, state }) =>
             .andWhere('jobGuid', jobGuid);
 
         const proms = await Promise.allSettled([(PubSubService.jobActivityUpdate(jobGuid, currentActivity))]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
-    });
-});
-
-listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
-{
-    /**
-     * Validate if all jobs are deleted on the order, then update activity that order is deleted
-     * update activity for job to be deleted
-     * and validate status field
-     */
-    setImmediate(async () =>
-    {
-        const orderUpdatePromise = [];
-        const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
-        if (jobsOrder?.deleteorder)
-        {
-            const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
-            orderUpdatePromise.push(
-                Order.query().patch(deleteStatusPayload).findById(orderGuid),
-                StatusManagerHandler.registerStatus({
-                    orderGuid,
-                    jobGuid,
-                    userGuid: currentUser,
-                    statusId: 19
-                })
-            );
-        }
-
-        const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
-                orderGuid,
-                jobGuid,
-                userGuid: currentUser,
-                statusId: 17
-            }),
-            OrderJobService.updateStatusField(jobGuid, currentUser),
-            ...orderUpdatePromise
-        ]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
-    });
-});
-
-listener.on('orderjob_undeleted', async ({ orderGuid, currentUser, jobGuid }) =>
-{
-    /**
-     * Register job and order as deleted for activities
-     * validate job status field and trigger event if needed
-     */
-    setImmediate(async () =>
-    {
-        await Promise.allSettled([
-            OrderJobService.updateStatusField(jobGuid, currentUser),
-            StatusManagerHandler.registerStatus({
-                orderGuid: orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                statusId: 18
-            }),
-            StatusManagerHandler.registerStatus({
-                orderGuid: orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                statusId: 20
-            })
-        ]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')

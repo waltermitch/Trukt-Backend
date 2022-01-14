@@ -16,6 +16,7 @@ const OrderStop = require('../Models/OrderStop');
 const BillService = require('./BIllService');
 const Job = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
+const R = require('ramda');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -34,12 +35,31 @@ let dbLoadboardNames;
 
 class LoadboardService
 {
-    static async getAllLoadboardPosts(jobId)
+    /**
+     * Gets either all the loadboard posts for a job, or the loadboard posts for the
+     * loadboards specified in the loadboardNames array.
+     * @param {UUID} jobGuid
+     * @param {Array<string>} loadboardNames
+     * @returns Object with a jobs loadboard posts with the keys being the loadboard name
+     * and the values being the loadboard posts
+     */
+    static async getLoadboardPosts(jobGuid, loadboardNames = [])
     {
-        const posts = (await LoadboardPost.query().where({ jobGuid: jobId })).reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        const postQuery = LoadboardPost.query().where({ jobGuid });
+        let posts;
+        if (R.isEmpty(loadboardNames))
+        {
+            posts = await postQuery;
+        }
+        else
+        {
+            posts = await postQuery.whereIn('loadboard', loadboardNames);
+        }
 
-        if (!posts)
-            throw new Error('Job not found');
+        if (R.isEmpty(posts))
+            throw new HttpError(404, 'Job not found');
+
+        posts = posts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
         return posts;
     }
@@ -324,6 +344,9 @@ class LoadboardService
                 dateScheduledEnd: job.delivery.dateScheduledEnd
             };
 
+            await Promise.all(allPromises);
+            await trx.commit();
+
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
@@ -344,9 +367,6 @@ class LoadboardService
 
                 emitter.emit('orderjob_dispatch_offer_sent', { jobGuid: jobId });
             }
-
-            await Promise.all(allPromises);
-            await trx.commit();
 
             dispatch.jobStatus = Job.STATUS.PENDING;
             return dispatch;
@@ -576,6 +596,7 @@ class LoadboardService
                 }
             });
 
+            emitter.emit('orderjob_dispatch_offer_accepted', { jobGuid: job.guid, currentUser });
             return dispatch;
         }
         catch (e)
@@ -592,7 +613,7 @@ class LoadboardService
         const loadboardNames = posts.map((post) => { return post.loadboard; });
         const job = await Job.query().findById(jobId).withGraphFetched(`[
             commodities(distinct, isNotDeleted).[vehicle, commType],
-            order.[client, clientContact, dispatcher, invoices.lines.item],
+            order.[client, clientContact, dispatcher, invoices.lines(isNotDeleted, transportOnly).item],
             stops(distinct).[primaryContact, terminal], 
             loadboardPosts(getExistingFromList),
             equipmentType, 
@@ -659,12 +680,13 @@ class LoadboardService
     static async getjobDataForUpdate(jobId)
     {
         const job = await Job.query().findById(jobId).withGraphFetched(`[
-            commodities(distinct).[vehicle, commType], 
+            commodities(distinct, isNotDeleted).[vehicle, commType], 
             order.[client, clientContact, invoices.lines(transportOnly).item],
             stops(distinct).[primaryContact, terminal], 
             loadboardPosts(getExistingFromList),
             equipmentType, 
             bills.lines(isNotDeleted, transportOnly).item,
+            dispatcher
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getValid')
         });
@@ -934,81 +956,6 @@ class LoadboardService
             await trx.rollback();
             throw e;
         }
-    }
-
-    static async getJobDispatchData(jobGuid)
-    {
-        let job = await OrderJobDispatch.query()
-            .withGraphJoined('[vendor, vendorAgent, job.[bills.lines, stops(distinct)]]')
-            .modifyGraph('vendor', builder =>
-            {
-                builder.select(
-                    'dotNumber',
-                    'email',
-                    'phoneNumber',
-                    'billingStreet',
-                    'billingCity',
-                    'billingPostalCode',
-                    'billingState',
-                    'billingCountry');
-            })
-            .modifyGraph('vendorAgent', builder =>
-            {
-                builder.select(
-                    'name',
-                    'email',
-                    'phoneNumber');
-            })
-            .modifyGraph('job', builder =>
-            {
-                builder.select('guid', 'status');
-            })
-            .select(
-                'orderJobDispatches.guid as dispatchGuid'
-            )
-            .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid, 'rcgTms.orderJobDispatches.isValid': true })
-            .andWhere(builder => builder.where({ isPending: true }).orWhere({
-                isAccepted: true
-            }));
-
-        // create blank info if no valid dispatches
-        if (!job)
-        {
-            job = await OrderJobDispatch.query()
-                .withGraphJoined('[job.[bills.lines, stops(distinct)]]')
-                .select(
-                    'orderJobDispatches.guid as dispatchGuid'
-                )
-                .modifyGraph('job', builder =>
-                {
-                    builder.select('guid', 'status');
-                })
-                .findOne({ 'rcgTms.orderJobDispatches.jobGuid': jobGuid })
-                .andWhere(builder =>
-                    builder.where({ 'orderJobDispatches.isCanceled': true })
-                        .orWhere({ isDeclined: true }));
-
-            if (job)
-            {
-                job.vendor = {
-                    dotNumber: null,
-                    email: null,
-                    phone: null,
-                    billingStreet: null,
-                    billingCity: null,
-                    billingPostalCode: null,
-                    billingState: null,
-                    billingCountry: null
-                };
-                job.vendorAgent = {
-                    name: null,
-                    email: null,
-                    phone: null
-                };
-            }
-        }
-
-        return job;
     }
 
     /**
