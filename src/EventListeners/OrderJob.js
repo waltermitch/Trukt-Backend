@@ -189,7 +189,7 @@ listener.on('orderjob_dispatch_canceled', ({ jobGuid, currentUser, orderGuid }) 
 });
 
 // this is for request, temp will change as names get impoved
-listener.on('orderjob_dispatch_offer_request_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
+listener.on('load_request_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
 {
     setImmediate(async () =>
     {
