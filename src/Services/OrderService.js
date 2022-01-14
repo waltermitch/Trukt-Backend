@@ -2507,12 +2507,14 @@ class OrderService
     }
 
     /**
-     * Creates the new stops and adds the guid to the stopsGraphs an stopsForStopLinks.
+     * @description Creates the new stops and adds the guid to the stopsGraphs an stopsForStopLinks.
      * Both stops arrays are base on the same list, so they have the same positioning
-     * @param {*} stopsToUpdateOrCreate
-     * @param {*} stopsForLinksCreation
-     * @param {*} trx
-     * @returns
+     * @param {OrderStop []} stopsGraphs List of order stops checked for update into DB
+     * @param {OrderStop []} stopsForStopLinks List of order stops as they came from user input.
+     * This is use due to the index property that stopGraph does not have,
+     * @param {transaction} trx Model transaction
+     * @returns {{stopsForStopLinks: OrderStop[], stopsGraphsToUpdate: OrderStop[]}} Same OrderStops as the input, with the adition of
+     * the new stop guid that was created (If it is requires to created it)
      */
     static async createMissingStops(stopsGraphs, stopsForStopLinks, trx)
     {
