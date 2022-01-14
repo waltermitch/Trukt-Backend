@@ -16,6 +16,7 @@ const myMessageHandler = async (message) =>
 {
     const responses = message.body;
     let jobGuid;
+    const loadboards = [];
     try
     {
         for (const res of responses)
@@ -25,7 +26,9 @@ const myMessageHandler = async (message) =>
             // we will have to check if the object is empty
             if (!R.isEmpty(res))
             {
-                const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
+                const loadboard = res.payloadMetadata.loadboard;
+                loadboards.push(loadboard);
+                const lbClass = loadboardClasses[`${loadboard}`];
 
                 try
                 {
@@ -59,7 +62,7 @@ const myMessageHandler = async (message) =>
                 case 'update':
                 default:
                     // getting status field by current state data is in, and active post that belongs to the post
-                    const [{ value: status, reason: error }, posts] = await Promise.allSettled([OrderJobService.updateStatusField(jobGuid), LoadboardService.getAllLoadboardPosts(jobGuid)]);
+                    const [{ value: status, reason: error }, posts] = await Promise.allSettled([OrderJobService.updateStatusField(jobGuid), LoadboardService.getLoadboardPosts(jobGuid, loadboards)]);
 
                     if (!status)
                         throw error;

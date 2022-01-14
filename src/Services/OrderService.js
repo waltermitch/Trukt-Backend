@@ -77,7 +77,8 @@ class OrderService
             dispatcher,
             salesperson,
             dates,
-            jobCategory
+            jobCategory,
+            accountingType
         },
         page,
         rowCount,
@@ -145,7 +146,7 @@ class OrderService
 
         const queryAllFilters = OrderService.addFilterModifiers(
             queryFilterDates,
-            { jobCategory, sort }
+            { jobCategory, sort, accountingType }
         );
 
         const queryWithGraphModifiers = OrderService.addGraphModifiers(
@@ -1446,9 +1447,10 @@ class OrderService
 
     static addFilterModifiers(baseQuery, filters)
     {
-        const { jobCategory, sort } = filters;
+        const { jobCategory, sort, accountingType } = filters;
         return baseQuery
             .modify('filterJobCategories', jobCategory)
+            .modify('filterAccounting', accountingType)
             .modify('sorted', sort);
     }
 
