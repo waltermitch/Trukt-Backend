@@ -110,14 +110,17 @@ class OrderService
             delivery
         );
 
-        for (const s of status)
+        baseOrderQuery.where(baseQueryAnd =>
         {
-            baseOrderQuery.orWhere(builder =>
+            for (const s of status)
             {
-                if (s in OrderService.statusMap)
-                    builder.modify(OrderService.statusMap[s]);
-            });
-        }
+                baseQueryAnd.orWhere(baseQueryOr =>
+                {
+                    if (s in OrderService.statusMap)
+                        baseQueryOr.modify(OrderService.statusMap[s]);
+                });
+            }
+        });
 
         const queryFilterCustomer = OrderService.addFilterCustomer(
             baseOrderQuery,
