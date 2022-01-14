@@ -148,6 +148,11 @@ class OrderStop extends BaseModel
         return (firstStop, secondStop) => firstStop.sequence - secondStop.sequence;
     }
 
+    static get filterDelivery()
+    {
+        return it => it.isDelivery;
+    }
+
     get isPickup()
     {
         return this.stopType == 'pickup';
