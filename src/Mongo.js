@@ -2,7 +2,6 @@ const { MongoClient } = require('mongodb');
 const Lock = require('./MongoLock');
 
 const dbUrl = process.env['mongo.connection.uri'] || process.env.MONGO_CONNECTION_URI;
-const dbName = process.env['mongo.database'] || process.env.MONGO_DATABASE;
 
 const dbOptions =
 {
@@ -51,13 +50,14 @@ class Mongo
         }
     }
 
-    static async getDB(databaseName = dbName)
+    static async getDB(databaseName = 'dev')
     {
         // this will only allow the process to continue when the mongo client makes an actual connection.
         await lock.acquire();
         if (!(databaseName in dbCache))
         {
-            dbCache[databaseName] = await client.db(databaseName);
+            // removing passing of name, because nobody uses this feature and it's too much work to refactor to fit to new connection string.
+            dbCache[databaseName] = client.db();
         }
         return dbCache[databaseName];
     }
