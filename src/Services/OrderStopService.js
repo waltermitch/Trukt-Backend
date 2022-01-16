@@ -385,6 +385,170 @@ class OrderStopService
                 GROUP BY commodity_guid) as subquery
             WHERE guid = subquery.commodity_guid`).transacting(trx);
     }
+
+    /**
+     * @description Calculates events that happened when data on stops changed.
+     * @param {OrderStop[]} oldStopData
+     * @param {OrderStop[]} newStopData
+     * @returns
+     */
+    static getStopEvents(oldStopData, newStopData)
+    {
+        const events = [];
+        for (const stop of newStopData)
+        {
+            const oldStop = oldStopData.find(it => it.guid === stop.guid) ?? {};
+            const newStop = Object.assign(R.clone(oldStop), stop);
+
+            const stopType = newStop.stopType ?? 'service';
+
+            if (newStop.isCompleted != oldStop.isCompleted)
+            {
+                if (newStop.isCompleted)
+                {
+                    events.push({
+                        event: `order_stop_${stopType}_completed`,
+                        stop: newStop
+                    });
+                }
+                else
+                {
+                    events.push({
+                        event: `order_stop_${stopType}_uncompleted`,
+                        stop: newStop
+                    });
+                }
+            }
+
+            if (newStop.isStarted != oldStop.isStarted)
+            {
+                if (newStop.isStarted)
+                {
+                    events.push({
+                        event: `order_stop_${stopType}_started`,
+                        stop: newStop
+                    });
+                }
+                else
+                {
+                    events.push({
+                        event: `order_stop_${stopType}_unstarted`,
+                        stop: newStop
+                    });
+                }
+            }
+
+            if (newStop.dateScheduledStart != oldStop.dateScheduledStart)
+            {
+                const dateRequestedStart = DateTime.fromISO(newStop.dateRequestedStart || oldStop.dateRequestedStart).toMillis();
+                const dateRequestedEnd = DateTime.fromISO(newStop.dateRequestedEnd || oldStop.dateRequestedEnd).toMillis();
+                const dateRequestedType = newStop.dateRequestedType || oldStop.dateRequestedType;
+
+                // convert to epochs, easiest way to compare times
+                const newDateStart = DateTime.fromISO(newStop.dateScheduledStart).toMillis();
+                const oldDateStart = DateTime.fromISO(oldStop.dateScheduledStart).toMillis();
+
+                let checkLateness = false;
+                if (Number.isNaN(newDateStart))
+                {
+                    // date was removed.
+                    events.push({
+                        event: `order_stop_${stopType}_unscheduled`,
+                        stop: newStop
+                    });
+                }
+                else if (Number.isNaN(oldDateStart))
+                {
+                    // date was just added / created
+                    events.push({
+                        event: `order_stop_${stopType}_scheduled`,
+                        stop: newStop
+                    });
+                    checkLateness = true;
+                }
+                else if (newDateStart > oldDateStart)
+                {
+                    // date was pushed back, so the delivery is delayed
+                    events.push({
+                        event: `order_stop_${stopType}_delayed`,
+                        stop: newStop
+                    });
+                    checkLateness = true;
+                }
+                else if (newDateStart < oldDateStart)
+                {
+                    // date was pushed up / forward, so the delivery is early
+                    events.push({
+                        event: `order_stop_${stopType}_early`,
+                        stop: newStop
+                    });
+                    checkLateness = true;
+                }
+
+                if (checkLateness)
+                {
+                    // checks if the date the delivery was scheduled for is late or not
+                    switch (dateRequestedType)
+                    {
+                        case 'estimated':
+                            if (newDateStart > dateRequestedEnd)
+                            {
+                                events.push({
+                                    event: `order_stop_${stopType}_scheduled_late`,
+                                    stop: newStop
+                                });
+                            }
+                            else if (newDateStart < dateRequestedStart)
+                            {
+                                events.push({
+                                    event: `order_stop_${stopType}_scheduled_early`,
+                                    stop: newStop
+                                });
+                            }
+                            break;
+                        case 'exactly':
+                            if (newDateStart > dateRequestedStart)
+                            {
+                                events.push({
+                                    event: `order_stop_${stopType}_scheduled_late`,
+                                    stop: newStop
+                                });
+                            }
+                            else if (newDateStart < dateRequestedStart)
+                            {
+                                events.push({
+                                    event: `order_stop_${stopType}_scheduled_early`,
+                                    stop: newStop
+                                });
+                            }
+                            break;
+                        case 'no later than':
+                            if (newDateStart > dateRequestedStart)
+                            {
+                                events.push({
+                                    event: `order_stop_${stopType}_scheduled_late`,
+                                    stop: newStop
+                                });
+                            }
+                            break;
+                        case 'no earlier than':
+                            if (newDateStart < dateRequestedStart)
+                            {
+                                events.push({
+                                    event: `order_stop_${stopType}_scheduled_early`,
+                                    stop: newStop
+                                });
+                            }
+                            break;
+                        default:
+
+                        // do nothing because the value is not known
+                    }
+                }
+            }
+        }
+        return events;
+    }
 }
 
 module.exports = OrderStopService;
