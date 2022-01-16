@@ -2,7 +2,10 @@ const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderStopLinks = require('../Models/OrderStopLink');
 const knex = require('../Models/BaseModel').knex();
 const emitter = require('../EventListeners/index');
-const OrderStops = require('../Models/OrderStop');
+const OrderStop = require('../Models/OrderStop');
+const OrderJob = require('../Models/OrderJob');
+const { DateTime } = require('luxon');
+const R = require('ramda');
 
 class OrderStopService
 {
@@ -32,30 +35,43 @@ class OrderStopService
          * if changing pickup, check if commodity has not be delivered
          */
         const [
+            orderRec,
+            stopRec,
+            jobRec,
+            rawQuery
+        ] =
+            await Promise.all([
+                OrderJob.relatedQuery('order').for(jobGuid).then(o => o[0]),
+                OrderStop.query().findById(stopGuid),
+                OrderJob.query().findById(jobGuid),
+                knex.raw(`
+                SELECT * FROM rcg_tms.order_jobs oj WHERE guid = '${jobGuid}';
+                SELECT * FROM rcg_tms.order_stops os WHERE os.guid = '${stopGuid}';
+                SELECT akeys(hstore('${hstoreValue.join(',')}') - hstore(array_agg(c.guid), array_agg(c.digit))) AS guid
+                FROM(SELECT guid:: text, '1' AS digit FROM rcg_tms.commodities WHERE guid IN ('${commodities.join('\',\'')}') ) c;
+                SELECT *
+                FROM rcg_tms.order_stop_links osl
+                LEFT JOIN rcg_tms.order_stops os ON os.guid = osl.stop_guid
+                WHERE osl.stop_guid = '${stopGuid}'
+                AND os.stop_type = 'pickup'
+                AND osl.job_guid = '${jobGuid}'
+                AND EXISTS (
+                    SELECT *
+                    FROM rcg_tms.order_stop_links osl2
+                    LEFT JOIN rcg_tms.order_stops os2 ON os2.guid = osl2.stop_guid
+                    WHERE os2.stop_type = 'delivery'  
+                    AND osl2.job_guid = osl.job_guid
+                    AND osl2.is_completed = true
+                );
+                `)
+            ]);
+
+        const [
             jobRes,
             jobStop,
             dbCommodities,
             illegalPickUp
-        ] = await knex.raw(`
-            SELECT * FROM rcg_tms.order_jobs oj WHERE guid = '${jobGuid}';
-            SELECT * FROM rcg_tms.order_stops os WHERE os.guid = '${stopGuid}';
-            SELECT akeys(hstore('${hstoreValue.join(',')}') - hstore(array_agg(c.guid), array_agg(c.digit))) AS guid
-            FROM(SELECT guid:: text, '1' AS digit FROM rcg_tms.commodities WHERE guid IN ('${commodities.join('\',\'')}') ) c;
-            SELECT * 
-            FROM rcg_tms.order_stop_links osl
-            LEFT JOIN rcg_tms.order_stops os ON os.guid = osl.stop_guid
-            WHERE osl.stop_guid = '${stopGuid}' 
-            AND os.stop_type = 'pickup'
-            AND osl.job_guid = '${jobGuid}'
-            AND EXISTS (
-            	SELECT * 
-            	FROM rcg_tms.order_stop_links osl2
-            	LEFT JOIN rcg_tms.order_stops os2 ON os2.guid = osl2.stop_guid
-            	WHERE os2.stop_type = 'delivery'  
-            	AND osl2.job_guid = osl.job_guid
-            	AND osl2.is_completed = true
-            );
-        `);
+        ] = rawQuery;
 
         // convert to a POJO unfortunately it is all snake_case
         const job = jobRes.rows.shift();
@@ -141,20 +157,26 @@ class OrderStopService
             // commit transaction
             await trx.commit();
 
+            const newStopRec = await OrderStop.query().findById(stopGuid);
+            const eventsToEmit = OrderStopService.getStopEvents([stopRec], [newStopRec]);
+            
             // we emit event that stop has been updated
             emitter.emit('orderjob_stop_update', { orderGuid, jobGuid, currentUser, jobStop: jobStop.rows[0], stopGuid });
+            for (const { event: eventName, ...params } of eventsToEmit)
+            {
+                params.job = jobRec;
+                params.order = orderRec;
+                emitter.emit(eventName, params);
+            }
+
+            // return stop that was updated
+            return newStopRec;
         }
         catch (error)
         {
             await trx.rollback();
             throw new HttpError(400, error);
         }
-
-        // query for the stop and return to the front end
-        const stop = await OrderStops.query().findById(stopGuid);
-
-        // return stop that was updated
-        return stop;
     }
 
     /**
@@ -184,10 +206,7 @@ class OrderStopService
         }
 
         // execute all promises
-        await Promise.all(promiseArrays);
-
-        // return nothing
-        return;
+        return Promise.all(promiseArrays);
     }
 
     /**
