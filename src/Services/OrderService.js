@@ -1535,28 +1535,29 @@ class OrderService
                 jobTypes,
                 invoiceBills,
                 orderInvoices,
-                referencesChecked
-            ] = await Promise.all(
-                [
-                    clientContact
-                        ? SFRecordType.query(trx)
-                            .modify('byType', 'contact')
-                            .modify('byName', 'account contact')
-                        : null,
-                    client?.guid
-                        ? OrderService.findSFClient(client.guid, trx)
-                        : undefined,
-                    commodities.length > 0 ? CommodityType.query(trx) : null,
-                    jobs.length > 0 ? OrderJobType.query(trx) : null,
-                    OrderService.getJobBills(jobs, trx),
-                    OrderService.getOrderInvoices(guid, trx),
-                    OrderService.validateReferencesBeforeUpdate(
-                        clientContact,
-                        guid,
-                        stops,
-                        terminals
-                    )
-                ]);
+                referencesChecked,
+                oldStopData
+            ] = await Promise.all([
+                clientContact
+                    ? SFRecordType.query(trx)
+                        .modify('byType', 'contact')
+                        .modify('byName', 'account contact')
+                    : null,
+                client?.guid
+                    ? OrderService.findSFClient(client.guid, trx)
+                    : undefined,
+                commodities.length > 0 ? CommodityType.query(trx) : null,
+                jobs.length > 0 ? OrderJobType.query(trx) : null,
+                OrderService.getJobBills(jobs, trx),
+                OrderService.getOrderInvoices(guid, trx),
+                OrderService.validateReferencesBeforeUpdate(
+                    clientContact,
+                    guid,
+                    stops,
+                    terminals
+                ),
+                Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid')
+            ]);
 
             // terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
             const { newOrderContactChecked, terminalsChecked, stopsChecked } = referencesChecked;
@@ -1651,6 +1652,16 @@ class OrderService
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
             await trx.commit();
+
+            const OrderStopService = require('./OrderStopService');
+            const events = OrderStopService.getStopEvents(oldStopData, stopsChecked);
+
+            for (const { event: eventName, ...params } of events)
+            {
+                params.order = orderGraph;
+                params.job = orderGraph.jobs[0];
+                emitter.emit(eventName, params);
+            }
 
             return orderUpdated;
         }
