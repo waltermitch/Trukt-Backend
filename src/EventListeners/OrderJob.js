@@ -393,7 +393,8 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, { currentUser, status: state.status }), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
+        const currrentJob = await OrderJobService.getJobData(jobGuid);
+        const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, currrentJob), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')
