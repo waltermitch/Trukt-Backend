@@ -9,7 +9,7 @@ const dbOptions =
     useNewUrlParser: true
 };
 
-const dbCache = {};
+let dbcon = undefined;
 const client = new MongoClient(dbUrl, dbOptions);
 const lock = new Lock();
 
@@ -50,16 +50,16 @@ class Mongo
         }
     }
 
-    static async getDB(databaseName = 'dev')
+    static async getDB()
     {
         // this will only allow the process to continue when the mongo client makes an actual connection.
         await lock.acquire();
-        if (!(databaseName in dbCache))
+        if (!dbcon)
         {
             // removing passing of name, because nobody uses this feature and it's too much work to refactor to fit to new connection string.
-            dbCache[databaseName] = client.db();
+            dbcon = client.db();
         }
-        return dbCache[databaseName];
+        return dbcon;
     }
 
     static async upsert(collection, filter, data)
