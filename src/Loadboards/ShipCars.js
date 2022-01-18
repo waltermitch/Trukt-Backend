@@ -270,13 +270,7 @@ class ShipCars extends Loadboard
                 }
                 allPromises.push(...commodityPromises);
 
-                objectionPost.externalGuid = response.id;
-                objectionPost.externalPostGuid = response.id;
-                objectionPost.status = 'posted';
-                objectionPost.isCreated = true;
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = true;
-                objectionPost.isDeleted = false;
+                objectionPost.setToPosted(response.guid);
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
@@ -284,40 +278,6 @@ class ShipCars extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            return objectionPost.jobGuid;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw new Error(err.message);
-        }
-    }
-
-    static async handleUnpost(payloadMetadata, response)
-    {
-        const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-
-        try
-        {
-            if (response.hasErrors)
-            {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
-                objectionPost.hasError = true;
-                objectionPost.apiError = response.errors;
-            }
-            else
-            {
-                objectionPost.isPosted = false;
-                objectionPost.externalPostGuid = null;
-                objectionPost.status = 'unposted';
-                objectionPost.isSynced = true;
-            }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-            await trx.commit();
             return objectionPost.jobGuid;
         }
         catch (err)
