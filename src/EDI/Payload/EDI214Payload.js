@@ -55,12 +55,12 @@ class EDI214Payload
 
     /**
      * @description Add the EDI partner to the payload.
-     * @param {SFAccount} sfaccount
+     * @param {SFAccount} sfAccount
      */
-    addPartner(sfaccount)
+    addPartner(sfAccount)
     {
-        this.partner = sfaccount.sfId;
-        this.sla = sfaccount.slaDays + ' days';
+        this.partner = sfAccount.sfId;
+        this.sla = sfAccount.slaDays + ' days';
     }
 
     /**

@@ -31,8 +31,8 @@ class EDIApi
     }
 
     /**
-     * Creates an HttpRequest promise with the given payload
-     * @param {Object} payload
+     * @description Creates an HttpRequest promise with the given payload
+     * @param {EDI214Payload} payload
      * @returns
      */
     send214(payload)
@@ -42,8 +42,8 @@ class EDIApi
     }
 
     /**
-     * Creates an HttpRequest promise with the given payload
-     * @param {Object} payload
+     * @description Creates an HttpRequest promise with the given payload
+     * @param {EDI204Payload} payload
      * @returns Promise
      */
     send204(payload)
@@ -53,8 +53,8 @@ class EDIApi
     }
 
     /**
-     * Creates an HttpRequest promise with the given payload
-     * @param {Object} payload
+     * @description Creates an HttpRequest promise with the given payload
+     * @param {EDI990Payload} payload
      * @returns
      */
     send990(payload)

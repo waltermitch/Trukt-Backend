@@ -324,16 +324,16 @@ class Loadboard
             try
             {
                 const dispatchRec = await OrderJobDispatch.query(trx)
-                .withGraphJoined('[job.order, vendor, vendorAgent]')
-                .findOne({ 'orderJobDispatches.externalGuid': externalGuid });
+                    .withGraphJoined('[job.order, vendor, vendorAgent]')
+                    .findOne({ 'orderJobDispatches.externalGuid': externalGuid });
 
                 const orderRec = dispatchRec.job.order;
                 const jobRec = dispatchRec.job;
-                
+
                 dispatchRec.setToAccepted();
                 dispatchRec.setUpdatedBy(process.env.SYSTEM_USER);
                 jobRec.setUpdatedBy(process.env.SYSTEM_USER);
-                
+
                 const dbQueries = [];
                 dbQueries.push(dispatchRec.$query(trx).patch());
                 dbQueries.push(jobRec.$query(trx).patch({
@@ -364,7 +364,7 @@ class Loadboard
                     }
                 }
 
-                await StatusManagerHandler.registerStatus({
+                StatusManagerHandler.registerStatus({
                     orderGuid: orderRec.guid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 13,

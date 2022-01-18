@@ -48,7 +48,6 @@ class EDIService
                         payload.addCommodities(commodities);
 
                         const res = await EDIApi.send214(payload);
-                        console.log('EDI', code, res.status);
                     }
                 }
             });
