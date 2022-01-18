@@ -223,6 +223,68 @@ class Loadboard
         return LoadboardPost.fromJson(post);
     }
 
+    static async handlePost(payloadMetadata, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.setToPosted(response.guid);
+            }
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
+            await trx.commit();
+
+            return objectionPost.jobGuid;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+    }
+
+    static async handleUnpost(payloadMetadata, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.setToUnposted();
+            }
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
+            await trx.commit();
+
+            return objectionPost.jobGuid;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+    }
+
     static async handleRemove(payloadMetadata, response)
     {
         const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
