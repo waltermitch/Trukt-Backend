@@ -575,8 +575,6 @@ class OrderService
                 job.graphLink('jobType', jobType);
                 job.setIsTransport(jobType);
                 job.setCreatedBy(currentUser);
-                job.setDefaultInspectionType();
-                job.setDefaultEquipmentType();
 
                 job.stopLinks = OrderService.buildStopLinksGraph(
                     orderStops,

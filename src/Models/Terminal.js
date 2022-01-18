@@ -140,7 +140,7 @@ class Terminal extends BaseModel
     }
 
     /**
-     * @description This is for Yamaha orders that do not provide the locationType, in which case we default the terminal to business
+     * @description This is for EDI orders that do not provide the locationType
      */
     setDefaultLocationType()
     {

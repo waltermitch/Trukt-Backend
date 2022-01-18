@@ -239,7 +239,7 @@ class Commodity extends BaseModel
     }
 
     /**
-     * @description This is for Yamaha orders that do not provide the description on the commodity
+     * @description This is for EDI orders that do not provide the description on the commodity
      */
     setDefaultDescription()
     {

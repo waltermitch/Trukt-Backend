@@ -802,7 +802,7 @@ class OrderJob extends BaseModel
     }
 
     /**
-     * @description This is for Yamaha orders that do not provide the inspection type on the job
+     * @description This is for EDI orders that do not provide the inspection type on the job
      */
     setDefaultInspectionType()
     {
@@ -811,7 +811,7 @@ class OrderJob extends BaseModel
     }
 
     /**
-     * @description This is for Yamaha orders that do not provide the equipment type on the job
+     * @description This is for EDI orders that do not provide the equipment type on the job
      */
     setDefaultEquipmentType()
     {
