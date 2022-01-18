@@ -800,6 +800,24 @@ class OrderJob extends BaseModel
             .innerJoin('orderLinesFullPaid as OFP', 'OJ.orderGuid', 'OFP.orderGuid')
             .select('guid').where('all_paid', true);
     }
+
+    /**
+     * @description This is for Yamaha orders that do not provide the inspection type on the job
+     */
+    setDefaultInspectionType()
+    {
+        if (!this.inspectionType)
+            this.inspectionType = 'standard';
+    }
+
+    /**
+     * @description This is for Yamaha orders that do not provide the equipment type on the job
+     */
+    setDefaultEquipmentType()
+    {
+        if (!this.equipmentTypeId)
+            this.equipmentTypeId = 3;
+    }
 }
 
 Object.assign(OrderJob.prototype, RecordAuthorMixin);

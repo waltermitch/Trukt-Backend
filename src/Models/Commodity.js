@@ -238,6 +238,15 @@ class Commodity extends BaseModel
         delete this.index;
     }
 
+    /**
+     * @description This is for Yamaha orders that do not provide the description on the commodity
+     */
+    setDefaultDescription()
+    {
+        if (!this.description)
+            this.description = this.identifier || 'not provided';
+    }
+
 }
 Object.assign(Commodity.prototype, FindOrCreateMixin);
 Object.assign(Commodity.prototype, RecordAuthorMixin);

@@ -138,6 +138,15 @@ class Terminal extends BaseModel
 
         return `${street1}${cityStr}${stateStr}${zipCodeStr}${countryStr}`;
     }
+
+    /**
+     * @description This is for Yamaha orders that do not provide the locationType, in which case we default the terminal to business
+     */
+    setDefaultLocationType()
+    {
+        if (!this.locationType)
+            this.locationType = 'business';
+    }
 }
 
 Object.assign(Terminal.prototype, RecordAuthorMixin);

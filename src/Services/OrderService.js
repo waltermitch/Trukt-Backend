@@ -304,6 +304,7 @@ class OrderService
             {
                 const term = Terminal.fromJson(t);
                 term.setCreatedBy(currentUser);
+                term.setDefaultLocationType();
                 return term.findOrCreate(trx).then(term => { term['#id'] = t['#id']; return term; });
             })));
             orderInfoPromises.push(Promise.all(orderObj.commodities.map(com => isUseful(com.vehicle) ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
@@ -417,6 +418,7 @@ class OrderService
                 }
                 commodity.graphLink('commType', commType);
                 commodity.setCreatedBy(currentUser);
+                commodity.setDefaultDescription();
 
                 // check to see if the commodity is a vehicle (it would have been created or found in the database)
                 vehicles[i] && commodity.graphLink('vehicle', vehicles[i]);
@@ -470,6 +472,8 @@ class OrderService
 
                 job.status = 'new';
                 job.setCreatedBy(currentUser);
+                job.setDefaultInspectionType();
+                job.setDefaultEquipmentType();
                 job.bills = [];
 
                 // remove the stops so that they are not re-created in the graph insert
@@ -571,6 +575,8 @@ class OrderService
                 job.graphLink('jobType', jobType);
                 job.setIsTransport(jobType);
                 job.setCreatedBy(currentUser);
+                job.setDefaultInspectionType();
+                job.setDefaultEquipmentType();
 
                 job.stopLinks = OrderService.buildStopLinksGraph(
                     orderStops,
