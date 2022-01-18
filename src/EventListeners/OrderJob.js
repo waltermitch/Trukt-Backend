@@ -8,6 +8,7 @@ const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
+const Super = require('../Loadboards/Super');
 
 // const { raw } = require('objection');
 
@@ -319,6 +320,7 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
     {
         await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
+            Super.updateStatus(jobGuid, 'deleted', 'notDeleted'),
             StatusManagerHandler.registerStatus({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
@@ -374,7 +376,7 @@ listener.on('orderjob_uncanceled', ({ orderGuid, currentUser, jobGuid }) =>
     {
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
-            LoadboardService.createPostings(jobGuid, [{ loadboard: 'SUPERDISPATCH' }], currentUser),
+            Super.updateStatus(jobGuid, 'canceled', 'notCanceled'),
             StatusManagerHandler.registerStatus({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,

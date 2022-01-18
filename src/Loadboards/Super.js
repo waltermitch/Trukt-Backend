@@ -825,6 +825,15 @@ class Super extends Loadboard
 
             await Loadboards.setSDOrderToDelivered(superJob.externalGuid, superJob.stops[0].dateCompleted, superJob.stops[superJob.stops.length - 1].dateCompleted);
         }
+        if ((newStatus != OrderJob.STATUS.CANCELED ||
+            newStatus != OrderJob.STATUS.DELETED) &&
+            (oldStatus == OrderJob.STATUS.CANCELED ||
+                oldStatus == OrderJob.STATUS.DELETED))
+        {
+            const superJob = await superJobQuery;
+            await Loadboards.rollbackManualSDStatusChange(superJob.externalGuid);
+            await LoadboardPost.query().patch({ status: 'fresh', isCreated: true, isDeleted: false, isSynced: true }).where({ externalGuid: superJob.externalGuid });
+        }
     }
 }
 
