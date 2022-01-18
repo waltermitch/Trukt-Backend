@@ -2050,7 +2050,9 @@ class OrderService
                 commodity.vehicle
             ).findOrCreate(trx);
             commodity.graphLink('vehicle', vehicle);
+            commodity.vehicle.weightClass = { '#dbRef': commodity.vehicle.weightClassId, 'id': commodity.vehicle.weightClassId };
         }
+
         return commodity;
     }
 
