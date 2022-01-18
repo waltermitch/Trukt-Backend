@@ -243,6 +243,11 @@ class Loadboard
             objectionPost.isCreated = false;
             objectionPost.isDeleted = true;
             objectionPost.deletedByGuid = payloadMetadata.userGuid;
+            if (objectionPost.loadboard != 'SUPERDISPATCH' &&
+                objectionPost.loadboard != 'CARDELIVERYNETWORK')
+            {
+                objectionPost.externalGuid = null;
+            }
         }
 
         await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
