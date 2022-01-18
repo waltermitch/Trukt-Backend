@@ -848,9 +848,9 @@ class LoadboardService
         });
     }
 
-    static async deletePostings(jobId, posts, userGuid)
+    static async deletePostings(jobId, userGuid)
     {
-        const job = await LoadboardService.getNotDeletedPosts(jobId, posts);
+        const job = await LoadboardService.getNotDeletedPosts(jobId);
 
         const payloads = [];
         let lbPayload;
@@ -878,17 +878,15 @@ class LoadboardService
         }
     }
 
-    static async getNotDeletedPosts(jobId, posts)
+    static async getNotDeletedPosts(jobId)
     {
-        const loadboardNames = posts.map((post) => { return post.loadboard; });
-
-        const job = await Job.query().findById(jobId)
-            .withGraphFetched('[loadboardPosts(getExistingFromList, getNotDeleted)]').modifiers({
-                getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
-            });
+        const job = await OrderJob.query().select('orderJobs.guid').findById(jobId)
+            .withGraphJoined('[loadboardPosts(getNotDeleted)]');
 
         if (!job)
+        {
             throw new Error('Job not found');
+        }
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
