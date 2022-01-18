@@ -1090,10 +1090,8 @@ class OrderJobService
             if (job && jobIsDispatched)
                 throw new HttpError(400, 'Please un-dispatch the Order before deleting');
 
-            const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
-
             // updating postings to be deleted
-            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, currentUser);
+            await LoadboardService.deletePostings(jobGuid, currentUser);
 
             // marking job as deleted
             const payload = OrderJobService.createStatusPayload('deleted', currentUser);
@@ -1173,11 +1171,8 @@ class OrderJobService
             // validate if you job conditions
             const job = await OrderJobService.checkJobToCancel(jobGuid, trx);
 
-            // getting loadboard names
-            const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
-
             // deleted all postings attached to the job
-            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, currentUser);
+            await LoadboardService.deletePostings(jobGuid, currentUser);
 
             // setting up canceled payload
             const payload = OrderJobService.createStatusPayload('canceled', currentUser);
