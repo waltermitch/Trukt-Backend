@@ -804,18 +804,18 @@ class OrderJob extends BaseModel
     /**
      * @description This is for EDI orders that do not provide the inspection type on the job
      */
-    setDefaultInspectionType()
+    setDefaultInspectionType(isEdi = false)
     {
-        if (!this.inspectionType)
+        if (isEdi && !this.inspectionType)
             this.inspectionType = 'standard';
     }
 
     /**
      * @description This is for EDI orders that do not provide the equipment type on the job
      */
-    setDefaultEquipmentType()
+    setDefaultEquipmentType(isEdi = false)
     {
-        if (!this.equipmentTypeId)
+        if (isEdi && !this.equipmentTypeId)
             this.equipmentTypeId = 3;
     }
 }

@@ -142,9 +142,9 @@ class Terminal extends BaseModel
     /**
      * @description This is for EDI orders that do not provide the locationType
      */
-    setDefaultLocationType()
+    setDefaultLocationType(isEdi = false)
     {
-        if (!this.locationType)
+        if (isEdi && !this.locationType)
             this.locationType = 'business';
     }
 }
