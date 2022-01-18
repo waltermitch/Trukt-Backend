@@ -1,5 +1,7 @@
 const OrderJobSerivce = require('../services/OrderJobService');
 const OrderService = require('../services/OrderService');
+const BillService = require('../Services/BillService');
+const InvoiceService = require('../Services/InvoiceService');
 const emitter = require('../EventListeners/index');
 
 class BulkController
@@ -48,7 +50,7 @@ class BulkController
             // throw all the exceptions in the exceptions list
             // otherwise convert all the exceptions into readable json formats
             // so the client can have both the successes and the failures
-            if (results.acceptedGuids.length == 0)
+            if (results.acceptedJobs.length == 0)
             {
                 throw results.exceptions;
             }
@@ -59,9 +61,9 @@ class BulkController
                     return error.toJson();
                 });
             }
-            for (const job of results.acceptedGuids)
+            for (const job of results.acceptedJobs)
             {
-                emitter.emit('orderjob_status', job.orderGuid);
+                emitter.emit('orderjob_ready', { orderGuid: job.orderGuid, currentUser: req.session.userGuid });
             }
             res.status(202).json(results);
         }
@@ -70,6 +72,58 @@ class BulkController
             next(error);
         }
 
+    }
+
+    static async exportBills(req, res)
+    {
+        const orders = req.body.orders;
+        const ordersExportPromises = orders.map(orderGuid => BillService.exportBills([orderGuid]));
+        const ordersExported = await Promise.allSettled(ordersExportPromises);
+
+        const results = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
+        {
+            const orderGuid = orders[arrayIndex];
+
+            const result = orderExported.value?.[0];
+            if (!result)
+                reduceResponse[orderGuid] = { status: 404, error: 'Order Not Found', data: null };
+            else if (result?.error)
+                reduceResponse[orderGuid] = { status: 400, error: orderExported.value, data: null };
+            else if (result?.success)
+                reduceResponse[orderGuid] = { status: 204, error: null, data: orderExported.value };
+            else
+                reduceResponse[orderGuid] = { status: 200, error: null, data: orderExported.value };
+
+            return reduceResponse;
+        }, {});
+
+        res.status(200).json(results);
+    }
+
+    static async exportInvocies(req, res)
+    {
+        const orders = req.body.orders;
+        const ordersExportPromises = orders.map(orderGuid => InvoiceService.exportInvoices([orderGuid]));
+        const ordersExported = await Promise.allSettled(ordersExportPromises);
+
+        const results = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
+        {
+            const orderGuid = orders[arrayIndex];
+
+            const result = orderExported.value?.[0];
+            if (!result)
+                reduceResponse[orderGuid] = { status: 500, error: 'Internal Server Error', data: null };
+            else if (result?.error)
+                reduceResponse[orderGuid] = { status: 400, error: orderExported.value, data: null };
+            else if (result?.success)
+                reduceResponse[orderGuid] = { status: 204, error: null, data: orderExported.value };
+            else
+                reduceResponse[orderGuid] = { status: 200, error: null, data: orderExported.value };
+
+            return reduceResponse;
+        }, {});
+
+        res.status(200).json(results);
     }
 }
 

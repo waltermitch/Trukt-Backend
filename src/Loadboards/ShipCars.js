@@ -502,68 +502,6 @@ class ShipCars extends Loadboard
         }
     }
 
-    static async handleCarrierAcceptDispatch(payloadMetadata, response)
-    {
-        if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)
-        {
-            const trx = await OrderJobDispatch.startTransaction();
-            const allPromises = [];
-            try
-            {
-                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
-                    .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
-
-                const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
-
-                objectionDispatch.setToAccepted();
-                objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
-
-                // have to put table name because externalGuid is also on loadboard post and not
-                // specifying it makes the query ambiguous
-                allPromises.push(OrderJobDispatch.query(trx).patch(objectionDispatch).where({
-                    'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
-                    isPending: true,
-                    isCanceled: false,
-                    isValid: true
-                }));
-
-                allPromises.push(Job.query(trx).patch({
-                    vendorGuid: objectionDispatch.vendorGuid,
-                    vendorContactGuid: objectionDispatch.vendorContactGuid,
-                    vendorAgentGuid: objectionDispatch.vendorAgentGuid,
-                    status: 'dispatched',
-                    updatedByGuid: process.env.SYSTEM_USER
-                }).findById(objectionDispatch.jobGuid));
-
-                await Promise.all(allPromises);
-                await trx.commit();
-
-                await StatusManagerHandler.registerStatus({
-                    orderGuid,
-                    userGuid: process.env.SYSTEM_USER,
-                    statusId: 13,
-                    jobGuid: objectionDispatch.jobGuid,
-                    extraAnnotations: {
-                        dispatchedTo: this.loadboardName,
-                        code: 'dispatched',
-                        vendorGuid: objectionDispatch.vendorGuid,
-                        vendorAgentGuid: objectionDispatch.vendorAgentGuid,
-                        vendorName: vendorName,
-                        vendorAgentName: vendorAgentName
-                    }
-                });
-
-                return objectionDispatch.jobGuid;
-            }
-            catch (e)
-            {
-                await trx.rollback(e);
-                throw new Error(e.message);
-            }
-        }
-    }
-
     static async handleCarrierDeclineDispatch(payloadMetadata, response)
     {
         if (payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid)

@@ -2,10 +2,8 @@ const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-b
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJobService = require('../Services/OrderJobService');
-const OrderJob = require('../Models/OrderJob');
-const knex = require('../Models/BaseModel').knex();
-const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const R = require('ramda');
+const PubSubService = require('../Services/PubSubService');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const topicName = 'loadboard_incoming';
@@ -18,6 +16,7 @@ const myMessageHandler = async (message) =>
 {
     const responses = message.body;
     let jobGuid;
+    const loadboards = [];
     try
     {
         for (const res of responses)
@@ -27,7 +26,9 @@ const myMessageHandler = async (message) =>
             // we will have to check if the object is empty
             if (!R.isEmpty(res))
             {
-                const lbClass = loadboardClasses[`${res.payloadMetadata.loadboard}`];
+                const loadboard = res.payloadMetadata.loadboard;
+                loadboards.push(loadboard);
+                const lbClass = loadboardClasses[`${loadboard}`];
 
                 try
                 {
@@ -47,105 +48,31 @@ const myMessageHandler = async (message) =>
         {
             const pubsubAction = responses[0].payloadMetadata.action;
 
-            // publish to a group that is named after the the jobGuid which
-            // should be listening on messages posted to the group
-            if (
-                pubsubAction == 'dispatch' ||
-                pubsubAction == 'carrierAcceptDispatch')
+            switch (pubsubAction)
             {
-                const job = await OrderJobDispatch.query()
-                    .withGraphJoined('[vendor, vendorAgent]')
-                    .modifyGraph('vendor', builder =>
-                    {
-                        builder.select(
-                            'dotNumber',
-                            'email',
-                            'phoneNumber',
-                            'billingStreet',
-                            'billingCity',
-                            'billingPostalCode',
-                            'billingState',
-                            'billingCountry');
-                    })
-                    .modifyGraph('vendorAgent', builder =>
-                    {
-                        builder.select(
-                            'name',
-                            'email',
-                            'phoneNumber');
-                    })
-                    .leftJoinRelated('job')
-                    .select(
-                        'orderJobDispatches.guid as dispatchGuid',
-                        'job.guid as jobGuid',
-                        'job.status'
-                    ).findOne({ 'jobGuid': jobGuid, isValid: true })
-                    .andWhere(builder => builder.where({ isPending: true }).orWhere({
-                        isAccepted: true
-                    }));
-                const [pickup, delivery] = (await knex.raw(`
-                        select distinct(os.guid), os.stop_type, os.date_scheduled_type, os.date_scheduled_start, os.date_scheduled_end 
-                        from rcg_tms.order_job_dispatches ojd 
-                        left join rcg_tms.order_stop_links osl 
-                        on ojd.job_guid = osl.job_guid
-                        left join rcg_tms.order_stops os 
-                        on osl.stop_guid = os.guid 
-                        where ojd.guid = ?
-                        and (os.stop_type = 'pickup' or os.stop_type = 'delivery')
-                        and os.date_scheduled_type is not null;`, [job.dispatchGuid])).rows;
-                job.pickup = pickup;
-                job.delivery = delivery;
-                
-                await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
+                case 'dispatch':
+                case 'carrierAcceptDispatch':
+                case 'undispatch':
+                case 'carrierDeclineDispatch':
+                    const job = await OrderJobService.getJobData(jobGuid);
+                    await Promise.allSettled([PubSubService.jobUpdated(jobGuid, job)]);
+                    break;
+                case 'post':
+                case 'unpost':
+                case 'update':
+                default:
+                    // getting status field by current state data is in, and active post that belongs to the post
+                    const [{ value: status, reason: error }, posts] = await Promise.allSettled([OrderJobService.updateStatusField(jobGuid), LoadboardService.getLoadboardPosts(jobGuid, loadboards)]);
+
+                    if (!status)
+                        throw error;
+
+                    // since the status update message is being sent in the updateStatusField function called earlier,
+                    // we just need to send the updated posts
+                    PubSubService.publishJobPostings(jobGuid, posts.value);
+                    break;
+
             }
-            if (pubsubAction == 'undispatch' ||
-                pubsubAction == 'carrierDeclineDispatch')
-            {
-                const job = (await OrderJobDispatch.query()
-                    .leftJoinRelated('job')
-                    .select(
-                        'job.guid as jobGuid',
-                        'job.status'
-                    ).where({ 'jobGuid': jobGuid })
-                    .andWhere(builder =>
-                        builder.where({ 'orderJobDispatches.isCanceled': true })
-                            .orWhere({ isDeclined: true }))
-                    .limit(1))[0];
-                if (job)
-                {
-                    job.vendor = {
-                        dotNumber: null,
-                        email: null,
-                        phone: null,
-                        billingStreet: null,
-                        billingCity: null,
-                        billingPostalCode: null,
-                        billingState: null,
-                        billingCountry: null
-                    };
-                    job.vendorAgent = {
-                        name: null,
-                        email: null,
-                        phone: null
-                    };
-                    job.pickup = { datedScheduledType: null, dateScheduledStart: null, dateScheduledEnd: null };
-                    job.delivery = { datedScheduledType: null, dateScheduledStart: null, dateScheduledEnd: null };
-                }
-
-                await pubsub.publishToGroup(jobGuid, { object: 'dispatch', data: { job } });
-            }
-            else
-            {
-                // getting status field by current state data is in, and active post that belongs to the post
-                const [{ value: status, reason: error }, posts] = await Promise.allSettled([OrderJobService.updateStatusField(jobGuid), LoadboardService.getAllLoadboardPosts(jobGuid)]);
-
-                if (!status)
-                    throw error;
-
-                // publishing status and post to posting group
-                await pubsub.publishToGroup(jobGuid, { object: 'posting', data: { posts, status } });
-            }
-
         }
     }
     catch (e)

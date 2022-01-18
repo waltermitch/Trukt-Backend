@@ -25,7 +25,7 @@ module.exports = (errors, request, response, next) =>
             return;
         } else if (e.constructor.name == 'HttpError')
         {
-            status = 400;
+            status = e.status || 400;
             data.errors.push(e.toJson());
         } else 
         {

@@ -355,37 +355,40 @@ class OrderJob extends BaseModel
         const Vehicle = require('./Vehicle');
         const Order = require('./Order');
 
-        query
+        query.where(
+            builder =>
+            {
+                // search by job number
+                builder.orWhere('job.number', 'ilike', `%${keyword}%`)
 
-            // search by job number
-            .orWhere('job.number', 'ilike', `%${keyword}%`)
+                    // search stoplink
+                    .orWhereIn('job.guid', OrderStopLink.query().select('jobGuid')
 
-            // search stoplink
-            .orWhereIn('job.guid', OrderStopLink.query().select('jobGuid')
+                        // search stop
+                        .whereIn('stopGuid', OrderStop.query().select('guid')
 
-                // search stop
-                .whereIn('stopGuid', OrderStop.query().select('guid')
+                            // search terminal
+                            .whereIn('terminalGuid', Terminal.query().select('guid')
+                                .where('city', 'ilike', `%${keyword}%`)
+                                .orWhere('state', 'ilike', `%${keyword}%`)
+                                .orWhere('zipCode', 'ilike', `%${keyword}%`)))
 
-                    // search terminal
-                    .whereIn('terminalGuid', Terminal.query().select('guid')
-                        .where('city', 'ilike', `%${keyword}%`)
-                        .orWhere('state', 'ilike', `%${keyword}%`)
-                        .orWhere('zipCode', 'ilike', `%${keyword}%`)))
+                        // search commodity and vehicle
+                        .orWhereIn('commodityGuid', Commodity.query().select('guid')
+                            .where('identifier', 'ilike', `%${keyword}%`)
+                            .orWhereIn('vehicleId', Vehicle.query().select('id')
+                                .where('name', 'ilike', `%${keyword}%`))))
 
-                // search commodity and vehicle
-                .orWhereIn('commodityGuid', Commodity.query().select('guid')
-                    .where('identifier', 'ilike', `%${keyword}%`)
-                    .orWhereIn('vehicleId', Vehicle.query().select('id')
-                        .where('name', 'ilike', `%${keyword}%`))))
+                    // search vendor attributes
+                    .orWhereIn('vendorGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
 
-            // search vendor attributes
-            .orWhereIn('vendorGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
-
-            // search client and client contact attributes
-            .orWhereIn('orderGuid', Order.query().select('guid')
-                .whereIn('clientContactGuid', SFContact.query().select('guid').where('email', 'ilike', `%${keyword}%`))
-                .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
-                .orWhere('referenceNumber', 'ilike', `%${keyword}%`));
+                    // search client and client contact attributes
+                    .orWhereIn('orderGuid', Order.query().select('guid')
+                        .whereIn('clientContactGuid', SFContact.query().select('guid').where('email', 'ilike', `%${keyword}%`))
+                        .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
+                        .orWhere('referenceNumber', 'ilike', `%${keyword}%`));
+            }
+        );
     }
 
     static modifiers = {
@@ -617,7 +620,8 @@ class OrderJob extends BaseModel
                     'job.isCanceled': false
                 });
         },
-        areAllOrderJobsDeleted: this.areAllOrderJobsDeleted
+        areAllOrderJobsDeleted: this.areAllOrderJobsDeleted,
+        filterAccounting: this.filterAccounting
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
@@ -697,6 +701,104 @@ class OrderJob extends BaseModel
     static areAllOrderJobsDeleted(query, orderGuid)
     {
         return query.select(raw('bool_and(is_deleted) as deleteOrder')).where('orderGuid', orderGuid);
+    }
+
+    static filterAccounting(query, accountingType)
+    {
+        const Bill = require('./Bill');
+        const InvoiceBill = require('./InvoiceBill');
+        const Invoice = require('./Invoice');
+        const Order = require('./Order');
+
+        switch (accountingType)
+        {
+            case 'not_invoiced':
+                const ordersWithInvoicesNotFullPaid = OrderJob.accountingNotFullPaid(Invoice, InvoiceBill, 'orderGuid', 'invoiceGuid', 'guid');
+
+                return query.whereIn('job.orderGuid', ordersWithInvoicesNotFullPaid);
+            case 'invoiced':
+                const ordersWithAllInvoicesFullPaid = OrderJob.ordersWithInvoicesPaidQuery(Invoice);
+                const ordersWithAllLinesFullPaid = OrderJob.ordersWithLinesPaidQuery(Invoice);
+
+                return query.whereIn('job.guid', ordersWithAllInvoicesFullPaid)
+                    .whereIn('job.guid', ordersWithAllLinesFullPaid);
+            case 'billed':
+                const jobsWithAllBillsFullPaid = OrderJob.jobsWithBillsPaidQuery(Bill);
+                const jobsWithAllLinesFullPaid = OrderJob.jobsWithLinesPaidQuery(Bill);
+
+                return query.whereIn('job.guid', jobsWithAllBillsFullPaid)
+                    .whereIn('job.guid', jobsWithAllLinesFullPaid);
+            case 'not_billed':
+                const jobsWithBillsNotFullPaid = OrderJob.accountingNotFullPaid(Bill, InvoiceBill, 'jobGuid', 'billGuid', 'guid');
+
+                return query.whereIn('job.guid', jobsWithBillsNotFullPaid);
+            case 'part_invoiced':
+                const ordersWithPartialPaidInvoices = Order.query().select('guid').whereIn('guid',
+                    Invoice.query().select('orderGuid').whereIn('invoiceGuid',
+                        InvoiceBill.query().select('IB.guid').alias('IB')
+                            .innerJoin('rcgTms.invoiceBillLines as IBL', 'IB.guid', 'invoiceGuid')
+                            .where('IBL.isPaid', false)
+                            .andWhere('IB.isPaid', true)
+                    )
+                );
+
+                return query.whereIn('job.orderGuid', ordersWithPartialPaidInvoices);
+            case 'part_billed':
+                const jobsWithPartialPaidBills = OrderJob.relatedQuery('bills').alias('B').select('jobGuid').where('isPaid', true)
+                    .whereExists(
+                        InvoiceBill.relatedQuery('lines').where('isPaid', false)
+                    );
+
+                return query.whereIn('job.guid', jobsWithPartialPaidBills);
+            default:
+                return query;
+        }
+    }
+
+    static accountingNotFullPaid(BaseModel, InnerModel, baseColumn, matchingColumn, innerColumn)
+    {
+        return BaseModel.query().select(baseColumn).whereIn(matchingColumn,
+            InnerModel.query().select(innerColumn).where('isPaid', false)
+        );
+    }
+
+    static baseAccountingGroupByAllPaid(Model, keyColumn, innerTable, leftColumn, rightColumn)
+    {
+        return Model.query().alias('BMA').select(keyColumn, raw('bool_and(is_paid = true) as all_paid'))
+            .innerJoin(`rcg_tms.${innerTable}`, `BMA.${leftColumn}`, rightColumn)
+            .groupBy(keyColumn);
+    }
+
+    static jobsWithBillsPaidQuery(Model)
+    {
+        const jobsGroupByBillsPaid = OrderJob.baseAccountingGroupByAllPaid(Model, 'jobGuid', 'invoiceBills', 'billGuid', 'guid');
+        return OrderJob.query().with('jobsFullPaid', jobsGroupByBillsPaid)
+            .innerJoin('jobsFullPaid', 'guid', 'jobGuid')
+            .select('guid').where('all_paid', true);
+    }
+
+    static jobsWithLinesPaidQuery(Model)
+    {
+        const jobsGroupByLinesPaid = OrderJob.baseAccountingGroupByAllPaid(Model, 'jobGuid', 'invoiceBillLines', 'billGuid', 'invoiceGuid');
+        return OrderJob.query().with('jobsFullPaid', jobsGroupByLinesPaid)
+            .innerJoin('jobsFullPaid', 'guid', 'jobGuid')
+            .select('guid').where('all_paid', true);
+    }
+
+    static ordersWithInvoicesPaidQuery(Model)
+    {
+        const ordersGroupByInvoicesPaid = OrderJob.baseAccountingGroupByAllPaid(Model, 'orderGuid', 'invoiceBills', 'invoiceGuid', 'guid');
+        return OrderJob.query().alias('OJ').with('ordersFullPaid', ordersGroupByInvoicesPaid)
+            .innerJoin('ordersFullPaid as OFP', 'OFP.orderGuid', 'OJ.orderGuid')
+            .select('guid').where('all_paid', true);
+    }
+
+    static ordersWithLinesPaidQuery(Model)
+    {
+        const ordersGroupByLinesPaid = OrderJob.baseAccountingGroupByAllPaid(Model, 'orderGuid', 'invoiceBillLines as IBL', 'invoiceGuid', 'IBL.invoiceGuid');
+        return OrderJob.query().alias('OJ').with('orderLinesFullPaid', ordersGroupByLinesPaid)
+            .innerJoin('orderLinesFullPaid as OFP', 'OJ.orderGuid', 'OFP.orderGuid')
+            .select('guid').where('all_paid', true);
     }
 }
 

@@ -82,7 +82,7 @@ class LoadboardController
     {
         try
         {
-            const posts = await LoadboardService.getAllLoadboardPosts(req.params.jobId);
+            const posts = await LoadboardService.getLoadboardPosts(req.params.jobId);
 
             res.json(posts);
             res.status(200);
