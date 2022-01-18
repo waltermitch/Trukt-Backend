@@ -7,7 +7,8 @@ const vehicleFields = [
     'year',
     'make',
     'model',
-    'trim'
+    'trim',
+    'weightClassId'
 ];
 
 const commTypeFields = ['category', 'type'];
