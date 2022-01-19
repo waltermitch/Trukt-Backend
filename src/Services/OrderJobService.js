@@ -33,7 +33,7 @@ class OrderJobService
             .query()
             .skipUndefined()
             .findById(jobGuid)
-            .withGraphFetched('[vendor,vendorAgent,vendorContact,dispatcher,jobType,stopLinks.[commodity.[vehicle,commType],stop.[terminal,primaryContact,alternativeContact]], bills]');
+            .withGraphFetched('[vendor(byType),vendorAgent,vendorContact,dispatcher,jobType,stopLinks.[commodity.[vehicle,commType],stop.[terminal,primaryContact,alternativeContact]], bills]');
 
         // terminal cache for storing terminals
         const terminalCache = {};
