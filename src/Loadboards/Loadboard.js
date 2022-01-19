@@ -1,11 +1,15 @@
 const OrderStopService = require('../Services/OrderStopService');
 const LoadboardPost = require('../Models/LoadboardPost');
 const Attachment = require('../Models/Attachment');
+const OrderJob = require('../Models/OrderJob');
 const OrderStop = require('../Models/OrderStop');
+const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const states = require('us-state-codes');
 const { DateTime } = require('luxon');
 const uuid = require('uuid');
 const R = require('ramda');
+const emitter = require('../EventListeners/index');
 
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
 
@@ -375,6 +379,80 @@ class Loadboard
         {
             await trx.rollback();
             throw error;
+        }
+    }
+
+    static async handleCarrierAcceptDispatch(payloadMetadata, response)
+    {
+        const externalGuid = payloadMetadata.externalDispatchGuid || payloadMetadata.externalGuid;
+        if (externalGuid)
+        {
+            const trx = await OrderJobDispatch.startTransaction();
+            try
+            {
+                const dispatchRec = await OrderJobDispatch.query(trx)
+                    .withGraphJoined('[job.order, vendor, vendorAgent]')
+                    .findOne({ 'orderJobDispatches.externalGuid': externalGuid });
+
+                const orderRec = dispatchRec.job.order;
+                const jobRec = dispatchRec.job;
+
+                dispatchRec.setToAccepted();
+                dispatchRec.setUpdatedBy(process.env.SYSTEM_USER);
+                jobRec.setUpdatedBy(process.env.SYSTEM_USER);
+
+                const dbQueries = [];
+                dbQueries.push(dispatchRec.$query(trx).patch());
+                dbQueries.push(jobRec.$query(trx).patch({
+                    vendorGuid: dispatchRec.vendorGuid,
+                    vendorContactGuid: dispatchRec.vendorContactGuid,
+                    vendorAgentGuid: dispatchRec.vendorAgentGuid,
+                    status: 'dispatched'
+                }));
+
+                dbQueries.push(
+                    OrderJob.relatedQuery('stops')
+                        .for(dispatchRec.jobGuid)
+                        .withGraphJoined('terminal')
+                        .whereNotNull('rcgTms.orderStopLinks.orderGuid')
+                        .distinctOn('rcgTms.orderStops.guid')
+                );
+
+                // TODO: invalidate all the other OrderJobDispatches
+                // TODO: unpost all the external LOADBOARD postings
+                const [, , orderStops] = await Promise.all(dbQueries);
+                await trx.commit();
+
+                for (const stop of orderStops)
+                {
+                    if (stop.isDelivery && stop.dateScheduledStart != undefined)
+                    {
+                        emitter.emit('order_stop_delivery_scheduled', { order: orderRec, job: jobRec, stop });
+                    }
+                }
+
+                StatusManagerHandler.registerStatus({
+                    orderGuid: orderRec.guid,
+                    userGuid: process.env.SYSTEM_USER,
+                    statusId: 13,
+                    jobGuid: dispatchRec.jobGuid,
+                    extraAnnotations: {
+                        dispatchedTo: this.loadboardName,
+                        code: 'dispatched',
+                        vendorGuid: dispatchRec.vendorGuid,
+                        vendorAgentGuid: dispatchRec.vendorAgentGuid,
+                        vendorName: dispatchRec.vendor.name,
+                        vendorAgentName: dispatchRec.vendorAgent.name
+                    }
+                });
+
+                return dispatchRec.jobGuid;
+            }
+            catch (e)
+            {
+                await trx.rollback(e);
+                throw new Error(e.message);
+            }
         }
     }
 }

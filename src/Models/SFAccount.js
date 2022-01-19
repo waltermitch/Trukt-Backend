@@ -190,6 +190,11 @@ class SFAccount extends BaseModel
         this.primaryContactId = contact.sfId;
     }
 
+    isEDIClient()
+    {
+        return this.ediClient === true;
+    }
+
 }
 
 module.exports = SFAccount;

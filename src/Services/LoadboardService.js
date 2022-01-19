@@ -506,17 +506,24 @@ class LoadboardService
         const trx = await OrderJobDispatch.startTransaction();
         const allPromises = [];
 
+        // TODO: combine this logic with Loadboard handleCarrierAcceptDispatch... it is the same thing. this is terrible design.
         try
         {
-            const job = await OrderJob.query(trx).findById(jobGuid)
-                .select([
-                    OrderJob.ref('*'),
-                    OrderJob.relatedQuery('dispatches').where({
-                        isValid: true,
-                        isPending: true
-                    }).count().as('validDispatchesCount')
-                ]);
-
+            const [job, orderStops] = await Promise.all([
+                OrderJob.query(trx).findById(jobGuid)
+                    .select([
+                        OrderJob.ref('*'),
+                        OrderJob.relatedQuery('dispatches').where({
+                            isValid: true,
+                            isPending: true
+                        }).count().as('validDispatchesCount')
+                    ]).withGraphJoined('order'),
+                OrderJob.relatedQuery('stops').for(jobGuid)
+                    .withGraphJoined('terminal')
+                    .whereNotNull('rcgTms.orderStopLinks.orderGuid')
+                    .distinctOn('rcgTms.orderStops.guid')
+            ]);
+            const order = job.order;
             if (!job)
                 throw new HttpError(404, 'Job not found');
 
@@ -597,6 +604,15 @@ class LoadboardService
             });
 
             emitter.emit('orderjob_dispatch_offer_accepted', { jobGuid: job.guid, currentUser });
+
+            for (const stop of orderStops)
+            {
+                if (stop.isDelivery && stop.dateScheduledStart != undefined)
+                {
+                    emitter.emit('order_stop_delivery_scheduled', { order, job, stop });
+                }
+            }
+
             return dispatch;
         }
         catch (e)
