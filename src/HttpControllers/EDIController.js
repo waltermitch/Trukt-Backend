@@ -262,9 +262,6 @@ class EDIController
             delete orderObj.totalCost;
             delete orderObj.edi;
 
-            // Set isEdi so in order creation we can identify it and add the proper default values
-            orderObj.isEdi = true;
-
             const order = await OrderService.create(orderObj, req.session.userGuid);
 
             await EDIData.query().insert({

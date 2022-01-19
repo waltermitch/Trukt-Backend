@@ -261,9 +261,6 @@ class OrderService
 
         try
         {
-            // Get if order is EDI so default values can be added
-            const { isEdi = false } = orderObj;
-
             // client is required and always should be checked.
             // vehicles are not checked and are created or found
             const dataCheck = { client: true, vehicles: false, terminals: false };
@@ -307,7 +304,7 @@ class OrderService
             {
                 const term = Terminal.fromJson(t);
                 term.setCreatedBy(currentUser);
-                term.setDefaultLocationType(isEdi);
+                term.setDefaultLocationType(order.isTender);
                 return term.findOrCreate(trx).then(term => { term['#id'] = t['#id']; return term; });
             })));
             orderInfoPromises.push(Promise.all(orderObj.commodities.map(com => isUseful(com.vehicle) ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
@@ -421,7 +418,7 @@ class OrderService
                 }
                 commodity.graphLink('commType', commType);
                 commodity.setCreatedBy(currentUser);
-                commodity.setDefaultDescription(isEdi);
+                commodity.setDefaultDescription(order.isTender);
 
                 // check to see if the commodity is a vehicle (it would have been created or found in the database)
                 vehicles[i] && commodity.graphLink('vehicle', vehicles[i]);
@@ -475,8 +472,8 @@ class OrderService
 
                 job.status = 'new';
                 job.setCreatedBy(currentUser);
-                job.setDefaultInspectionType(isEdi);
-                job.setDefaultEquipmentType(isEdi);
+                job.setDefaultInspectionType(order.isTender);
+                job.setDefaultEquipmentType(order.isTender);
                 job.bills = [];
 
                 // remove the stops so that they are not re-created in the graph insert
