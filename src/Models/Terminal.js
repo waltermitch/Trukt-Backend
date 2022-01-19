@@ -5,6 +5,7 @@ const { eqProps } = require('ramda');
 
 const geoCoordFields = ['latitude', 'longitude'];
 const zipCodeNoDashRegex = /^[^-]*[^ -]\w+/;
+const EDI_DEFAULT_LOCATION_TYPE = 'business';
 
 class Terminal extends BaseModel
 {
@@ -145,7 +146,7 @@ class Terminal extends BaseModel
     setDefaultLocationType(isEdi = false)
     {
         if (isEdi && !this.locationType)
-            this.locationType = 'business';
+            this.locationType = EDI_DEFAULT_LOCATION_TYPE;
     }
 }
 

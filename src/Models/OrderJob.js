@@ -4,6 +4,8 @@ const { ref, raw } = require('objection');
 const BaseModel = require('./BaseModel');
 
 const jobTypeFields = ['category', 'type'];
+const EDI_DEFAULT_INSPECTION_TYPE = 'standard';
+const EDI_DEFAULT_EQUIPMENT_TYPE_ID = 3;
 
 class OrderJob extends BaseModel
 {
@@ -807,7 +809,7 @@ class OrderJob extends BaseModel
     setDefaultInspectionType(isEdi = false)
     {
         if (isEdi && !this.inspectionType)
-            this.inspectionType = 'standard';
+            this.inspectionType = EDI_DEFAULT_INSPECTION_TYPE;
     }
 
     /**
@@ -816,7 +818,7 @@ class OrderJob extends BaseModel
     setDefaultEquipmentType(isEdi = false)
     {
         if (isEdi && !this.equipmentTypeId)
-            this.equipmentTypeId = 3;
+            this.equipmentTypeId = EDI_DEFAULT_EQUIPMENT_TYPE_ID;
     }
 }
 
