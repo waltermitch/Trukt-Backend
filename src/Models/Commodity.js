@@ -241,9 +241,9 @@ class Commodity extends BaseModel
     /**
      * @description This is for EDI orders that do not provide the description on the commodity
      */
-    setDefaultDescription(isEdi = false)
+    setDefaultValues(isTender = false)
     {
-        if (isEdi && !this.description)
+        if (isTender && !this?.description)
             this.description = this.identifier || 'not provided';
     }
 
