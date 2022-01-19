@@ -103,23 +103,32 @@ class Terminal extends BaseModel
 
     static hasTerminalsSameBaseInformation(terminal1, terminal2)
     {
-        const hasSameBaseInfo = [
-            eqProps('street1', terminal1, terminal2),
-            eqProps('city', terminal1, terminal2),
-            eqProps('state', terminal1, terminal2),
-            eqProps('zipCode', terminal1, terminal2),
-            eqProps('country', terminal1, terminal2)
-        ].includes(false);
+        const baseInfoKeys = [
+            'street1',
+            'city',
+            'state',
+            'zipCode',
+            'country'
+        ];
+        return baseInfoKeys.every(key =>
+        {
+            const terminal1Value = terminal1[key]?.toLowerCase() || '';
+            const terminal2Value = terminal2[key]?.toLowerCase() || '';
 
-        return !hasSameBaseInfo;
+            return terminal1Value == terminal2Value;
+        });
     }
 
     static hasTerminalsSameExtraInformation(terminal1, terminal2)
     {
-        const hasExtraBaseInfo = [eqProps('name', terminal1, terminal2), eqProps('street2', terminal1, terminal2), eqProps('locationType', terminal1, terminal2)]
-            .includes(false);
+        const exytraInfoKeys = ['name', 'street2', 'locationType'];
+        return exytraInfoKeys.every(key =>
+        {
+            const terminal1Value = terminal1[key]?.toLowerCase() || '';
+            const terminal2Value = terminal2[key]?.toLowerCase() || '';
 
-        return !hasExtraBaseInfo;
+            return terminal1Value == terminal2Value;
+        });
     }
 
     /**
