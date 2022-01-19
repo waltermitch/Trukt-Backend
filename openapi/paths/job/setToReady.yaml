@@ -17,42 +17,45 @@ parameters:
     required: true
 
 responses:
-  204:
-    description: Successful job changes and exceptions
+  200:
+    description: Successful job change
     content:
       application/json:
         schema:
           type: object
           properties:
-            acceptedJobs:
-              type: array
-              items:
-                type: object
-                properties:
-                  guid:
-                    $ref: '../../components/schemas/Common.yaml#/guid'
-                  number:
-                    type: string
-                    example: RC10008A
-                  status:
-                    type: string
-                    example: ready
-                  isReady:
-                    type: boolean
-                    example: true
-            exceptions:
-              type: array
-              items:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: 'Job cannot be changed to ready status'
+            jobGuid:
+              type: object
+              properties:
+                guid:
+                  $ref: '../../components/schemas/Common.yaml#/guid'
+                status:
+                  type: number
+                  example: 200
+                errors: 
+                  type: array             
 
   404:
     description: Job not found
     content:
-      application/json: {}
+      application/json: 
+        schema:
+          type: object
+          properties:
+            jobGuid:
+              type: object
+              properties:
+                guid:
+                  $ref: '../../components/schemas/Common.yaml#/guid'
+                status:
+                  type: number
+                  example: 404
+                errors: 
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    - The job with guid 4c095329-0000-0000-0000-000000000000 doesnot exist.        
 
   409:
     description: Conflict
@@ -61,21 +64,19 @@ responses:
         schema:
           type: object
           properties:
-            errors:
-              type: array
-              items:
-                type: object
-                properties:
-                  message:
+            jobGuid:
+              type: object
+              properties:
+                guid:
+                  $ref: '../../components/schemas/Common.yaml#/guid'
+                status:
+                  type: number
+                  example: 409
+                errors: 
+                  type: array
+                  items:
                     type: string
-                    description: the conflict with the job
-              example:
-                - message: guid has incorrect stop sequences, is missing requested dates, or cannot be found.
-                - message: Job RC10008A belongs to tender, you must accept tender before moving to ready.
-                - message: Job RC10008A has already been verified.
-                - message: Carrier CarrierName for RC10008A must be undispatched before it can transition to ready.
-                - message: Vendor VendorName for RC10008A must be unassigned before it can transition to ready.
-                - message: Please cancel the loadboard request for RC10008A for it to go to ready.
-                - message: Please assign a dispatcher to job RC10008A first.
-                - message: field must be false before RC10008A can be changed to ready.
-                - message: Address for TERMINAL NAME for job RC10008A cannot be mapped to a real location, please verify the address before verifying this job.
+                  example: 
+                    - 'Please assign a dispatcher.'
+                    - 'Please use a real address instead of E 11th Street WA Tacoma 98421'
+                    - 'Client requested pickup and delivery dates must be set.'      
