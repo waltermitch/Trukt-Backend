@@ -12,7 +12,7 @@ class CentralDispatch extends Loadboard
         this.senderId = process.env['loadboards.CentralDispatch.Id'];
 
         // attaching the node env onto the job number so different environments unpost each others loads
-        if (process.env.NODE_ENV != 'prod')
+        if (process.env.NODE_ENV != 'prod' && process.env.NODE_ENV != 'production')
         {
             this.data.number += '-' + process.env.NODE_ENV.slice(0, 3);
         }
