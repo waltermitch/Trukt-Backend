@@ -609,7 +609,7 @@ class LoadboardService
             {
                 if (stop.isDelivery && stop.dateScheduledStart != undefined)
                 {
-                    emitter.emit('order_stop_delivery_scheduled', { order, job, stop });
+                    emitter.emit('order_stop_delivery_scheduled', { order, job, stop, datetime: stop.dateScheduledStart });
                 }
             }
 
