@@ -224,7 +224,10 @@ class Order extends BaseModel
                     jobType: true,
                     stopLinks: {
                         commodity: {
-                            vehicle: true,
+                            vehicle:
+                            {
+                                weightClass: true
+                            },
                             commType: true
                         },
                         stop: {
