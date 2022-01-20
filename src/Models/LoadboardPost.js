@@ -95,6 +95,32 @@ class LoadboardPost extends BaseModel
     {
         return this.isPosted && this.isSynced && !this.hasError;
     }
+
+    static getEmptyPost(jobGuid, loadboard)
+    {
+        return {
+            jobGuid: jobGuid,
+            loadboard: loadboard,
+            externalGuid: null,
+            externalPostGuid: null,
+            instructions: null,
+            status: null,
+            isCreated: false,
+            isPosted: false,
+            isSynced: false,
+            hasError: false,
+            apiError: null,
+            values: null,
+            dateCreated: null,
+            dateUpdated: null,
+            dateDeleted: null,
+            isDeleted: false,
+            createdByGuid: null,
+            updatedByGuid: null,
+            deletedByGuid: null,
+            guid: null
+        };
+    }
 }
 
 Object.assign(LoadboardPost.prototype, FindOrCreateMixin);
