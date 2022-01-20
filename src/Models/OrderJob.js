@@ -671,8 +671,6 @@ class OrderJob extends BaseModel
     {
         if (!this.isReady)
             throw new HttpError(400, 'Job is not ready');
-        if (this.status !== OrderJob.STATUS.PENDING)
-            throw new HttpError(400, 'Job is not pending');
         if (Number(this.validDispatchesCount) > 1)
             throw new HttpError(400, 'Job has more than one valid pending dispatch');
         if (Number(this.validDispatchesCount) === 0)
