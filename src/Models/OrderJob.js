@@ -4,6 +4,8 @@ const { ref, raw } = require('objection');
 const BaseModel = require('./BaseModel');
 
 const jobTypeFields = ['category', 'type'];
+const EDI_DEFAULT_INSPECTION_TYPE = 'standard';
+const EDI_DEFAULT_EQUIPMENT_TYPE_ID = 3;
 
 class OrderJob extends BaseModel
 {
@@ -799,6 +801,18 @@ class OrderJob extends BaseModel
         return OrderJob.query().alias('OJ').with('orderLinesFullPaid', ordersGroupByLinesPaid)
             .innerJoin('orderLinesFullPaid as OFP', 'OJ.orderGuid', 'OFP.orderGuid')
             .select('guid').where('all_paid', true);
+    }
+
+    /**
+     * @description This is for EDI orders that do not provide the inspection type or equipment type on the job
+     */
+    setDefaultValues(isTender = false)
+    {
+        if (isTender && !this.inspectionType)
+            this.inspectionType = EDI_DEFAULT_INSPECTION_TYPE;
+
+        if (isTender && !this.equipmentTypeId)
+            this.equipmentTypeId = EDI_DEFAULT_EQUIPMENT_TYPE_ID;
     }
 }
 
