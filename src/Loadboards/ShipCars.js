@@ -515,9 +515,16 @@ class ShipCars extends Loadboard
             try
             {
                 // 1. Set Dispatch record to canceled
-                const { orderGuid, vendorName, vendorDot, vendorAgentName, ...dispatch } = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                const { orderGuid, vendorName, vendorDot, vendorAgentName, ...dispatch } = await OrderJobDispatch.query()
+                    .leftJoinRelated('job')
+                    .leftJoinRelated('vendor')
+                    .leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+                    .select('rcgTms.orderJobDispatches.*',
+                        'job.orderGuid',
+                        'vendor.dotNumber as vendorDot',
+                        'vendor.name as vendorName',
+                        'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
 
