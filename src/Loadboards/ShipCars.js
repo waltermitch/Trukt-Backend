@@ -369,6 +369,7 @@ class ShipCars extends Loadboard
                     .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                     .select('salesforce.accounts.name as vendorName',
                         'salesforce.accounts.guid as vendorGuid',
+                        'salesforce.accounts.dot_number as dotNumber',
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
@@ -383,6 +384,7 @@ class ShipCars extends Loadboard
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
                         vendorAgentName: vendor.agentName,
+                        dotNumber: vendor.dotNumber,
                         code: 'pending'
                     }
                 });
@@ -473,6 +475,7 @@ class ShipCars extends Loadboard
                 .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                 .select('salesforce.accounts.name as vendorName',
                     'salesforce.accounts.guid as vendorGuid',
+                    'salesforce.accounts.dot_number as dotNumber',
                     'salesforce.contacts.guid as agentGuid',
                     'salesforce.contacts.name as agentName');
 
@@ -485,12 +488,13 @@ class ShipCars extends Loadboard
                 statusId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
-                    undispatchedFrom: this.loadboardName,
+                    loadboard: this.loadboardName,
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,
                     vendorName: vendor.vendorName,
-                    vendorAgentName: vendor.agentName
+                    vendorAgentName: vendor.agentName,
+                    dotNumber: vendor.dotNumber
                 }
             });
             return objectionPost.jobGuid;
@@ -511,7 +515,7 @@ class ShipCars extends Loadboard
             try
             {
                 // 1. Set Dispatch record to canceled
-                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                const { orderGuid, vendorName, vendorDot, vendorAgentName, ...dispatch } = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
                     .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
 
@@ -580,11 +584,12 @@ class ShipCars extends Loadboard
                     statusId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: this.loadboardName,
+                        loadboard: this.loadboardName,
                         code: 'declined',
                         vendorGuid: objectionDispatch.vendorGuid,
                         vendorAgentGuid: objectionDispatch.vendorAgentGuid,
                         vendorName: vendorName,
+                        dotNumber: vendorDot,
                         vendorAgentName: vendorAgentName
                     }
                 });
