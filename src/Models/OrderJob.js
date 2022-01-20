@@ -376,16 +376,16 @@ class OrderJob extends BaseModel
                         // search commodity and vehicle
                         .orWhereIn('commodityGuid', Commodity.query().select('guid')
                             .where('identifier', 'ilike', `%${keyword}%`)
-                            .orWhereIn('vehicleId', Vehicle.query().select('id')
-                                .where('name', 'ilike', `%${keyword}%`))))
+                            .orWhereIn('vehicleId', Vehicle.query().alias('vehicle').select('vehicle.id')
+                                .where('vehicle.name', 'ilike', `%${keyword}%`))))
 
                     // search vendor attributes
-                    .orWhereIn('vendorGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
+                    .orWhereIn('vendorGuid', SFAccount.query().alias('vendor').select('vendor.guid').where('vendor.name', 'ilike', `%${keyword}%`))
 
                     // search client and client contact attributes
-                    .orWhereIn('orderGuid', Order.query().select('guid')
+                    .orWhereIn('job.orderGuid', Order.query().select('guid')
                         .whereIn('clientContactGuid', SFContact.query().select('guid').where('email', 'ilike', `%${keyword}%`))
-                        .orWhereIn('clientGuid', SFAccount.query().select('guid').where('name', 'ilike', `%${keyword}%`))
+                        .orWhereIn('clientGuid', SFAccount.query().alias('client').select('client.guid').where('client.name', 'ilike', `%${keyword}%`))
                         .orWhere('referenceNumber', 'ilike', `%${keyword}%`));
             }
         );
@@ -621,7 +621,33 @@ class OrderJob extends BaseModel
                 });
         },
         areAllOrderJobsDeleted: this.areAllOrderJobsDeleted,
-        filterAccounting: this.filterAccounting
+        filterAccounting: this.filterAccounting,
+        isBilled: (queryBuilder) =>
+        {
+            const InvoiceLine = require('./InvoiceLine');
+            const billAndLinesPaid = InvoiceLine.query()
+                .select(raw('bill.job_guid, bool_and(invoice_bill.is_paid = true) as all_bills_paid, bool_and(invoice_bill_lines.is_paid = true) as all_lines_paid'))
+                .joinRelated({ bill: true, invoiceBill: true })
+                .groupBy('bill.jobGuid');
+
+            return queryBuilder
+                .select(raw('(CASE WHEN all_bills_paid = true and bill_and_lines_paid.all_lines_paid = true THEN true ELSE false END) AS is_billed'))
+                .with('billAndLinesPaid', billAndLinesPaid)
+                .leftJoin('billAndLinesPaid', 'billAndLinesPaid.jobGuid', 'job.guid');
+        },
+        isInvoiced: (queryBuilder) =>
+        {
+            const InvoiceLine = require('./InvoiceLine');
+            const invoicesAndLinesPaid = InvoiceLine.query()
+                .select(raw('invoice.order_guid, bool_and(invoice_bill.is_paid = true) as all_invoices_paid, bool_and(invoice_bill_lines.is_paid = true) as all_lines_paid'))
+                .joinRelated({ invoice: true, invoiceBill: true })
+                .groupBy('invoice.order_guid');
+
+            return queryBuilder
+                .select(raw('(CASE WHEN all_invoices_paid = true and invoices_and_lines_paid.all_lines_paid = true THEN true ELSE false END) AS is_invoiced'))
+                .with('invoicesAndLinesPaid', invoicesAndLinesPaid)
+                .leftJoin('invoicesAndLinesPaid', 'invoicesAndLinesPaid.orderGuid', 'job.orderGuid');
+        }
     };
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
