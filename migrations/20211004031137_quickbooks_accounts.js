@@ -8,8 +8,10 @@ exports.up = function (knex)
     return knex.schema.withSchema(schemaName)
         .createTable(accountsTable, (table) =>
         {
-            table.integer('id', { primaryKey: true }).unique().notNullable();
+            table.increments('id', { primaryKey: true }).notNullable();
             table.string('name').notNullable();
+            table.integer('billing_id').notNullable();
+            table.integer('invoicing_id').notNullable();
         })
         .createTable(mappings, (table) =>
         {
