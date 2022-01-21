@@ -8,16 +8,25 @@ const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
+const Super = require('../Loadboards/Super');
 
 // const { raw } = require('objection');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
-listener.on('orderjob_ready', ({ orderGuid, currentUser }) =>
+listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markOrderReady(orderGuid, currentUser)]);
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid: orderGuid,
+                jobGuid: jobGuid,
+                userGuid: currentUser,
+                statusId: 16
+            }),
+            OrderService.markOrderReady(orderGuid, currentUser)
+        ]);
 
         // This doesn't make any sense so I uncommented it for now
         // Order.query()
@@ -46,7 +55,7 @@ listener.on('orderjob_hold_added', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            await StatusManagerHandler.registerStatus({
+            StatusManagerHandler.registerStatus({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -65,7 +74,7 @@ listener.on('orderjob_hold_removed', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            await StatusManagerHandler.registerStatus({
+            StatusManagerHandler.registerStatus({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -319,6 +328,7 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
     {
         await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
+            Super.updateStatus(jobGuid, 'deleted', 'notDeleted'),
             StatusManagerHandler.registerStatus({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
@@ -374,7 +384,7 @@ listener.on('orderjob_uncanceled', ({ orderGuid, currentUser, jobGuid }) =>
     {
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
-            LoadboardService.createPostings(jobGuid, [{ loadboard: 'SUPERDISPATCH' }], currentUser),
+            Super.updateStatus(jobGuid, 'canceled', 'notCanceled'),
             StatusManagerHandler.registerStatus({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,

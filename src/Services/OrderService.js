@@ -304,9 +304,10 @@ class OrderService
             {
                 const term = Terminal.fromJson(t);
                 term.setCreatedBy(currentUser);
+                term.setDefaultValues(order?.isTender);
                 return term.findOrCreate(trx).then(term => { term['#id'] = t['#id']; return term; });
             })));
-            orderInfoPromises.push(Promise.all(orderObj.commodities.map(com => isUseful(com.vehicle) ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
+            orderInfoPromises.push(Promise.all(orderObj.commodities.map(com => isUseful(com) ? Vehicle.fromJson(com).findOrCreate(trx) : null)));
 
             const jobInfoPromises = [];
             for (const job of orderObj.jobs)
@@ -417,9 +418,15 @@ class OrderService
                 }
                 commodity.graphLink('commType', commType);
                 commodity.setCreatedBy(currentUser);
+                commodity.setDefaultValues(order?.isTender);
 
                 // check to see if the commodity is a vehicle (it would have been created or found in the database)
-                vehicles[i] && commodity.graphLink('vehicle', vehicles[i]);
+                if (vehicles[i])
+                {
+                    commodity.graphLink('vehicle', vehicles[i]);
+                    commodity.vehicle.weightClass = { '#dbRef': vehicles[i].weightClassId, 'id': vehicles[i].weightClassId };
+                }
+
                 cache[com['#id']] = commodity;
                 return cache;
             }, {});
@@ -470,6 +477,7 @@ class OrderService
 
                 job.status = 'new';
                 job.setCreatedBy(currentUser);
+                job.setDefaultValues(order?.isTender);
                 job.bills = [];
 
                 // remove the stops so that they are not re-created in the graph insert
@@ -653,7 +661,7 @@ class OrderService
             order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
 
             const orderCreated = await Order.query(trx).skipUndefined()
-                .insertGraph(order, { allowRefs: true });
+                .insertGraph(order, { allowRefs: true, relate: ['jobs.stopLinks.commodity.vehicle.weightClass'] });
 
             await trx.commit();
             return orderCreated;
@@ -1287,7 +1295,7 @@ class OrderService
     {
         return customerList?.length
             ? baseQuery.whereIn(
-                'orderGuid',
+                'job.orderGuid',
                 Order.query()
                     .select('guid')
                     .whereIn('clientGuid', customerList)
@@ -1299,7 +1307,7 @@ class OrderService
     {
         return dispatcherList?.length
             ? baseQuery.whereIn(
-                'orderGuid',
+                'job.orderGuid',
                 Order.query()
                     .select('guid')
                     .whereIn('dispatcherGuid', dispatcherList)
@@ -1311,7 +1319,7 @@ class OrderService
     {
         return salespersonList?.length
             ? baseQuery.whereIn(
-                'orderGuid',
+                'job.orderGuid',
                 Order.query()
                     .select('guid')
                     .whereIn('salespersonGuid', salespersonList)
@@ -1534,6 +1542,7 @@ class OrderService
                 .modifyGraph('vendor.rectype', (builder) =>
                     builder.select('name').distinct()
                 )
+                .modify(['isInvoiced', 'isBilled'])
         );
     }
 
@@ -2103,6 +2112,7 @@ class OrderService
 
         return { commodity: commodityUpserted, index };
     }
+
     static async createCommodityGraph(
         commodityInput,
         commodityTypes,
@@ -2133,7 +2143,9 @@ class OrderService
                 commodity.vehicle
             ).findOrCreate(trx);
             commodity.graphLink('vehicle', vehicle);
+            commodity.vehicle.weightClass = { '#dbRef': commodity.vehicle.weightClassId, 'id': commodity.vehicle.weightClassId };
         }
+
         return commodity;
     }
 

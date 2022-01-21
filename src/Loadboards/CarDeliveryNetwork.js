@@ -12,7 +12,7 @@ class CarDeliveryNetwork extends Loadboard
 
     toJSON()
     {
-        const orderNumber = process.env.NODE_ENV != 'prod' || process.env.NODE_ENV != 'production' ? this.saltOrderNumber(this.data.number) : this.data.number;
+        const orderNumber = process.env.NODE_ENV == 'prod' || process.env.NODE_ENV == 'production' ? this.data.number : this.saltOrderNumber(this.data.number);
         const payload = {
             loadId: orderNumber,
             Notes: this.data.instructions,
@@ -101,7 +101,7 @@ class CarDeliveryNetwork extends Loadboard
             }
             else
             {
-                objectionPost.externalGuid = response.id;
+                objectionPost.externalGuid = response.guid;
                 objectionPost.status = 'created';
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
@@ -120,107 +120,6 @@ class CarDeliveryNetwork extends Loadboard
             await trx.rollback();
         }
     }
-
-    static async handlePost(payloadMetadata, response)
-    {
-        const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-        try
-        {
-            if (response.hasErrors)
-            {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
-                objectionPost.hasError = true;
-                objectionPost.apiError = response.errors;
-            }
-            else
-            {
-                objectionPost.externalGuid = response.id;
-                objectionPost.externalPostGuid = response.id;
-                objectionPost.status = 'posted';
-                objectionPost.isCreated = true;
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = true;
-                objectionPost.isDeleted = false;
-            }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-
-            trx.commit();
-
-            return objectionPost.jobGuid;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-        }
-    }
-
-    static async handleUnpost(payloadMetadata, response)
-    {
-        const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-
-        try
-        {
-            if (response.hasErrors)
-            {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
-                objectionPost.hasError = true;
-                objectionPost.apiError = response.errors;
-            }
-            else
-            {
-                objectionPost.externalPostGuid = null;
-                objectionPost.status = 'unposted';
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = false;
-            }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-            await trx.commit();
-
-            return objectionPost.jobGuid;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-        }
-    }
-
-    static async handleRemove(payloadMetadata, response)
-    {
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-
-        if (response.hasErrors)
-        {
-            objectionPost.isSynced = false;
-            objectionPost.isPosted = false;
-            objectionPost.hasError = true;
-            objectionPost.apiError = response.errors;
-            objectionPost.updatedByGuid = payloadMetadata.userGuid;
-        }
-
-        else
-        {
-            objectionPost.externalPostGuid = null;
-            objectionPost.status = 'removed';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = false;
-            objectionPost.isCreated = false;
-            objectionPost.isDeleted = true;
-            objectionPost.deletedByGuid = payloadMetadata.userGuid;
-        }
-
-        await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
-        return;
-
-    }
-
 }
 
 module.exports = CarDeliveryNetwork;
