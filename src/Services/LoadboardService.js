@@ -455,7 +455,7 @@ class LoadboardService
                     vendorAgentGuid: null,
                     vendorContact: null,
                     dateStarted: null,
-                    status: 'ready'
+                    status: Job.STATUS.READY
                 });
 
                 job.setUpdatedBy(currentUser);
@@ -464,7 +464,7 @@ class LoadboardService
                 await OrderJob.query(trx).patch(job).findById(dispatch.jobGuid);
 
                 // returning ready status if sucessfull
-                dispatch.jobStatus = 'ready';
+                dispatch.jobStatus = job.status;
             }
 
             // commiting transaction
@@ -531,12 +531,7 @@ class LoadboardService
 
             const dispatch = await job.$relatedQuery('dispatches', trx)
                 .findOne({ 'orderJobDispatches.jobGuid': jobGuid, isPending: true, isValid: true })
-                .select(
-                    'orderJobDispatches.*',
-                    'loadboardPost.loadboard as loadboardName',
-                    'loadboardPost.externalGuid as externalPostGuid')
-                .leftJoinRelated('loadboardPost')
-                .withGraphFetched('[vendor, vendorAgent]');
+                .withGraphFetched('[vendor, vendorAgent, loadboardPost]');
 
             if (!dispatch)
                 throw new HttpError(404, 'Dispatch not found');
@@ -554,15 +549,10 @@ class LoadboardService
 
             allPromises.push(dispatch.$relatedQuery('loadboardPost', trx).patch({ isPosted: false }));
 
-            allPromises.push(dispatch.$query(trx).patch({
-                isAccepted: true,
-                isPending: false,
-                dateAccepted: new Date(),
-                isDeclined: false,
-                dateCanceled: null,
-                dateDeclined: null,
-                updatedByGuid: currentUser
-            }));
+            dispatch.setToAccepted();
+            dispatch.setUpdatedBy(currentUser);
+
+            allPromises.push(dispatch.$query(trx).patch());
 
             allPromises.push(job.$query(trx).patch({
                 vendorGuid: dispatch.vendor.guid,
@@ -585,21 +575,25 @@ class LoadboardService
                 }).findById(jobBill.guid)
             );
 
+            allPromises.push(OrderJobDispatch.query(trx).patch({ isValid: false })
+                .where({ jobGuid: dispatch.jobGuid }).andWhereNot({ guid: dispatch.guid }));
+
             await Promise.all([...allPromises, sender.sendMessages({ body: lbPayload })]);
             await trx.commit();
             dispatch.status = OrderJob.STATUS.DISPATCHED;
 
-            StatusManagerHandler.registerStatus({
+            await StatusManagerHandler.registerStatus({
                 orderGuid: job.orderGuid,
                 userGuid: currentUser,
                 statusId: 11,
                 jobGuid: job.guid,
                 extraAnnotations: {
-                    dispatchedTo: dispatch.loadboardName || 'TRUKT',
+                    loadboard: dispatch.loadboardPost.loadboard || 'TRUKT',
                     vendorGuid: dispatch.vendor.guid,
                     vendorAgentGuid: dispatch.vendorAgent.guid,
                     vendorName: dispatch.vendor.name,
-                    vendorAgentName: dispatch.vendorAgent.name
+                    vendorAgentName: dispatch.vendorAgent.name,
+                    dotNumber: dispatch.vendor.dotNumber
                 }
             });
 

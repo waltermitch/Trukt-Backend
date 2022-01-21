@@ -476,6 +476,7 @@ class Super extends Loadboard
                     .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                     .select('salesforce.accounts.name as vendorName',
                         'salesforce.accounts.guid as vendorGuid',
+                        'salesforce.accounts.dot_number as dotNumber',
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
@@ -485,11 +486,12 @@ class Super extends Loadboard
                     statusId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: this.loadboardName,
+                        loadboard: this.loadboardName,
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
                         vendorAgentName: vendor.agentName,
+                        dotNumber: vendor.dotNumber,
                         code: 'pending'
                     }
                 });
@@ -565,6 +567,7 @@ class Super extends Loadboard
                 .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                 .select('salesforce.accounts.name as vendorName',
                     'salesforce.accounts.guid as vendorGuid',
+                    'salesforce.accounts.dot_number as dotNumber',
                     'salesforce.contacts.guid as agentGuid',
                     'salesforce.contacts.name as agentName');
 
@@ -581,6 +584,7 @@ class Super extends Loadboard
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,
+                    dotNumber: vendor.dotNumber,
                     vendorName: vendor.vendorName,
                     vendorAgentName: vendor.agentName
                 }
@@ -605,9 +609,16 @@ class Super extends Loadboard
             {
                 // getting the dispatch record because it has the job guid, which we need in order to operate
                 // on the job
-                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
+                const { orderGuid, vendorName, vendorDot, vendorAgentName, ...dispatch } = await OrderJobDispatch.query(trx)
+                    .leftJoinRelated('job')
+                    .leftJoinRelated('vendor')
+                    .leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
+                    .select('rcgTms.orderJobDispatches.*',
+                        'job.orderGuid',
+                        'vendor.name as vendorName',
+                        'vendor.dotNumber as vendorDot',
+                        'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
 
@@ -641,10 +652,11 @@ class Super extends Loadboard
                     statusId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        undispatchedFrom: this.loadboardName,
+                        loadboard: this.loadboardName,
                         code: 'declined',
                         vendorGuid: objectionDispatch.vendorGuid,
                         vendorAgentGuid: objectionDispatch.vendorAgentGuid,
+                        dotNumber: vendorDot,
                         vendorName: vendorName,
                         vendorAgentName: vendorAgentName
                     }

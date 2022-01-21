@@ -391,7 +391,7 @@ class Loadboard
             try
             {
                 const dispatchRec = await OrderJobDispatch.query(trx)
-                    .withGraphJoined('[job.order, vendor, vendorAgent]')
+                    .withGraphJoined('[job.order, vendor, vendorAgent, loadboardPost]')
                     .findOne({ 'orderJobDispatches.externalGuid': externalGuid });
 
                 const orderRec = dispatchRec.job.order;
@@ -418,8 +418,9 @@ class Loadboard
                         .distinctOn('rcgTms.orderStops.guid')
                 );
 
-                // TODO: invalidate all the other OrderJobDispatches
-                // TODO: unpost all the external LOADBOARD postings
+                dbQueries.push(OrderJobDispatch.query(trx).patch({ isValid: false })
+                    .where({ jobGuid: dispatchRec.jobGuid }).andWhereNot({ guid: dispatchRec.guid }));
+
                 const [, , orderStops] = await Promise.all(dbQueries);
                 await trx.commit();
 
@@ -431,18 +432,18 @@ class Loadboard
                     }
                 }
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid: orderRec.guid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 13,
                     jobGuid: dispatchRec.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: this.loadboardName,
-                        code: 'dispatched',
+                        loadboard: dispatchRec.loadboardPost.loadboard,
                         vendorGuid: dispatchRec.vendorGuid,
                         vendorAgentGuid: dispatchRec.vendorAgentGuid,
                         vendorName: dispatchRec.vendor.name,
-                        vendorAgentName: dispatchRec.vendorAgent.name
+                        vendorAgentName: dispatchRec.vendorAgent.name,
+                        dotNumber: dispatchRec.vendor.dotNumber
                     }
                 });
 
