@@ -696,7 +696,6 @@ class OrderJobService
         // looping through all the good one to minimize amount of requests return [...result[0].rows, ...result[1].rows];
         for (const job of goodGuids)
         {
-            console.log('Good:', job);
             jobsQueryArray.push(knex.raw(`
                 SELECT
                 	oj.guid,
@@ -781,13 +780,9 @@ class OrderJobService
                     WHERE guid = '${job.guid}' AND oj.is_transport = false;   
             `).then((result) => { return result[0].rows[0] ?? result[1].rows[0]; }));
         }
-        console.log(jobsQueryArray.length);
-
-        // console.log(jobsQueryArray);
 
         // making query reuests
         const allJobs = await Promise.all(jobsQueryArray);
-        console.log('Job', allJobs);
 
         // validating the information
         const { goodJobs, badJobs } = OrderJobService.validateOrderState(allJobs);
