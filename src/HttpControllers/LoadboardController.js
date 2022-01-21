@@ -82,22 +82,14 @@ class LoadboardController
     {
         try
         {
-            const posts = await LoadboardService.getLoadboardPosts(req.params.jobId);
+            const posts = await LoadboardService.getAllAndMissingPosts(req.params.jobId);
 
             res.json(posts);
             res.status(200);
         }
-        catch (e)
+        catch (error)
         {
-            let status = 400;
-            if (e.toString() == 'Error: Job not found')
-            {
-                status = 404;
-            }
-            next({
-                status,
-                data: { message: e.toString() || 'Internal server error' }
-            });
+            next(error);
         }
     }
 

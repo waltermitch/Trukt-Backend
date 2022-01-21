@@ -304,9 +304,10 @@ class OrderService
             {
                 const term = Terminal.fromJson(t);
                 term.setCreatedBy(currentUser);
+                term.setDefaultValues(order?.isTender);
                 return term.findOrCreate(trx).then(term => { term['#id'] = t['#id']; return term; });
             })));
-            orderInfoPromises.push(Promise.all(orderObj.commodities.map(com => isUseful(com.vehicle) ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
+            orderInfoPromises.push(Promise.all(orderObj.commodities.map(com => isUseful(com) ? Vehicle.fromJson(com).findOrCreate(trx) : null)));
 
             const jobInfoPromises = [];
             for (const job of orderObj.jobs)
@@ -417,9 +418,15 @@ class OrderService
                 }
                 commodity.graphLink('commType', commType);
                 commodity.setCreatedBy(currentUser);
+                commodity.setDefaultValues(order?.isTender);
 
                 // check to see if the commodity is a vehicle (it would have been created or found in the database)
-                vehicles[i] && commodity.graphLink('vehicle', vehicles[i]);
+                if (vehicles[i])
+                {
+                    commodity.graphLink('vehicle', vehicles[i]);
+                    commodity.vehicle.weightClass = { '#dbRef': vehicles[i].weightClassId, 'id': vehicles[i].weightClassId };
+                }
+
                 cache[com['#id']] = commodity;
                 return cache;
             }, {});
@@ -470,6 +477,7 @@ class OrderService
 
                 job.status = 'new';
                 job.setCreatedBy(currentUser);
+                job.setDefaultValues(order?.isTender);
                 job.bills = [];
 
                 // remove the stops so that they are not re-created in the graph insert
@@ -653,7 +661,7 @@ class OrderService
             order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
 
             const orderCreated = await Order.query(trx).skipUndefined()
-                .insertGraph(order, { allowRefs: true });
+                .insertGraph(order, { allowRefs: true, relate: ['jobs.stopLinks.commodity.vehicle.weightClass'] });
 
             await trx.commit();
             return orderCreated;
@@ -882,77 +890,145 @@ class OrderService
     }
 
     /**
-     * @param {('accept' | 'reject')} action
+     * Method is to accepts load tenders. Validates, sends requests and updates the database in our system.
      * @param {string []} orderGuids
-     * @param {string} reason
-     * @returns {{orderGuid: string, jobGuid: string, status: number, message: string | null}} reason
+     * @param {string} currentUser
+     * @returns {Promise<{guid: string, status: number, message: string} []>} currentUser
      */
-    static async handleLoadTenders(action, orderGuids, reason)
+    static async acceptLoadTenders(orderGuids, currentUser)
     {
-        const responses = [];
+        // valdiate orders for accepting or declineing
+        const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
 
-        const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
+        const resBody = {};
 
-        /**
-         * if the lengths do not match, that means one of the orders does not exist.
-         * find the guid that does not exist and add it to responses
-         */
+        // send request to logic
+        const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('accept', successfulTenders, null);
 
-        const hashedOrders = orders.reduce((map, obj) =>
+        failedTenders.push(...failedOrders);
+
+        // add errored orders to body message
+        for (const order of failedTenders)
         {
-            map[obj.guid] = obj;
-            return map;
-        }, {});
+            resBody[order.orderGuid] = {
+                jobGuid: order.jobGuid,
+                status: order.status,
+                errors: order.errors
+            };
+        }
 
-        const filteredOrders = [];
-        for (const guid of orderGuids)
+        if (!goodOrders.length)
+            return resBody;
+
+        // update the tenders into order
+        if (goodOrders.length > 0)
         {
-            if (hashedOrders[guid] === undefined)
+            const data = await Promise.all([
+                Order.query().skipUndefined().findByIds(goodOrders).patch({
+                    isTender: false,
+                    isDeleted: false,
+                    status: 'new',
+                    updatedByGuid: currentUser
+                }),
+                OrderJob.query().skipUndefined().patch({
+                    isDeleted: false,
+                    status: 'new',
+                    updatedByGuid: currentUser
+                }).whereIn('orderGuid', goodOrders).returning('guid', 'orderGuid')
+            ]);
+
+            // loop through successfull jobs and emmit event to update acivity logs
+            for (const job of data[1])
             {
-                responses.push({
-                    orderGuid: guid,
-                    jobGuid: null,
-                    status: 404,
-                    message: 'Order not found.'
-                });
-            }
-            else
-            {
-                let message = null;
+                resBody[job.orderGuid] = {
+                    jobGuid: job.guid,
+                    status: 200,
+                    errors: []
+                };
 
-                if (hashedOrders[guid].jobs[0].isTransport === false)
-                {
-                    message = 'Order does not have a transport job.';
-                }
-
-                if (hashedOrders[guid].isTender === false)
-                {
-                    message = 'Order is not a tender.';
-                }
-
-                if (hashedOrders[guid].isDeleted === true)
-                {
-                    message = 'Order is deleted.';
-                }
-
-                if (message)
-                {
-                    responses.push({
-                        orderGuid: guid,
-                        jobGuid: null,
-                        status: 400,
-                        message
-                    });
-                }
-
-                if (hashedOrders[guid].isTender && !hashedOrders[guid].isDeleted)
-                {
-                    filteredOrders.push(hashedOrders[guid]);
-                }
+                emitter.emit('tender_accepted', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
+                emitter.emit('order_created', job.orderGuid);
             }
         }
 
-        const logicAppPayloads = filteredOrders.map((item) => ({
+        return resBody;
+    }
+
+    /**
+     * Method is to rejects load tenders. Validates, sends requests and updated the database in our system.
+     * @param {string []} orderGuids
+     * @param {string} reason
+     * @param {string} currentUser
+     */
+    static async rejectLoadTenders(orderGuids, reason, currentUser)
+    {
+        // valdiate orders for accepting or declineing
+        const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
+
+        const resBody = {};
+
+        // send request to logic
+        const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('reject', successfulTenders, reason);
+
+        failedTenders.push(...failedOrders);
+
+        // add errored orders to body message
+        for (const order of failedTenders)
+        {
+            resBody[order.orderGuid] = {
+                jobGuid: order.jobGuid,
+                status: order.status,
+                errors: order.errors
+            };
+        }
+
+        if (!goodOrders.length)
+            return resBody;
+
+        // update the tenders into order
+        if (goodOrders.length > 0)
+        {
+            const data = await Promise.all([
+                Order.query().skipUndefined().findByIds(goodOrders).patch({
+                    isTender: false,
+                    isDeleted: true,
+                    status: 'deleted',
+                    deletedByGuid: currentUser
+                }),
+                OrderJob.query().skipUndefined().patch({
+                    isDeleted: true,
+                    status: 'deleted',
+                    deletedByGuid: currentUser
+                }).whereIn('orderGuid', goodOrders).returning('guid', 'orderGuid')
+            ]);
+
+            // loop through successfull jobs and emmit event to update acivity logs
+            for (const job of data[1])
+            {
+                resBody[job.orderGuid] = {
+                    jobGuid: job.guid,
+                    status: 200,
+                    errors: []
+                };
+
+                emitter.emit('tender_rejected', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
+            }
+        }
+
+        return resBody;
+    }
+
+    /**
+     * This method will be taking in acction, array of order objects, and a reason.
+     * @param {('accept' | 'reject')} action
+     * @param {object []} orderObjectsArray
+     * @param {string} reason
+     * @returns {{orderGuid: string, jobGuid: string, status: number, message: string | null}} reason
+     */
+    static async handleLoadTendersAPICall(action, orderObjectsArray, reason)
+    {
+        // composing payload for edi endpoint
+        const logicAppPayloads = orderObjectsArray.map((item) => ({
             order: {
                 guid: item.guid,
                 number: item.number
@@ -966,81 +1042,102 @@ class OrderService
             reason
         }));
 
-        let apiResponses = [];
-        if (filteredOrders.length)
+        // sending multiple requests to logic app
+        const apiResponses = await Promise.allSettled(logicAppPayloads.map((item) => logicAppInstance.post(process.env['azure.logicApp.params'], item)));
+
+        const failed = [];
+        const goodGuids = [];
+
+        // looping through responses to separate failed ones
+        for (let i = 0; i < apiResponses.length; i++)
         {
-            apiResponses = await Promise.allSettled(logicAppPayloads.map((item) => logicAppInstance.post(process.env['azure.logicApp.params'], item)));
+            if (apiResponses[i].status === 'fulfilled')
+            {
+                goodGuids.push(orderObjectsArray[i].guid);
+            }
+            else if (apiResponses[i].status === 'rejected')
+            {
+                failed.push({
+                    orderGuid: orderObjectsArray[i].guid,
+                    jobGuid: orderObjectsArray[i].jobs[0].guid,
+                    status: 400,
+                    errors: [apiResponses[i]?.reason?.message]
+                });
+            }
         }
 
-        const formattedResponses = apiResponses.map((item, index) => ({
-            orderGuid: filteredOrders[index].guid,
-            jobGuid: filteredOrders[index].jobs[0].guid,
-            status: item.status === 'fulfilled' ? 200 : 400,
-            message: item?.reason?.message || null
-        }));
-
-        return [...responses, ...formattedResponses];
+        return { goodOrders: goodGuids, failedOrders: failed };
     }
 
     /**
-     * @param {{orderGuid: string, jobGuid: string, status: Number, message: string | null} []} responses
-     * @param {boolean} isTender
-     * @param {boolean} isDeleted
-     * @param {number} statusId
-     * @param {string} currentUser
-     * @returns {Promise<undefined>}
+     * Method take in order guid for validation. Creates errors of orders that failed, and return an object
+     * with successfull payload and failed ones.
+     * @param {uuid []} orderGuids
+     * @returns
      */
-    static async loadTendersHelper(responses, isTender, isDeleted, statusId, currentUser)
+    static async validateLoadTendersState(orderGuids)
     {
-        const successfulResponses = responses.filter((item) => item.status === 200);
+        // query all of the data
+        const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
 
-        const successfulResponseGuids = successfulResponses.map((item) => item.orderGuid);
+        // for array of data
+        const orderExceptions = [];
+        const existingOrders = [];
 
-        if (successfulResponseGuids.length)
+        // creating object with orderGuid as keys for map validation
+        const hashedOrders = orders.reduce((map, obj) =>
         {
-            await Order.query().skipUndefined().findByIds(successfulResponseGuids).patch({
-                isTender,
-                isDeleted,
-                status: 'New'
-            });
+            map[obj.guid] = obj;
+            return map;
+        }, {});
 
-            await Promise.allSettled(successfulResponses.map((item) =>
-                StatusManagerHandler.registerStatus({
-                    orderGuid: item.orderGuid,
-                    jobGuid: item.jobGuid,
-                    userGuid: currentUser,
-                    statusId
-                })));
+        // loop through all guids validate the data
+        for (const guid of orderGuids)
+        {
+            const errors = [];
+            if (hashedOrders[guid] === undefined)
+            {
+                orderExceptions.push({
+                    orderGuid: guid,
+                    jobGuid: null,
+                    status: 404,
+                    errors: ['Order not found.']
+                });
+            }
+            else
+            {
+                if (hashedOrders[guid].jobs[0].isTransport === false)
+                {
+                    errors.push('Order does not have a transport job.');
+                }
 
+                if (hashedOrders[guid].isTender === false)
+                {
+                    errors.push('Order is not a tender.');
+                }
+
+                if (hashedOrders[guid].isDeleted === true)
+                {
+                    errors.push('Order is deleted.');
+                }
+
+                if (errors.length > 0)
+                {
+                    orderExceptions.push({
+                        orderGuid: guid,
+                        jobGuid: hashedOrders[guid].jobs[0].guid,
+                        status: 400,
+                        errors: errors
+                    });
+                }
+
+                if (hashedOrders[guid].isTender && !hashedOrders[guid].isDeleted)
+                {
+                    existingOrders.push(hashedOrders[guid]);
+                }
+            }
         }
-    }
-
-    /**
-     * @param {string []} orderGuids
-     * @param {string} currentUser
-     * @returns {Promise<{guid: string, status: number, message: string} []>} currentUser
-     */
-    static async acceptLoadTenders(orderGuids, currentUser)
-    {
-        const responses = await this.handleLoadTenders('accept', orderGuids, null);
-
-        await this.loadTendersHelper(responses, false, false, 8, currentUser);
-
-        return responses;
-    }
-
-    /**
-     * @param {string []} orderGuids
-     * @param {string} reason
-     * @param {string} currentUser
-     */
-    static async rejectLoadTenders(orderGuids, reason, currentUser)
-    {
-        const responses = await this.handleLoadTenders('reject', orderGuids, reason);
-
-        await this.loadTendersHelper(responses, true, true, 9, currentUser);
-
-        return responses;
+        return { successfulTenders: existingOrders, failedTenders: orderExceptions };
     }
 
     static async updateClientNote(orderGuid, body, currentUser)
@@ -1198,7 +1295,7 @@ class OrderService
     {
         return customerList?.length
             ? baseQuery.whereIn(
-                'orderGuid',
+                'job.orderGuid',
                 Order.query()
                     .select('guid')
                     .whereIn('clientGuid', customerList)
@@ -1210,7 +1307,7 @@ class OrderService
     {
         return dispatcherList?.length
             ? baseQuery.whereIn(
-                'orderGuid',
+                'job.orderGuid',
                 Order.query()
                     .select('guid')
                     .whereIn('dispatcherGuid', dispatcherList)
@@ -1222,7 +1319,7 @@ class OrderService
     {
         return salespersonList?.length
             ? baseQuery.whereIn(
-                'orderGuid',
+                'job.orderGuid',
                 Order.query()
                     .select('guid')
                     .whereIn('salespersonGuid', salespersonList)
@@ -1445,6 +1542,7 @@ class OrderService
                 .modifyGraph('vendor.rectype', (builder) =>
                     builder.select('name').distinct()
                 )
+                .modify(['isInvoiced', 'isBilled'])
         );
     }
 
@@ -2014,6 +2112,7 @@ class OrderService
 
         return { commodity: commodityUpserted, index };
     }
+
     static async createCommodityGraph(
         commodityInput,
         commodityTypes,
@@ -2044,7 +2143,9 @@ class OrderService
                 commodity.vehicle
             ).findOrCreate(trx);
             commodity.graphLink('vehicle', vehicle);
+            commodity.vehicle.weightClass = { '#dbRef': commodity.vehicle.weightClassId, 'id': commodity.vehicle.weightClassId };
         }
+
         return commodity;
     }
 

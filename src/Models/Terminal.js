@@ -5,6 +5,7 @@ const { eqProps } = require('ramda');
 
 const geoCoordFields = ['latitude', 'longitude'];
 const zipCodeNoDashRegex = /^[^-]*[^ -]\w+/;
+const EDI_DEFAULT_LOCATION_TYPE = 'business';
 
 class Terminal extends BaseModel
 {
@@ -146,6 +147,15 @@ class Terminal extends BaseModel
         const countryStr = country && `, ${country}` || '';
 
         return `${street1}${cityStr}${stateStr}${zipCodeStr}${countryStr}`;
+    }
+
+    /**
+     * @description This is for EDI orders that do not provide the locationType
+     */
+    setDefaultValues(isTender = false)
+    {
+        if (isTender && !this?.locationType)
+            this.locationType = EDI_DEFAULT_LOCATION_TYPE;
     }
 }
 

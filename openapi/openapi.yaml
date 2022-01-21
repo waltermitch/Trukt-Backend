@@ -50,12 +50,18 @@ paths:
   /order/find_by_vin/{vin}:
     get:
       $ref: paths/order/findByVin.yaml
-  /order/tender/accept:
+  /order/{orderGuid}/tender/accept:
     put:
       $ref: paths/order/putTenderAccept.yaml
-  /order/tender/reject:
+  /order/tender/accept:
+    put:
+      $ref: paths/order/putTendersAccept.yaml
+  /order/{orderGuid}/tender/reject:
     put:
       $ref: paths/order/putTenderReject.yaml
+  /order/tender/reject:
+    put:
+      $ref: paths/order/putTendersReject.yaml
   /order/{orderGuid}/notes:
     get:
       $ref: paths/order/getNotes.yaml
@@ -266,6 +272,12 @@ paths:
   /bulk/order/users:
     put:
       $ref: paths/bulk/updateOrderUsers.yaml
+  /bulk/tender/accept:
+    put:
+      $ref: paths/bulk/putAcceptLoadTenders.yaml
+  /bulk/tender/reject:
+    put:
+      $ref: paths/bulk/putRejectLoadTenders.yaml
   /bulk/job/users:
     put:
       $ref: paths/bulk/updateJobUsers.yaml

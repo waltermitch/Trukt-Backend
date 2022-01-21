@@ -7,7 +7,8 @@ const vehicleFields = [
     'year',
     'make',
     'model',
-    'trim'
+    'trim',
+    'weightClassId'
 ];
 
 const commTypeFields = ['category', 'type'];
@@ -236,6 +237,15 @@ class Commodity extends BaseModel
 
         // index is used from external for creating
         delete this.index;
+    }
+
+    /**
+     * @description This is for EDI orders that do not provide the description on the commodity
+     */
+    setDefaultValues(isTender = false)
+    {
+        if (isTender && !this?.description)
+            this.description = this.identifier || 'not provided';
     }
 
 }

@@ -44,27 +44,8 @@ class BulkController
     {
         try
         {
-            const results = await OrderJobSerivce.setJobsToReadyBulk(req.body.jobGuids, req.session.userGuid);
+            const results = await OrderJobSerivce.setJobsToReady(req.body.jobGuids, req.session.userGuid);
 
-            // check if there are any successfull status changes. If there are none,
-            // throw all the exceptions in the exceptions list
-            // otherwise convert all the exceptions into readable json formats
-            // so the client can have both the successes and the failures
-            if (results.acceptedJobs.length == 0)
-            {
-                throw results.exceptions;
-            }
-            else
-            {
-                results.exceptions = results.exceptions.map(error =>
-                {
-                    return error.toJson();
-                });
-            }
-            for (const job of results.acceptedJobs)
-            {
-                emitter.emit('orderjob_ready', { orderGuid: job.orderGuid, currentUser: req.session.userGuid });
-            }
             res.status(202).json(results);
         }
         catch (error)
@@ -124,6 +105,31 @@ class BulkController
         }, {});
 
         res.status(200).json(results);
+    }
+
+    // TODO: Added for bulk oporations
+    static async handleTendersBulk(req, res, next)
+    {
+        const orderGuids = req.body.orderGuids;
+
+        try
+        {
+            let result;
+            if (req.params.action == 'accept')
+            {
+                result = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+            }
+            else if (req.params.action == 'reject')
+            {
+                result = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+            }
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            next(error);
+        }
     }
 }
 

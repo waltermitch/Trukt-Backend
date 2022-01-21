@@ -119,10 +119,7 @@ class QBO
 
     static async syncListsToDB(keepAlive = true)
     {
-        let [accounts, methods, terms] = await Promise.all([QBO.getAccounts(keepAlive), QBO.getPaymentMethods(keepAlive), QBO.getPaymentTerms(keepAlive)]);
-
-        accounts = accounts.filter((it) => it?.Description?.includes('EXTERNAL'))
-            .map((e) => { return { 'name': e.Name, 'id': e.Id }; });
+        let [methods, terms] = await Promise.all([QBO.getPaymentMethods(keepAlive), QBO.getPaymentTerms(keepAlive)]);
 
         methods = methods.map((e) => { return { 'name': e.Name, 'externalId': e.Id, 'externalSource': 'QBO' }; });
         terms = terms.map((e) => { return { 'name': e.Name, 'id': e.Id }; });
@@ -131,7 +128,7 @@ class QBO
 
         try
         {
-            await Promise.all([QBAccount.query(trx).insert(accounts).onConflict('id').merge(), QBPaymentTerm.query(trx).insert(terms).onConflict('id').merge(), InvoicePaymentMethod.query(trx).insert(methods).onConflict('externalId').merge()]);
+            await Promise.all([QBPaymentTerm.query(trx).insert(terms).onConflict('id').merge(), InvoicePaymentMethod.query(trx).insert(methods).onConflict('externalId').merge()]);
             await trx.commit();
         }
         catch (err)
