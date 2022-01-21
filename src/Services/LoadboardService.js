@@ -896,7 +896,7 @@ class LoadboardService
 
     static async getNotDeletedPosts(jobId)
     {
-        const job = await OrderJob.query().select('orderJobs.guid').findById(jobId)
+        const job = await OrderJob.query().select('orderJobs.orderGuid', 'orderJobs.guid').findById(jobId)
             .withGraphJoined('[loadboardPosts(getNotDeleted)]');
 
         if (!job)
