@@ -580,7 +580,7 @@ class Super extends Loadboard
                 statusId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
-                    undispatchedFrom: this.loadboardName,
+                    loadboard: this.loadboardName,
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,

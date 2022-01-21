@@ -339,7 +339,7 @@ class ShipCars extends Loadboard
                     statusId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: this.loadboardName,
+                        loadboard: this.loadboardName,
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
