@@ -1,4 +1,3 @@
-const LoadboardPost = require('../Models/LoadboardPost');
 const Loadboard = require('./Loadboard');
 const { DateTime } = require('luxon');
 
@@ -123,102 +122,6 @@ class CentralDispatch extends Loadboard
             default:
                 return 'Other';
         }
-    }
-
-    static async handlePost(payloadMetadata, response)
-    {
-        const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-        try
-        {
-            if (response.hasErrors)
-            {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
-                objectionPost.hasError = true;
-                objectionPost.apiError = response.errors;
-            }
-            else
-            {
-                objectionPost.externalGuid = response.id;
-                objectionPost.externalPostGuid = response.id;
-                objectionPost.status = 'posted';
-                objectionPost.isCreated = true;
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = true;
-                objectionPost.isDeleted = false;
-            }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-            await trx.commit();
-
-            return objectionPost.jobGuid;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-        }
-    }
-
-    static async handleUnpost(payloadMetadata, response)
-    {
-        const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-        try
-        {
-            if (response.hasErrors)
-            {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
-                objectionPost.hasError = true;
-                objectionPost.apiError = response.errors;
-            }
-            else
-            {
-                objectionPost.externalGuid = null;
-                objectionPost.externalPostGuid = null;
-                objectionPost.status = 'unposted';
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = false;
-            }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-            await trx.commit();
-
-            return objectionPost.jobGuid;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-        }
-    }
-
-    static async handleRemove(payloadMetadata, response)
-    {
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-        if (response.hasErrors)
-        {
-            objectionPost.isSynced = false;
-            objectionPost.isPosted = false;
-            objectionPost.hasError = true;
-            objectionPost.apiError = response.errors;
-            objectionPost.updatedByGuid = payloadMetadata.userGuid;
-        }
-        else
-        {
-            objectionPost.externalPostGuid = null;
-            objectionPost.status = 'removed';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = false;
-            objectionPost.isCreated = false;
-            objectionPost.isDeleted = true;
-            objectionPost.deletedByGuid = payloadMetadata.userGuid;
-        }
-
-        await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
-        return;
     }
 }
 

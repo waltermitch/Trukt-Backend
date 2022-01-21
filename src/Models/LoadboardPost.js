@@ -121,6 +121,37 @@ class LoadboardPost extends BaseModel
             guid: null
         };
     }
+
+    setToPosted(externalGuid)
+    {
+        this.externalGuid = externalGuid;
+        this.externalPostGuid = externalGuid;
+        this.status = 'posted';
+        this.isCreated = true;
+        this.isSynced = true;
+        this.isPosted = true;
+        this.isDeleted = false;
+        this.dateDeleted = null;
+        this.deletedByGuid = null;
+        this.apiError = null;
+    }
+
+    setToUnposted()
+    {
+        this.externalPostGuid = null;
+        this.status = 'unposted';
+        this.isSynced = true;
+        this.isPosted = false;
+        this.isDeleted = false;
+        this.dateDeleted = null;
+        this.deletedByGuid = null;
+        if (this.loadboard != 'SUPERDISPATCH' &&
+            this.loadboard != 'SHIPCARS' &&
+            this.loadboard != 'CARDELIVERYNETWORK')
+        {
+            this.externalGuid = null;
+        }
+    }
 }
 
 Object.assign(LoadboardPost.prototype, FindOrCreateMixin);
