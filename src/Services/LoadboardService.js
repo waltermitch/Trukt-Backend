@@ -36,6 +36,29 @@ let dbLoadboardNames;
 class LoadboardService
 {
     /**
+     * @description Retrieves all the existing loadboard posts for a job and adds all the missing
+     * potential loadboard posts as nulled out posts
+     * @param {UUID} jobGuid
+     * @returns {Object} An object with all the loadboard posts with the loadboardname being the key
+     * and the post being the value
+     */
+    static async getAllAndMissingPosts(jobGuid)
+    {
+        // reducing all the loadboards into a string array
+        const allLoadboardNames = (Object.keys(dbLoadboardNames)).map(key => key);
+        const posts = await this.getLoadboardPosts(jobGuid, allLoadboardNames);
+        for (const lb of allLoadboardNames)
+        {
+            if (!(lb in posts))
+            {
+                posts[lb] = LoadboardPost.getEmptyPost(jobGuid, lb);
+            }
+        }
+
+        return posts;
+    }
+
+    /**
      * Gets either all the loadboard posts for a job, or the loadboard posts for the
      * loadboards specified in the loadboardNames array.
      * @param {UUID} jobGuid
@@ -45,21 +68,24 @@ class LoadboardService
      */
     static async getLoadboardPosts(jobGuid, loadboardNames = [])
     {
-        const postQuery = LoadboardPost.query().where({ jobGuid });
-        let posts;
+        const jobQuery = Job.query().select('orderJobs.guid').findById(jobGuid);
+        let job;
         if (R.isEmpty(loadboardNames))
         {
-            posts = await postQuery;
+            job = await jobQuery.withGraphJoined('loadboardPosts');
         }
         else
         {
-            posts = await postQuery.whereIn('loadboard', loadboardNames);
+            job = await jobQuery.withGraphJoined('loadboardPosts(getExistingFromList)')
+                .findById(jobGuid).modifiers({
+                    getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
+                });
         }
 
-        if (R.isEmpty(posts))
+        if (!job)
             throw new HttpError(404, 'Job not found');
 
-        posts = posts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
+        const posts = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
         return posts;
     }
