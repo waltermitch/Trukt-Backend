@@ -114,7 +114,7 @@ class BaseModel extends Model
 
     /**
      * links a model to the current instance
-     * used for graph insert, doesnt do anything is model doesnt exist
+     * used for graph insert, doesnt do anything if model doesnt exist
      * @param {string} relName
      * @param {Model} model
      */

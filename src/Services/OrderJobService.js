@@ -33,7 +33,7 @@ class OrderJobService
             .query()
             .skipUndefined()
             .findById(jobGuid)
-            .withGraphFetched('[vendor(byType),vendorAgent,vendorContact,dispatcher,jobType,stopLinks.[commodity.[vehicle,commType],stop.[terminal,primaryContact,alternativeContact]], bills]');
+            .withGraphFetched('[vendor(byType),vendorAgent,vendorContact,dispatcher,jobType,stopLinks.[commodity.[vehicle,commType],stop.[terminal,primaryContact,alternativeContact]], bills.[lines.[link]]]');
 
         // terminal cache for storing terminals
         const terminalCache = {};
@@ -337,8 +337,7 @@ class OrderJobService
 
     }
 
-    // this is really poorly named, will need to be renamed to something more descriptive
-    // TODO - rename this to something more descriptive (post launch)
+    // TODO: DEPRICATE SOON
     static async updateJobStatus(jobGuid, statusToUpdate, userGuid, trx)
     {
         const generalBulkFunctions = {
@@ -583,80 +582,412 @@ class OrderJobService
         };
     }
 
+    /**
+     * This method takes in a single job guid and will use the bulk method to validate job
+     * before setting setting status to ready.
+     * @param {uuid} jobGuid current job guid
+     * @param {uuid} urrentUser uuid of user that is currently making this request
+     * @returns {object}
+     */
     static async setJobToReady(jobGuid, currentUser)
     {
-        return await OrderJobService.setJobsToReadyBulk([jobGuid], currentUser);
+        return await OrderJobService.setJobsToReady([jobGuid], currentUser);
     }
 
-    static async setJobsToReadyBulk(jobGuids, currentUser)
+    /**
+     * This method will take in array of guids send it to get validated and then update
+     * the jobs that pass the validation. Since we are not throwing errors, we will
+     * be returning all data succesfull and unseccessfull. This method is designed to do bulk.
+     * @param {[uuids]} jobGuids array of job guids
+     * @param {uuid} currentUser uuid of user that is currently making this request
+     * @returns {object}
+     */
+    static async setJobsToReady(jobGuids, currentUser)
     {
-        const { jobs, exceptions } = await OrderJobService.getJobForReadyCheck(jobGuids);
-        const res = { acceptedJobs: [], exceptions: [...exceptions] };
+        // Validate jobs adn get failed exceptions
+        const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState(jobGuids);
 
-        // for every job that has passed the initial query and given us data
-        // loop through every job, and check if it passes more tests.
-        // if it does, it returns the valid job guid because that is
-        // all we need to update the job to ready.
-        for (const job of jobs)
+        // for storing responses
+        const resBody = {};
+
+        /**
+         * loop to failed jobs and compose error messages
+         * "jobGuid" :{ status: "200", errors: []}
+        */
+        for (const failedJob of jobsExceptions)
         {
-            const readyResult = OrderJobService.checkJobIsReady(job);
-
-            if (typeof readyResult == 'string')
+            // for jobs does not exist
+            if (failedJob.status === 404)
             {
-                res.acceptedJobs.push(readyResult);
+                resBody[failedJob.guid] = {
+                    status: 404,
+                    errors: failedJob.errors
+                };
             }
-            else if (readyResult instanceof HttpError)
+            else
             {
-                res.exceptions.push(readyResult);
+                // other issues on the job
+                resBody[failedJob.guid] = {
+                    status: 409,
+                    errors: failedJob.errors
+                };
             }
         }
 
-        // patch every job and set fields to ready status
-        res.acceptedJobs = await OrderJob.query().patch({
-            status: OrderJob.STATUS.READY,
-            isReady: true,
-            dateVerified: DateTime.utc().toString(),
-            verifiedByGuid: currentUser,
-            updatedByGuid: currentUser
-        }).findByIds(res.acceptedJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
-
-        const promiseArray = [];
-
-        // update activity on every job
-        for (const job of res.acceptedJobs)
+        // update all of the jobs to ready status and emmit events
+        if (goodJobs.length > 0)
         {
-            promiseArray.push(StatusManagerHandler.registerStatus({
-                orderGuid: job.orderGuid,
-                jobGuid: job.guid,
-                userGuid: currentUser,
-                statusId: 16
-            }));
-            promiseArray.push(OrderJobService.updateStatusField(job.guid, currentUser));
+            const data = await OrderJob.query().patch({
+                status: OrderJob.STATUS.READY,
+                isReady: true,
+                dateVerified: DateTime.utc().toString(),
+                verifiedByGuid: currentUser,
+                updatedByGuid: currentUser
+            }).findByIds(goodJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
+
+            // loop good guids and send event
+            for (const job of data)
+            {
+                resBody[job.guid] = {
+                    status: 200,
+                    errors: []
+                };
+                emitter.emit('orderjob_status_updated', { jobGuid: job.guid, currentUser, state: { status: OrderJob.STATUS.READY } });
+                emitter.emit('orderjob_ready', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
+            }
         }
 
-        Promise.allSettled(promiseArray);
-
-        return res;
+        // returning body payload
+        return resBody;
     }
 
+    /**
+     * This method will take in an array of Job guids and create queries to validate the jobs
+     * state for change. For missing or incorrect guids, exception array will be created to deal with
+     * broken guids or bad orders. No Errors will be directly thrown.
+     * @param {[uuid]} jobGuids an array of job guids
+     * @returns
+     */
+    static async checkJobForReadyState(jobGuids)
+    {
+        // initialize all the required variables and query for guids
+        const jobsExceptions = [];
+        const jobsQueryArray = [];
+        const goodGuids = await OrderJob.query().select('guid').findByIds(jobGuids);
+
+        // find the job that do no exist in the returned query
+        // I compare both arrays and create an array of bad guids, then attach an error message
+        // so the errors can be properly thrown.
+        if (jobGuids.length != goodGuids.length)
+        {
+            const comp = (x, y) => x === y.guid;
+            const badGuids = R.differenceWith(comp, jobGuids, goodGuids);
+            const jobsDontExists = badGuids.map((guid) =>
+            {
+                return { guid: guid, status: 404, errors: [`The job with guid ${guid} doesn't exist.`] };
+            });
+            jobsExceptions.push(...jobsDontExists);
+        }
+
+        // if no good guids were passed, return
+        if (!goodGuids.length)
+            return { goodJobs: [], jobsExceptions };
+
+        // looping through all the good one to minimize amount of requests return [...result[0].rows, ...result[1].rows];
+        for (const job of goodGuids)
+        {
+            jobsQueryArray.push(knex.raw(`
+                SELECT
+                	oj.guid,
+                	oj.order_guid,
+                	oj.dispatcher_guid,
+                	oj.vendor_guid,
+                	oj.vendor_agent_guid,
+                	oj.vendor_contact_guid,
+                	oj.is_on_hold,
+                	oj.is_complete,
+                	oj.is_deleted,
+                	oj.is_canceled,
+                	oj.is_ready,
+                	oj.status,
+                	oj."number",
+                    oj.is_transport,
+                	(SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
+                		LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbr.is_accepted AND lbp2.job_guid = oj.guid) AS has_accepted_requests,
+                	stop.pickup_requested_date,
+                	stop.delivery_requested_date,
+                	stop.pickup_sequence,
+                	stop.delivery_sequence,
+                	stop.bad_pickup_address,
+                	stop.bad_delivery_address,
+                    stop.commodity_guid
+                FROM rcg_tms.order_jobs oj
+                JOIN
+                	(SELECT DISTINCT
+                			os.date_requested_start  pickup_requested_date,
+                			os2.date_requested_start  delivery_requested_date,
+                			osl.job_guid,
+                			os."sequence" pickup_sequence,
+                			os2."sequence" delivery_sequence,
+                            osl.commodity_guid,
+                			CASE WHEN t.is_resolved THEN null ELSE CONCAT(t.street1, ' ', t.state, ' ', t.city, ' ',t.zip_code) END AS bad_pickup_address,
+                			CASE WHEN t2.is_resolved THEN null ELSE CONCAT(t2.street1, ' ', t2.state, ' ', t2.city, ' ',t2.zip_code) END AS bad_delivery_address
+                		FROM rcg_tms.order_stop_links osl
+                		LEFT JOIN rcg_tms.order_stops os ON osl.stop_guid = os.guid
+                		LEFT JOIN rcg_tms.terminals t ON os.terminal_guid = t.guid,
+                		rcg_tms.order_stop_links osl2
+                		LEFT JOIN rcg_tms.order_stops os2 ON osl2.stop_guid = os2.guid
+                		LEFT JOIN rcg_tms.terminals t2 ON os2.terminal_guid = t2.guid
+                		WHERE os.stop_type = 'pickup'
+                		AND os2.stop_type = 'delivery'
+                		AND os."sequence" < os2."sequence"
+                		AND osl.order_guid = osl2.order_guid
+                		AND osl.job_guid = '${job.guid}'
+                		ORDER BY os2."sequence" DESC, os."sequence" ASC LIMIT 1) AS stop ON stop.job_guid = oj.guid
+                WHERE guid = '${job.guid}' AND oj.is_transport;  
+                
+                SELECT
+                        oj.guid,
+                        oj.order_guid,
+                        oj.dispatcher_guid,
+                        oj.vendor_guid,
+                        oj.vendor_agent_guid,
+                        oj.vendor_contact_guid,
+                        oj.is_on_hold,
+                        oj.is_complete,
+                        oj.is_deleted,
+                        oj.is_canceled,
+                        oj.is_ready,
+                        oj.status,
+                        oj."number",
+                        oj.is_transport,
+                        (SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
+                            LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbr.is_accepted AND lbp2.job_guid = oj.guid) AS has_accepted_requests,
+	                    stop."commodityGuid",
+	                    stop.not_resolved_address,
+	                    stop.stop_type
+                    FROM rcg_tms.order_jobs oj
+                    JOIN
+                        (SELECT DISTINCT
+                                osl.commodity_guid "commodityGuid",
+                                osl.job_guid,
+                                CASE WHEN t.is_resolved THEN null ELSE CONCAT(t.street1, ' ', t.state, ' ', t.city, ' ',t.zip_code) END AS not_resolved_address,
+                                os.stop_type 
+                            FROM rcg_tms.order_stop_links osl
+                            LEFT JOIN rcg_tms.order_stops os ON osl.stop_guid = os.guid
+                            LEFT JOIN rcg_tms.terminals t ON os.terminal_guid = t.guid
+                            WHERE osl.job_guid = '${job.guid}') AS stop ON stop.job_guid = oj.guid
+                    WHERE guid = '${job.guid}' AND oj.is_transport = false;   
+            `).then((result) => { return result[0].rows[0] ?? result[1].rows[0]; }));
+        }
+
+        // making query reuests
+        const allJobs = await Promise.all(jobsQueryArray);
+
+        // validating the information
+        const { goodJobs, badJobs } = OrderJobService.validateOrderState(allJobs);
+
+        // adding to jobexception all bad jobs
+        jobsExceptions.push(...badJobs);
+
+        // return all infomation, this comment is for VLAD xD
+        return { goodJobs, jobsExceptions };
+    }
+
+    /**
+     * The method will be taking in an array of job objects that will have all the
+     * required data to validate it's transition to ready state. If errors exist we will accumilate
+     * them and return them as bad Jobs, otherwise return them as job that are ready to be set as ready.
+     * @param {[{jobObjects}]} allJobsData
+     * @returns { goodJobs, badJobs }
+     */
+    static validateOrderState(allJobsData)
+    {
+        // separte job kinds
+        const goodJobs = [];
+        const badJobs = [];
+
+        // validate each job and return human redable errors
+        for (const job of allJobsData)
+        {
+            const errors = [];
+            if (!job.dispatcher_guid)
+            {
+                errors.push('Please assign a dispatcher.');
+            }
+            if (job.vendor_guid && job.is_transport === true)
+            {
+                errors.push('Please un-dispatch the Carrier first.');
+            }
+            if (job.vendor_guid && job.is_transport === false)
+            {
+                errors.push('Please un-assign the Vendor first.');
+            }
+            if (job.has_accepted_requests)
+            {
+                errors.push('Please cancel Carrier request.');
+            }
+            if (job.is_ready)
+            {
+                errors.push('Order has been verified already.');
+            }
+            if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
+            {
+                errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
+            }
+            if (job.not_resolved_address && job.is_transport === false)
+            {
+                errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
+            }
+            if (job.is_on_hold)
+            {
+                errors.push('Order is On Hold');
+            }
+            if (job.is_canceled)
+            {
+                errors.push('Order is Canceled');
+            }
+            if (job.is_deleted)
+            {
+                errors.push('Order is Deleted');
+            }
+            if (job.is_complete)
+            {
+                errors.push('Order is Compelete');
+            }
+            if (!job.pickup_requested_date || !job.delivery_requested_date)
+            {
+                errors.push('Client requested pickup and delivery dates must be set.');
+            }
+            if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === true)
+            {
+                errors.push('There must be at least one commodity to pick up and deliver.');
+            }
+            if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === false)
+            {
+                errors.push('There must be at least one commodity to service.');
+            }
+            if (job.is_transport === false && job.stop_type != null)
+            {
+                errors.push('There must be one service stop.');
+            }
+
+            // distinguishing jobs, for the special ones xD
+            if (errors.length > 0)
+            {
+                job.errors = errors;
+                badJobs.push(job);
+            }
+            else
+            {
+                goodJobs.push(job.guid);
+            }
+        }
+
+        // returning all jobs after validation
+        return { goodJobs, badJobs };
+    }
+
+    // TODO: DEPRICATE SOON
     static async getJobForReadyCheck(jobGuids)
     {
-        const exceptions = [];
+        const jobsNotFoundExceptions = [];
 
-        // first we must find which guids are actually present in the database
-        const found = R.pluck('guid', await OrderJob.query().select('guid').findByIds(jobGuids));
+        // getting all jobs guid and tranport field to help differentiate job types
+        const jobsGuidsFound = await OrderJob.query().select('guid', 'isTransport').findByIds(jobGuids);
+
+        // Separate jobs types to throw differnet exceptions to the user.
+        const { serviceJobsFound, transportJobsFound } = jobsGuidsFound.reduce((allJobs, job) =>
+        {
+            if (job.isTransport)
+                allJobs.transportJobsFound.push(job.guid);
+            else
+                allJobs.serviceJobsFound.push(job.guid);
+            return allJobs;
+        }, { serviceJobsFound: [], transportJobsFound: [] });
+
+        const jobsFound = [...serviceJobsFound, ...transportJobsFound];
 
         // if there are guids that are not found, create human readable exceptions for each missing guid
-        if (found.length != jobGuids.length)
+        if (jobsFound.length != jobGuids.length)
         {
             for (let i = 0; i < jobGuids.length; i++)
             {
-                if (found.indexOf(jobGuids[i]) == -1)
-                {
-                    exceptions.push(new HttpError(404, `Job with guid ${jobGuids[i]} cannot be found`));
-                }
+                if (jobsFound.indexOf(jobGuids[i]) == -1)
+                    jobsNotFoundExceptions.push(new HttpError(404, `Job with guid ${jobGuids[i]} cannot be found`));
             }
         }
+
+        // If no job was found, do not continue
+        if (!jobsFound.length)
+            return { jobs: [], exceptions: jobsNotFoundExceptions };
+
+        // Validating transport and service job through their own methods
+        const allJobsChecked = await Promise.all([
+            OrderJobService
+                .checkTransportJobsToMarkAsReady(transportJobsFound),
+            OrderJobService
+                .checkServiceJobsToMarkAsReady(serviceJobsFound)
+        ]);
+
+        const { jobsExceptions, goodJobs } = allJobsChecked?.reduce((allJobs, jobs) =>
+        {
+            allJobs.jobsExceptions.push(...jobs.exceptions);
+            allJobs.goodJobs.push(...jobs.goodJobsGuids);
+
+            return allJobs;
+        }, { jobsExceptions: [], goodJobs: [] });
+        const allJobsExceptions = [...jobsExceptions, ...jobsNotFoundExceptions];
+
+        const jobs = await OrderJob
+            .query()
+            .alias('job')
+            .select(
+                'job.isReady',
+                'job.isOnHold',
+                'job.isDeleted',
+                'job.isCanceled',
+                'job.isComplete',
+                'job.dispatcherGuid',
+                'job.vendorGuid',
+                'job.vendorContactGuid',
+                'job.vendorAgentGuid',
+                'job.orderGuid',
+                'job.guid',
+                'job.number',
+                'order.isTender',
+                'vendor.name as vendorName',
+                'type.category as typeCategory',
+                'type.type as jobType'
+            )
+            .leftJoinRelated('order')
+            .leftJoinRelated('vendor')
+            .leftJoinRelated('type')
+            .withGraphFetched('[requests(accepted), stops]')
+            .findByIds(Array.from(goodJobs))
+            .modifyGraph('requests', builder =>
+            {
+                builder.select('isValid', 'isAccepted');
+            })
+            .modifyGraph('stops', builder =>
+            {
+                builder.select('sequence', 'stopType', 'dateRequestedStart',
+                    'terminal.isResolved as resolvedTerminal', 'terminal.name as terminalName')
+                    .leftJoinRelated('terminal').where({ 'terminal.isResolved': false })
+                    .distinctOn('terminal.name');
+            });
+
+        return { jobs, exceptions: allJobsExceptions };
+    }
+
+    // TODO: DEPRICATE SOON
+    static async checkTransportJobsToMarkAsReady(transportJobsFoundGUIDs)
+    {
+        // If no transport job was found, do not continue
+        if (!transportJobsFoundGUIDs.length)
+            return { exceptions: [], goodJobsGuids: [] };
+
+        const exceptions = [];
 
         // this array of question marks is meant to be used for the prepared
         // statement in the following raw query. Because Knex does not support
@@ -664,10 +995,8 @@ class OrderJobService
         // the raw list with a question mark for every item in the list you
         // are passing in.
         const questionMarks = [];
-        for (let i = 0; i < found.length; i++)
-        {
+        for (let i = 0; i < transportJobsFoundGUIDs.length; i++)
             questionMarks.push('?');
-        }
 
         // This query returns data for jobs with
         // pickups and deliveries in proper sequence, with stops
@@ -706,7 +1035,7 @@ class OrderJobService
                 os.date_requested_start, 
                 os2.date_requested_start,
                 osl.job_guid
-            order by pickup_sequence`, found)).rows;
+            order by pickup_sequence`, transportJobsFoundGUIDs)).rows;
 
         const missingDates = (await knex.raw(`
             select distinct(oj."number"), oj.guid "jobGuid", os.stop_type 
@@ -718,82 +1047,67 @@ class OrderJobService
             where os.date_requested_start is null
             and osl.order_guid is null
             and oj.guid in (${questionMarks});
-        `, found)).rows;
+        `, transportJobsFoundGUIDs)).rows;
 
         for (const missingDate of missingDates)
         {
-            const index = found.indexOf(missingDate.jobGuid);
+            const index = transportJobsFoundGUIDs.indexOf(missingDate.jobGuid);
             if (index > -1)
             {
                 exceptions.push(new HttpError(409, `${R.toUpper(missingDate.stop_type)} for job ${missingDate.number} is missing requested dates`));
-                found.splice(index, 1);
+                transportJobsFoundGUIDs.splice(index, 1);
             }
         }
 
         // Since the previous query only returns some data, we need to know which guids
         // passed the query and which ones did not so we can tell the client which guids
         // did not pass the first test.
-        const setGoodGuids = new Set(rows.map(row => row.job_guid));
+        const goodJobsGuids = new Set(rows.map(row => row.job_guid));
 
-        if (found.length != setGoodGuids.size)
+        if (transportJobsFoundGUIDs.length != goodJobsGuids.size)
         {
-            for (const guid of found)
+            for (const guid of transportJobsFoundGUIDs)
             {
-                if (!setGoodGuids.has(guid))
-                {
+                if (!goodJobsGuids.has(guid))
                     exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, please ensure each commodity has a pickup and delivery.`));
-                }
             }
         }
 
-        const jobs = await OrderJob
-            .query()
-            .alias('job')
-            .select(
-                'job.isReady',
-                'job.isOnHold',
-                'job.isDeleted',
-                'job.isCanceled',
-                'job.isComplete',
-                'job.dispatcherGuid',
-                'job.vendorGuid',
-                'job.vendorContactGuid',
-                'job.vendorAgentGuid',
-                'job.orderGuid',
-                'job.guid',
-                'job.number',
-                'order.isTender',
-                'vendor.name as vendorName',
-                'type.category as typeCategory',
-                'type.type as jobType'
-            )
-            .leftJoinRelated('order')
-            .leftJoinRelated('vendor')
-            .leftJoinRelated('type')
-            .withGraphFetched('[requests(accepted), stops]')
-            .findByIds(Array.from(setGoodGuids))
-            .modifyGraph('requests', builder =>
-            {
-                builder.select('isValid', 'isAccepted');
-            })
-            .modifyGraph('stops', builder =>
-            {
-                builder.select('sequence', 'stopType', 'dateRequestedStart',
-                    'terminal.isResolved as resolvedTerminal', 'terminal.name as terminalName')
-                    .leftJoinRelated('terminal').where({ 'terminal.isResolved': false })
-                    .distinctOn('terminal.name');
-            });
-
-        return { jobs, exceptions };
+        return { exceptions, goodJobsGuids };
     }
 
-    /**
-     * @description This function takes an orderjob and checks if it's data is sufficient to allow
-     * it to transition to the ready state. It can be used to verify both transport and service jobs
-     * @param {OrderJob} job
-     * @returns If the job passes all the checks, it returns the job itself,
-     * otherwise it returns an http exception
-     */
+    // TODO: DEPRICATE SOON
+    static async checkServiceJobsToMarkAsReady(serviceJobsFound)
+    {
+        // Check jobs that have at leats one stop, with 1 commodity asigned and dateRequested is not null
+        const jobsChecked = await OrderStopLink.query().distinct('jobGuid', 'dispatcherGuid')
+            .joinRelated('stop')
+            .joinRelated('job')
+            .whereIn('jobGuid', serviceJobsFound)
+            .whereNotNull('dateRequestedStart');
+
+        return serviceJobsFound?.reduce((allJobs, jobGuid) =>
+        {
+            const jobHasCorrectStops = R.find(R.propEq('jobGuid', jobGuid))(jobsChecked);
+
+            // If jobfound is not in jobsChecked array, it is because it does not have at leaast 1 stop with 1 commodity with date requested start
+            if (!jobHasCorrectStops)
+            {
+                allJobs.exceptions.push(new HttpError(409, `Job ${jobGuid} has incorrect stop, please ensure it has at least stop with one commodity and requested date start`));
+                return allJobs;
+            }
+
+            // If jobFound is in jobsChecked array, but does not have a dispatcher, add esception, other wise it fullfills service job checks
+            if (!jobHasCorrectStops?.dispatcherGuid)
+                allJobs.exceptions.push(new HttpError(409, `Job ${jobGuid} does not have a dispatcher`));
+            else
+                allJobs.goodJobsGuids.push(jobGuid);
+
+            return allJobs;
+        }, { goodJobsGuids: [], exceptions: [] });
+    }
+
+    // TODO: DEPRICATE SOON
     static checkJobIsReady(job)
     {
         const booleanFields = [
@@ -1090,10 +1404,8 @@ class OrderJobService
             if (job && jobIsDispatched)
                 throw new HttpError(400, 'Please un-dispatch the Order before deleting');
 
-            const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
-
             // updating postings to be deleted
-            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, currentUser);
+            await LoadboardService.deletePostings(jobGuid, currentUser);
 
             // marking job as deleted
             const payload = OrderJobService.createStatusPayload('deleted', currentUser);
@@ -1173,11 +1485,8 @@ class OrderJobService
             // validate if you job conditions
             const job = await OrderJobService.checkJobToCancel(jobGuid, trx);
 
-            // getting loadboard names
-            const dbLoadboardNames = (await Loadboard.query())?.map(({ name }) => ({ loadboard: name }));
-
             // deleted all postings attached to the job
-            await LoadboardService.deletePostings(jobGuid, dbLoadboardNames, currentUser);
+            await LoadboardService.deletePostings(jobGuid, currentUser);
 
             // setting up canceled payload
             const payload = OrderJobService.createStatusPayload('canceled', currentUser);

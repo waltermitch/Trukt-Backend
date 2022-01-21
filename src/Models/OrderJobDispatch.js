@@ -100,18 +100,22 @@ class OrderJobDispatch extends BaseModel
         this.isDeclined = true;
         this.isValid = false;
         this.dateDeclined = DateTime.now();
+        this.dateAccepted = null;
+        this.dateCanceled = null;
     }
 
     // this is meant to be used to update the dispatch when a carrier or a dispatcher
     // accepts the offer
-    setToAccepted()
+    setToAccepted(acceptedDate)
     {
         this.isPending = false;
         this.isAccepted = true;
         this.isCanceled = false;
         this.isDeclined = false;
         this.isValid = true;
-        this.dateAccepted = DateTime.now();
+        this.dateAccepted = acceptedDate || DateTime.now();
+        this.dateCanceled = null;
+        this.dateDeclined = null;
     }
 
     // this is meant to be used to update the dispatch when a dispatcher
