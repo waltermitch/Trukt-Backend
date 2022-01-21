@@ -12,7 +12,7 @@ class CarDeliveryNetwork extends Loadboard
 
     toJSON()
     {
-        const orderNumber = process.env.NODE_ENV != 'prod' || process.env.NODE_ENV != 'production' ? this.saltOrderNumber(this.data.number) : this.data.number;
+        const orderNumber = process.env.NODE_ENV == 'prod' || process.env.NODE_ENV == 'production' ? this.data.number : this.saltOrderNumber(this.data.number);
         const payload = {
             loadId: orderNumber,
             Notes: this.data.instructions,
