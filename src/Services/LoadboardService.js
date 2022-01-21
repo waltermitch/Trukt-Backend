@@ -382,12 +382,13 @@ class LoadboardService
                     statusId: 10,
                     jobGuid: jobId,
                     extraAnnotations: {
-                        dispatchedTo: 'TRUKT',
+                        loadboard: 'TRUKT',
                         code: 'pending',
                         vendorGuid: dispatch.vendor.guid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
                         vendorName: dispatch.vendor.name,
-                        vendorAgentName: dispatch.vendorAgent.name
+                        vendorAgentName: dispatch.vendorAgent.name,
+                        dotNumber: dispatch.vendor.dotNumber
                     }
                 });
 
@@ -506,12 +507,13 @@ class LoadboardService
                     statusId: 12,
                     jobGuid,
                     extraAnnotations: {
-                        undispatchedFrom: 'TRUKT',
+                        loadboard: 'TRUKT',
                         code: 'ready',
                         vendorGuid: dispatch.vendor.guid,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
                         vendorName: dispatch.vendor.name,
-                        vendorAgentName: dispatch.vendorAgent.name
+                        vendorAgentName: dispatch.vendorAgent.name,
+                        dotNumber: dispatch.vendor.dotNumber
                     }
                 });
 
