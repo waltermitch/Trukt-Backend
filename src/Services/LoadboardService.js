@@ -455,7 +455,7 @@ class LoadboardService
                     vendorAgentGuid: null,
                     vendorContact: null,
                     dateStarted: null,
-                    status: Job.STATUS.READY
+                    status: OrderJob.STATUS.READY
                 });
 
                 job.setUpdatedBy(currentUser);
