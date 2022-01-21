@@ -38,7 +38,7 @@ class BillLineItem extends LineItem
     constructor(data)
     {
         super(data);
-        this.AccountBasedExpenseLineDetail = { 'AccountRef': { 'value': data.item.qbAccount.id } };
+        this.AccountBasedExpenseLineDetail = { 'AccountRef': { 'value': data.item.qbAccount.billing_id } };
         this.DetailType = 'AccountBasedExpenseLineDetail';
     }
 }
