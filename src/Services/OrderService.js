@@ -1053,7 +1053,7 @@ class OrderService
                     orderGuid: orderObjectsArray[i].guid,
                     jobGuid: orderObjectsArray[i].jobs[0].guid,
                     status: 400,
-                    errors: [apiResponses[i]?.reason?.message || null]
+                    errors: [apiResponses[i]?.reason?.message]
                 });
             }
         }
