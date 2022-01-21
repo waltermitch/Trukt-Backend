@@ -1206,7 +1206,7 @@ class OrderService
     {
         return customerList?.length
             ? baseQuery.whereIn(
-                'orderGuid',
+                'job.orderGuid',
                 Order.query()
                     .select('guid')
                     .whereIn('clientGuid', customerList)
@@ -1218,7 +1218,7 @@ class OrderService
     {
         return dispatcherList?.length
             ? baseQuery.whereIn(
-                'orderGuid',
+                'job.orderGuid',
                 Order.query()
                     .select('guid')
                     .whereIn('dispatcherGuid', dispatcherList)
@@ -1230,7 +1230,7 @@ class OrderService
     {
         return salespersonList?.length
             ? baseQuery.whereIn(
-                'orderGuid',
+                'job.orderGuid',
                 Order.query()
                     .select('guid')
                     .whereIn('salespersonGuid', salespersonList)
@@ -1453,6 +1453,7 @@ class OrderService
                 .modifyGraph('vendor.rectype', (builder) =>
                     builder.select('name').distinct()
                 )
+                .modify(['isInvoiced', 'isBilled'])
         );
     }
 
