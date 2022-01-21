@@ -13,11 +13,19 @@ const listener = require('./index');
 
 const SYSUSER = process.env.SYSTEM_USER;
 
-listener.on('orderjob_ready', ({ orderGuid, currentUser }) =>
+listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([OrderService.markOrderReady(orderGuid, currentUser)]);
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid: orderGuid,
+                jobGuid: jobGuid,
+                userGuid: currentUser,
+                statusId: 16
+            }),
+            OrderService.markOrderReady(orderGuid, currentUser)
+        ]);
 
         // This doesn't make any sense so I uncommented it for now
         // Order.query()
@@ -46,7 +54,7 @@ listener.on('orderjob_hold_added', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            await StatusManagerHandler.registerStatus({
+            StatusManagerHandler.registerStatus({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -65,7 +73,7 @@ listener.on('orderjob_hold_removed', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            await StatusManagerHandler.registerStatus({
+            StatusManagerHandler.registerStatus({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,

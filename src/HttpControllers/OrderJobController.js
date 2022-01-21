@@ -87,30 +87,20 @@ class OrderJobController
 
     static async setJobToReadySingle(req, res, next)
     {
+        const jobGuid = req.params.jobGuid;
         try
         {
-            const results = await OrderJobService.setJobToReady(req.params.jobGuid, req.session.userGuid);
+            const result = await OrderJobService.setJobToReady(jobGuid, req.session.userGuid);
 
-            // check if there are any successfull status changes. If there are none,
-            // throw all the exceptions in the exceptions list
-            // otherwise convert all the exceptions into readable json formats
-            // so the client can have both the successes and the failures
-            if (results.acceptedJobs.length == 0)
+            // for single response we are returning status with payload
+            if (result[`${jobGuid}`].status === 404 || result[`${jobGuid}`].status === 409)
             {
-                throw results.exceptions;
+                res.status(result[`${jobGuid}`].status).json(result);
             }
             else
             {
-                results.exceptions = results.exceptions.map(error =>
-                {
-                    return error.toJson();
-                });
+                res.status(202).json(result);
             }
-            for (const job of results.acceptedJobs)
-            {
-                emitter.emit('orderjob_ready', { orderGuid: job.orderGuid, currentUser: req.session.userGuid });
-            }
-            res.status(202).json(results);
         }
         catch (e)
         {
