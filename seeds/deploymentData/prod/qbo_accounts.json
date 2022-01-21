@@ -1,0 +1,43 @@
+{
+    "table": "accounts",
+    "schema": "quickbooks",
+    "unique": "id",
+    "data": [
+        {
+            "id": 1,
+            "name": "Trucking Paid / Vehicle Shipping",
+            "invoicing_id": 4,
+            "billing_id": 28
+        },
+        {
+            "id": 2,
+            "name": "Keys Paid",
+            "invoicing_id": 1,
+            "billing_id": 17
+        },
+        {
+            "id": 3,
+            "name": "Storage Charges",
+            "invoicing_id": 16,
+            "billing_id": 30
+        },
+        {
+            "id": 4,
+            "name": "Fuel Surcharge",
+            "invoicing_id": 9,
+            "billing_id": 207
+        },
+        {
+            "id": 5,
+            "name": "Repossession",
+            "invoicing_id": 13,
+            "billing_id": 183
+        },
+        {
+            "id": 6,
+            "name": "Impound Fees",
+            "invoicing_id": 3,
+            "billing_id": 182
+        }
+    ]
+}
