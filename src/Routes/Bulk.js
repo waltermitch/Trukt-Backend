@@ -9,6 +9,7 @@ router
     .put(`${prefix}/job/dates`, (req, res) => http(req, res, controller.updateJobDates))
     .put(`${prefix}/job/status`, (req, res) => http(req, res, controller.updateJobStatus))
     .put(`${prefix}/job/prices`, (req, res) => http(req, res, controller.updateJobPrices))
+    .put(`${prefix}/tender/:action(accept|reject)`, controller.handleTendersBulk)
     .put(`${prefix}/job/status/ready`, controller.setJobsReadyBulk)
     .put(`${prefix}/order/bill/export`, controller.exportBills)
     .put(`${prefix}/order/invoice/export`, controller.exportInvocies);
