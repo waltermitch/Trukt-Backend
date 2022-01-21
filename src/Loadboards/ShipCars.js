@@ -53,7 +53,7 @@ class ShipCars extends Loadboard
             delivery_notes: this.data.delivery?.notes ? this.data.delivery?.notes : ' ',
 
             first_available_date: this.data.pickup.dateRequestedStart.toISODate(),
-            shipper_load_id: process.env.NODE_ENV != 'prod' || process.env.NODE_ENV != 'production' ? this.saltOrderNumber(this.data.number) : this.data.number,
+            shipper_load_id: process.env.NODE_ENV == 'prod' || process.env.NODE_ENV == 'production' ? this.data.number : this.saltOrderNumber(this.data.number),
             instructions: this.data.loadboardInstructions,
             specific_load_requirements: this.postObject.instructions,
             enclosed_trailer: this.getEnclosedTrailer(this.data.equipmentType?.name),
