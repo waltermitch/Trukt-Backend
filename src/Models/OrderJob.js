@@ -300,13 +300,13 @@ class OrderJob extends BaseModel
         {
             case 'clientName':
                 return SFAccount.query().select('name').where('guid',
-                    Order.query().select('clientGuid').whereRaw('guid = order_guid')
+                    Order.query().select('clientGuid').whereRaw('guid = "job".order_guid')
                 );
             case 'dispatcherName':
                 return User.query().select('name').whereRaw('guid = "job".dispatcher_guid');
             case 'salespersonName':
                 return SFAccount.query().select('name').where('guid',
-                    Order.query().select('salespersonGuid').whereRaw('guid = order_guid')
+                    Order.query().select('salespersonGuid').whereRaw('guid = "job".order_guid')
                 );
             case 'pickupTerminal':
                 return Terminal.query().select('name').where('guid',

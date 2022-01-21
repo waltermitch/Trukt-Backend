@@ -1,26 +1,25 @@
-summary: Accept Load Tenders
+summary: Accept Load Tender
 operationId: acceptOrderbyGuid
-description: Accept Load Tenders in bulk.
+description: Accept Load Tender.
 tags:
   - Order
-requestBody:
-  content:
-    application/json:
-      schema:
-        type: object
-        properties:
-          orderGuids:
-            type: array
-            items:
-              $ref: '../../components/schemas/Common.yaml#/guid'
-            description: Array of load tender guids to accept.
-            minItems: 1
-            maxItems: 100
-        required:
-          - orderGuids
+
+parameters:
+  - in: path
+    name: orderGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
 
 responses:
   200:
+    description: Tender
+    content:
+      application/json:
+        schema:
+          $ref: ../../components/schemas/EDI.yaml#/LoadTenderResponses
+        
+  404:
     description: Tender
     content:
       application/json:

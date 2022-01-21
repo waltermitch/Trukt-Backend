@@ -68,7 +68,7 @@ class LoadboardService
      */
     static async getLoadboardPosts(jobGuid, loadboardNames = [])
     {
-        const jobQuery = Job.query().select('orderJobs.guid').findById(jobGuid);
+        const jobQuery = OrderJob.query().select('orderJobs.guid').findById(jobGuid);
         let job;
         if (R.isEmpty(loadboardNames))
         {

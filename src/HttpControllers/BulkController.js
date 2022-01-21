@@ -106,6 +106,31 @@ class BulkController
 
         res.status(200).json(results);
     }
+
+    // TODO: Added for bulk oporations
+    static async handleTendersBulk(req, res, next)
+    {
+        const orderGuids = req.body.orderGuids;
+
+        try
+        {
+            let result;
+            if (req.params.action == 'accept')
+            {
+                result = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+            }
+            else if (req.params.action == 'reject')
+            {
+                result = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+            }
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = BulkController;

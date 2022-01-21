@@ -1,38 +1,31 @@
-summary: Reject Load Tenders
-operationId: rejectOrderbyGuid
-description: Reject Load Tenders in bulk.
+summary: Reject Load Tenders Bulk
+operationId: rejectOrderbyGuidsBulk
+description: Reject Load Tenders in Bulk.
 tags:
-  - Order
-
-parameters:
-  - in: path
-    name: orderGuid
-    schema:
-      $ref: '../../components/schemas/Common.yaml#/guid'
-    required: true
-
+  - Bulk
 requestBody:
   content:
     application/json:
       schema:
         type: object
         properties:
+          orderGuids:
+            type: array
+            items:
+              $ref: '../../components/schemas/Common.yaml#/guid'
+            description: Array of load tender guids to accept.
+            minItems: 1
+            maxItems: 100
           reason:
             type: string
             description: Reason for declining the load tender.
             example: Can't find driver for load.
         required:
+          - orderGuids
           - reason
 
 responses:
   200:
-    description: Tender
-    content:
-      application/json:
-        schema:
-          $ref: ../../components/schemas/EDI.yaml#/LoadTenderResponses
-
-  404:
     description: Tender
     content:
       application/json:

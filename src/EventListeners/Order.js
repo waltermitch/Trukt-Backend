@@ -85,6 +85,44 @@ listener.on('order_undelivered', ({ orderGuid, userGuid, jobGuid }) =>
     });
 });
 
+listener.on('tender_accepted', ({ jobGuid, orderGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid: currentUser,
+                statusId: 8
+            })
+        ]);
+    });
+
+    // for (const p of proms)
+    //     if (p.status === 'rejected')
+    //         console.log(p.reason?.response?.data || p.reason);
+});
+
+listener.on('tender_rejected', ({ jobGuid, orderGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([
+            StatusManagerHandler.registerStatus({
+                orderGuid,
+                jobGuid,
+                userGuid: currentUser,
+                statusId: 9
+            })
+        ]);
+    });
+
+    // for (const p of proms)
+    //     if (p.status === 'rejected')
+    //         console.log(p.reason?.response?.data || p.reason);
+});
+
 async function createSuperOrders(orderGuid)
 {
     const jobsToPost = await OrderService.getTransportJobsIds(orderGuid);
