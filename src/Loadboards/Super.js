@@ -355,13 +355,7 @@ class Super extends Loadboard
                     allPromises.push(SFAccount.query(trx).patch(client).findById(client.guid));
                 }
 
-                objectionPost.externalGuid = response.guid;
-                objectionPost.externalPostGuid = response.guid;
-                objectionPost.status = 'posted';
-                objectionPost.isCreated = true;
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = true;
-                objectionPost.isDeleted = false;
+                objectionPost.setToPosted(response.guid);
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
@@ -376,67 +370,6 @@ class Super extends Loadboard
             await trx.rollback();
             throw new Error(err.message);
         }
-    }
-
-    static async handleUnpost(payloadMetadata, response)
-    {
-        const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-
-        try
-        {
-            if (response.hasErrors)
-            {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
-                objectionPost.hasError = true;
-                objectionPost.apiError = response.errors;
-            }
-            else
-            {
-                objectionPost.externalPostGuid = null;
-                objectionPost.status = 'unposted';
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = false;
-            }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-            await trx.commit();
-            return objectionPost.jobGuid;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw new Error(err.message);
-        }
-    }
-
-    static async handleRemove(payloadMetadata, response)
-    {
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-
-        if (response.hasErrors)
-        {
-            objectionPost.isSynced = false;
-            objectionPost.isPosted = false;
-            objectionPost.hasError = true;
-            objectionPost.apiError = response.errors;
-            objectionPost.updatedByGuid = payloadMetadata.userGuid;
-        }
-        else
-        {
-            objectionPost.externalPostGuid = null;
-            objectionPost.status = 'removed';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = false;
-            objectionPost.isCreated = false;
-            objectionPost.isDeleted = true;
-            objectionPost.deletedByGuid = payloadMetadata.userGuid;
-        }
-
-        await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
-        return;
     }
 
     static async handleUpdate(payloadMetadata, response)
@@ -543,6 +476,7 @@ class Super extends Loadboard
                     .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                     .select('salesforce.accounts.name as vendorName',
                         'salesforce.accounts.guid as vendorGuid',
+                        'salesforce.accounts.dot_number as dotNumber',
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
@@ -552,11 +486,12 @@ class Super extends Loadboard
                     statusId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: this.loadboardName,
+                        loadboard: this.loadboardName,
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
                         vendorAgentName: vendor.agentName,
+                        dotNumber: vendor.dotNumber,
                         code: 'pending'
                     }
                 });
@@ -632,6 +567,7 @@ class Super extends Loadboard
                 .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                 .select('salesforce.accounts.name as vendorName',
                     'salesforce.accounts.guid as vendorGuid',
+                    'salesforce.accounts.dot_number as dotNumber',
                     'salesforce.contacts.guid as agentGuid',
                     'salesforce.contacts.name as agentName');
 
@@ -644,10 +580,11 @@ class Super extends Loadboard
                 statusId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
-                    undispatchedFrom: this.loadboardName,
+                    loadboard: this.loadboardName,
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,
+                    dotNumber: vendor.dotNumber,
                     vendorName: vendor.vendorName,
                     vendorAgentName: vendor.agentName
                 }
@@ -672,9 +609,16 @@ class Super extends Loadboard
             {
                 // getting the dispatch record because it has the job guid, which we need in order to operate
                 // on the job
-                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query(trx).leftJoinRelated('job').leftJoinRelated('vendor').leftJoinRelated('vendorAgent')
+                const { orderGuid, vendorName, vendorDot, vendorAgentName, ...dispatch } = await OrderJobDispatch.query(trx)
+                    .leftJoinRelated('job')
+                    .leftJoinRelated('vendor')
+                    .leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName', 'vendorAgent.name as vendorAgentName');
+                    .select('rcgTms.orderJobDispatches.*',
+                        'job.orderGuid',
+                        'vendor.name as vendorName',
+                        'vendor.dotNumber as vendorDot',
+                        'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
 
@@ -708,10 +652,11 @@ class Super extends Loadboard
                     statusId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        undispatchedFrom: this.loadboardName,
+                        loadboard: this.loadboardName,
                         code: 'declined',
                         vendorGuid: objectionDispatch.vendorGuid,
                         vendorAgentGuid: objectionDispatch.vendorAgentGuid,
+                        dotNumber: vendorDot,
                         vendorName: vendorName,
                         vendorAgentName: vendorAgentName
                     }
@@ -791,6 +736,15 @@ class Super extends Loadboard
             superJob.stops = OrderStop.firstAndLast(superJob.stops);
 
             await Loadboards.setSDOrderToDelivered(superJob.externalGuid, superJob.stops[0].dateCompleted, superJob.stops[superJob.stops.length - 1].dateCompleted);
+        }
+        if ((newStatus != OrderJob.STATUS.CANCELED ||
+            newStatus != OrderJob.STATUS.DELETED) &&
+            (oldStatus == OrderJob.STATUS.CANCELED ||
+                oldStatus == OrderJob.STATUS.DELETED))
+        {
+            const superJob = await superJobQuery;
+            await Loadboards.rollbackManualSDStatusChange(superJob.externalGuid);
+            await LoadboardPost.query().patch({ status: 'fresh', isCreated: true, isDeleted: false, isSynced: true }).where({ externalGuid: superJob.externalGuid });
         }
     }
 }

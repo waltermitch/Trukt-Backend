@@ -227,6 +227,68 @@ class Loadboard
         return LoadboardPost.fromJson(post);
     }
 
+    static async handlePost(payloadMetadata, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.setToPosted(response.guid);
+            }
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
+            await trx.commit();
+
+            return objectionPost.jobGuid;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+    }
+
+    static async handleUnpost(payloadMetadata, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.isSynced = false;
+                objectionPost.isPosted = false;
+                objectionPost.hasError = true;
+                objectionPost.apiError = response.errors;
+            }
+            else
+            {
+                objectionPost.setToUnposted();
+            }
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+
+            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
+            await trx.commit();
+
+            return objectionPost.jobGuid;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+        }
+    }
+
     static async handleRemove(payloadMetadata, response)
     {
         const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
@@ -247,6 +309,11 @@ class Loadboard
             objectionPost.isCreated = false;
             objectionPost.isDeleted = true;
             objectionPost.deletedByGuid = payloadMetadata.userGuid;
+            if (objectionPost.loadboard != 'SUPERDISPATCH' &&
+                objectionPost.loadboard != 'CARDELIVERYNETWORK')
+            {
+                objectionPost.externalGuid = null;
+            }
         }
 
         await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
@@ -324,7 +391,7 @@ class Loadboard
             try
             {
                 const dispatchRec = await OrderJobDispatch.query(trx)
-                    .withGraphJoined('[job.order, vendor, vendorAgent]')
+                    .withGraphJoined('[job.order, vendor, vendorAgent, loadboardPost]')
                     .findOne({ 'orderJobDispatches.externalGuid': externalGuid });
 
                 const orderRec = dispatchRec.job.order;
@@ -351,8 +418,9 @@ class Loadboard
                         .distinctOn('rcgTms.orderStops.guid')
                 );
 
-                // TODO: invalidate all the other OrderJobDispatches
-                // TODO: unpost all the external LOADBOARD postings
+                dbQueries.push(OrderJobDispatch.query(trx).patch({ isValid: false })
+                    .where({ jobGuid: dispatchRec.jobGuid }).andWhereNot({ guid: dispatchRec.guid }));
+
                 const [, , orderStops] = await Promise.all(dbQueries);
                 await trx.commit();
 
@@ -360,22 +428,22 @@ class Loadboard
                 {
                     if (stop.isDelivery && stop.dateScheduledStart != undefined)
                     {
-                        emitter.emit('order_stop_delivery_scheduled', { order: orderRec, job: jobRec, stop });
+                        emitter.emit('order_stop_delivery_scheduled', { order: orderRec, job: jobRec, stop, datetime: stop.dateScheduledStart });
                     }
                 }
 
-                StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid: orderRec.guid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 13,
                     jobGuid: dispatchRec.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: this.loadboardName,
-                        code: 'dispatched',
+                        loadboard: dispatchRec.loadboardPost.loadboard,
                         vendorGuid: dispatchRec.vendorGuid,
                         vendorAgentGuid: dispatchRec.vendorAgentGuid,
                         vendorName: dispatchRec.vendor.name,
-                        vendorAgentName: dispatchRec.vendorAgent.name
+                        vendorAgentName: dispatchRec.vendorAgent.name,
+                        dotNumber: dispatchRec.vendor.dotNumber
                     }
                 });
 

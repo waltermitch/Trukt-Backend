@@ -95,6 +95,63 @@ class LoadboardPost extends BaseModel
     {
         return this.isPosted && this.isSynced && !this.hasError;
     }
+
+    static getEmptyPost(jobGuid, loadboard)
+    {
+        return {
+            jobGuid: jobGuid,
+            loadboard: loadboard,
+            externalGuid: null,
+            externalPostGuid: null,
+            instructions: null,
+            status: null,
+            isCreated: false,
+            isPosted: false,
+            isSynced: true,
+            hasError: false,
+            apiError: null,
+            values: null,
+            dateCreated: null,
+            dateUpdated: null,
+            dateDeleted: null,
+            isDeleted: false,
+            createdByGuid: null,
+            updatedByGuid: null,
+            deletedByGuid: null,
+            guid: null
+        };
+    }
+
+    setToPosted(externalGuid)
+    {
+        this.externalGuid = externalGuid;
+        this.externalPostGuid = externalGuid;
+        this.status = 'posted';
+        this.isCreated = true;
+        this.isSynced = true;
+        this.isPosted = true;
+        this.isDeleted = false;
+        this.dateDeleted = null;
+        this.deletedByGuid = null;
+        this.apiError = null;
+    }
+
+    setToUnposted()
+    {
+        this.externalPostGuid = null;
+        this.status = 'unposted';
+        this.isSynced = true;
+        this.isPosted = false;
+        this.isDeleted = false;
+        this.dateDeleted = null;
+        this.deletedByGuid = null;
+        if (this.loadboard != 'SUPERDISPATCH' &&
+            this.loadboard != 'SHIPCARS' &&
+            this.loadboard != 'CARDELIVERYNETWORK')
+        {
+            this.externalGuid = null;
+        }
+    }
 }
 
 Object.assign(LoadboardPost.prototype, FindOrCreateMixin);

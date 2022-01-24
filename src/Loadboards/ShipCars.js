@@ -53,7 +53,7 @@ class ShipCars extends Loadboard
             delivery_notes: this.data.delivery?.notes ? this.data.delivery?.notes : ' ',
 
             first_available_date: this.data.pickup.dateRequestedStart.toISODate(),
-            shipper_load_id: process.env.NODE_ENV != 'prod' || process.env.NODE_ENV != 'production' ? this.saltOrderNumber(this.data.number) : this.data.number,
+            shipper_load_id: process.env.NODE_ENV == 'prod' || process.env.NODE_ENV == 'production' ? this.data.number : this.saltOrderNumber(this.data.number),
             instructions: this.data.loadboardInstructions,
             specific_load_requirements: this.postObject.instructions,
             enclosed_trailer: this.getEnclosedTrailer(this.data.equipmentType?.name),
@@ -270,13 +270,7 @@ class ShipCars extends Loadboard
                 }
                 allPromises.push(...commodityPromises);
 
-                objectionPost.externalGuid = response.id;
-                objectionPost.externalPostGuid = response.id;
-                objectionPost.status = 'posted';
-                objectionPost.isCreated = true;
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = true;
-                objectionPost.isDeleted = false;
+                objectionPost.setToPosted(response.guid);
             }
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
@@ -284,40 +278,6 @@ class ShipCars extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            return objectionPost.jobGuid;
-        }
-        catch (err)
-        {
-            await trx.rollback();
-            throw new Error(err.message);
-        }
-    }
-
-    static async handleUnpost(payloadMetadata, response)
-    {
-        const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-
-        try
-        {
-            if (response.hasErrors)
-            {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
-                objectionPost.hasError = true;
-                objectionPost.apiError = response.errors;
-            }
-            else
-            {
-                objectionPost.isPosted = false;
-                objectionPost.externalPostGuid = null;
-                objectionPost.status = 'unposted';
-                objectionPost.isSynced = true;
-            }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
-
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-            await trx.commit();
             return objectionPost.jobGuid;
         }
         catch (err)
@@ -369,6 +329,7 @@ class ShipCars extends Loadboard
                     .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                     .select('salesforce.accounts.name as vendorName',
                         'salesforce.accounts.guid as vendorGuid',
+                        'salesforce.accounts.dot_number as dotNumber',
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
@@ -378,11 +339,12 @@ class ShipCars extends Loadboard
                     statusId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: this.loadboardName,
+                        loadboard: this.loadboardName,
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
                         vendorAgentName: vendor.agentName,
+                        dotNumber: vendor.dotNumber,
                         code: 'pending'
                     }
                 });
@@ -473,6 +435,7 @@ class ShipCars extends Loadboard
                 .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                 .select('salesforce.accounts.name as vendorName',
                     'salesforce.accounts.guid as vendorGuid',
+                    'salesforce.accounts.dot_number as dotNumber',
                     'salesforce.contacts.guid as agentGuid',
                     'salesforce.contacts.name as agentName');
 
@@ -485,12 +448,13 @@ class ShipCars extends Loadboard
                 statusId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
-                    undispatchedFrom: this.loadboardName,
+                    loadboard: this.loadboardName,
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,
                     vendorName: vendor.vendorName,
-                    vendorAgentName: vendor.agentName
+                    vendorAgentName: vendor.agentName,
+                    dotNumber: vendor.dotNumber
                 }
             });
             return objectionPost.jobGuid;
@@ -511,9 +475,16 @@ class ShipCars extends Loadboard
             try
             {
                 // 1. Set Dispatch record to canceled
-                const { orderGuid, vendorName, vendorAgentName, ...dispatch } = await OrderJobDispatch.query().leftJoinRelated('job').leftJoinRelated('vendor')
+                const { orderGuid, vendorName, vendorDot, vendorAgentName, ...dispatch } = await OrderJobDispatch.query()
+                    .leftJoinRelated('job')
+                    .leftJoinRelated('vendor')
+                    .leftJoinRelated('vendorAgent')
                     .findOne({ 'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid })
-                    .select('rcgTms.orderJobDispatches.*', 'job.orderGuid', 'vendor.name as vendorName');
+                    .select('rcgTms.orderJobDispatches.*',
+                        'job.orderGuid',
+                        'vendor.dotNumber as vendorDot',
+                        'vendor.name as vendorName',
+                        'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
 
@@ -580,11 +551,12 @@ class ShipCars extends Loadboard
                     statusId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        dispatchedTo: this.loadboardName,
+                        loadboard: this.loadboardName,
                         code: 'declined',
                         vendorGuid: objectionDispatch.vendorGuid,
                         vendorAgentGuid: objectionDispatch.vendorAgentGuid,
                         vendorName: vendorName,
+                        dotNumber: vendorDot,
                         vendorAgentName: vendorAgentName
                     }
                 });
@@ -618,32 +590,6 @@ class ShipCars extends Loadboard
             commodityPromises.push(Commodity.query().patch(com).findById(com.guid));
         }
         return commodityPromises;
-    }
-
-    static async handleRemove(payloadMetadata, response)
-    {
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
-        if (response.hasErrors)
-        {
-            objectionPost.isSynced = false;
-            objectionPost.isPosted = false;
-            objectionPost.hasError = true;
-            objectionPost.apiError = response.errors;
-            objectionPost.updatedByGuid = payloadMetadata.userGuid;
-        }
-        else
-        {
-            objectionPost.externalPostGuid = null;
-            objectionPost.status = 'removed';
-            objectionPost.isSynced = true;
-            objectionPost.isPosted = false;
-            objectionPost.isCreated = false;
-            objectionPost.isDeleted = true;
-            objectionPost.deletedByGuid = payloadMetadata.userGuid;
-        }
-
-        await LoadboardPost.query().patch(objectionPost).findById(objectionPost.guid);
-        return;
     }
 }
 

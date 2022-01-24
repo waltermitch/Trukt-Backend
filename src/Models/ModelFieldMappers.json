@@ -217,7 +217,12 @@
         "hide": {
             "database": {
                 "into": [
-                    "vectorName"
+                    "vectorName",
+                    "vectorAddress"
+                ],
+                "outa" : [
+                    "vectorName",
+                    "vectorAddress"
                 ]
             },
             "external": {
@@ -232,7 +237,12 @@
                     "primaryContactGuid",
                     "alternativeContactGuid",
                     "resolvedTimes",
-                    "vectorName"
+                    "vectorName",
+                    "vectorAddress"
+                ],
+                "outa":[
+                    "vectorName",
+                    "vectorAddress"
                 ]
             }
         }

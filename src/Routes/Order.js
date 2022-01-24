@@ -10,6 +10,7 @@ router
     .post(`${prefix}/getorders`, controller.getOrders)
     .post(`${prefix}`, controller.createOrder)
     .put(`${prefix}/tender/:action(accept|reject)`, controller.handleTenders)
+    .put(`${prefix}/:orderGuid(${uuidRegexStr})/tender/:action(accept|reject)`, controller.handleTender)
     .patch(`${prefix}`, controller.patchOrder)
     .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes`, controller.getOrderNotes)
     .get(`${prefix}/:orderGuid(${uuidRegexStr})/notes/all`, controller.getAllNotes)

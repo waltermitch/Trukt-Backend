@@ -1,10 +1,6 @@
 LoadTenderResponseObject:
   type: object
   properties:
-    orderGuid:
-      allOf:
-        - description: The load tender's order guid.
-        - $ref: './Common.yaml#/guid'
     jobGuid:
       allOf:
         - type: string
@@ -16,13 +12,14 @@ LoadTenderResponseObject:
       description: HTTP status code for the load tender action.
       format: integer
       example: 200
-    message:
-      type: string
+    errors:
+      type: array
       description: HTTP status message for the load tender action.
-      example: OK
+      example: []
 
 LoadTenderResponses:
-  type: array
+  type: object
   description: List of response objects for each load tender.
-  items:
-    $ref: '#/LoadTenderResponseObject'
+  properties:
+    orderGuid:
+      $ref: '#/LoadTenderResponseObject'

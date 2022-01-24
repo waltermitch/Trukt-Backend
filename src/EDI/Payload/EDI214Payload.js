@@ -116,6 +116,11 @@ class EDI214Payload
         {
             datetimeObj = DateTime.fromISO(datetime);
         }
+        else if (datetime == undefined)
+        {
+            datetimeObj = DateTime.now();
+        }
+
         this.datetime = datetimeObj.toUTC().toISO();
     }
 

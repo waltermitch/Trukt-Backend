@@ -78,29 +78,60 @@ class OrderController
 
     }
 
+    // TODO: FOR SINGLE ACCEPT NOT USED YET
+    static async handleTender(req, res, next)
+    {
+        const orderGuid = req.params.orderGuid;
+        try
+        {
+            let result;
+            if (req.params.action == 'accept')
+            {
+                result = await OrderService.acceptLoadTenders([orderGuid], req.session.userGuid);
+            }
+            else if (req.params.action == 'reject')
+            {
+                result = await OrderService.rejectLoadTenders([orderGuid], req.body.reason, req.session.userGuid);
+            }
+            if (result[`${orderGuid}`].status === 404 || result[`${orderGuid}`].status === 400)
+            {
+                res.status(result[`${orderGuid}`].status);
+                res.json(result);
+            }
+            else
+            {
+                res.status(200);
+                res.json(result);
+            }
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    // FIXME: CURRENTLY USED for both BULK and Single
     static async handleTenders(req, res, next)
     {
         const orderGuids = req.body.orderGuids;
-
-        let responses = [];
-        if (req.params.action == 'accept')
+        try
         {
-            responses = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
-
-            for (const response of responses)
+            let result;
+            if (req.params.action == 'accept')
             {
-                if (response.status === 200)
-                    emitter.emit('order_created', response.orderGuid);
+                result = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
             }
-
+            else if (req.params.action == 'reject')
+            {
+                result = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+            }
+            res.status(200);
+            res.json(result);
         }
-        else if (req.params.action == 'reject')
+        catch (error)
         {
-            responses = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+            next(error);
         }
-
-        res.status(200);
-        res.json(responses);
     }
 
     static async patchOrder(req, res, next)

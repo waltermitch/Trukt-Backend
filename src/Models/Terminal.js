@@ -2,9 +2,11 @@ const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const BaseModel = require('./BaseModel');
 const { eqProps } = require('ramda');
+const { raw } = require('objection');
 
 const geoCoordFields = ['latitude', 'longitude'];
 const zipCodeNoDashRegex = /^[^-]*[^ -]\w+/;
+const EDI_DEFAULT_LOCATION_TYPE = 'business';
 
 class Terminal extends BaseModel
 {
@@ -70,7 +72,13 @@ class Terminal extends BaseModel
         {
             if (field in json)
             {
-                json[field] = parseFloat(json[field]);
+                // geoCoordFields in trukt db are stored up to 7 decimal places
+                // if a geocoord is provided that is not 7 decimal places
+                // findorcreate breaks because since this is an integer
+                // it looks for an exact match which it cannot find and returns
+                // null. This is to make sure we can find existing terminals
+                // no matter how precise the provided geocoords are
+                json[field] = parseFloat(parseFloat(json[field]).toFixed(7));
             }
         }
         json = this.mapIndex(json);
@@ -103,23 +111,32 @@ class Terminal extends BaseModel
 
     static hasTerminalsSameBaseInformation(terminal1, terminal2)
     {
-        const hasSameBaseInfo = [
-            eqProps('street1', terminal1, terminal2),
-            eqProps('city', terminal1, terminal2),
-            eqProps('state', terminal1, terminal2),
-            eqProps('zipCode', terminal1, terminal2),
-            eqProps('country', terminal1, terminal2)
-        ].includes(false);
+        const baseInfoKeys = [
+            'street1',
+            'city',
+            'state',
+            'zipCode',
+            'country'
+        ];
+        return baseInfoKeys.every(key =>
+        {
+            const terminal1Value = terminal1[key]?.toLowerCase() || '';
+            const terminal2Value = terminal2[key]?.toLowerCase() || '';
 
-        return !hasSameBaseInfo;
+            return terminal1Value == terminal2Value;
+        });
     }
 
     static hasTerminalsSameExtraInformation(terminal1, terminal2)
     {
-        const hasExtraBaseInfo = [eqProps('name', terminal1, terminal2), eqProps('street2', terminal1, terminal2), eqProps('locationType', terminal1, terminal2)]
-            .includes(false);
+        const exytraInfoKeys = ['name', 'street2', 'locationType'];
+        return exytraInfoKeys.every(key =>
+        {
+            const terminal1Value = terminal1[key]?.toLowerCase() || '';
+            const terminal2Value = terminal2[key]?.toLowerCase() || '';
 
-        return !hasExtraBaseInfo;
+            return terminal1Value == terminal2Value;
+        });
     }
 
     /**
@@ -137,6 +154,35 @@ class Terminal extends BaseModel
         const countryStr = country && `, ${country}` || '';
 
         return `${street1}${cityStr}${stateStr}${zipCodeStr}${countryStr}`;
+    }
+
+    /**
+     * @description This is for EDI orders that do not provide the locationType
+     */
+    setDefaultValues(isTender = false)
+    {
+        if (isTender && !this?.locationType)
+            this.locationType = EDI_DEFAULT_LOCATION_TYPE;
+    }
+
+    /**
+     * @description Query to search by address in vector_address
+     * @param {*} address string with the address to search
+     * @returns raw query
+     */
+    static searchByVectorAddress(address)
+    {
+        // Remove the following characters from the address: ; * & $ @
+        const addressWithAllowCharacters = address.replace(/[;*&$@]/g, '');
+
+        // split the query by spaces add wild card to the end of each word, and join them with &
+        const addressVector = addressWithAllowCharacters
+            .split(' ')
+            .filter(addressWord => addressWord.length)
+            .map(addressWord => addressWord + ':*')
+            .join(' & ');
+
+        return raw('vector_address @@ to_tsquery(\'english\', ? )', [addressVector]);
     }
 }
 
