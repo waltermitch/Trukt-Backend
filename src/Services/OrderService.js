@@ -1278,11 +1278,13 @@ class OrderService
         {
             return coordinatesList.reduce((query, coordinates, index) =>
             {
-                const getSTWithinFunction = OrderService.getSTWithin(
-                    coordinates.latitude,
-                    coordinates.longitude,
-                    coordinates.radius
-                );
+                const getSTWithinFunction = coordinates.address ?
+                    Terminal.searchByVectorAddress(coordinates.address) :
+                    OrderService.getSTWithin(
+                        coordinates.latitude,
+                        coordinates.longitude,
+                        coordinates.radius || 1
+                    );
 
                 return index === 0
                     ? this.where(getSTWithinFunction)

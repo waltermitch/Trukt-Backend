@@ -2,6 +2,7 @@ const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const BaseModel = require('./BaseModel');
 const { eqProps } = require('ramda');
+const { raw } = require('objection');
 
 const geoCoordFields = ['latitude', 'longitude'];
 const zipCodeNoDashRegex = /^[^-]*[^ -]\w+/;
@@ -147,6 +148,26 @@ class Terminal extends BaseModel
     {
         if (isTender && !this?.locationType)
             this.locationType = EDI_DEFAULT_LOCATION_TYPE;
+    }
+
+    /**
+     * @description Query to search by address in vector_address
+     * @param {*} address string with the address to search
+     * @returns raw query
+     */
+    static searchByVectorAddress(address)
+    {
+        // Remove the following characters from the address: ; * & $ @
+        const addressWithAllowCharacters = address.replace(/[;*&$@]/g, '');
+
+        // split the query by spaces add wild card to the end of each word, and join them with &
+        const addressVector = addressWithAllowCharacters
+            .split(' ')
+            .filter(addressWord => addressWord.length)
+            .map(addressWord => addressWord + ':*')
+            .join(' & ');
+
+        return raw('vector_address @@ to_tsquery(\'english\', ? )', [addressVector]);
     }
 }
 
