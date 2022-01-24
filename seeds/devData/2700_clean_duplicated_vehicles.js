@@ -45,8 +45,9 @@ exports.seed = async function (trx)
 
     const commoditiesToUpdate = vehicleFoundPerGroup.map(({ id }, positionInvehicleFoundPerGroup) =>
     {
-        return Commodity.query(trx).patch({ vehicleId: id })
-            .whereIn('vehicleId', vehiclesIdsPerGroup[positionInvehicleFoundPerGroup]);
+        const vehiclesIds = vehiclesIdsPerGroup[positionInvehicleFoundPerGroup].map(vehicle => `${vehicle.id}`);
+        return Commodity.query(trx).patch({ 'vehicle_id': id })
+            .whereIn('vehicle_id', vehiclesIds);
     });
 
     await Promise.all(commoditiesToUpdate);
