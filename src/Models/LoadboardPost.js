@@ -107,7 +107,7 @@ class LoadboardPost extends BaseModel
             status: null,
             isCreated: false,
             isPosted: false,
-            isSynced: false,
+            isSynced: true,
             hasError: false,
             apiError: null,
             values: null,
