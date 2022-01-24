@@ -1279,7 +1279,7 @@ class OrderService
             return coordinatesList.reduce((query, coordinates, index) =>
             {
                 const getSTWithinFunction = coordinates.address ?
-                    Terminal.searchByVectorAddres(coordinates.address) :
+                    Terminal.searchByVectorAddress(coordinates.address) :
                     OrderService.getSTWithin(
                         coordinates.latitude,
                         coordinates.longitude,

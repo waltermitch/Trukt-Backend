@@ -155,17 +155,17 @@ class Terminal extends BaseModel
      * @param {*} address string with the address to search
      * @returns raw query
      */
-    static searchByVectorAddres(address)
+    static searchByVectorAddress(address)
     {
         // Remove the following characters from the address: ; * & $ @
         const addressWithAllowCharacters = address.replace(/[;*&$@]/g, '');
 
         // split the query by spaces add wild card to the end of each word, and join them with &
-        const addressVector = (addressWithAllowCharacters.split(' ').filter(addressWord =>
-        {
-            if (addressWord.length)
-                return addressWord + ':*';
-        })).join(' & ');
+        const addressVector = addressWithAllowCharacters
+            .split(' ')
+            .filter(addressWord => addressWord.length)
+            .map(addressWord => addressWord + ':*')
+            .join(' & ');
 
         return raw('vector_address @@ to_tsquery(\'english\', ? )', [addressVector]);
     }
