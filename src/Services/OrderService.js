@@ -2215,11 +2215,13 @@ class OrderService
                     // Create new resolved terminal
                     else
                     {
+                        // eslint-disable-next-line no-unused-vars
+                        const { guid, ...terminalInfoToCreate } = terminalData;
                         const terminalToCreate = Terminal.fromJson({
+                            ...terminalInfoToCreate,
                             latitude,
                             longitude,
-                            isResolved: true,
-                            ...terminalData
+                            isResolved: true
                         });
                         terminalToCreate.setCreatedBy(currentUser);
 
