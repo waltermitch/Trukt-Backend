@@ -72,7 +72,13 @@ class Terminal extends BaseModel
         {
             if (field in json)
             {
-                json[field] = parseFloat(json[field]);
+                // geoCoordFields in trukt db are stored up to 7 decimal places
+                // if a geocoord is provided that is not 7 decimal places
+                // findorcreate breaks because since this is an integer
+                // it looks for an exact match which it cannot find and returns
+                // null. This is to make sure we can find existing terminals
+                // no matter how precise the provided geocoords are
+                json[field] = parseFloat(parseFloat(json[field]).toFixed(7));
             }
         }
         json = this.mapIndex(json);
