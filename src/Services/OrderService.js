@@ -1278,11 +1278,13 @@ class OrderService
         {
             return coordinatesList.reduce((query, coordinates, index) =>
             {
-                const getSTWithinFunction = OrderService.getSTWithin(
-                    coordinates.latitude,
-                    coordinates.longitude,
-                    coordinates.radius
-                );
+                const getSTWithinFunction = coordinates.address ?
+                    Terminal.searchByVectorAddress(coordinates.address) :
+                    OrderService.getSTWithin(
+                        coordinates.latitude,
+                        coordinates.longitude,
+                        coordinates.radius || 1
+                    );
 
                 return index === 0
                     ? this.where(getSTWithinFunction)
@@ -2147,7 +2149,9 @@ class OrderService
                 commodity.vehicle
             ).findOrCreate(trx);
             commodity.graphLink('vehicle', vehicle);
-            commodity.vehicle.weightClass = { '#dbRef': commodity.vehicle.weightClassId, 'id': commodity.vehicle.weightClassId };
+
+            if (commodity.vehicle.weightClassId)
+                commodity.vehicle.weightClass = { '#dbRef': commodity.vehicle.weightClassId, 'id': commodity.vehicle.weightClassId };
         }
 
         return commodity;
@@ -2215,11 +2219,13 @@ class OrderService
                     // Create new resolved terminal
                     else
                     {
+                        // eslint-disable-next-line no-unused-vars
+                        const { guid, ...terminalInfoToCreate } = terminalData;
                         const terminalToCreate = Terminal.fromJson({
+                            ...terminalInfoToCreate,
                             latitude,
                             longitude,
-                            isResolved: true,
-                            ...terminalData
+                            isResolved: true
                         });
                         terminalToCreate.setCreatedBy(currentUser);
 

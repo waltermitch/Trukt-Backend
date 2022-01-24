@@ -18,39 +18,63 @@ requestBody:
             type: object
             properties:
               pickup:
-                description: Coordinates on which to search for order pickups
+                description: List of pickup terminals to search for
                 type: array
                 items:
-                  type: object
-                  properties:
-                    longitude:
-                      $ref: ../../components/schemas/Common.yaml#/longitude
-                    latitude:
-                      $ref: ../../components/schemas/Common.yaml#/latitude
-                    radius:
-                      description: Search maximun radius for coordinates
-                      type: integer
-                      default: 1
-                  required:
-                    - longitude
-                    - latitude
+                  oneOf:
+                  - description:  Coordinates on which to search for order pickups
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      longitude:
+                        $ref: ../../components/schemas/Common.yaml#/longitude
+                      latitude:
+                        $ref: ../../components/schemas/Common.yaml#/latitude
+                      radius:
+                        description: Search maximun radius for coordinates
+                        type: integer
+                        default: 1
+                    required:
+                      - longitude
+                      - latitude
+                  - type: object
+                    additionalProperties: false
+                    properties:
+                      address:
+                        description: Address string to search for order pickups
+                        type: string
+                        minLength: 1
+                    required:
+                      - address
               delivery:
-                description: Coordinates on which to search for delivery pickups
+                description: List of delivery terminals to search for  
                 type: array
                 items:
-                  type: object
-                  properties:
-                    longitude:
-                      $ref: ../../components/schemas/Common.yaml#/longitude
-                    latitude:
-                      $ref: ../../components/schemas/Common.yaml#/latitude
-                    radius:
-                      description: Search maximun radius for coordinates
-                      type: integer
-                      default: 1
-                  required:
-                    - longitude
-                    - latitude
+                  oneOf:
+                  - description:  Coordinates on which to search for order deliveries
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      longitude:
+                        $ref: ../../components/schemas/Common.yaml#/longitude
+                      latitude:
+                        $ref: ../../components/schemas/Common.yaml#/latitude
+                      radius:
+                        description: Search maximun radius for coordinates
+                        type: integer
+                        default: 1
+                    required:
+                      - longitude
+                      - latitude
+                  - type: object
+                    additionalProperties: false
+                    properties:
+                      address:
+                        description: Address string to search for order deliveries
+                        type: string
+                        minLength: 1
+                    required:
+                      - address
               status:
                 description: Filters for order status
                 type: array
