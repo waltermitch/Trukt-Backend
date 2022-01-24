@@ -428,7 +428,7 @@ class Loadboard
                 {
                     if (stop.isDelivery && stop.dateScheduledStart != undefined)
                     {
-                        emitter.emit('order_stop_delivery_scheduled', { order: orderRec, job: jobRec, stop });
+                        emitter.emit('order_stop_delivery_scheduled', { order: orderRec, job: jobRec, stop, datetime: stop.dateScheduledStart });
                     }
                 }
 

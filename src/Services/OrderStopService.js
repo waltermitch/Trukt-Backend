@@ -159,7 +159,7 @@ class OrderStopService
 
             const newStopRec = await OrderStop.query().findById(stopGuid);
             const eventsToEmit = OrderStopService.getStopEvents([stopRec], [newStopRec]);
-            
+
             // we emit event that stop has been updated
             emitter.emit('orderjob_stop_update', { orderGuid, jobGuid, currentUser, jobStop: jobStop.rows[0], stopGuid });
             for (const { event: eventName, ...params } of eventsToEmit)
@@ -417,6 +417,8 @@ class OrderStopService
         for (const stop of newStopData)
         {
             const oldStop = oldStopData.find(it => it.guid === stop.guid) ?? {};
+
+            // create a complete picture of the stop data
             const newStop = Object.assign(R.clone(oldStop), stop);
 
             const stopType = newStop.stopType ?? 'service';
@@ -427,14 +429,16 @@ class OrderStopService
                 {
                     events.push({
                         event: `order_stop_${stopType}_completed`,
-                        stop: newStop
+                        stop: newStop,
+                        datetime: newStop.dateCompleted
                     });
                 }
                 else
                 {
                     events.push({
                         event: `order_stop_${stopType}_uncompleted`,
-                        stop: newStop
+                        stop: newStop,
+                        datetime: DateTime.now()
                     });
                 }
             }
@@ -445,14 +449,16 @@ class OrderStopService
                 {
                     events.push({
                         event: `order_stop_${stopType}_started`,
-                        stop: newStop
+                        stop: newStop,
+                        datetime: newStop.dateStarted
                     });
                 }
                 else
                 {
                     events.push({
                         event: `order_stop_${stopType}_unstarted`,
-                        stop: newStop
+                        stop: newStop,
+                        datetime: DateTime.now()
                     });
                 }
             }
@@ -473,7 +479,8 @@ class OrderStopService
                     // date was removed.
                     events.push({
                         event: `order_stop_${stopType}_unscheduled`,
-                        stop: newStop
+                        stop: newStop,
+                        datetime: DateTime.now()
                     });
                 }
                 else if (Number.isNaN(oldDateStart))
@@ -481,7 +488,8 @@ class OrderStopService
                     // date was just added / created
                     events.push({
                         event: `order_stop_${stopType}_scheduled`,
-                        stop: newStop
+                        stop: newStop,
+                        datetime: newStop.dateScheduledStart
                     });
                     checkLateness = true;
                 }
@@ -490,7 +498,8 @@ class OrderStopService
                     // date was pushed back, so the delivery is delayed
                     events.push({
                         event: `order_stop_${stopType}_delayed`,
-                        stop: newStop
+                        stop: newStop,
+                        datetime: newStop.dateScheduledStart
                     });
                     checkLateness = true;
                 }
@@ -499,7 +508,8 @@ class OrderStopService
                     // date was pushed up / forward, so the delivery is early
                     events.push({
                         event: `order_stop_${stopType}_early`,
-                        stop: newStop
+                        stop: newStop,
+                        datetime: newStop.dateScheduledStart
                     });
                     checkLateness = true;
                 }
@@ -514,14 +524,16 @@ class OrderStopService
                             {
                                 events.push({
                                     event: `order_stop_${stopType}_scheduled_late`,
-                                    stop: newStop
+                                    stop: newStop,
+                                    datetime: newStop.dateScheduledStart
                                 });
                             }
                             else if (newDateStart < dateRequestedStart)
                             {
                                 events.push({
                                     event: `order_stop_${stopType}_scheduled_early`,
-                                    stop: newStop
+                                    stop: newStop,
+                                    datetime: newStop.dateScheduledStart
                                 });
                             }
                             break;
@@ -530,14 +542,16 @@ class OrderStopService
                             {
                                 events.push({
                                     event: `order_stop_${stopType}_scheduled_late`,
-                                    stop: newStop
+                                    stop: newStop,
+                                    datetime: newStop.dateScheduledStart
                                 });
                             }
                             else if (newDateStart < dateRequestedStart)
                             {
                                 events.push({
                                     event: `order_stop_${stopType}_scheduled_early`,
-                                    stop: newStop
+                                    stop: newStop,
+                                    datetime: newStop.dateScheduledStart
                                 });
                             }
                             break;
@@ -546,7 +560,8 @@ class OrderStopService
                             {
                                 events.push({
                                     event: `order_stop_${stopType}_scheduled_late`,
-                                    stop: newStop
+                                    stop: newStop,
+                                    datetime: newStop.dateScheduledStart
                                 });
                             }
                             break;
@@ -555,7 +570,8 @@ class OrderStopService
                             {
                                 events.push({
                                     event: `order_stop_${stopType}_scheduled_early`,
-                                    stop: newStop
+                                    stop: newStop,
+                                    datetime: newStop.dateScheduledStart
                                 });
                             }
                             break;

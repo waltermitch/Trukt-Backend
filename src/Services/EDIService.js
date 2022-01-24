@@ -13,7 +13,7 @@ class EDIService
      * @param {Object{order: Order, job: OrderJob, stop: OrderStop}} params
      * @param {String} code
      */
-    static async sendCode({ order, job, stop }, code)
+    static async sendCode({ order, job, stop, datetime }, code)
     {
         // First check if this is an EDI order
         return EDIData.query().findOne({ orderGuid: order.guid, documentNumber: '204' })
@@ -44,7 +44,7 @@ class EDIService
                         payload.addStatus(code);
                         payload.addReason('NS');
                         payload.addEDIData(edi204doc);
-                        payload.addDatetime(stopRec.dateScheduledStart);
+                        payload.addDatetime(datetime);
                         payload.addCommodities(commodities);
 
                         const res = await EDIApi.send214(payload);
