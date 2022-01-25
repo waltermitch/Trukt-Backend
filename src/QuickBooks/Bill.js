@@ -1,5 +1,24 @@
 const LineItem = require('./LineItem');
 
+const env = process.env.NODE_ENV || process.env.ENV;
+
+let freightId;
+switch (env)
+{
+    case 'prod':
+    case 'production':
+        freightId = 217;
+        break;
+    case 'staging':
+        freightId = 98;
+        break;
+    case 'dev':
+    case 'development':
+    default:
+        freightId = 141;
+        break;
+}
+
 class Bill
 {
     constructor(data)
@@ -37,8 +56,14 @@ class BillLineItem extends LineItem
 {
     constructor(data)
     {
+        let itemId;
+        if (data.commodity?.commType?.category === 'freight')
+            itemId = freightId;
+        else
+            itemId = data.item.qbAccount.billingId;
+
         super(data);
-        this.AccountBasedExpenseLineDetail = { 'AccountRef': { 'value': data.item.qbAccount.billingId } };
+        this.AccountBasedExpenseLineDetail = { 'AccountRef': { 'value': itemId } };
         this.DetailType = 'AccountBasedExpenseLineDetail';
     }
 }
