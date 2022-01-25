@@ -14,9 +14,7 @@ exports.up = function (knex)
                         NEW.guid__c = gen_random_uuid();
                     END IF;
                 ELSEIF (TG_OP = 'UPDATE') THEN
-                    IF (OLD.guid__c IS NULL AND NEW.guid__c IS NOT NULL) THEN
-                        NEW.guid__c = NEW.guid__c;
-                    ELSEIF ((NEW.guid__c <> OLD.guid__c) OR (NEW.guid__c IS NULL AND OLD.guid__c IS NOT NULL)) THEN
+                    IF (OLD.guid__c IS NOT NULL) THEN
                         NEW.guid__c = OLD.guid__c;
                     ELSE
                         NEW.guid__c = gen_random_uuid();
