@@ -649,8 +649,42 @@ class OrderJob extends BaseModel
                 .select(raw('(CASE WHEN all_invoices_paid = true and invoices_and_lines_paid.all_lines_paid = true THEN true ELSE false END) AS is_invoiced'))
                 .with('invoicesAndLinesPaid', invoicesAndLinesPaid)
                 .leftJoin('invoicesAndLinesPaid', 'invoicesAndLinesPaid.orderGuid', 'job.orderGuid');
-        }
+        },
+        filterByDispatcher: this.filterByDispatcher,
+        filterByCustomer: this.filterByCustomer,
+        filterBySalesperson: this.filterBySalesperson,
+        filterByCarrier: this.filterByCarrier
     };
+
+    static filterByCarrier(queryBuilder, carrierList = [])
+    {
+        return carrierList?.length
+            ? queryBuilder.whereIn('vendorGuid', carrierList) : queryBuilder;
+    }
+
+    static filterByDispatcher(queryBuilder, dispatcherList = [])
+    {
+        return dispatcherList?.length
+            ? queryBuilder.whereIn('job.dispatcherGuid', dispatcherList) : queryBuilder;
+    }
+
+    static filterByCustomer(queryBuilder, customerList = [])
+    {
+        const Order = require('../Models/Order');
+        return customerList?.length
+            ? queryBuilder.whereIn('job.orderGuid',
+                Order.query().select('guid').whereIn('clientGuid', customerList)
+            ) : queryBuilder;
+    }
+
+    static filterBySalesperson(queryBuilder, salespersonList = [])
+    {
+        const Order = require('../Models/Order');
+        return salespersonList?.length
+            ? queryBuilder.whereIn('job.orderGuid',
+                Order.query().select('guid').whereIn('salespersonGuid', salespersonList)
+            ) : queryBuilder;
+    }
 
     findInvocieLineByCommodityAndType(commodityGuid, lineTypeId)
     {
