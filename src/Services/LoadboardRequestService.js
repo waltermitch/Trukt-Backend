@@ -294,7 +294,7 @@ class LoadboardRequestService
         // search data base by the guid that super provides and update to canceled
         await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
 
-        emitter.emit('orderjob_dispatch_offer_declined', { jobGuid: jobGuid, dispatcherGuid: currentUser, orderGuid: orderGuid });
+        emitter.emit('load_request_declined', { jobGuid: jobGuid, dispatcherGuid: currentUser, orderGuid: orderGuid });
 
         return;
     }
