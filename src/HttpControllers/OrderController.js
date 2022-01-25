@@ -139,11 +139,7 @@ class OrderController
         try
         {
             const { body } = req;
-            const oldOrder = await Order.query().findById(body.guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload);
             const order = await OrderService.patchOrder(body, req.session.userGuid);
-
-            // register this event
-            emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: order });
 
             res.status(200);
             res.json(order);

@@ -1636,7 +1636,8 @@ class OrderService
                 invoiceBills,
                 orderInvoices,
                 referencesChecked,
-                oldStopData
+                oldStopData,
+                oldOrder
             ] = await Promise.all([
                 clientContact
                     ? SFRecordType.query(trx)
@@ -1656,7 +1657,8 @@ class OrderService
                     stops,
                     terminals
                 ),
-                Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid')
+                Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
+                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload)
             ]);
 
             // terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
@@ -1762,6 +1764,8 @@ class OrderService
                 params.job = orderGraph.jobs[0];
                 emitter.emit(eventName, params);
             }
+
+            emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: orderUpdated });
 
             return orderUpdated;
         }
