@@ -424,7 +424,6 @@ class OrderService
                 if (vehicles[i])
                 {
                     commodity.graphLink('vehicle', vehicles[i]);
-                    commodity.vehicle.weightClass = { '#dbRef': vehicles[i].weightClassId, 'id': vehicles[i].weightClassId };
                 }
 
                 cache[com['#id']] = commodity;
@@ -661,7 +660,7 @@ class OrderService
             order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
 
             const orderCreated = await Order.query(trx).skipUndefined()
-                .insertGraph(order, { allowRefs: true, relate: ['jobs.stopLinks.commodity.vehicle.weightClass'] });
+                .insertGraph(order, { allowRefs: true });
 
             await trx.commit();
             return orderCreated;
@@ -2149,9 +2148,6 @@ class OrderService
                 commodity.vehicle
             ).findOrCreate(trx);
             commodity.graphLink('vehicle', vehicle);
-
-            if (commodity.vehicle.weightClassId)
-                commodity.vehicle.weightClass = { '#dbRef': commodity.vehicle.weightClassId, 'id': commodity.vehicle.weightClassId };
         }
 
         return commodity;
