@@ -1308,13 +1308,7 @@ class OrderService
     static addFilterDispatcher(baseQuery, dispatcherList)
     {
         return dispatcherList?.length
-            ? baseQuery.whereIn(
-                'job.orderGuid',
-                Order.query()
-                    .select('guid')
-                    .whereIn('dispatcherGuid', dispatcherList)
-            )
-            : baseQuery;
+            ? baseQuery.whereIn('job.dispatcherGuid', dispatcherList) : baseQuery;
     }
 
     static addFilterSalesperson(baseQuery, salespersonList)
