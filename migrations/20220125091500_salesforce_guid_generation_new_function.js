@@ -4,7 +4,7 @@ exports.up = function (knex)
     return knex.raw(`
         CREATE OR REPLACE FUNCTION rcg_tms.uuid_valid(uuid varchar)
             returns boolean as $$
-            select uuid IS NOT NULL AND uuid ~ '^[0-9a-f]{8}-(:\\?[0-9a-f]{4}-){3}[0-9a-f]{12}$';
+            select uuid IS NOT NULL AND uuid ~ '^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$';
         $$ language sql;
 
         CREATE OR REPLACE FUNCTION rcg_tms.salesforce_guid_gen()
