@@ -4,7 +4,8 @@ exports.up = function (knex)
     return knex.raw(`
         CREATE OR REPLACE FUNCTION rcg_tms.uuid_valid(uuid varchar)
             returns boolean as $$
-            select uuid IS NOT NULL AND uuid ~ '^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$';
+            --If this regex is created usign Knex migration files, we need to scape "\\?", if is created directly in the DB there is no need to scape it
+            select uuid IS NOT NULL AND uuid ~ '^[0-9a-f]{8}-(\\?:[0-9a-f]{4}-){3}[0-9a-f]{12}$';
         $$ language sql;
 
         CREATE OR REPLACE FUNCTION rcg_tms.salesforce_guid_gen()
