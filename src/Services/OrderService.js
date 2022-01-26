@@ -287,7 +287,9 @@ class OrderService
                 term.setDefaultValues(order?.isTender);
                 return term.findOrCreate(trx).then(term => { term['#id'] = t['#id']; return term; });
             })));
-            orderInfoPromises.push(Promise.all(orderObj.commodities.map(com => isUseful(com) ? Vehicle.fromJson(com).findOrCreate(trx) : null)));
+
+            const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
+            orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
 
             const jobInfoPromises = [];
             for (const job of orderObj.jobs)
