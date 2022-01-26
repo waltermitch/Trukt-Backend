@@ -289,7 +289,7 @@ class OrderService
             })));
 
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
-            orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
+            orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
 
             const jobInfoPromises = [];
             for (const job of orderObj.jobs)
