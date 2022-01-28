@@ -115,10 +115,19 @@ class Super extends Loadboard
 
     dispatchJSON()
     {
+        if(!this.data.vendor.sdGuid &&
+            (!this.data.vendor.dotNumber ||
+                !this.data.vendor.phoneNumber ||
+                !this.data.vendor.email))
+        {
+            throw new Error('Carrier is not registered with SuperDispatch. A valid dot number, phone number and email are required to be invited to SuperDispatch.');
+        }
+
         const payload = {
             carrier_guid: this.data.vendor.sdGuid,
             carrier_usdot: this.data.vendor.dotNumber,
-
+            carrier_phone: this.data.vendor.phoneNumber,
+            carrier_email: this.data.vendor.email,
             price: this.data.dispatch.price,
             pickup: {
                 date_type: this.setDateType(this.data.pickup.dateScheduledType),
@@ -486,7 +495,7 @@ class Super extends Loadboard
                     statusId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
-                        loadboard: this.loadboardName,
+                        loadboard: 'SUPERDISPATCH',
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
@@ -580,7 +589,7 @@ class Super extends Loadboard
                 statusId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
-                    loadboard: this.loadboardName,
+                    loadboard: 'SUPERDISPATCH',
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,
@@ -652,7 +661,7 @@ class Super extends Loadboard
                     statusId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        loadboard: this.loadboardName,
+                        loadboard: 'SUPERDISPATCH',
                         code: 'declined',
                         vendorGuid: objectionDispatch.vendorGuid,
                         vendorAgentGuid: objectionDispatch.vendorAgentGuid,
