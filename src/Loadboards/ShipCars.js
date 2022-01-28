@@ -72,6 +72,10 @@ class ShipCars extends Loadboard
 
     dispatchJSON()
     {
+        if(!this.data.vendor.scId)
+        {
+            throw new Error('Carrier missing ShipCars Id');
+        }
         const payload = {
             'carrier': this.data.vendor.scId,
 
@@ -339,7 +343,7 @@ class ShipCars extends Loadboard
                     statusId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
-                        loadboard: this.loadboardName,
+                        loadboard: 'SHIPCARS',
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
@@ -448,7 +452,7 @@ class ShipCars extends Loadboard
                 statusId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
-                    loadboard: this.loadboardName,
+                    loadboard: 'SHIPCARS',
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,
@@ -551,7 +555,7 @@ class ShipCars extends Loadboard
                     statusId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        loadboard: this.loadboardName,
+                        loadboard: 'SHIPCARS',
                         code: 'declined',
                         vendorGuid: objectionDispatch.vendorGuid,
                         vendorAgentGuid: objectionDispatch.vendorAgentGuid,
