@@ -1,8 +1,13 @@
+const LocationLinks = require('../Models/CopartLocationLinks');
+const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
-const ArcgisClient = require('../ArcgisClient');
+const OrderStops = require('../Models/OrderStop');
 const Terminal = require('../Models/Terminal');
+const ArcGIS = require('../ArcGIS/API');
 
-const keywordFields = {
+const { SYSTEM_USER } = process.env;
+const keywordFields =
+{
     'country': ['country'],
     'state': ['state'],
     'city': ['city'],
@@ -10,23 +15,20 @@ const keywordFields = {
     'address': ['street1', 'street2']
 };
 
-const { SYSTEM_USER } = process.env;
-
 class TerminalService
 {
     static async getById(terminalId)
     {
         const terminal = await Terminal.query().where('rcgTms.terminals.guid', '=', `${terminalId}`).withGraphJoined('[contacts, primaryContact, alternativeContact]');
+
         return terminal;
     }
 
     static async search(query)
     {
+        // remove unwanted keys that null or empty strings
         for (const key in query)
-
-            // remove unwanted keys that undefined or empty strings
-            if (query[key] == undefined || query[key] == '')
-
+            if (query[key] == null || query[key] == '')
                 delete query[key];
 
         // query will be an object with key being the query word
@@ -123,56 +125,121 @@ class TerminalService
         return terminal.results || terminal;
     }
 
-    /**
-     * Returns terminals that hasn't being resolved and hasn't been
-     * checked for max 3 times (This is to avoid checking an unverifiable address forever)
-     */
-    static async getUnverifiedTerminals(limit = 100)
+    static async resolveTerminals(limit = 100)
     {
-        return Terminal.query().select()
+        // get all unresolved terminals, that have been checked for max 3 times
+        // we want to get the least recently checked ones first to avoid checking the same address over and over again
+        const terminals = await Terminal.query().select()
             .where('isResolved', false)
             .andWhere('resolvedTimes', '<', 3)
-            .orderBy('dateCreated', 'resolvedTimes')
-            .limit(limit) || [];
-    }
+            .orderBy('dateUpdated', 'resolvedTimes')
+            .limit(limit);
 
-    static async resolveTerminal(terminal)
-    {
-        const { guid } = terminal;
-        try
+        for (const terminal of terminals)
         {
-            const terminalAddress = Terminal.createStringAddress(terminal);
-            const arcgisAddress = await ArcgisClient.findGeocode(terminalAddress);
-            const terminalToUpdate = TerminalService.updateTerminalInformation(arcgisAddress, terminal, SYSTEM_USER);
-
-            return await TerminalService.updateTerminal(terminalToUpdate);
-        }
-        catch (error)
-        {
-            /**
-             * Some terminals may return an error when inserting due to unique coordinates constraint,
-             * in those cases we mark those termianls as resolved = false (Which is the default) and resolved_times = 3
-             * so we stop checking that terminal but still know that is not resolved.
-             */
+            const { guid } = terminal;
             try
             {
-                const message = `Error, terminal ${guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
-                console.error(message);
+                // convert object to string
+                const terminalAddress = Terminal.createStringAddress(terminal);
 
-                const unresolvedTerminalToUpdate = {
-                    guid,
-                    resolvedTimes: 3,
-                    updatedByGuid: SYSTEM_USER
-                };
-                return await TerminalService.updateTerminal(unresolvedTerminalToUpdate);
+                // lookup candidates
+                const [candidate] = await ArcGIS.findMatches(terminalAddress);
+
+                // check score of first candidate
+                if (candidate?.score > 95)
+                {
+                    const coords = ArcGIS.parseGeoCoords(candidate);
+
+                    // at this point we have a match, but we don't know if there is a terminal with this lat/long in the db already
+                    // if there is an existing terminal we need to update all the objects related to this terminal to use that one
+                    // if no such terminal exists we will simply update this terminal with the lat/long
+                    const [existingTerminal, trx] = await Promise.all(
+                        [
+                            Terminal.query()
+                                .select('guid')
+                                .where('latitude', coords.lat)
+                                .andWhere('longitude', coords.long)
+                                .first(),
+
+                            Terminal.startTransaction()
+                        ]);
+
+                    if (existingTerminal)
+                    {
+                        // update all orderStops and terminalContacts from current terminal to existing terminal
+                        await Promise.all(
+                            [
+                                OrderStops.query(trx)
+                                    .where('terminalGuid', guid)
+                                    .update({ terminalGuid: existingTerminal.guid, updatedByGuid: SYSTEM_USER }),
+
+                                TerminalContacts.query(trx)
+                                    .where('terminalGuid', guid)
+                                    .update({ terminalGuid: existingTerminal.guid, updatedByGuid: SYSTEM_USER })
+                                    .onConflict('phone').ignore(),
+
+                                LocationLinks.query(trx)
+                                    .where('terminalGuid', guid)
+                                    .update({ terminalGuid: existingTerminal.guid })
+                            ])
+                            .then(async ([orderStops, terminalContacts]) =>
+                            {
+                                // now that there is nothing attached to this terminal, we can delete it
+                                await Terminal.query(trx).deleteById(guid);
+                            });
+                    }
+                    else
+                    {
+                        const payload =
+                        {
+                            latitude: coords.lat,
+                            longitude: coords.long,
+                            updatedByGuid: SYSTEM_USER,
+                            isResolved: true
+                        };
+
+                        // add these fields if they exist
+                        const { attributes: atr } = candidate;
+
+                        if (atr.StAddr)
+                            payload.street1 = atr.StAddr;
+                        if (atr.City)
+                            payload.city = atr.City;
+                        if (atr.State)
+                            payload.state = atr.RegionAbbr || atr.Region;
+                        if (atr.Postal)
+                            payload.zipCode = atr.Postal;
+
+                        // update current terminal with normalized address since no match was found
+                        await Terminal.query(trx)
+                            .where('guid', guid)
+                            .patch(payload);
+                    }
+
+                    await trx.commit();
+                }
+                else
+                {
+                    // if the score is less than 95, we will mark the terminal as unresolved and increment the resolvedTimes
+                    await Terminal.query()
+                        .where('guid', guid)
+                        .update({ isResolved: false, resolvedTimes: terminal.resolvedTimes + 1, updatedByGuid: SYSTEM_USER });
+                }
             }
-            catch (err)
+            catch (error)
             {
-                const message = `Error, terminal ${guid} could not be updated: ${err?.nativeError?.detail || err?.message || err}`;
+                /**
+                 * Some terminals may return an error when inserting due to unique coordinates constraint,
+                 * in those cases we mark those termianls as resolved = false (Which is the default) and resolved_times = 3
+                 * so we stop checking that terminal but still know that is not resolved.
+                 */
+                const message = `Error, terminal ${guid} could not be updated: ${error?.nativeError?.detail || error?.message || error}`;
                 console.error(message);
                 telemetryClient.trackException({
                     exception: new Error(message),
-                    properties: {
+                    properties:
+                    {
                         guid: terminal.guid,
                         name: terminal.name,
                         street1: terminal.street1,
@@ -188,38 +255,6 @@ class TerminalService
                 throw { message };
             }
         }
-    }
-
-    static async updateTerminal(terminal)
-    {
-        return await Terminal.query()
-            .patch(terminal)
-            .where('guid', terminal.guid);
-    }
-
-    /**
-     * Latitude is arcgis.Y
-     * Longitude is arcgis.X
-     * https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find-address-candidates.htm#ESRI_SECTION1_CF39B0C8FC2547C3A52156F509C555FC
-     */
-    static updateTerminalInformation(arcgisAddress, { guid, resolvedTimes }, system_user)
-    {
-        const termninalToUpdate = {
-            guid,
-            updatedByGuid: system_user,
-            resolvedTimes
-        };
-
-        if (ArcgisClient.isAddressFound(arcgisAddress))
-        {
-            termninalToUpdate.latitude = arcgisAddress.location.y;
-            termninalToUpdate.longitude = arcgisAddress.location.x;
-            termninalToUpdate.isResolved = true;
-        }
-        else
-            termninalToUpdate.resolvedTimes++;
-
-        return termninalToUpdate;
     }
 }
 
