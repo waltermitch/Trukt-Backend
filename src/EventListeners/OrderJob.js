@@ -210,6 +210,19 @@ listener.on('load_request_accepted', ({ jobGuid, currentUser, orderGuid, body })
     });
 });
 
+// this is for load request declined, I don't think much happens to job
+listener.on('load_request_declined', ({ jobGuid, currentUser, orderGuid, body }) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([]);
+
+        // for (const p of proms)
+        //     if (p.status === 'rejected')
+        //         console.log(p.reason?.response?.data || p.reason);
+    });
+});
+
 listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }) =>
 {
     setImmediate(async () =>
