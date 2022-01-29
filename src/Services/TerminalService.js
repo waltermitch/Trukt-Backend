@@ -129,10 +129,11 @@ class TerminalService
     {
         // get all unresolved terminals, that have been checked for max 3 times
         // we want to get the least recently checked ones first to avoid checking the same address over and over again
+        // we can also choose where we nulls go in the result set.
         const terminals = await Terminal.query().select()
             .where('isResolved', false)
-            .andWhere('resolvedTimes', '<', 3)
-            .orderBy('dateUpdated', 'resolvedTimes')
+            .andWhere('resolvedTimes', '<', 12)
+            .orderByRaw('date_updated ASC NULLS FIRST')
             .limit(limit);
 
         for (const terminal of terminals)
