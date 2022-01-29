@@ -1,7 +1,6 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const BaseModel = require('./BaseModel');
-const { eqProps } = require('ramda');
 const { raw } = require('objection');
 
 const geoCoordFields = ['latitude', 'longitude'];
@@ -81,9 +80,10 @@ class Terminal extends BaseModel
                 json[field] = parseFloat(parseFloat(json[field]).toFixed(7));
             }
         }
-        json = this.mapIndex(json);
-        return json;
 
+        json = this.mapIndex(json);
+
+        return json;
     }
 
     $formatJson(json)
@@ -97,6 +97,7 @@ class Terminal extends BaseModel
                 json[field] = parseFloat(json[field]);
             }
         }
+
         return json;
     }
 
@@ -118,6 +119,7 @@ class Terminal extends BaseModel
             'zipCode',
             'country'
         ];
+
         return baseInfoKeys.every(key =>
         {
             const terminal1Value = terminal1[key]?.toLowerCase() || '';
@@ -130,6 +132,7 @@ class Terminal extends BaseModel
     static hasTerminalsSameExtraInformation(terminal1, terminal2)
     {
         const exytraInfoKeys = ['name', 'street2', 'locationType'];
+
         return exytraInfoKeys.every(key =>
         {
             const terminal1Value = terminal1[key]?.toLowerCase() || '';
