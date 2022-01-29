@@ -606,7 +606,6 @@ class OrderJob extends BaseModel
                     }))
                 .whereNotExists(orderJobDispatches.query().alias('ojd')
                     .where({
-                        'ojd.isPending': true,
                         'ojd.isValid': true,
                         'ojd.jobGuid': ref('job.guid')
                     }));

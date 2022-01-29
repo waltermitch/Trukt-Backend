@@ -1,6 +1,6 @@
 const BaseModel = require('./BaseModel');
 
-class Bill extends BaseModel
+class LocationLink extends BaseModel
 {
     static get tableName()
     {
@@ -13,4 +13,4 @@ class Bill extends BaseModel
     }
 }
 
-module.exports = Bill;
+module.exports = LocationLink;
