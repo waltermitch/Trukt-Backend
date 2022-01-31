@@ -24,11 +24,8 @@ class SystemManagementService
     // function sync users with azure
     static async syncUsers(keepAlive = true)
     {
-        // gets users from AD Employee Group
-        const usersFromAD = await Graph.getGroupMembers(process.env['azure.ad.groupId'], keepAlive);
-
-        // gets users from DB
-        const usersFromDB = await User.query();
+        // gets users from AD Employee Group and from DB
+        const [usersFromAD, usersFromDB] = await Promise.all([Graph.getGroupMembers(process.env['azure.ad.groupId'], keepAlive), User.query()]);
 
         // map db users to map
         const dbUsers = new Map(usersFromDB.map((user) => [user.guid, user]));
