@@ -111,7 +111,7 @@ class CarDeliveryNetwork extends Loadboard
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.id);
 
-            trx.commit();
+            await trx.commit();
 
             return objectionPost.jobGuid;
         }
