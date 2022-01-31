@@ -132,7 +132,7 @@ class TerminalService
         // we can also choose where we nulls go in the result set.
         const terminals = await Terminal.query().select()
             .where('isResolved', false)
-            .andWhere('resolvedTimes', '<', 12)
+            .andWhere('resolvedTimes', '<', 1)
             .orderByRaw('date_updated ASC NULLS FIRST')
             .limit(limit);
 
