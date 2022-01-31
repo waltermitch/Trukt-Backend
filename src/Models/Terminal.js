@@ -148,12 +148,19 @@ class Terminal extends BaseModel
     {
         const { street1, city, state, zipCode, country } = terminal;
 
-        const cityStr = city && `, ${city}` || '';
-        const stateStr = state && `, ${state}` || '';
-        const zipCodeStr = zipCode && `, ${zipCode.match(zipCodeNoDashRegex)}` || '';
-        const countryStr = country && `, ${country}` || '';
+        let address = '';
+        if (street1)
+            address += `${street1}, `;
+        if (city)
+            address += `${city}, `;
+        if (state)
+            address += `${state} `;
+        if (zipCode)
+            address += `${zipCode.match(zipCodeNoDashRegex)}`;
+        if (country)
+            address += ` ${country}`;
 
-        return `${street1}${cityStr}${stateStr}${zipCodeStr}${countryStr}`;
+        return address;
     }
 
     /**

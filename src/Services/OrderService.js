@@ -122,34 +122,14 @@ class OrderService
             }
         });
 
-        const queryFilterCustomer = OrderService.addFilterCustomer(
-            baseOrderQuery,
-            customer
-        );
-
-        const queryFilterDispatcher = OrderService.addFilterDispatcher(
-            queryFilterCustomer,
-            dispatcher
-        );
-
-        const queryFilterSalesperson = OrderService.addFilterSalesperson(
-            queryFilterDispatcher,
-            salesperson
-        );
-
-        const queryFilterCarrier = OrderService.addFilterCarrier(
-            queryFilterSalesperson,
-            carrier
-        );
-
         const queryFilterDates = OrderService.addFilterDates(
-            queryFilterCarrier,
+            baseOrderQuery,
             dates
         );
 
         const queryAllFilters = OrderService.addFilterModifiers(
             queryFilterDates,
-            { jobCategory, sort, accountingType }
+            { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier }
         );
 
         const queryWithGraphModifiers = OrderService.addGraphModifiers(
@@ -1294,42 +1274,6 @@ class OrderService
         });
     }
 
-    static addFilterCustomer(baseQuery, customerList)
-    {
-        return customerList?.length
-            ? baseQuery.whereIn(
-                'job.orderGuid',
-                Order.query()
-                    .select('guid')
-                    .whereIn('clientGuid', customerList)
-            )
-            : baseQuery;
-    }
-
-    static addFilterDispatcher(baseQuery, dispatcherList)
-    {
-        return dispatcherList?.length
-            ? baseQuery.whereIn(
-                'job.orderGuid',
-                Order.query()
-                    .select('guid')
-                    .whereIn('dispatcherGuid', dispatcherList)
-            )
-            : baseQuery;
-    }
-
-    static addFilterSalesperson(baseQuery, salespersonList)
-    {
-        return salespersonList?.length
-            ? baseQuery.whereIn(
-                'job.orderGuid',
-                Order.query()
-                    .select('guid')
-                    .whereIn('salespersonGuid', salespersonList)
-            )
-            : baseQuery;
-    }
-
     static addFilterDates(baseQuery, dateList)
     {
         const isDateListEmpty = dateList?.length > 0 ? false : true;
@@ -1417,15 +1361,6 @@ class OrderService
 
             return `${dbDateSQL} ${comparisonValue} ${userDateSQL}`;
         }
-    }
-
-    static addFilterCarrier(baseQuery, carrierList)
-    {
-        const doesCarrierListHaveElements =
-            carrierList?.length > 0 ? true : false;
-        return doesCarrierListHaveElements
-            ? baseQuery.whereIn('vendorGuid', carrierList)
-            : baseQuery;
     }
 
     static async getComparisonTypesCached()
@@ -1551,11 +1486,16 @@ class OrderService
 
     static addFilterModifiers(baseQuery, filters)
     {
-        const { jobCategory, sort, accountingType } = filters;
+        const { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier }
+            = filters;
         return baseQuery
             .modify('filterJobCategories', jobCategory)
             .modify('filterAccounting', accountingType)
-            .modify('sorted', sort);
+            .modify('sorted', sort)
+            .modify('filterByCustomer', customer)
+            .modify('filterByDispatcher', dispatcher)
+            .modify('filterBySalesperson', salesperson)
+            .modify('filterByCarrier', carrier);
     }
 
     static addDeliveryAddress(jobsArray)
@@ -1637,7 +1577,8 @@ class OrderService
                 invoiceBills,
                 orderInvoices,
                 referencesChecked,
-                oldStopData
+                oldStopData,
+                oldOrder
             ] = await Promise.all([
                 clientContact
                     ? SFRecordType.query(trx)
@@ -1657,7 +1598,8 @@ class OrderService
                     stops,
                     terminals
                 ),
-                Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid')
+                Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
+                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload)
             ]);
 
             // terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
@@ -1763,6 +1705,8 @@ class OrderService
                 params.job = orderGraph.jobs[0];
                 emitter.emit(eventName, params);
             }
+
+            emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: orderUpdated });
 
             return orderUpdated;
         }
