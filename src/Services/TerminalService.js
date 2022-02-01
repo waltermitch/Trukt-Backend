@@ -233,7 +233,7 @@ class TerminalService
                 const message = `Error, terminal ${guid} could not be updated: ${error?.nativeError?.detail || error?.message || error}`;
                 console.error(message);
                 telemetryClient.trackException({
-                    exception: new Error(message),
+                    exception: error,
                     properties:
                     {
                         guid: terminal.guid,
