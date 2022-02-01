@@ -178,7 +178,7 @@ class TerminalService
                                 TerminalContacts.query(trx)
                                     .where('terminalGuid', guid)
                                     .update({ terminalGuid: existingTerminal.guid, updatedByGuid: SYSTEM_USER })
-                                    .onConflict('phone').ignore(),
+                                    .onConflict(['phone_number', 'name', 'terminal_guid']).merge(),
 
                                 LocationLinks.query(trx)
                                     .where('terminalGuid', guid)
@@ -188,6 +188,12 @@ class TerminalService
                             {
                                 // now that there is nothing attached to this terminal, we can delete it
                                 await Terminal.query(trx).deleteById(guid);
+                            })
+                            .catch(async (err) =>
+                            {
+                                // need to rollback the transaction here
+                                await trx.rollback();
+                                throw err;
                             });
                     }
                     else
@@ -253,7 +259,6 @@ class TerminalService
                     },
                     severity: 2
                 });
-                throw { message };
             }
         }
     }
