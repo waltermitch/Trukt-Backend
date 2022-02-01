@@ -35,7 +35,8 @@ class Bill
         this.lineItems = [];
 
         for (let i = 0; i < items.length; i++)
-            this.lineItems.push(new BillLineItem(items[i]));
+            if (items[i].amount > 0)
+                this.lineItems.push(new BillLineItem(items[i]));
     }
 
     toJSON()
