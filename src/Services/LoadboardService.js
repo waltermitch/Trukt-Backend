@@ -755,42 +755,38 @@ class LoadboardService
             const post = posts[i];
             if (job.postObjects[`${post.loadboard}`]?.hasError)
             {
-                delete job.postObjects[`${post.loadboard}`];
-                posts.splice(i, 1);
+                job.postObjects[`${post.loadboard}`].hasError = null;
+            }
+            if (post.values != null)
+            {
+                const lbContact = await LoadboardContact.query().findById(post.values.contactId).where({ loadboard: post.loadboard });
+
+                if (!lbContact || lbContact.loadboard != post.loadboard)
+                    throw new HttpError(404, `Please provide a valid contact for posting to ${post.loadboard}`);
+
+                post.values.contact = lbContact;
+            }
+            if (!(post.loadboard in job.postObjects))
+            {
+                const objectionPost = LoadboardPost.fromJson({
+                    jobGuid: job.guid,
+                    loadboard: post.loadboard,
+                    instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
+                    values: post.values,
+                    createdByGuid: currentUser
+                });
+                newPosts.push(objectionPost);
             }
             else
             {
-                if (post.values != null)
-                {
-                    const lbContact = await LoadboardContact.query().findById(post.values.contactId).where({ loadboard: post.loadboard });
-
-                    if (!lbContact || lbContact.loadboard != post.loadboard)
-                        throw 'please provide a valid loadboard contact id';
-
-                    post.values.contact = lbContact;
-                }
-                if (!(post.loadboard in job.postObjects))
-                {
-                    const objectionPost = LoadboardPost.fromJson({
-                        jobGuid: job.guid,
-                        loadboard: post.loadboard,
-                        instructions: post.loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
-                        values: post.values,
-                        createdByGuid: currentUser
-                    });
-                    newPosts.push(objectionPost);
-                }
-                else
-                {
-                    job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].guid, {
-                        jobGuid: job.guid,
-                        loadboard: post.loadboard,
-                        instructions: post.loadboardInstructions || job.postObjects[`${post.loadboard}`].loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
-                        isSynced: false,
-                        values: post.values,
-                        updatedByGuid: currentUser
-                    });
-                }
+                job.postObjects[`${post.loadboard}`] = await LoadboardPost.query().patchAndFetchById(job.postObjects[`${post.loadboard}`].guid, {
+                    jobGuid: job.guid,
+                    loadboard: post.loadboard,
+                    instructions: post.loadboardInstructions || job.postObjects[`${post.loadboard}`].loadboardInstructions || job.loadboardInstructions?.substring(0, 59),
+                    isSynced: false,
+                    values: post.values,
+                    updatedByGuid: currentUser
+                });
             }
         }
         if (newPosts.length != 0)
