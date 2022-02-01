@@ -188,6 +188,8 @@ class TerminalService
                             {
                                 // now that there is nothing attached to this terminal, we can delete it
                                 await Terminal.query(trx).deleteById(guid);
+
+                                await trx.commit();
                             })
                             .catch(async (err) =>
                             {
@@ -219,12 +221,10 @@ class TerminalService
                             payload.zipCode = atr.Postal;
 
                         // update current terminal with normalized address since no match was found
-                        await Terminal.query(trx)
+                        await Terminal.query()
                             .where('guid', guid)
                             .patch(payload);
                     }
-
-                    await trx.commit();
                 }
                 else
                 {
