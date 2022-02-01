@@ -95,6 +95,7 @@ class Loadboard
     dispatch()
     {
         this.cleanUp();
+        this.validateDispatch();
         const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
         const payload = {};
 
@@ -221,6 +222,9 @@ class Loadboard
 
         return phone;
     }
+
+    // currently overridden by child classes
+    validateDispatch() { }
 
     static async handleCreate(post)
     {
