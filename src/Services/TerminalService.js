@@ -3,6 +3,7 @@ const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
 const OrderStops = require('../Models/OrderStop');
 const Terminal = require('../Models/Terminal');
+const { mergeDeepRight } = require('ramda');
 const ArcGIS = require('../ArcGIS/API');
 
 const { SYSTEM_USER } = process.env;
@@ -155,76 +156,64 @@ class TerminalService
                     // at this point we have a match, but we don't know if there is a terminal with this lat/long in the db already
                     // if there is an existing terminal we need to update all the objects related to this terminal to use that one
                     // if no such terminal exists we will simply update this terminal with the lat/long
-                    const [existingTerminal, trx] = await Promise.all(
-                        [
-                            Terminal.query()
-                                .select('guid')
-                                .where('latitude', coords.lat)
-                                .andWhere('longitude', coords.long)
-                                .first(),
-
-                            Terminal.startTransaction()
-                        ]);
-
-                    if (existingTerminal)
+                    await Terminal.transaction(async trx =>
                     {
-                        // update all orderStops and terminalContacts from current terminal to existing terminal
-                        await Promise.all(
-                            [
-                                OrderStops.query(trx)
-                                    .where('terminalGuid', guid)
-                                    .update({ terminalGuid: existingTerminal.guid, updatedByGuid: SYSTEM_USER }),
+                        const existingTerminal = await Terminal.query()
+                            .select('guid')
+                            .where('latitude', coords.lat)
+                            .andWhere('longitude', coords.long)
+                            .first();
 
-                                TerminalContacts.query(trx)
-                                    .where('terminalGuid', guid)
-                                    .update({ terminalGuid: existingTerminal.guid, updatedByGuid: SYSTEM_USER })
-                                    .onConflict(['phone_number', 'name', 'terminal_guid']).merge(),
-
-                                LocationLinks.query(trx)
-                                    .where('terminalGuid', guid)
-                                    .update({ terminalGuid: existingTerminal.guid })
-                            ])
-                            .then(async ([orderStops, terminalContacts]) =>
-                            {
-                                // now that there is nothing attached to this terminal, we can delete it
-                                await Terminal.query(trx).deleteById(guid);
-
-                                await trx.commit();
-                            })
-                            .catch(async (err) =>
-                            {
-                                // need to rollback the transaction here
-                                await trx.rollback();
-                                throw err;
-                            });
-                    }
-                    else
-                    {
-                        const payload =
+                        if (existingTerminal)
                         {
-                            latitude: coords.lat,
-                            longitude: coords.long,
-                            updatedByGuid: SYSTEM_USER,
-                            isResolved: true
-                        };
+                            // update all orderStops and terminalContacts from current terminal to existing terminal
+                            await Promise.all(
+                                [
+                                    OrderStops.query(trx)
+                                        .where('terminalGuid', guid)
+                                        .patch({ terminalGuid: existingTerminal.guid, updatedByGuid: SYSTEM_USER }),
 
-                        // add these fields if they exist
-                        const { attributes: atr } = candidate;
+                                    // since we can't use onConflict for a patch, we need to do this manually
+                                    TerminalService.mergeContacts(guid, existingTerminal.guid, trx),
 
-                        if (atr.StAddr)
-                            payload.street1 = atr.StAddr;
-                        if (atr.City)
-                            payload.city = atr.City;
-                        if (atr.State)
-                            payload.state = atr.RegionAbbr || atr.Region;
-                        if (atr.Postal)
-                            payload.zipCode = atr.Postal;
+                                    LocationLinks.query(trx)
+                                        .where('terminalGuid', guid)
+                                        .patch({ terminalGuid: existingTerminal.guid })
+                                ])
+                                .then(async ([orderStops, terminalContacts]) =>
+                                {
+                                    // now that there is nothing attached to this terminal, we can delete it
+                                    await Terminal.query(trx).deleteById(guid);
+                                });
+                        }
+                        else
+                        {
+                            const payload =
+                            {
+                                latitude: coords.lat,
+                                longitude: coords.long,
+                                updatedByGuid: SYSTEM_USER,
+                                isResolved: true
+                            };
 
-                        // update current terminal with normalized address since no match was found
-                        await Terminal.query()
-                            .where('guid', guid)
-                            .patch(payload);
-                    }
+                            // add these fields if they exist
+                            const { attributes: atr } = candidate;
+
+                            if (atr.StAddr)
+                                payload.street1 = atr.StAddr;
+                            if (atr.City)
+                                payload.city = atr.City;
+                            if (atr.State)
+                                payload.state = atr.RegionAbbr || atr.Region;
+                            if (atr.Postal)
+                                payload.zipCode = atr.Postal;
+
+                            // update current terminal with normalized address since no match was found
+                            await Terminal.query(trx)
+                                .where('guid', guid)
+                                .patch(payload);
+                        }
+                    });
                 }
                 else
                 {
@@ -260,6 +249,57 @@ class TerminalService
                     severity: 2
                 });
             }
+        }
+    }
+
+    static async mergeContacts(oldTerminalGuid, newTerminalGuid, trx)
+    {
+        // get old and new terminal contacts
+        const [oldTerminalContacts, newTerminalContacts] = await Promise.all([
+            TerminalContacts.query(trx)
+                .where('terminalGuid', oldTerminalGuid),
+
+            TerminalContacts.query(trx)
+                .where('terminalGuid', newTerminalGuid)
+        ]);
+
+        for (const oldTerminalContact of oldTerminalContacts)
+        {
+            // try to find a match in the new terminal contacts
+            const match = newTerminalContacts.find(newTerminalContact =>
+                newTerminalContact.name == oldTerminalContact.name && newTerminalContact.phoneNumber == oldTerminalContact.phoneNumber);
+
+            let newContactGuid;
+            if (match)
+            {
+                newContactGuid = match.guid;
+            }
+
+            // if no match we will create a new contact on the new terminal
+            else
+            {
+                const payload = mergeDeepRight(oldTerminalContact, { terminalGuid: newTerminalGuid });
+
+                delete payload.guid;
+
+                const newContact = await TerminalContacts.query(trx).insert(payload);
+
+                newContactGuid = newContact.guid;
+            }
+
+            // update all orderStops with old terminal contact to new terminal contact
+            await Promise.all([
+                OrderStops.query(trx)
+                    .where('primaryContactGuid', oldTerminalContact.guid)
+                    .patch({ primaryContactGuid: newContactGuid }),
+
+                OrderStops.query(trx)
+                    .where('alternativeContactGuid', oldTerminalContact.guid)
+                    .patch({ alternativeContactGuid: newContactGuid })
+            ]);
+
+            // now we can delete the old contact
+            await TerminalContacts.query(trx).deleteById(oldTerminalContact.guid);
         }
     }
 }
