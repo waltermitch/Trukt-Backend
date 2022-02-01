@@ -40,7 +40,8 @@ class Invoice
         this.lineItems = [];
 
         for (let i = 0; i < items.length; i++)
-            this.lineItems.push(new InvoiceLineItem(items[i]));
+            if (items[i].amount > 0)
+                this.lineItems.push(new InvoiceLineItem(items[i]));
     }
 
     toJSON()
