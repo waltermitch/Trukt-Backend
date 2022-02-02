@@ -24,59 +24,31 @@ responses:
         schema:
           type: object
           properties:
-            jobGuid:
-              type: object
-              properties:
-                guid:
-                  $ref: '../../components/schemas/Common.yaml#/guid'
-                status:
-                  type: number
-                  example: 200
-                errors: 
-                  type: array             
+            status:
+              type: number
+              example: 200
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  errorType:
+                    type: string
+                    example: 'DataConflictError'
+                  message:
+                    type: string
+                    example: 'Please assign a dispatcher.'
 
   404:
     description: Job not found
     content:
-      application/json: 
+      application/json:
         schema:
-          type: object
-          properties:
-            jobGuid:
-              type: object
-              properties:
-                guid:
-                  $ref: '../../components/schemas/Common.yaml#/guid'
-                status:
-                  type: number
-                  example: 404
-                errors: 
-                  type: array
-                  items:
-                    type: string
-                  example:
-                    - The job with guid 4c095329-0000-0000-0000-000000000000 doesnot exist.        
+          $ref: '#/responses/200/content/application~1json/schema'
 
   409:
     description: Conflict
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            jobGuid:
-              type: object
-              properties:
-                guid:
-                  $ref: '../../components/schemas/Common.yaml#/guid'
-                status:
-                  type: number
-                  example: 409
-                errors: 
-                  type: array
-                  items:
-                    type: string
-                  example: 
-                    - 'Please assign a dispatcher.'
-                    - 'Please use a real address instead of E 11th Street WA Tacoma 98421'
-                    - 'Client requested pickup and delivery dates must be set.'      
+          $ref: '#/responses/200/content/application~1json/schema'
