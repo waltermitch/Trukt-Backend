@@ -593,7 +593,12 @@ class OrderJobService
      */
     static async setJobToReady(jobGuid, currentUser)
     {
-        return await OrderJobService.setJobsToReady([jobGuid], currentUser);
+        const resp = await OrderJobService.setJobsToReady([jobGuid], currentUser);
+
+        const response = Object.values(resp)[0];
+        response.errors = response.errors.map(str => { return { message: str, errorType: 'DataConflictError' }; });
+
+        return response;
     }
 
     /**
