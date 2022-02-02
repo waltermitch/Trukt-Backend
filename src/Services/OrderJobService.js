@@ -406,12 +406,14 @@ class OrderJobService
 
         switch (status)
         {
+            case 'new':
+                return statusProperties;
             case 'on hold':
                 return { ...statusProperties, isOnHold: true, status };
             case 'ready':
                 return { ...statusProperties, isReady: true, status };
             case 'canceled':
-                return { ...statusProperties, isCanceled: true, status };
+                return { ...statusProperties, isCanceled: true };
             case 'deleted':
                 return { ...statusProperties, isDeleted: true, status, deletedByGuid: userGuid };
         }
