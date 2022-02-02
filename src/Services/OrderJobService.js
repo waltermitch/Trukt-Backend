@@ -1505,6 +1505,8 @@ class OrderJobService
             await trx.commit();
 
             // setting off an event to update status manager
+            // this event will actually update the jobs status field and
+            // send the updated job info to the client
             emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
             return { status: 200 };
@@ -1538,35 +1540,43 @@ class OrderJobService
 
     static async uncancelJob(jobGuid, currentUser)
     {
-        const trx = await OrderJob.startTransaction();
-
         try
         {
-            // getting canceled job with passed guid
-            const job = await OrderJob.query(trx).select('orderGuid', 'isCanceled', 'status').findOne('guid', jobGuid);
-
+            const job = await OrderJob.query().select('orderGuid', 'isCanceled', 'status').findOne('guid', jobGuid);
             if (!job)
                 throw new HttpError(400, 'Job does not exist');
             if (!job.isCanceled)
                 return { status: 200, message: { data: { status: job.status } } };
 
-            // createing ready status to undo delete
-            const payload = OrderJobService.createStatusPayload('ready', currentUser);
+            // setting job to 'new' status so it can pass the conditions to
+            // transition to ready
+            const payload = OrderJobService.createStatusPayload('new', currentUser);
+            const jobUpdated = await OrderJob.query().patchAndFetchById(jobGuid, payload);
 
-            // update orderJob to Ready state
-            const jobUpdated = await OrderJob.query(trx).patchAndFetchById(jobGuid, payload);
+            const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([jobUpdated.guid]);
+            let data;
+            if(goodJobs.length === 1)
+            {
+                data = await OrderJob.query().patch({
+                    isReady: true,
+                    dateVerified: DateTime.utc().toString(),
+                    verifiedByGuid: currentUser,
+                    updatedByGuid: currentUser
+                }).findById(goodJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
+            }
+            else
+            {
+                throw new HttpError(400, jobsExceptions[0].errors[0]);
+            }
 
-            // commiting transaction
-            await trx.commit();
-
-            // emitting event for update statys manager
+            // the status manager will handle actually changing the jobs status field
+            // and sending the updated job to the client
             emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
 
-            return { status: 200, message: { data: { status: jobUpdated.status } } };
+            return { status: 200, message: { data: { status: data.status } } };
         }
         catch (error)
         {
-            await trx.rollback();
             throw new HttpError(500, error);
         }
     }
