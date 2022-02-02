@@ -91,16 +91,9 @@ class OrderJobController
         try
         {
             const result = await OrderJobService.setJobToReady(jobGuid, req.session.userGuid);
+            const status = result.status || 200;
 
-            // for single response we are returning status with payload
-            if (result[`${jobGuid}`].status === 404 || result[`${jobGuid}`].status === 409)
-            {
-                res.status(result[`${jobGuid}`].status).json(result);
-            }
-            else
-            {
-                res.status(202).json(result);
-            }
+            res.status(status).json(result);
         }
         catch (e)
         {
