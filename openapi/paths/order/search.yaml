@@ -210,4 +210,284 @@ responses:
   200:
     description: Orders
     content:
-      application/json: {}
+      application/json: 
+        schema:
+          type: array
+          items:
+            allOf:
+              - $ref: ../../components/schemas/Orderjob.yaml#/JobCategoryBase
+              - type: object
+                properties:
+                  guid:
+                    $ref: ../../components/schemas/Common.yaml#/guid
+                  number:
+                    type: string
+                    pattern: /[A-Z]{2}/d{5}/
+                    example: RC10000
+                  status:
+                    $ref: ../../components/schemas/Common.yaml#/Enums/jobStatus
+                  estimatedRevenue:
+                    type: string
+                    format: currency
+                    description: The amount owed by the client.
+                  estimatedExpense:
+                    type: string
+                    format: currency
+                    description: The amount owed to the vendors.
+                    example: '99.00'
+                  actualRevenue:
+                    allOf:
+                      - $ref: ../../components/schemas/Common.yaml#/currency
+                      - description: The calculated revenue for this order.
+                        readOnly: true
+                        example: '99.00'
+                  actualExpense:
+                    allOf:
+                      - $ref: ../../components/schemas/Common.yaml#/currency
+                      - description: The calculated expense for this order.
+                        readOnly: true
+                        example: '99.00'
+                  dateCreated:
+                    $ref: ../../components/schemas/Common.yaml#/dateCreated
+                  dateUpdated:
+                    $ref: ../../components/schemas/Common.yaml#/dateUpdated
+                  grossProfitMargin:
+                    type: string
+                    description: The gross profit made on this job
+                    example: '28.17'
+                  vendor:
+                    allOf:
+                      - $ref: '../../components/schemas/Account.yaml#/account'
+                      - description: The vendor fulfilling the job
+                  dispatcher: 
+                    $ref: ../../components/schemas/User.yaml#/Dispatcher
+                  isInvoiced:
+                    type: boolean
+                    description: Whether the job belongs to and Order that is completely invoiced or not
+                  isBilled:
+                    type: boolean
+                    description: Whether the job is completely billed or not
+                  loadboardPosts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        loadboard:
+                          $ref: ../../components/schemas/Common.yaml#/Enums/Loadboard Name
+                        isPosted: 
+                          type: boolean
+                          description: Whether the loadboards is currently posted or not
+                        status: 
+                          $ref: ../../components/schemas/Common.yaml#/Enums/LoadBoard Request Status
+              - type: object
+                properties:
+                  order:
+                    type: object
+                    description: Order to which the job belongs
+                    properties:
+                      guid:
+                        $ref: ../../components/schemas/Common.yaml#/guid
+                      number:
+                        type: string
+                        pattern: /[A-Z]{2}/d{5}/
+                        example: RC10000
+                      instructions:
+                        type: string
+                        description: The instructions for the order provided by the client.
+                      status:
+                        $ref: ../../components/schemas/Common.yaml#/Enums/orderStatus
+                      distance:
+                        type: number
+                        description: The calculated distance required to travel to complete the full order in miles.
+                        nullable: true
+                        minimum: 0
+                        maximum: 9999999.9
+                      clientNotes:
+                        type: object
+                        properties:
+                          updatedByGuid:
+                            $ref: ../../components/schemas/Common.yaml#/guid
+                          dateUpdated:
+                            $ref: ../../components/schemas/Common.yaml#/dateUpdated
+                          updatedBy: 
+                            type:  object
+                            properties:
+                              userName: 
+                                type: string
+                                description: The name of the TMS User account that updated this record.
+                              email: 
+                                $ref: ../../components/schemas/Common.yaml#/email
+                      isComplete:
+                        type: boolean
+                        default: false
+                        example: false
+                      estimatedRevenue:
+                        type: string
+                        format: currency
+                        description: The amount owed by the client.
+                      estimatedExpense:
+                        type: string
+                        format: currency
+                        description: The amount owed to the vendors.
+                        example: '99.00'
+                      quotedRevenue:
+                        type: string
+                        format: currency
+                        description: The amount quoted to the client for this order.
+                        example: '99.00'
+                      estimatedIncome:
+                        allOf:
+                          - $ref: ../../components/schemas/Common.yaml#/currency
+                          - description: The calculated total estimated income for this order.
+                            readOnly: true
+                            example: '99.00'
+                      actualRevenue:
+                        allOf:
+                          - $ref: ../../components/schemas/Common.yaml#/currency
+                          - description: The calculated revenue for this order.
+                            readOnly: true
+                            example: '99.00'
+                      actualExpense:
+                        allOf:
+                          - $ref: ../../components/schemas/Common.yaml#/currency
+                          - description: The calculated expense for this order.
+                            readOnly: true
+                            example: '99.00'
+                      actualIncome:
+                        allOf:
+                          - $ref: ../../components/schemas/Common.yaml#/currency
+                          - description: The calculated total income for this order.
+                            readOnly: true
+                            example: '99.00'
+                      dateExpectedCompleteBy:
+                        type: string
+                        format: date-time
+                        description: The date that this order is expected to be completed by.
+                      dateCompleted:
+                        description: The date that this order was completed
+                        type: string
+                        format: date-time
+                        readOnly: true
+                        nullable: true
+                      dateCreated:
+                        $ref: ../../components/schemas/Common.yaml#/dateCreated
+                      dateUpdated:
+                        $ref: ../../components/schemas/Common.yaml#/dateUpdated
+                      createdByGuid:
+                        $ref: ../../components/schemas/Common.yaml#/createdByGuid
+                      updatedByGuid:
+                        $ref: ../../components/schemas/Common.yaml#/updatedByGuid
+                      referenceNumber:
+                        type: string
+                        maxLength: 64
+                        description: The external identification number the client uses for this order.
+                      inspectionType:
+                        $ref: ../../components/schemas/Common.yaml#/Enums/inspectionType
+                      isTender:
+                        type: boolean
+                        description: Signals if the order is a tender and is pending approval or confirmation.
+                        example: false                     
+                      estimatedDistance:
+                        type: number
+                        description: The distance required to travel to complete the full order in miles.
+                        nullable: true
+                        minimum: 0
+                        maximum: 9999999.9
+                      bol:
+                        type: string
+                        maxLength: 64
+                        description: The Bill of Lading reference number for this order.
+                      bolUrl:
+                        type: string
+                        maxLength: 1024
+                        description: The URL to the Bill of Lading for this order.
+                      client:
+                        allOf:
+                          - $ref: ../../components/schemas/Account.yaml#/account
+                          - description: The client that placed the order
+                      clientContact:
+                        allOf:
+                          - $ref: ../../components/schemas/Contact.yaml
+                          - description: The contact that works for the client.
+                      
+                      dispatcher:
+                        allOf:
+                          - $ref: ../../components/schemas/Common.yaml#/guidObject
+                          - description: The dispatcher responsible for this order.
+                      salesperson:
+                        allOf:
+                          - $ref: ../../components/schemas/Common.yaml#/guidObject
+                          - description: The salesperson responsible for managing this order.
+                      isReady:
+                        type: boolean
+                      isOnHold:
+                        type: boolean
+                      isCanceled:
+                        type: boolean
+              - type: object
+                properties:
+                  stops:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        guid:
+                          $ref: ../../components/schemas/Common.yaml#/guid
+                        sequence:
+                          type: integer
+                          description: The order in which the stops need to be visited. This number should be assigned in increasing order. Magnitude is arbitrary.
+                          nullable: false
+                        stopType:
+                          $ref: ../../components/schemas/Common.yaml#/Enums/stopType
+                        dateRequestedStart:
+                          description: >
+                            This date is requested by the customer. The earliest date this stop should
+                            be worked.
+                          type: string
+                          format: date-time
+                          example: '2021-09-09T13:45:45.000Z'
+                          nullable: true
+                        dateRequestedEnd:
+                          description: >
+                            This date is requested by the customer. The latest date this stop should
+                            be worked.
+                          type: string
+                          format: date-time
+                          example: '2021-09-09T13:45:45.000Z'
+                          nullable: true
+                        dateRequestedType:
+                          description: Defines the type of requested date the customer requested.
+                          $ref: ../../components/schemas/Common.yaml#/Enums/stopDateType
+                        dateScheduledStart:
+                          description: >
+                            This date is submitted by the dispatcher. The earliest date this stop will
+                            be worked
+                          type: string
+                          format: date-time
+                          example: '2021-09-09T13:45:45.000Z'
+                          nullable: true
+                        dateScheduledEnd:
+                          description: >
+                            This date is submitted by the dispatcher. The latest date this stop will
+                            be worked
+                          type: string
+                          format: date-time
+                          example: '2021-09-09T13:45:45.000Z'
+                          nullable: true
+                        dateScheduledType:
+                          description: Defined the type of scheduled date the dispatcher submitted.
+                          $ref: ../../components/schemas/Common.yaml#/Enums/stopDateType
+                        terminal:
+                          $ref: ../../components/schemas/Terminal.yaml#/TerminalBase
+                        commodities:
+                          type: array
+                          items:
+                            $ref: ../../components/schemas/Commodity.yaml#/Commodity
+              - type: object
+                properties:
+                  deliveryAddress:
+                    allOf:
+                      - $ref: ../../components/schemas/Terminal.yaml#/TerminalBase
+                      - description: Last delivery terminal address
+                    
+                  
