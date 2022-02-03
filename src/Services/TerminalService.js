@@ -132,7 +132,7 @@ class TerminalService
 
     static async addUnresolvedTerminalToQueue(terminal)
     {
-        await terminalsQueue.sender.sendMessages([terminal]);
+        await terminalsQueue.batchSend([terminal]);
     }
 
     static async queueUnresolvedTerminals()
@@ -142,7 +142,7 @@ class TerminalService
         // we can also choose where we nulls go in the result set.
         const terminals = await Terminal.query()
             .where('isResolved', false)
-            .andWhere('resolvedTimes', '=', 2)
+            .andWhere('resolvedTimes', '<', 1)
             .orderByRaw('date_updated ASC NULLS FIRST');
 
         // put the terminals in the queue
@@ -216,13 +216,15 @@ class TerminalService
                     // this will not resolve the terminal but will merge it into a duplicate unresolved terminal
                     await Terminal.transaction(async trx =>
                     {
-                        const existingTerminal = await Terminal.query().select('guid').where({
-                            'name': terminal.name,
-                            'street1': terminal.street1,
-                            'city': terminal.city,
-                            'state': terminal.state,
-                            'zipCode': terminal.zipCode
-                        })
+                        const existingTerminal = await Terminal.query()
+                            .select('guid')
+                            .where({
+                                'name': terminal.name,
+                                'street1': terminal.street1,
+                                'city': terminal.city,
+                                'state': terminal.state,
+                                'zipCode': terminal.zipCode
+                            })
                             .andWhereNot('guid', guid).first();
 
                         if (existingTerminal)
