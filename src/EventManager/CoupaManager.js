@@ -1,12 +1,14 @@
 const OrderService = require('../Services/OrderService');
 const Queue = require('../Azure/ServiceBus');
 
+const coupaPos = new Queue({ queue: 'coupa-pos' });
+
 class CoupaManager
 {
     static async checkCoupaQueue()
     {
         // poll the coupapos queue for new messages (50 at a time)
-        const res = await Queue.popMany('coupapos', 50);
+        const res = await coupaPos.getMessages(50);
 
         const proms = [];
 
