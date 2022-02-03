@@ -2,6 +2,7 @@ const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const { ref, raw } = require('objection');
 const BaseModel = require('./BaseModel');
+const { snakeCaseString } = require('../Utils');
 
 const jobTypeFields = ['category', 'type'];
 const EDI_DEFAULT_INSPECTION_TYPE = 'standard';
@@ -284,7 +285,8 @@ class OrderJob extends BaseModel
         const { field, order } = sortField;
         const sortFieldQuery = OrderJob.customSort(field);
 
-        return query.orderBy(sortFieldQuery, order || 'ASC');
+        const rawSortQuery = raw(`(${sortFieldQuery}) ${order || 'asc'} nulls last`);
+        return query.orderByRaw(rawSortQuery);
     }
 
     static customSort(sortField = 'number')
@@ -295,53 +297,60 @@ class OrderJob extends BaseModel
         const OrderStop = require('./OrderStop');
         const OrderStopLink = require('./OrderStopLink');
         const User = require('./User');
+        const SFContact = require('./SFContact');
 
         switch (sortField)
         {
             case 'clientName':
                 return SFAccount.query().select('name').where('guid',
                     Order.query().select('clientGuid').whereRaw('guid = "job".order_guid')
-                );
+                ).toKnexQuery().toString();
             case 'dispatcherName':
-                return User.query().select('name').whereRaw('guid = "job".dispatcher_guid');
+                return User.query().select('name').whereRaw('guid = "job".dispatcher_guid').toKnexQuery().toString();
             case 'salespersonName':
                 return SFAccount.query().select('name').where('guid',
                     Order.query().select('salespersonGuid').whereRaw('guid = "job".order_guid')
-                );
+                ).toKnexQuery().toString();
             case 'pickupTerminal':
                 return Terminal.query().select('name').where('guid',
                     OrderStop.query().select('terminalGuid').whereIn('guid',
                         OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'pickup').orderBy('dateRequestedStart').limit(1)
-                );
+                ).toKnexQuery().toString();
             case 'deliveryTerminal':
                 return Terminal.query().select('name').where('guid',
                     OrderStop.query().select('terminalGuid').whereIn('guid',
                         OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
                     ).andWhere('stopType', 'delivery').orderBy('dateRequestedStart', 'desc').limit(1)
-                );
+                ).toKnexQuery().toString();
             case 'requestedPickupDate':
                 return OrderStop.query().min('dateRequestedStart')
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
-                    ).andWhere('stopType', 'pickup');
+                    ).andWhere('stopType', 'pickup').toKnexQuery().toString();
             case 'requestedDeliveryDate':
                 return OrderStop.query().max('dateRequestedStart')
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
-                    ).andWhere('stopType', 'delivery');
+                    ).andWhere('stopType', 'delivery').toKnexQuery().toString();
             case 'scheduledPickupDate':
                 return OrderStop.query().min('dateScheduledStart')
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
-                    ).andWhere('stopType', 'pickup');
+                    ).andWhere('stopType', 'pickup').toKnexQuery().toString();
             case 'scheduledDeliveryDate':
                 return OrderStop.query().max('dateScheduledStart')
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid').whereRaw('job_guid = "job"."guid"')
-                    ).andWhere('stopType', 'delivery');
+                    ).andWhere('stopType', 'delivery').toKnexQuery().toString();
+            case 'clientContactEmail':
+                return SFContact.query().select('email').where('guid',
+                    Order.query().select('client_contact_guid').whereRaw('guid = "job".order_guid')
+                ).toKnexQuery().toString();
+            case 'carrierName':
+                return SFAccount.query().select('name').whereRaw('guid = "job".vendor_guid').toKnexQuery().toString();
             default:
-                return sortField;
+                return snakeCaseString(sortField);
         }
     }
 

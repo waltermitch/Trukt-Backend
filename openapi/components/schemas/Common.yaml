@@ -437,6 +437,9 @@ Enums:
       - requestedDeliveryDate
       - scheduledPickupDate
       - scheduledDeliveryDate
+      - clientContactEmail
+      - carrierName
+      - grossProfitMargin
     default: number
   stopStatus:
     type: string
