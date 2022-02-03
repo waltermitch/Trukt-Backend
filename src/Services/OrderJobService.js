@@ -589,7 +589,12 @@ class OrderJobService
      */
     static async setJobToReady(jobGuid, currentUser)
     {
-        return await OrderJobService.setJobsToReady([jobGuid], currentUser);
+        const resp = await OrderJobService.setJobsToReady([jobGuid], currentUser);
+
+        const response = Object.values(resp)[0];
+        response.errors = response.errors.map(str => { return { message: str, errorType: 'DataConflictError' }; });
+
+        return response;
     }
 
     /**
@@ -728,8 +733,8 @@ class OrderJobService
                 			os."sequence" pickup_sequence,
                 			os2."sequence" delivery_sequence,
                             osl.commodity_guid,
-                			CASE WHEN t.is_resolved THEN null ELSE CONCAT(t.street1, ' ', t.state, ' ', t.city, ' ',t.zip_code) END AS bad_pickup_address,
-                			CASE WHEN t2.is_resolved THEN null ELSE CONCAT(t2.street1, ' ', t2.state, ' ', t2.city, ' ',t2.zip_code) END AS bad_delivery_address
+                			CASE WHEN t.is_resolved THEN null ELSE CONCAT(t.street1, ' ', t.city, ' ', t.state, ' ',t.zip_code) END AS bad_pickup_address,
+                			CASE WHEN t2.is_resolved THEN null ELSE CONCAT(t2.street1, ' ', t2.city, ' ', t2.state, ' ',t2.zip_code) END AS bad_delivery_address
                 		FROM rcg_tms.order_stop_links osl
                 		LEFT JOIN rcg_tms.order_stops os ON osl.stop_guid = os.guid
                 		LEFT JOIN rcg_tms.terminals t ON os.terminal_guid = t.guid,
