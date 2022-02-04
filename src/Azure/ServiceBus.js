@@ -35,6 +35,10 @@ class ServiceBus
 
     async batchSend(messages = [], contentType = 'application/json')
     {
+        // make sure its an array
+        if (!Array.isArray(messages))
+            messages = [messages];
+
         let batch = await this.sender.createMessageBatch();
 
         for (const msg of messages)
