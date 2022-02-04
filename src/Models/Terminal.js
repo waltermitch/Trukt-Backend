@@ -64,6 +64,11 @@ class Terminal extends BaseModel
     static uniqueColumns = ['latitude', 'longitude']
     static onConflictIgnore = true
 
+    $beforeInsert()
+    {
+        delete this['#id'];
+    }
+
     $parseJson(json)
     {
         json = super.$parseJson(json);
@@ -167,12 +172,17 @@ class Terminal extends BaseModel
     }
 
     /**
-     * @description This is for EDI orders that do not provide the locationType
+     * @description This is for EDI orders that do not provide the locationType, and other stuff
      */
     setDefaultValues(isTender = false)
     {
         if (isTender && !this?.locationType)
             this.locationType = EDI_DEFAULT_LOCATION_TYPE;
+
+        this.isResolved = false;
+        this.resolvedTimes = 0;
+        this.latitude = null;
+        this.longitude = null;
     }
 
     /**
