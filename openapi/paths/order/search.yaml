@@ -215,7 +215,7 @@ responses:
           type: array
           items:
             allOf:
-              - $ref: ../../components/schemas/Orderjob.yaml#/JobCategoryBase
+              - $ref: ../../components/schemas/OrderJob.yaml#/JobCategoryBase
               - type: object
                 properties:
                   guid:
