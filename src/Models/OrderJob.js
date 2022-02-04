@@ -349,6 +349,10 @@ class OrderJob extends BaseModel
                 ).toKnexQuery().toString();
             case 'carrierName':
                 return SFAccount.query().select('name').whereRaw('guid = "job".vendor_guid').toKnexQuery().toString();
+            case 'clientContactName':
+                return SFContact.query().select('name').where('guid',
+                    Order.query().select('clientContactGuid').whereRaw('guid = "job".order_guid')
+                ).toKnexQuery().toString();
             default:
                 return snakeCaseString(sortField);
         }
