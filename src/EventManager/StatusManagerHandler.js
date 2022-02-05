@@ -1,7 +1,7 @@
 const StatusManagerService = require('../../src/Services/StatusManagerService');
 const Queue = require('../Azure/ServiceBus');
 
-const QUEUE_NAME = process.env['azure.servicebus.statusManager.queueName'];
+const QUEUE_NAME = 'status_manager';
 
 // this be a subscription based queue for streaming event updates
 const managerQueue = new Queue({ queue: QUEUE_NAME });

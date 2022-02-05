@@ -616,12 +616,12 @@ class LoadboardService
                 statusId: 11,
                 jobGuid: job.guid,
                 extraAnnotations: {
-                    loadboard: dispatch.loadboardPost.loadboard || 'TRUKT',
-                    vendorGuid: dispatch.vendor.guid,
-                    vendorAgentGuid: dispatch.vendorAgent.guid,
-                    vendorName: dispatch.vendor.name,
-                    vendorAgentName: dispatch.vendorAgent.name,
-                    dotNumber: dispatch.vendor.dotNumber
+                    loadboard: dispatch.loadboardPost?.loadboard || 'TRUKT',
+                    vendorGuid: dispatch.vendor?.guid,
+                    vendorAgentGuid: dispatch.vendorAgent?.guid,
+                    vendorName: dispatch.vendor?.name,
+                    vendorAgentName: dispatch.vendorAgent?.name,
+                    dotNumber: dispatch.vendor?.dotNumber
                 }
             });
 
