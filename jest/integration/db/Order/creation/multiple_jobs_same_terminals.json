@@ -191,8 +191,8 @@
                             "city": "Washington",
                             "country": "USA",
                             "zipCode": "20500",
-                            "latitude": 38.897957,
-                            "longitude": -77.03656
+                            "latitude": null,
+                            "longitude": null
                         },
                         "primaryContact": {
                             "phoneNumber": "111-222-3333",
@@ -250,8 +250,8 @@
                             "city": "beaver island",
                             "country": "USA",
                             "zipCode": "49782",
-                            "latitude": 45.659551,
-                            "longitude": -85.525857
+                            "latitude": null,
+                            "longitude": null
                         },
                         "primaryContact": {
                             "phoneNumber": "111-222-3333",
@@ -337,8 +337,8 @@
                             "city": "beaver island",
                             "country": "USA",
                             "zipCode": "49782",
-                            "latitude": 45.659551,
-                            "longitude": -85.525857
+                            "latitude": null,
+                            "longitude": null
                         },
                         "primaryContact": {
                             "phoneNumber": "111-222-3333",
@@ -393,8 +393,8 @@
                             "city": "Washington",
                             "country": "USA",
                             "zipCode": "20500",
-                            "latitude": 38.897957,
-                            "longitude": -77.03656
+                            "latitude": null,
+                            "longitude": null
                         },
                         "primaryContact": {
                             "phoneNumber": "111-222-3333",
@@ -455,8 +455,8 @@
                     "city": "Washington",
                     "country": "USA",
                     "zipCode": "20500",
-                    "latitude": 38.897957,
-                    "longitude": -77.03656
+                    "latitude": null,
+                    "longitude": null
                 },
                 "primaryContact": {
                     "phoneNumber": "111-222-3333",
@@ -512,8 +512,8 @@
                     "city": "beaver island",
                     "country": "USA",
                     "zipCode": "49782",
-                    "latitude": 45.659551,
-                    "longitude": -85.525857
+                    "latitude": null,
+                    "longitude": null
                 },
                 "primaryContact": {
                     "phoneNumber": "111-222-3333",
@@ -569,8 +569,8 @@
                     "city": "beaver island",
                     "country": "USA",
                     "zipCode": "49782",
-                    "latitude": 45.659551,
-                    "longitude": -85.525857
+                    "latitude": null,
+                    "longitude": null
                 },
                 "primaryContact": {
                     "phoneNumber": "111-222-3333",
@@ -623,8 +623,8 @@
                     "city": "Washington",
                     "country": "USA",
                     "zipCode": "20500",
-                    "latitude": 38.897957,
-                    "longitude": -77.03656
+                    "latitude": null,
+                    "longitude": null
                 },
                 "primaryContact": {
                     "phoneNumber": "111-222-3333",
@@ -670,8 +670,8 @@
                 "city": "beaver island",
                 "country": "USA",
                 "zipCode": "49782",
-                "latitude": 45.659551,
-                "longitude": -85.525857
+                "latitude": null,
+                "longitude": null
             },
             {
                 "name": "white house",
@@ -682,8 +682,8 @@
                 "city": "Washington",
                 "country": "USA",
                 "zipCode": "20500",
-                "latitude": 38.897957,
-                "longitude": -77.03656
+                "latitude": null,
+                "longitude": null
             }
         ]
     },

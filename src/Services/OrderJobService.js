@@ -1,4 +1,3 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LoadboardService = require('../Services/LoadboardService');
 const LoadboardRequest = require('../Models/LoadboardRequest');
@@ -8,7 +7,6 @@ const InvoiceLine = require('../Models/InvoiceLine');
 const { uuidRegexStr } = require('../Utils/Regexes');
 const emitter = require('../EventListeners/index');
 const knex = require('../Models/BaseModel').knex();
-const Loadboard = require('../Models/Loadboard');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
