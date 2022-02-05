@@ -39,6 +39,10 @@ class ServiceBus
         if (!Array.isArray(messages))
             messages = [messages];
 
+        // return if length is 0
+        if (messages.length === 0)
+            return;
+
         let batch = await this.sender.createMessageBatch();
 
         for (const msg of messages)
