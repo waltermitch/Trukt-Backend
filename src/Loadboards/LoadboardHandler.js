@@ -2,15 +2,13 @@ const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-b
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJobService = require('../Services/OrderJobService');
-const R = require('ramda');
 const PubSubService = require('../Services/PubSubService');
+const R = require('ramda');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const topicName = 'loadboard_incoming';
 const sbClient = new ServiceBusClient(connectionString);
 const receiver = sbClient.createReceiver(topicName, process.env['azure.servicebus.loadboards.subscription.to']);
-
-const pubsub = require('../Azure/PubSub');
 
 const myMessageHandler = async (message) =>
 {
@@ -83,7 +81,6 @@ const myMessageHandler = async (message) =>
 
 const myErrorHandler = async (args) =>
 {
-
     console.log(
         `Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `,
         args.error
