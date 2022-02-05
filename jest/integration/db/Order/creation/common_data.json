@@ -64,8 +64,8 @@
             "city": "Washington",
             "country": "USA",
             "zipCode": "20500",
-            "latitude": 38.8979570,
-            "longitude": -77.0365600
+            "latitude": null,
+            "longitude": null
         },
         {
             "index": "ter_2",
@@ -77,8 +77,8 @@
             "city": "beaver island",
             "country": "USA",
             "zipCode": "49782",
-            "latitude": 45.6595510,
-            "longitude": -85.5258570
+            "latitude": null,
+            "longitude": null
         },
         {
             "index": "ter_3",
@@ -90,8 +90,8 @@
             "city": "hooper",
             "country": "USA",
             "zipCode": "84315",
-            "latitude": 41.1668330,
-            "longitude": -112.3381250
+            "latitude": null,
+            "longitude": null
         },
         {
             "index": "ter_4",
@@ -103,8 +103,8 @@
             "city": "isabella",
             "country": "USA",
             "zipCode": "55607",
-            "latitude": 47.6173750,
-            "longitude": -91.3562880
+            "latitude": null,
+            "longitude": null
         }
     ],
     "commodities": [

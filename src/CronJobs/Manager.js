@@ -8,6 +8,7 @@ const Cron = require('node-cron');
 const expressions =
 {
     second: '*/1 * * * * *',
+    fiveSeconds: '*/5 * * * * *',
     tenSeconds: '*/10 * * * * *',
     minute: '0 */1 * * * *',
     fiveMinutes: '0 */5 * * * *',
@@ -18,10 +19,11 @@ const expressions =
     daily: '0 0 1 */1 * *'
 };
 
-// every second
-// Cron.schedule(expressions.second, async () =>
-// {
-// });
+// every 5 seconds
+Cron.schedule(expressions.fiveSeconds, async () =>
+{
+    await TerminalService.dequeueUnresolvedTerminals();
+});
 
 // every 5 minutes
 Cron.schedule(expressions.fiveMinutes, async () =>
@@ -34,7 +36,7 @@ Cron.schedule(expressions.fiveMinutes, async () =>
 // every 10 minutes
 Cron.schedule(expressions.tenMinutes, async () =>
 {
-    await TerminalService.resolveTerminals();
+    await TerminalService.queueUnresolvedTerminals();
 });
 
 // every 30 minutes

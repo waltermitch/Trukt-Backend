@@ -21,13 +21,13 @@ class UserService
         // clamp the amount between 1 and 100
         rc = Math.min(100, Math.max(1, rc));
 
-        // clean out any special characters
+        // clean out any % characters
         search = search.replace(/%/g, '');
 
         const users = await User.query()
             .where('name', 'ilike', `${search}%`)
 
-            // prevent users from finding the TMS  System user
+            // prevent users from finding the TMS System user
             .modify('noSystemUser')
             .modify('isNotDeleted')
             .orderBy('name', 'asc')
