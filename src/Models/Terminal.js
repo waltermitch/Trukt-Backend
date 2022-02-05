@@ -115,6 +115,20 @@ class Terminal extends BaseModel
         return `${this.street1}, ${this.city}, ${this.state} ${this.zipCode}`;
     }
 
+    isDifferent(terminal)
+    {
+        if (this.street1 !== terminal.street1)
+            return true;
+        if (this.city !== terminal.city)
+            return true;
+        if (this.state !== terminal.state)
+            return true;
+        if (this.zipCode !== terminal.zipCode)
+            return true;
+        else
+            return false;
+    }
+
     static hasTerminalsSameBaseInformation(terminal1, terminal2)
     {
         const baseInfoKeys = [

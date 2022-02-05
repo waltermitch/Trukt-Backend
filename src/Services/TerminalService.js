@@ -382,25 +382,51 @@ class TerminalService
         // if a guid is not provided, we will assume this is a new terminal
         if (!terminal.guid)
         {
-            const term = Terminal.fromJson(terminal);
-
-            term.setCreatedBy(currentUser);
-            term.setDefaultValues(isTender);
-
-            // create a new terminal
-            const newTerminal = await Terminal.query(trx).insert(terminal);
-
-            // everytime we create a new terminal, we want to queue it up
-            await terminalsQueue.sender.sendMessages(terminal);
-
-            return newTerminal;
+            return await TerminalService.create(terminal, currentUser, trx, isTender);
         }
         else
         {
-            return await Terminal.query(trx).findById(terminal.guid);
+            const term = await Terminal.query(trx).findById(terminal.guid);
+
+            // check if the terminal was not found we will create it, no error will be thrown
+            // if the terminal was found, we will check if user is trying to change the important fields
+            // if so, we will create a new terminal and leave the old one as is
+            if (!term)
+            {
+                return await TerminalService.create(terminal, currentUser, trx, isTender);
+            }
+            else
+            {
+                term['#id'] = terminal.index;
+
+                return term;
+            }
         }
     }
 
+    static async create(terminal, currentUser, trx, isTender)
+    {
+        // make sure to delete the guid
+        delete terminal.guid;
+
+        const term = Terminal.fromJson(terminal);
+
+        term.setCreatedBy(currentUser);
+        term.setDefaultValues(isTender);
+
+        // create a new terminal
+        const newTerminal = await Terminal.query(trx).insert(term);
+
+        // everytime we create a new terminal, we want to queue it up
+        await terminalsQueue.batchSend(newTerminal);
+
+        newTerminal['#id'] = terminal['#id'];
+
+        return newTerminal;
+    }
+
+    // this method is only for the /update endpoint and will update a terminal with the new information
+    // terminals shouldn't be updated directly in other places like during order creation/update
     static async update(terminal, currentUser, trx = undefined)
     {
         const term = Terminal.fromJson(terminal);
