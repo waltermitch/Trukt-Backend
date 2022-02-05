@@ -9,7 +9,7 @@ class PubSub
 {
     static async getSubToken(userId)
     {
-        const token = await service.getAuthenticationToken({ roles: ['webpubsub.joinLeaveGroup'], userId: userId, 'ttl': 1440 });
+        const token = await service.getClientAccessToken({ userId, roles: ['webpubsub.joinLeaveGroup'], expirationTimeInMinutes: 1440 });
 
         return token;
     }
