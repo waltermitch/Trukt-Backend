@@ -1452,7 +1452,8 @@ class OrderService
                             'inoperable',
                             'identifier',
                             'lotNumber',
-                            'typeId'
+                            'typeId',
+                            'description'
                         )
                         .whereNotNull('jobGuid')
                         .distinct('guid')
