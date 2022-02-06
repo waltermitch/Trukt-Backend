@@ -11,6 +11,7 @@ const SFRecordType = require('../Models/SFRecordType');
 const Contact = require('../Models/TerminalContact');
 const InvoiceBill = require('../Models/InvoiceBill');
 const InvoiceLine = require('../Models/InvoiceLine');
+const TerminalService = require('./TerminalService');
 const emitter = require('../EventListeners/index');
 const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
@@ -86,8 +87,7 @@ class OrderService
         globalSearch
     )
     {
-        dateFilterComparisonTypes =
-            dates && (await OrderService.getComparisonTypesCached());
+        dateFilterComparisonTypes = dates && (await OrderService.getComparisonTypesCached());
 
         // beggining of base query for jobs with return of specific fields
         const baseOrderQuery = OrderJob.query()
@@ -139,7 +139,8 @@ class OrderService
 
         const { total, results } = await queryWithGraphModifiers;
 
-        const ordersWithDeliveryAddress = {
+        const ordersWithDeliveryAddress =
+        {
             results: OrderService.addDeliveryAddress(results),
             page: page + 1,
             rowCount,
@@ -156,12 +157,14 @@ class OrderService
         if (order)
         {
             const trx = await Order.startTransaction();
+
             try
             {
                 order = await Order.fetchGraph(order, Order.fetch.payload, {
                     transaction: trx,
                     skipFetched: true
                 }).skipUndefined();
+
                 await trx.commit();
 
                 const terminalCache = {};
@@ -244,7 +247,6 @@ class OrderService
             // client is required and always should be checked.
             // vehicles are not checked and are created or found
             const dataCheck = { client: true, vehicles: false, terminals: false };
-            const jobsDataCheck = [];
 
             // order object will be used to link OrderStopLink from the job
             const order = Order.fromJson({
@@ -268,10 +270,9 @@ class OrderService
                 isDummy: orderObj.isDummy || false,
                 isTender: orderObj.isTender || false,
                 quotedRevenue: orderObj.quotedRevenue,
-                dateExpectedCompleteBy: orderObj.dateExpectedCompleteBy
+                dateExpectedCompleteBy: orderObj.dateExpectedCompleteBy,
+                createdByGuid: currentUser
             });
-
-            order.setCreatedBy(currentUser);
 
             // DO NOT change the ordering of these promises, it will mess up _dataCheck and other destructured code
             let orderInfoPromises = [];
@@ -280,13 +281,7 @@ class OrderService
             orderInfoPromises.push(dataCheck.dispatcher = isUseful(orderObj.dispatcher) ? User.query(trx).findById(orderObj.dispatcher.guid) : null);
             orderInfoPromises.push(dataCheck.referrer = isUseful(orderObj.referrer) ? SFAccount.query(trx).findById(orderObj.referrer.guid) : null);
             orderInfoPromises.push(dataCheck.salesperson = isUseful(orderObj.salesperson) ? SFAccount.query(trx).findById(orderObj.salesperson.guid) : null);
-            orderInfoPromises.push(Promise.all(orderObj.terminals.map(t =>
-            {
-                const term = Terminal.fromJson(t);
-                term.setCreatedBy(currentUser);
-                term.setDefaultValues(order?.isTender);
-                return term.findOrCreate(trx).then(term => { term['#id'] = t['#id']; return term; });
-            })));
+            orderInfoPromises.push(Promise.all(orderObj.terminals.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender }))));
 
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
             orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
@@ -301,20 +296,16 @@ class OrderService
 
             // use trx (transaction) because none of the data should be left in the database if any of it fails
             const [
-                contactRecordType,
-                commTypes,
-                jobTypes,
-                invoiceLineItems,
-                orderInformation,
-                jobInformation
-            ] = await Promise.all([
-                SFRecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact'),
-                CommodityType.query(trx),
-                OrderJobType.query(trx),
-                InvoiceLineItem.query(trx),
-                Promise.all(orderInfoPromises),
-                Promise.all(jobInfoPromises)
-            ]);
+                {
+                    contactRecordType,
+                    commTypes,
+                    jobTypes,
+                    invoiceLineItems
+                },
+                orderInformation
+
+                // jobInformation <- this is commented out because nobody is using it, no need to waste time fetching it
+            ] = await Promise.all([OrderService.buildCache(), Promise.all(orderInfoPromises)]); /*Promise.all(jobInfoPromises)*/
 
             // checks if the data that was provided in the payload was found in the database
             // will throw an error if it wasn't found.
@@ -384,8 +375,10 @@ class OrderService
                     }
                     contactsForStopInOrder.push(contactToCreate);
                 }
+
                 return Promise.all(contactsForStopInOrder);
             });
+
             orderInfoPromises.push(Promise.all(stopContactsInOrder));
 
             // commodities are reused in the system
@@ -393,22 +386,23 @@ class OrderService
             {
                 const commodity = Commodity.fromJson(com);
                 const commType = commTypes.find((it) => CommodityType.compare(commodity, it));
+
                 if (!commType)
                 {
                     const commTypeStr = commodity.typeId ? commodity.typeId : `${commodity.commType?.category} ${commodity.commType?.type}`;
                     throw new Error(`Unknown commodity type: ${commTypeStr}`);
                 }
+
                 commodity.graphLink('commType', commType);
                 commodity.setCreatedBy(currentUser);
                 commodity.setDefaultValues(order?.isTender);
 
                 // check to see if the commodity is a vehicle (it would have been created or found in the database)
                 if (vehicles[i])
-                {
                     commodity.graphLink('vehicle', vehicles[i]);
-                }
 
                 cache[com['#id']] = commodity;
+
                 return cache;
             }, {});
 
@@ -1452,7 +1446,8 @@ class OrderService
                             'inoperable',
                             'identifier',
                             'lotNumber',
-                            'typeId'
+                            'typeId',
+                            'description'
                         )
                         .whereNotNull('jobGuid')
                         .distinct('guid')
@@ -1570,26 +1565,21 @@ class OrderService
 
             // create new order
             const [
-                contactRecordType,
+                {
+                    contactRecordType,
+                    commodityTypes,
+                    jobTypes
+                },
                 clientFound,
-                commodityTypes,
-                jobTypes,
                 invoiceBills,
                 orderInvoices,
                 referencesChecked,
                 oldStopData,
                 oldOrder
             ] = await Promise.all([
-                clientContact
-                    ? SFRecordType.query(trx)
-                        .modify('byType', 'contact')
-                        .modify('byName', 'account contact')
-                    : null,
-                client?.guid
-                    ? OrderService.findSFClient(client.guid, trx)
-                    : undefined,
-                commodities.length > 0 ? CommodityType.query(trx) : null,
-                jobs.length > 0 ? OrderJobType.query(trx) : null,
+                OrderService.buildCache(),
+
+                client?.guid ? OrderService.findSFClient(client.guid, trx) : undefined,
                 OrderService.getJobBills(jobs, trx),
                 OrderService.getOrderInvoices(guid, trx),
                 OrderService.validateReferencesBeforeUpdate(
@@ -1668,11 +1658,9 @@ class OrderService
             const orderGraph = Order.fromJson({
                 guid,
                 updatedByGuid: currentUser,
-                dispatcherGuid:
-                    OrderService.getObjectContactReference(dispatcher),
+                dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
                 referrerGuid: OrderService.getObjectContactReference(referrer),
-                salespersonGuid:
-                    OrderService.getObjectContactReference(salesperson),
+                salespersonGuid: OrderService.getObjectContactReference(salesperson),
                 clientGuid: client?.guid,
                 instructions,
                 clientContactGuid: orderContactCreated,
@@ -1771,6 +1759,7 @@ class OrderService
                 }
             }
         }
+
         delProms && await Promise.all(delProms);
     }
 
@@ -1796,9 +1785,7 @@ class OrderService
             );
 
         return InvoiceBill.fetchGraph(allInvoiceBills, '[lines.link, job]', { transaction: trx })
-            .modifyGraph('job', (builder) =>
-                builder.select('guid')
-            );
+            .modifyGraph('job', (builder) => builder.select('guid'));
     }
 
     static async getOrderInvoices(orderGuid, trx)
@@ -1815,7 +1802,7 @@ class OrderService
     // If contactObject is null -> reference should be removed
     static getObjectContactReference(contactObject)
     {
-        return contactObject === null ? null : contactObject?.guid;
+        return contactObject?.guid || null;
     }
 
     static async validateReferencesBeforeUpdate(
@@ -1832,16 +1819,12 @@ class OrderService
         // Return new stops with info checked if needs to be updated or created
         const stopsToChecked = [];
         for (const stop of stops)
-            stopsToChecked.push(
-                OrderService.getStopsWithInfoChecked(stop, orderGuid)
-            );
+            stopsToChecked.push(OrderService.getStopsWithInfoChecked(stop, orderGuid));
 
         // Return new terminals with info checked if needs to be updated or created
         const terminalsToChecked = [];
         for (const terminal of terminals)
-            terminalsToChecked.push(
-                OrderService.getTerminalWithInfoChecked(terminal)
-            );
+            terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal));
 
         const [orderChecked, terminalsChecked, stopsChecked] =
             await Promise.all([orderContacToCheck, Promise.all(terminalsToChecked), Promise.all(stopsToChecked)]);
@@ -1858,11 +1841,12 @@ class OrderService
 
         return { newOrderContactChecked, terminalsChecked, stopsChecked };
     }
+
     static async getStopsWithInfoChecked(stop, orderGuid)
     {
         const contacTypes = ['primaryContact', 'alternativeContact'];
         const contactsActionPromise = contacTypes.map((contactType) =>
-            OrderService.checkTerminalContacReference(
+            OrderService.checkTerminalContactReference(
                 stop[contactType],
                 orderGuid
             )
@@ -1960,7 +1944,7 @@ class OrderService
      * @param {*} stopTerminalContactInput
      * @returns string with the action to perform later by updateCreateStopContacts function
      */
-    static async checkTerminalContacReference(terminalContact, orderGuid)
+    static async checkTerminalContactReference(terminalContact, orderGuid)
     {
         if (terminalContact === null) return 'remove';
         else if (terminalContact === undefined) return 'nothingToDo';
@@ -2096,7 +2080,7 @@ class OrderService
     }
 
     /**
-     * Base information (B.I.): Fileds use to create the address; Street1, city, state, zipCode and Country
+     * Base information (B.I.): Fields use to create the address; Street1, city, state, zipCode and Country
      * Extra information (E.I.): Fields that are not use to create the address; Street2 and Name
      * findOrCreate: We call Arcgis to get Lat and Long -> We look in DB for that key, if it exists
      *      we pull that record and update the E.I., if not, we create a new record.
@@ -2117,9 +2101,8 @@ class OrderService
                 const terminalToUpdate = Terminal.fromJson(terminalData);
                 terminalToUpdate.setUpdatedBy(currentUser);
 
-                const terminalUpdated = await Terminal.query(
-                    trx
-                ).patchAndFetchById(terminalToUpdate.guid, terminalToUpdate);
+                const terminalUpdated = await Terminal.query(trx)
+                    .patchAndFetchById(terminalToUpdate.guid, terminalToUpdate);
 
                 return { terminal: terminalUpdated, index };
             case 'findOrCreate':
@@ -2182,9 +2165,7 @@ class OrderService
                         Terminal.fromJson(terminalDataNoGuid);
                     terminalToCreate.setCreatedBy(currentUser);
 
-                    terminalCreated = await Terminal.query(trx).insertAndFetch(
-                        terminalToCreate
-                    );
+                    terminalCreated = await Terminal.query(trx).insertAndFetch(terminalToCreate);
                 }
 
                 return { terminal: terminalCreated, index };
@@ -2207,6 +2188,7 @@ class OrderService
 
         return terminalContactGraph;
     }
+
     static async createStopContactsMap(stops, terminalsMap, currentUser, trx)
     {
         const stopsWithContacts =
@@ -2234,6 +2216,7 @@ class OrderService
             return map;
         }, {});
     }
+
     static async createOrderContactCommoditiesTerminalsMap(
         contactInfo,
         commoditiesInfo,
@@ -2377,8 +2360,7 @@ class OrderService
                     {
                         terminalContactToUpdate.setUpdatedBy(currentUser);
                         terminalContactToUpdate.email = contactInput.email;
-                        terminalContactToUpdate.mobileNumber =
-                            contactInput.mobileNumber;
+                        terminalContactToUpdate.mobileNumber = contactInput.mobileNumber;
                     }
                     else
                         terminalContactToUpdate =
@@ -2397,8 +2379,7 @@ class OrderService
                     break;
                 default:
                     // Null means that should be delete, the real remove happens in createSingleStopGraph
-                    contactsUpdated[contactType] =
-                        contactAction === 'remove' ? null : undefined;
+                    contactsUpdated[contactType] = contactAction === 'remove' ? null : undefined;
             }
         }
 
@@ -2479,8 +2460,7 @@ class OrderService
 
     static isTerminalContactToBeDeleted(terminalContact)
     {
-        if (terminalContact === null) return true;
-        return false;
+        return terminalContact === null ? true : false;
     }
 
     static createJobsGraph(jobsInput, jobTypes, currentUser)
@@ -2507,8 +2487,7 @@ class OrderService
 
     static createSingleJobGraph(jobInput, jobTypes, currentUser)
     {
-        const jobWithContactReferences =
-            OrderService.createJobContactReferences(jobInput);
+        const jobWithContactReferences = OrderService.createJobContactReferences(jobInput);
         const jobGraph = OrderJob.fromJson(jobWithContactReferences);
 
         if (jobGraph?.jobType?.category && jobGraph?.jobType?.type)
@@ -2533,8 +2512,7 @@ class OrderService
 
     static createJobContactReferences(jobInput)
     {
-        const { dispatcher, vendor, vendorAgent, vendorContact, ...jobData } =
-            jobInput;
+        const { dispatcher, vendor, vendorAgent, vendorContact, ...jobData } = jobInput;
 
         return {
             dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
@@ -2545,6 +2523,38 @@ class OrderService
                 OrderService.getObjectContactReference(vendorContact),
             ...jobData
         };
+    }
+
+    /**
+     * This method is used to minimize amount of queries to be done
+     * to get stuff like commTypes, recordTypes, etc.
+     */
+    static async buildCache()
+    {
+        if (!cache.has('orderInfo'))
+        {
+            const [
+                contactRecordType,
+                commTypes,
+                jobTypes,
+                invoiceLineItems
+            ] = await Promise.all(
+                [
+                    SFRecordType.query().modify('byType', 'contact').modify('byName', 'account contact'),
+                    CommodityType.query(),
+                    OrderJobType.query(),
+                    InvoiceLineItem.query()
+                ]);
+
+            cache.set('orderInfo', {
+                contactRecordType,
+                commTypes,
+                jobTypes,
+                invoiceLineItems
+            });
+        }
+
+        return cache.get('orderInfo');
     }
 
     /**

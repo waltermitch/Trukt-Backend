@@ -2,7 +2,7 @@ class Bill
 {
     constructor(data)
     {
-        this.ApprovedDate = data.datePaid;
+        this.ApprovedDate = data.dateCharged;
         this.ExternalInvoiceKey = data.guid;
         this.ExternalPayeeKey = data.vendorId;
         this.InvoiceImportedStatusId = data.paymentStatus || 2;

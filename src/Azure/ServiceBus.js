@@ -1,73 +1,101 @@
-const HTTPS = require('../AuthController');
-const DB = require('../Mongo');
+const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 
-// config
-const opts =
-{
-    url: process.env['azure.serviceBus.url'],
-    tokenName: 'internal_service_bus_api_access_token'
-};
+const connectionString = process.env['azure.servicebus.connectionString'];
 
-// service bus singleton
-let api;
+const serviceBusClient = new ServiceBusClient(connectionString);
 
 class ServiceBus
 {
-    static async connect()
+    constructor({ queue, topic, subscription })
     {
-        if (!api?.expCheck())
+        if (queue)
+            this.buildQueue(queue);
+        else if (topic && subscription)
+            this.buildTopic(topic, subscription);
+    }
+
+    buildQueue(queue)
+    {
+        this.receiver = serviceBusClient.createReceiver(queue);
+        this.sender = serviceBusClient.createSender(queue);
+    }
+
+    buildTopic(topic, subscription)
+    {
+        // whoever uses this can implement it
+        // i don't like this approach because system gets spammed with messages potentially
+    }
+
+    async getMessages(amount = 1)
+    {
+        const res = await this.receiver.receiveMessages(amount);
+
+        return res.map((e) => e.body);
+    }
+
+    async batchSend(messages = [], contentType = 'application/json')
+    {
+        // make sure its an array
+        if (!Array.isArray(messages))
+            messages = [messages];
+
+        // return if length is 0
+        if (messages.length === 0)
+            return;
+
+        let batch = await this.sender.createMessageBatch();
+
+        for (const msg of messages)
         {
-            // get token
-            const token = await DB.getSecret({ 'name': opts.tokenName });
-
-            if (!api?.instance)
+            const payload = { body: msg, contentType };
+            if (!batch.tryAddMessage(payload))
             {
-                api = new HTTPS(opts);
-                api.connect();
+                await this.sender.sendMessages(batch);
+                batch = await this.sender.createMessageBatch();
+
+                if (!batch.tryAddMessage(payload))
+                    throw new Error('Failed to add message to batch');
             }
-
-            api.exp = token.exp;
-
-            // set token
-            api.setToken(token.value);
         }
 
-        return api.instance;
+        // send the last batch
+        await this.sender.sendMessages(batch);
     }
 
-    static async push(SBName, data)
+    async subscriptionMessageHandler(message)
     {
-        // connect
-        const api = await ServiceBus.connect();
-
-        // add message
-        const res = await api.post(`${SBName}/messages`, data);
-
-        return res.status;
+        // can expand this later;
+        if (message.body)
+            return message.body;
     }
 
-    static async pop(SBName)
+    async subscriptionErrorHandler(args)
     {
-        const api = await ServiceBus.connect();
+        // copy pasted this from LoadboardHandler.js
+        console.log(`Error occurred with ${args.entityPath} within ${args.fullyQualifiedNamespace}: `, args.error);
 
-        const res = await api.delete(`${SBName}/messages/head`);
-
-        return res;
-    }
-
-    // batch promises to get many messages
-    static async popMany(SBName, count)
-    {
-        // map promises
-        const promises = [];
-
-        for (let i = 0; i < count; i++)
-            promises.push({ func: ServiceBus.pop, args: [SBName] });
-
-        // get messages
-        const res = await Promise.all(promises.map(p => p.func(...p.args)));
-
-        return res;
+        if (isServiceBusError(args.error))
+        {
+            switch (args.error.code)
+            {
+                case 'MessagingEntityDisabled':
+                case 'MessagingEntityNotFound':
+                case 'UnauthorizedAccess':
+                    // It's possible you have a temporary infrastructure change (for instance, the entity being
+                    // temporarily disabled). The handler will continue to retry if `close()` is not called on the subscription - it is completely up to you
+                    // what is considered fatal for your program.
+                    console.log(`An unrecoverable error occurred. Stopping processing. ${args.error.code}`, args.error);
+                    await this.subscription.close();
+                    break;
+                case 'MessageLockLost':
+                    console.log('Message lock lost for message', args.error);
+                    break;
+                case 'ServiceBusy':
+                    // choosing an arbitrary amount of time to wait.
+                    await delay(1000);
+                    break;
+            }
+        }
     }
 }
 

@@ -415,7 +415,7 @@ class InvoiceService
                 const trx = await InvoiceBill.transaction();
 
                 // update all invoices and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateInvoiced: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateCharged: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
 
                 if (proms[0].status == 'fulfilled')
                 {

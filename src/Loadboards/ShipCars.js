@@ -352,7 +352,7 @@ class ShipCars extends Loadboard
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
             await Promise.all(allPromises);
-            trx.commit();
+            await trx.commit();
 
             return objectionPost.jobGuid;
         }
