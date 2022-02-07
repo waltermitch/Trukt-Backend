@@ -6,17 +6,17 @@ const serviceBusClient = new ServiceBusClient(connectionString);
 
 class ServiceBus
 {
-    constructor({ queue, topic, subscription })
+    constructor({ queue, topic, subscription, receiveMode })
     {
         if (queue)
-            this.buildQueue(queue);
+            this.buildQueue(queue, receiveMode);
         else if (topic && subscription)
             this.buildTopic(topic, subscription);
     }
 
-    buildQueue(queue)
+    buildQueue(queue, receiveMode = 'receiveAndDelete')
     {
-        this.receiver = serviceBusClient.createReceiver(queue);
+        this.receiver = serviceBusClient.createReceiver(queue, { receiveMode });
         this.sender = serviceBusClient.createSender(queue);
     }
 
