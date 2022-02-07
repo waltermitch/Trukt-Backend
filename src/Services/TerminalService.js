@@ -1,8 +1,15 @@
+const LocationLinks = require('../Models/CopartLocationLinks');
+const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
-const ArcgisClient = require('../ArcgisClient');
+const OrderStops = require('../Models/OrderStop');
 const Terminal = require('../Models/Terminal');
+const Queue = require('../Azure/ServiceBus');
+const { mergeDeepRight } = require('ramda');
+const ArcGIS = require('../ArcGIS/API');
 
-const keywordFields = {
+const { SYSTEM_USER } = process.env;
+const keywordFields =
+{
     'country': ['country'],
     'state': ['state'],
     'city': ['city'],
@@ -10,23 +17,22 @@ const keywordFields = {
     'address': ['street1', 'street2']
 };
 
-const { SYSTEM_USER } = process.env;
+const terminalsQueue = new Queue({ queue: 'unresolved_terminals' });
 
 class TerminalService
 {
     static async getById(terminalId)
     {
         const terminal = await Terminal.query().where('rcgTms.terminals.guid', '=', `${terminalId}`).withGraphJoined('[contacts, primaryContact, alternativeContact]');
+
         return terminal;
     }
 
     static async search(query)
     {
+        // remove unwanted keys that null or empty strings
         for (const key in query)
-
-            // remove unwanted keys that undefined or empty strings
-            if (query[key] == undefined || query[key] == '')
-
+            if (query[key] == null || query[key] == '')
                 delete query[key];
 
         // query will be an object with key being the query word
@@ -61,6 +67,7 @@ class TerminalService
             qb.whereRaw('vector_name @@ to_tsquery(\'english\', ? )', [searchVal]);
         }
 
+        // TODO add comments here cause nobody knows what this is
         for (const keyword in keywordFields)
 
             if (keyword in query)
@@ -123,56 +130,132 @@ class TerminalService
         return terminal.results || terminal;
     }
 
-    /**
-     * Returns terminals that hasn't being resolved and hasn't been
-     * checked for max 3 times (This is to avoid checking an unverifiable address forever)
-     */
-    static async getUnverifiedTerminals(limit = 100)
+    static async addUnresolvedTerminalToQueue(terminal)
     {
-        return Terminal.query().select()
-            .where('isResolved', false)
-            .andWhere('resolvedTimes', '<', 3)
-            .orderBy('dateCreated', 'resolvedTimes')
-            .limit(limit) || [];
+        await terminalsQueue.batchSend([terminal]);
     }
 
-    static async resolveTerminal(terminal)
+    static async queueUnresolvedTerminals()
     {
-        const { guid } = terminal;
+        // get all unresolved terminals, that have never been checked
+        // we want to get the least recently checked ones first to avoid checking the same address over and over again
+        // we can also choose where we nulls go in the result set.
+        const terminals = await Terminal.query()
+            .where('isResolved', false)
+            .andWhere('resolvedTimes', '<', 1)
+            .orderByRaw('date_updated ASC NULLS FIRST')
+            .limit(200);
+
+        // put the terminals in the queue
         try
         {
-            const terminalAddress = Terminal.createStringAddress(terminal);
-            const arcgisAddress = await ArcgisClient.findGeocode(terminalAddress);
-            const terminalToUpdate = TerminalService.updateTerminalInformation(arcgisAddress, terminal, SYSTEM_USER);
-
-            return await TerminalService.updateTerminal(terminalToUpdate);
+            await terminalsQueue.batchSend(terminals);
         }
-        catch (error)
+        catch (err)
         {
-            /**
-             * Some terminals may return an error when inserting due to unique coordinates constraint,
-             * in those cases we mark those termianls as resolved = false (Which is the default) and resolved_times = 3
-             * so we stop checking that terminal but still know that is not resolved.
-             */
+            console.log(err);
+        }
+    }
+
+    static async dequeueUnresolvedTerminals()
+    {
+        const terminals = await terminalsQueue.getMessages(5);
+
+        await TerminalService.resolveTerminals(terminals);
+    }
+
+    static async resolveTerminals(terminals = [])
+    {
+        for (const t of terminals)
+        {
+            // first we want to ensure this terminal is not already resolved/deleted
+            const terminal = await Terminal.query().findById(t.guid).where('isResolved', false);
+
+            if (!terminal)
+                continue;
+
             try
             {
-                const message = `Error, terminal ${guid} could not be resovled: ${error?.nativeError?.detail || error?.message || error}`;
-                console.error(message);
+                // convert object to string
+                const terminalAddress = Terminal.createStringAddress(terminal);
 
-                const unresolvedTerminalToUpdate = {
-                    guid,
-                    resolvedTimes: 3,
-                    updatedByGuid: SYSTEM_USER
-                };
-                return await TerminalService.updateTerminal(unresolvedTerminalToUpdate);
+                // lookup candidates
+                const [candidate] = await ArcGIS.findMatches(terminalAddress);
+
+                // check score of first candidate
+                if (candidate?.score >= 95)
+                {
+                    const coords = ArcGIS.parseGeoCoords(candidate);
+
+                    // at this point we have a match, but we don't know if there is a terminal with this lat/long in the db already
+                    // if there is an existing terminal we need to update all the objects related to this terminal to use that one
+                    // if no such terminal exists we will simply update this terminal with the lat/long
+                    await Terminal.transaction(async trx =>
+                    {
+                        const existingTerminal = await Terminal.query()
+                            .select('guid')
+                            .where('latitude', coords.lat)
+                            .andWhere('longitude', coords.long)
+                            .andWhereNot('guid', terminal.guid)
+                            .first();
+
+                        if (existingTerminal)
+                        {
+                            // this will take the current terminal and move point related records to existing terminal and then delete it
+                            await TerminalService.mergeTerminals(existingTerminal, terminal, trx);
+                        }
+                        else
+                        {
+                            // this will take the current terminal update the address info, lat/long etc, and set it as resolved
+                            await TerminalService.normalizeTerminal(terminal, candidate, trx);
+                        }
+                    });
+                }
+                else
+                {
+                    // if we are here we want to attempt one more lookup, based on a match for properties
+                    // this will not resolve the terminal but will merge it into a duplicate unresolved terminal
+                    await Terminal.transaction(async trx =>
+                    {
+                        const existingTerminal = await Terminal.query()
+                            .select('guid')
+                            .where({
+                                'name': terminal.name,
+                                'street1': terminal.street1,
+                                'city': terminal.city,
+                                'state': terminal.state,
+                                'zipCode': terminal.zipCode
+                            })
+                            .andWhereNot('guid', terminal.guid)
+                            .first();
+
+                        if (existingTerminal)
+                        {
+                            await TerminalService.mergeTerminals(existingTerminal, terminal, trx);
+                        }
+                        else
+                        {
+                            // if the score is less than 95, we will mark the terminal as unresolved and increment the resolvedTimes
+                            await Terminal.query(trx)
+                                .where('guid', terminal.guid)
+                                .update({ isResolved: false, resolvedTimes: 1, updatedByGuid: SYSTEM_USER });
+                        }
+                    });
+                }
             }
-            catch (err)
+            catch (error)
             {
-                const message = `Error, terminal ${guid} could not be updated: ${err?.nativeError?.detail || err?.message || err}`;
+                /**
+                 * Some terminals may return an error when inserting due to unique coordinates constraint,
+                 * in those cases we mark those terminals as resolved = false (Which is the default) and resolved_times = 3
+                 * so we stop checking that terminal but still know that is not resolved.
+                 */
+                const message = `Error, terminal ${t.guid} could not be updated: ${error?.nativeError?.detail || error?.message || error}`;
                 console.error(message);
                 telemetryClient.trackException({
-                    exception: new Error(message),
-                    properties: {
+                    exception: error,
+                    properties:
+                    {
                         guid: terminal.guid,
                         name: terminal.name,
                         street1: terminal.street1,
@@ -185,41 +268,181 @@ class TerminalService
                     },
                     severity: 2
                 });
-                throw { message };
             }
         }
     }
 
-    static async updateTerminal(terminal)
+    // this method will update a terminal with the new information from arcgis
+    // in the processing normalizing the address formatting, etc and mark it as resolved
+    static async normalizeTerminal(terminal, arcGISmatch, trx)
     {
-        return await Terminal.query()
-            .patch(terminal)
-            .where('guid', terminal.guid);
-    }
+        const coords = ArcGIS.parseGeoCoords(arcGISmatch);
 
-    /**
-     * Latitude is arcgis.Y
-     * Longitude is arcgis.X
-     * https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find-address-candidates.htm#ESRI_SECTION1_CF39B0C8FC2547C3A52156F509C555FC
-     */
-    static updateTerminalInformation(arcgisAddress, { guid, resolvedTimes }, system_user)
-    {
-        const termninalToUpdate = {
-            guid,
-            updatedByGuid: system_user,
-            resolvedTimes
+        const payload =
+        {
+            latitude: coords.lat,
+            longitude: coords.long,
+            updatedByGuid: SYSTEM_USER,
+            isResolved: true
         };
 
-        if (ArcgisClient.isAddressFound(arcgisAddress))
+        // add these fields if they exist
+        const { attributes: atr } = arcGISmatch;
+
+        if (atr.StAddr)
+            payload.street1 = atr.StAddr;
+        if (atr.City)
+            payload.city = atr.City;
+        if (atr.State)
+            payload.state = atr.RegionAbbr || atr.Region;
+        if (atr.Postal)
+            payload.zipCode = atr.Postal;
+
+        // update current terminal with normalized address since no match was found
+        await Terminal.query(trx)
+            .where('guid', terminal.guid)
+            .patch(payload);
+    }
+
+    // this method will merge one terminal into another including all related records
+    static async mergeTerminals(primaryTerminal, alternativeTerminal, trx)
+    {
+        // update all orderStops and terminalContacts from current terminal to existing terminal
+        await Promise.all(
+            [
+                OrderStops.query(trx)
+                    .where('terminalGuid', alternativeTerminal.guid)
+                    .patch({ terminalGuid: primaryTerminal.guid, updatedByGuid: SYSTEM_USER }),
+
+                // since we can't use onConflict for a patch, we need to do this manually
+                TerminalService.mergeContacts(alternativeTerminal.guid, primaryTerminal.guid, trx),
+
+                LocationLinks.query(trx)
+                    .where('terminalGuid', alternativeTerminal.guid)
+                    .patch({ terminalGuid: primaryTerminal.guid })
+            ])
+            .then(async ([orderStops, terminalContacts]) =>
+            {
+                // now that there is nothing attached to this terminal, we can delete it
+                await Terminal.query(trx).deleteById(alternativeTerminal.guid);
+            });
+    }
+
+    static async mergeContacts(oldTerminalGuid, newTerminalGuid, trx)
+    {
+        // get old and new terminal contacts
+        const [oldTerminalContacts, newTerminalContacts] = await Promise.all([
+            TerminalContacts.query(trx)
+                .where('terminalGuid', oldTerminalGuid),
+
+            TerminalContacts.query(trx)
+                .where('terminalGuid', newTerminalGuid)
+        ]);
+
+        for (const oldTerminalContact of oldTerminalContacts)
         {
-            termninalToUpdate.latitude = arcgisAddress.location.y;
-            termninalToUpdate.longitude = arcgisAddress.location.x;
-            termninalToUpdate.isResolved = true;
+            // try to find a match in the new terminal contacts
+            const match = newTerminalContacts.find(newTerminalContact =>
+                newTerminalContact.name == oldTerminalContact.name && newTerminalContact.phoneNumber == oldTerminalContact.phoneNumber);
+
+            let newContactGuid;
+            if (match)
+            {
+                newContactGuid = match.guid;
+            }
+
+            // if no match we will create a new contact on the new terminal
+            else
+            {
+                const payload = mergeDeepRight(oldTerminalContact, { terminalGuid: newTerminalGuid });
+
+                delete payload.guid;
+
+                const newContact = await TerminalContacts.query(trx).insert(payload);
+
+                newContactGuid = newContact.guid;
+            }
+
+            // update all orderStops with old terminal contact to new terminal contact
+            await Promise.all([
+                OrderStops.query(trx)
+                    .where('primaryContactGuid', oldTerminalContact.guid)
+                    .patch({ primaryContactGuid: newContactGuid }),
+
+                OrderStops.query(trx)
+                    .where('alternativeContactGuid', oldTerminalContact.guid)
+                    .patch({ alternativeContactGuid: newContactGuid })
+            ]);
+
+            // now we can delete the old contact
+            await TerminalContacts.query(trx).deleteById(oldTerminalContact.guid);
+        }
+    }
+
+    static async findOrCreate(terminal, currentUser, trx, isTender)
+    {
+        // if a guid is not provided, we will assume this is a new terminal
+        if (!terminal.guid)
+        {
+            return await TerminalService.create(terminal, currentUser, trx, isTender);
         }
         else
-            termninalToUpdate.resolvedTimes++;
+        {
+            const term = await Terminal.query(trx).findById(terminal.guid);
 
-        return termninalToUpdate;
+            // check if the terminal was not found we will create it, no error will be thrown
+            // if the terminal was found, we will check if user is trying to change the important fields
+            // if so, we will create a new terminal and leave the old one as is
+            if (!term)
+            {
+                return await TerminalService.create(terminal, currentUser, trx, isTender);
+            }
+            else
+            {
+                term['#id'] = terminal.index;
+
+                return term;
+            }
+        }
+    }
+
+    static async create(terminal, currentUser, trx, isTender)
+    {
+        // make sure to delete the guid
+        delete terminal.guid;
+
+        const term = Terminal.fromJson(terminal);
+
+        term.setCreatedBy(currentUser);
+        term.setDefaultValues(isTender);
+
+        // create a new terminal
+        const newTerminal = await Terminal.query(trx).insert(term);
+
+        // everytime we create a new terminal, we want to queue it up
+        await terminalsQueue.batchSend(newTerminal);
+
+        newTerminal['#id'] = terminal['#id'];
+
+        return newTerminal;
+    }
+
+    // this method is only for the /update endpoint and will update a terminal with the new information
+    // terminals shouldn't be updated directly in other places like during order creation/update
+    static async update(terminal, currentUser, trx = undefined)
+    {
+        const term = Terminal.fromJson(terminal);
+
+        term.setDefaultValues();
+        term.setUpdatedBy(currentUser);
+
+        term.isResolved = terminal.isResolved || false;
+
+        const newTerminal = await Terminal.query(trx)
+            .patchAndFetch(term)
+            .where('guid', terminal.guid);
+
+        return newTerminal;
     }
 }
 

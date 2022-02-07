@@ -189,7 +189,7 @@ class BillService
         // query to get all the orders with related objects
         const qb = Order.query().whereIn('guid', arr);
 
-        qb.withGraphFetched('[jobs.[bills.[lines.[commodity.[stops.[terminal], vehicle], item.qbAccount]], vendor]]');
+        qb.withGraphFetched('[jobs.[bills.[lines.[commodity.[stops.[terminal], vehicle, commType], item.qbAccount]], vendor]]');
 
         // get all the orders
         const orders = await qb;
@@ -263,7 +263,7 @@ class BillService
                 const trx = await InvoiceBill.transaction();
 
                 // update all the bills and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, datePaid: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.bill?.Id }).where('invoiceGuid', guid)]);
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateCharged: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.bill?.Id }).where('invoiceGuid', guid)]);
 
                 if (proms[0].status == 'fulfilled')
                 {

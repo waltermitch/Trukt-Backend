@@ -688,6 +688,9 @@ class Super extends Loadboard
                     }
                 });
 
+                // TODO: Add events to trigger disptch declined, when moved to service class
+                // emitter.emit('orderjob_dispatch_offer_declined', { jobGuid: objectionDispatch.jobGuid, currentUser: process.env.SYSTEM_USER, orderGuid: orderGuid });
+
                 return objectionDispatch.jobGuid;
             }
             catch (e)
