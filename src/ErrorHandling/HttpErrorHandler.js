@@ -5,7 +5,7 @@ const telemetryClient = require('./Insights');
 /* eslint-disable */
 module.exports = (errors, request, response, next) =>
 {
-    if(!Array.isArray(errors))
+    if (!Array.isArray(errors))
     {
         errors = [errors];
     }
@@ -13,7 +13,7 @@ module.exports = (errors, request, response, next) =>
     let data = {
         errors: []
     };
-    for(const e of errors)
+    for (const e of errors)
     {
         // handle openapi validator errors
         if (e?.constructor?.name in validatorErrors)
@@ -30,7 +30,7 @@ module.exports = (errors, request, response, next) =>
         } else 
         {
             status = e.status || status;
-            data.errors.push({message: e.message || e.data.message});
+            data.errors.push({ message: e.data?.message || e.message });
         }
     }
     console.log(...errors);
