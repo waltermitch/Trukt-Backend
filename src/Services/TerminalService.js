@@ -143,7 +143,8 @@ class TerminalService
         const terminals = await Terminal.query()
             .where('isResolved', false)
             .andWhere('resolvedTimes', '<', 1)
-            .orderByRaw('date_updated ASC NULLS FIRST');
+            .orderByRaw('date_updated ASC NULLS FIRST')
+            .limit(200);
 
         // put the terminals in the queue
         try
