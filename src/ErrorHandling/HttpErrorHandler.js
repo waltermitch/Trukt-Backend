@@ -6,7 +6,6 @@ const telemetryClient = require('./Insights');
 /* eslint-disable */
 module.exports = (errors, request, response, next) =>
 {
-    // console.log({errors, errorName: errors.constructor.name});
     if (errors instanceof ValidationError)
     {
         switch (errors.type) {
