@@ -3,157 +3,179 @@ const validatorErrors = require('express-openapi-validator').error;
 const HttpError = require('./Exceptions/HttpError');
 const telemetryClient = require('./Insights');
 
-/* eslint-disable */
-module.exports = (errors, request, response, next) =>
+/**
+ * Evaluates the error and returns the appropriate error message structure
+ * @param {unknown} error
+ * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data: Record<string, unknown}}
+ */
+function formatErrorMessageStructure(error)
 {
-    if (errors instanceof ValidationError)
+    // TODO: Set error types for custom app types
+    if (error instanceof ValidationError)
     {
-        switch (errors.type) {
+        switch (error.type)
+        {
             case 'ModelValidation':
             case 'RelationExpression':
             case 'UnallowedRelation':
             case 'InvalidGraph':
             default:
                 telemetryClient.trackException({
-                    exception: errors,
-                    severity: 2,
-                })
-                response.status(400).send({
+                    exception: error,
+                    severity: 2
+                });
+                return {
                     status: 400,
                     errors: [
                         {
-                            errorType: errors.type,
-                            message: errors.message,
+                            errorType: error.type,
+                            message: error.message
                         }
                     ],
-                    data: errors.data
-                });
-                break;
+                    data: error.data
+                };
         }
-    } else if (errors instanceof NotFoundError)
+    }
+    else if (error instanceof NotFoundError)
     {
         telemetryClient.trackException({
-            exception: errors,
-            severity: 2,
-        })
-        response.status(404).send({
+            exception: error,
+            severity: 2
+        });
+        return {
             status: 404,
             errors: [
                 {
-                    errorType: errors.name,
-                    message: errors.message,
+                    errorType: error.name,
+                    message: error.message
                     
                 }
             ],
-            data: errors.data
-        });
-    } else if (errors instanceof UniqueViolationError || errors instanceof ForeignKeyViolationError)
+            data: error.data
+        };
+    }
+    else if (error instanceof UniqueViolationError || error instanceof ForeignKeyViolationError)
     {
         telemetryClient.trackException({
-            exception: errors,
-            severity: 3,
-        })
-        response.status(409).send({
+            exception: error,
+            severity: 3
+        });
+        return {
             status: 409,
             errors: [
                 {
-                    errorType: errors.name,
-                    message: errors.nativeError.detail,
-                    code: errors.nativeError.code,
+                    errorType: error.name,
+                    message: error.nativeError.detail,
+                    code: error.nativeError.code
                 }
             ],
-            data: errors.data,
-        });
-    } else if (errors instanceof NotNullViolationError || errors instanceof CheckViolationError || errors instanceof DataError)
+            data: error.data
+        };
+    }
+    else if (error instanceof NotNullViolationError || error instanceof CheckViolationError || error instanceof DataError)
     {
         telemetryClient.trackException({
-            exception: errors,
-            severity: 3,
-        })
-        response.status(400).send({
+            exception: error,
+            severity: 3
+        });
+        return {
             status: 400,
             errors: [
                 {
-                    errorType: errors.name,
-                    message: errors.nativeError.detail,
-                    code: errors.nativeError.code
+                    errorType: error.name,
+                    message: error.nativeError.detail,
+                    code: error.nativeError.code
                 }
             ],
-            data: errors.data
-        });
-    } else if (errors instanceof DBError)
+            data: error.data
+        };
+    }
+    else if (error instanceof DBError)
     {
         telemetryClient.trackException({
-            exception: errors,
-            severity: 4,
-        })
-        response.status(500).send({
+            exception: error,
+            severity: 4
+        });
+        return {
             status: 500,
             errors: [
                 {
-                    errorType: 'DBError',
-                    message: errors.message,
+                    errorType: error.name,
+                    message: error.message
                 }
             ],
-            data: errors.data
-        });
-    } else if (errors instanceof HttpError || errors.constructor.name === 'HttpError')
+            data: error.data
+        };
+    }
+    else if (error instanceof HttpError || error.constructor.name === 'HttpError')
     {
         telemetryClient.trackException({
-            exception: errors,
-            severity: 2,
-        })
-        response.status(errors.status).send({
-            status: errors.status,
+            exception: error,
+            severity: 2
+        });
+        return {
+            status: error.status,
             errors: [
                 {
                     errorType: 'HttpError',
-                    message: errors.message,
+                    message: error.message
                 }
             ],
             data: {}
-        });
-    } else if (errors instanceof Error)
+        };
+    }
+    else if (error instanceof Error)
     {
         telemetryClient.trackException({
-            exception: errors,
-            severity: 3,
-        })
-        response.status(500).send({
+            exception: error,
+            severity: 3
+        });
+        return {
             status: 500,
             errors: [
                 {
-                    errorType: errors.name,
-                    message: errors.message,
+                    errorType: error.name,
+                    message: error.message
                 }
-            ]
-        });
-    } else if (Array.isArray(errors))
-    {
-        // TODO: Set error exception in Application Azure Insights with the class designated for bulk actions
-
-        response.status(500).send({
-            status: 500,
-            errors: errors.map(error => ({
-                errorType: error.name,
-                message: error.message,
-            }))
-        });
-    } else
+            ],
+            data: {}
+        };
+    }
+    else
     {
         telemetryClient.trackException({
-            exception: errors,
-            severity: 3,
-        })
-        response.status(500).send({
+            exception: error,
+            severity: 3
+        });
+        return {
             status: 500,
             errors: [
                 {
                     errorType: 'UnknownError',
-                    message: errors.toString(),
+                    message: error.toString()
                 }
             ],
             data: {}
+        };
+    }
+}
+
+module.exports = (errors, request, response, next) =>
+{
+
+    if (Array.isArray(errors))
+    {
+        // TODO: Set error exception in Application Azure Insights with the class designated for bulk actions
+
+        response.status(200).send({
+            status: 200,
+            errors: errors.map(formatErrorMessageStructure)
         });
+    }
+    else
+    {
+        const errorMessage = formatErrorMessageStructure(errors);
+
+        response.status(errorMessage.status).send(errorMessage);
     }
 };
