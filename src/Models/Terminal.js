@@ -1,7 +1,6 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const BaseModel = require('./BaseModel');
-const { eqProps } = require('ramda');
 const { raw } = require('objection');
 
 const geoCoordFields = ['latitude', 'longitude'];
@@ -65,6 +64,11 @@ class Terminal extends BaseModel
     static uniqueColumns = ['latitude', 'longitude']
     static onConflictIgnore = true
 
+    $beforeInsert()
+    {
+        delete this['#id'];
+    }
+
     $parseJson(json)
     {
         json = super.$parseJson(json);
@@ -81,9 +85,10 @@ class Terminal extends BaseModel
                 json[field] = parseFloat(parseFloat(json[field]).toFixed(7));
             }
         }
-        json = this.mapIndex(json);
-        return json;
 
+        json = this.mapIndex(json);
+
+        return json;
     }
 
     $formatJson(json)
@@ -97,6 +102,7 @@ class Terminal extends BaseModel
                 json[field] = parseFloat(json[field]);
             }
         }
+
         return json;
     }
 
@@ -109,6 +115,20 @@ class Terminal extends BaseModel
         return `${this.street1}, ${this.city}, ${this.state} ${this.zipCode}`;
     }
 
+    isDifferent(terminal)
+    {
+        if (this.street1 !== terminal.street1)
+            return true;
+        if (this.city !== terminal.city)
+            return true;
+        if (this.state !== terminal.state)
+            return true;
+        if (this.zipCode !== terminal.zipCode)
+            return true;
+        else
+            return false;
+    }
+
     static hasTerminalsSameBaseInformation(terminal1, terminal2)
     {
         const baseInfoKeys = [
@@ -118,6 +138,7 @@ class Terminal extends BaseModel
             'zipCode',
             'country'
         ];
+
         return baseInfoKeys.every(key =>
         {
             const terminal1Value = terminal1[key]?.toLowerCase() || '';
@@ -130,6 +151,7 @@ class Terminal extends BaseModel
     static hasTerminalsSameExtraInformation(terminal1, terminal2)
     {
         const exytraInfoKeys = ['name', 'street2', 'locationType'];
+
         return exytraInfoKeys.every(key =>
         {
             const terminal1Value = terminal1[key]?.toLowerCase() || '';
@@ -164,12 +186,17 @@ class Terminal extends BaseModel
     }
 
     /**
-     * @description This is for EDI orders that do not provide the locationType
+     * @description This is for EDI orders that do not provide the locationType, and other stuff
      */
     setDefaultValues(isTender = false)
     {
         if (isTender && !this?.locationType)
             this.locationType = EDI_DEFAULT_LOCATION_TYPE;
+
+        this.isResolved = false;
+        this.resolvedTimes = 0;
+        this.latitude = null;
+        this.longitude = null;
     }
 
     /**

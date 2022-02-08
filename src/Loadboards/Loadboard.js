@@ -12,7 +12,7 @@ const R = require('ramda');
 const emitter = require('../EventListeners/index');
 
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
-
+const systemUser = process.env['SYSTEM_USER'];
 class Loadboard
 {
     constructor(data)
@@ -95,6 +95,7 @@ class Loadboard
     dispatch()
     {
         this.cleanUp();
+        this.validateDispatch();
         const payloadMetadata = { post: this.postObject, dispatch: this.data.dispatch, loadboard: this.loadboardName };
         const payload = {};
 
@@ -222,6 +223,9 @@ class Loadboard
         return phone;
     }
 
+    // currently overridden by child classes
+    validateDispatch() { }
+
     static async handleCreate(post)
     {
         return LoadboardPost.fromJson(post);
@@ -348,8 +352,7 @@ class Loadboard
                     commodities: stop.commodities.map(com => com.guid),
                     date: response.completedAtTime
                 };
-
-                promises.push({ func: OrderStopService.updateStopStatus, params, body });
+                promises.push({ func: OrderStopService.updateStopStatus, params, body, systemUser });
             }
 
             const attachments = [];
@@ -371,7 +374,7 @@ class Loadboard
             if (attachments.length > 0)
                 await Attachment.query(trx).insert(attachments);
 
-            await Promise.all(promises.map(async (prom) => await prom.func(prom.params, prom.body)));
+            await Promise.all(promises.map(async (prom) => await prom.func(prom.params, prom.body, systemUser)));
 
             await trx.commit();
         }

@@ -23,11 +23,20 @@ const toStringRegex = /^\/|\/\w*$/g;
 // matches records by salesforce ids
 const salesforceIdRegex = /[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18}/g;
 
+const phoneNumberRegex = /\d{7}\d*/;
+
+const emailRegex = /\w+@\w+\./;
+
+const dotNumberRegex = /^\d{4}\d*$/;
+
 module.exports = {
     uuidRegex,
     orderNumberRegex,
     jobNumberRegex,
     toStringRegex,
     uuidRegexStr,
-    salesforceIdRegex
+    salesforceIdRegex,
+    phoneNumberRegex,
+    emailRegex,
+    dotNumberRegex
 };

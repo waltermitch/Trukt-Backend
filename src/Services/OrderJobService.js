@@ -1,4 +1,3 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LoadboardService = require('../Services/LoadboardService');
 const LoadboardRequest = require('../Models/LoadboardRequest');
@@ -8,7 +7,6 @@ const InvoiceLine = require('../Models/InvoiceLine');
 const { uuidRegexStr } = require('../Utils/Regexes');
 const emitter = require('../EventListeners/index');
 const knex = require('../Models/BaseModel').knex();
-const Loadboard = require('../Models/Loadboard');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
@@ -746,8 +744,8 @@ class OrderJobService
                 			os."sequence" pickup_sequence,
                 			os2."sequence" delivery_sequence,
                             osl.commodity_guid,
-                			CASE WHEN t.is_resolved THEN null ELSE CONCAT(t.street1, ' ', t.state, ' ', t.city, ' ',t.zip_code) END AS bad_pickup_address,
-                			CASE WHEN t2.is_resolved THEN null ELSE CONCAT(t2.street1, ' ', t2.state, ' ', t2.city, ' ',t2.zip_code) END AS bad_delivery_address
+                			CASE WHEN t.is_resolved THEN null ELSE CONCAT(t.street1, ' ', t.city, ' ', t.state, ' ',t.zip_code) END AS bad_pickup_address,
+                			CASE WHEN t2.is_resolved THEN null ELSE CONCAT(t2.street1, ' ', t2.city, ' ', t2.state, ' ',t2.zip_code) END AS bad_delivery_address
                 		FROM rcg_tms.order_stop_links osl
                 		LEFT JOIN rcg_tms.order_stops os ON osl.stop_guid = os.guid
                 		LEFT JOIN rcg_tms.terminals t ON os.terminal_guid = t.guid,

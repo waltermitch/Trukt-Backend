@@ -197,8 +197,8 @@
                             "city": "Washington",
                             "country": "USA",
                             "zipCode": "20500",
-                            "latitude": 38.897957,
-                            "longitude": -77.03656
+                            "latitude": null,
+                            "longitude": null
                         },
                         "primaryContact": {
                             "phoneNumber": "111-222-3333",
@@ -256,8 +256,8 @@
                             "city": "beaver island",
                             "country": "USA",
                             "zipCode": "49782",
-                            "latitude": 45.659551,
-                            "longitude": -85.525857
+                            "latitude": null,
+                            "longitude": null
                         },
                         "primaryContact": {
                             "phoneNumber": "111-222-3333",
@@ -343,8 +343,8 @@
                             "city": "hooper",
                             "country": "USA",
                             "zipCode": "84315",
-                            "latitude": 41.166833,
-                            "longitude": -112.338125
+                            "latitude": null,
+                            "longitude": null
                         },
                         "primaryContact": {
                             "phoneNumber": "111-222-3333",
@@ -399,8 +399,8 @@
                             "city": "isabella",
                             "country": "USA",
                             "zipCode": "55607",
-                            "latitude": 47.617375,
-                            "longitude": -91.356288
+                            "latitude": null,
+                            "longitude": null
                         },
                         "primaryContact": {
                             "phoneNumber": "111-222-3333",
@@ -461,8 +461,8 @@
                     "city": "Washington",
                     "country": "USA",
                     "zipCode": "20500",
-                    "latitude": 38.897957,
-                    "longitude": -77.03656
+                    "latitude": null,
+                    "longitude": null
                 },
                 "primaryContact": {
                     "phoneNumber": "111-222-3333",
@@ -518,8 +518,8 @@
                     "city": "beaver island",
                     "country": "USA",
                     "zipCode": "49782",
-                    "latitude": 45.659551,
-                    "longitude": -85.525857
+                    "latitude": null,
+                    "longitude": null
                 },
                 "primaryContact": {
                     "phoneNumber": "111-222-3333",
@@ -575,8 +575,8 @@
                     "city": "hooper",
                     "country": "USA",
                     "zipCode": "84315",
-                    "latitude": 41.166833,
-                    "longitude": -112.338125
+                    "latitude": null,
+                    "longitude": null
                 },
                 "primaryContact": {
                     "phoneNumber": "111-222-3333",
@@ -629,8 +629,8 @@
                     "city": "isabella",
                     "country": "USA",
                     "zipCode": "55607",
-                    "latitude": 47.617375,
-                    "longitude": -91.356288
+                    "latitude": null,
+                    "longitude": null
                 },
                 "primaryContact": {
                     "phoneNumber": "111-222-3333",
@@ -676,8 +676,8 @@
                 "city": "beaver island",
                 "country": "USA",
                 "zipCode": "49782",
-                "latitude": 45.659551,
-                "longitude": -85.525857
+                "latitude": null,
+                "longitude": null
             },
             {
                 "name": "fremont island",
@@ -688,8 +688,8 @@
                 "city": "hooper",
                 "country": "USA",
                 "zipCode": "84315",
-                "latitude": 41.166833,
-                "longitude": -112.338125
+                "latitude": null,
+                "longitude": null
             },
             {
                 "name": "isabella",
@@ -700,8 +700,8 @@
                 "city": "isabella",
                 "country": "USA",
                 "zipCode": "55607",
-                "latitude": 47.617375,
-                "longitude": -91.356288
+                "latitude": null,
+                "longitude": null
             },
             {
                 "name": "white house",
@@ -712,8 +712,8 @@
                 "city": "Washington",
                 "country": "USA",
                 "zipCode": "20500",
-                "latitude": 38.897957,
-                "longitude": -77.03656
+                "latitude": null,
+                "longitude": null
             }
         ]
     },
