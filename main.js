@@ -8,10 +8,13 @@ require('./local.settings');
 const telemetryClient = require('./src/ErrorHandling/Insights');
 require('./src/HttpControllers/HttpRouteController');
 const express = require('express');
+const session = require('express-session');
 const cors = require('cors');
+const KnexSessionStore = require('connect-session-knex')(session);
+const BaseModel = require('./src/Models/BaseModel');
 const fs = require('fs');
-const HttpErrorHandler = require('./src/ErrorHandling/HttpErrorHandler');
 const PGListener = require('./src/EventManager/PGListener');
+const HttpErrorHandler = require('./src/ErrorHandling/HttpErrorHandler');
 const Mongo = require('./src/Mongo');
 const Auth = require('./src/Authorization/Auth');
 require('./src/EventManager/StatusCacheManager').startCache();
@@ -36,9 +39,44 @@ async function run()
         console.error(error);
     }
 
+    const store = new KnexSessionStore
+        ({
+            knex: BaseModel.knex(),
+            tableName: 'sessions'
+        });
+
+    const sessionConfig = {
+        secret: process.env['node.secret'],
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            // 1 day
+            maxAge: 1 * 24 * 60 * 60 * 1000
+        },
+        store
+    };
+
+    switch (process.env.ENV)
+    {
+        case 'dev':
+        case 'development':
+            sessionConfig.cookie.secure = true;
+            break;
+        case 'staging':
+            sessionConfig.cookie.secure = true;
+            break;
+        case 'prod':
+        case 'production':
+            sessionConfig.cookie.secure = true;
+            break;
+        default:
+            sessionConfig.cookie.secure = false;
+    }
+
     const app = express();
 
     app.use(corsMiddleware());
+    app.use(session(sessionConfig));
     app.use(express.json());
 
     app.use(
@@ -107,7 +145,9 @@ function corsMiddleware()
             return origin;
         });
 
-        return cors({ origin: whitelistedOrigins });
+        return cors({
+            origin: whitelistedOrigins
+        });
     }
     else
     {
