@@ -305,7 +305,7 @@ class OrderService
                 orderInformation
 
                 // jobInformation <- this is commented out because nobody is using it, no need to waste time fetching it
-            ] = await Promise.all([OrderService.buildCache(), Promise.all(orderInfoPromises)]); /*Promise.all(jobInfoPromises)*/
+            ] = await Promise.all([OrderService.buildCache(), Promise.all(orderInfoPromises)]);
 
             // checks if the data that was provided in the payload was found in the database
             // will throw an error if it wasn't found.
@@ -635,7 +635,8 @@ class OrderService
             order.jobs = orderJobs;
             order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
 
-            const orderCreated = await Order.query(trx).skipUndefined()
+            const orderCreated = await Order.query(trx)
+                .skipUndefined()
                 .insertGraph(order, { allowRefs: true });
 
             await trx.commit();
@@ -669,6 +670,7 @@ class OrderService
             lines: [],
             consigneeGuid: consignee?.guid
         });
+
         bill.setCreatedBy(currentUser);
         bill.lines.push(...lines);
 
@@ -697,7 +699,6 @@ class OrderService
                 throw new Error(`${key} record doesn't exist.`);
             }
         }
-
     }
 
     static async calculateTotalDistance(stops)
