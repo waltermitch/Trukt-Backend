@@ -15,6 +15,10 @@ module.exports = (errors, request, response, next) =>
             case 'UnallowedRelation':
             case 'InvalidGraph':
             default:
+                telemetryClient.trackException({
+                    exception: errors,
+                    severity: 2,
+                })
                 response.status(400).send({
                     status: 400,
                     errors: [
@@ -29,6 +33,10 @@ module.exports = (errors, request, response, next) =>
         }
     } else if (errors instanceof NotFoundError)
     {
+        telemetryClient.trackException({
+            exception: errors,
+            severity: 2,
+        })
         response.status(404).send({
             status: 404,
             errors: [
@@ -42,6 +50,10 @@ module.exports = (errors, request, response, next) =>
         });
     } else if (errors instanceof UniqueViolationError || errors instanceof ForeignKeyViolationError)
     {
+        telemetryClient.trackException({
+            exception: errors,
+            severity: 3,
+        })
         response.status(409).send({
             status: 409,
             errors: [
@@ -55,6 +67,10 @@ module.exports = (errors, request, response, next) =>
         });
     } else if (errors instanceof NotNullViolationError || errors instanceof CheckViolationError || errors instanceof DataError)
     {
+        telemetryClient.trackException({
+            exception: errors,
+            severity: 3,
+        })
         response.status(400).send({
             status: 400,
             errors: [
@@ -68,6 +84,10 @@ module.exports = (errors, request, response, next) =>
         });
     } else if (errors instanceof DBError)
     {
+        telemetryClient.trackException({
+            exception: errors,
+            severity: 4,
+        })
         response.status(500).send({
             status: 500,
             errors: [
@@ -80,6 +100,10 @@ module.exports = (errors, request, response, next) =>
         });
     } else if (errors instanceof HttpError || errors.constructor.name === 'HttpError')
     {
+        telemetryClient.trackException({
+            exception: errors,
+            severity: 2,
+        })
         response.status(errors.status).send({
             status: errors.status,
             errors: [
@@ -92,6 +116,10 @@ module.exports = (errors, request, response, next) =>
         });
     } else if (errors instanceof Error)
     {
+        telemetryClient.trackException({
+            exception: errors,
+            severity: 3,
+        })
         response.status(500).send({
             status: 500,
             errors: [
@@ -101,8 +129,23 @@ module.exports = (errors, request, response, next) =>
                 }
             ]
         });
+    } else if (Array.isArray(errors))
+    {
+        // TODO: Set error exception in Application Azure Insights with the class designated for bulk actions
+
+        response.status(500).send({
+            status: 500,
+            errors: errors.map(error => ({
+                errorType: error.name,
+                message: error.message,
+            }))
+        });
     } else
     {
+        telemetryClient.trackException({
+            exception: errors,
+            severity: 3,
+        })
         response.status(500).send({
             status: 500,
             errors: [
