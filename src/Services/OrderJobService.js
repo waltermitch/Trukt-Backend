@@ -1569,7 +1569,7 @@ class OrderJobService
 
             const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([jobUpdated.guid]);
             let data;
-            if(goodJobs.length === 1)
+            if (goodJobs.length === 1)
             {
                 data = await OrderJob.query().patch({
                     isReady: true,
