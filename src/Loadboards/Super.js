@@ -229,8 +229,9 @@ class Super extends Loadboard
     formatCommodities(commodities)
     {
         const vehicles = [];
-        for (const com of commodities)
+        for(let i = 0; i < commodities.length; i++)
         {
+            const com = commodities[i];
             vehicles.push({
                 vin: com.identifier || 'vin',
                 year: com.vehicle?.year || 2005,
@@ -241,7 +242,7 @@ class Super extends Loadboard
                 lot_number: com.lotNumber,
                 price: com.bill?.amount || 5,
                 tariff: com.invoice?.amount || 5,
-                guid: com.extraExternalData?.sdGuid
+                guid: com.extraExternalData?.sdGuid || `com${i}`
             });
         }
 
@@ -730,7 +731,7 @@ class Super extends Loadboard
                     com.extraExternalData = {};
                 }
                 com.extraExternalData.sdGuid = commodity.guid;
-                newCommodities.shift(i);
+                newCommodities.splice(i, 1);
                 break;
             }
         }
