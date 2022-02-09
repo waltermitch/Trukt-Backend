@@ -30,3 +30,8 @@ DeletedBy:
   allOf:
     - $ref: '#/TMSUser'
     - description: The TMS User that deleted the parent record.
+  
+Dispatcher:
+  allOf:
+    - $ref: '#/TMSUser'
+    - description: The TMS User responsible for this job..

@@ -134,6 +134,7 @@ class LoadboardPost extends BaseModel
         this.dateDeleted = null;
         this.deletedByGuid = null;
         this.apiError = null;
+        this.hasError = false;
     }
 
     setToUnposted()
@@ -145,6 +146,8 @@ class LoadboardPost extends BaseModel
         this.isDeleted = false;
         this.dateDeleted = null;
         this.deletedByGuid = null;
+        this.hasError = false;
+        this.apiError = null;
         if (this.loadboard != 'SUPERDISPATCH' &&
             this.loadboard != 'SHIPCARS' &&
             this.loadboard != 'CARDELIVERYNETWORK')

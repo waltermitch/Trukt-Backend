@@ -582,6 +582,7 @@ class OrderStopService
                 }
             }
         }
+
         return events;
     }
 }
