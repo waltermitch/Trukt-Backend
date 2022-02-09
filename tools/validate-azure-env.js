@@ -80,8 +80,6 @@ function compareAzureWithLocalEnvs(azureFileName, localSettingsEnv)
         const localEnv = local_settings[localSettingsEnv][azureEnvName];
         if (!localEnv)
             completeList.push({ envName: azureEnvName, message: 'NOT EXISTS IN LOCAL' });
-        else if (localEnv !== azure_envs[azureEnvName])
-            completeList.push({ envName: azureEnvName, message: 'HAS DIFFERENT VALUE LOCALLY' });
 
         return completeList;
     }, []);
