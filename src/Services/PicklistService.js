@@ -93,16 +93,15 @@ class PicklistService
         // as a response.
         const loadboardData = await Loadboards.getEquipmentTypes();
 
-        for (const contact of (await LoadboardContact.query()))
+        for (const contact of (await LoadboardContact.query().select('loadboard', 'id', 'name', 'phone', 'email').where({ isActive: true })))
         {
-            const newContact = { id: contact.id, name: contact.name, phone: contact.phone, email: contact.email };
-            if (loadboardData[`${contact.loadboard}`].contacts == null)
+            if (loadboardData[contact.loadboard].contacts == null)
             {
-                loadboardData[`${contact.loadboard}`].contacts = [newContact];
+                loadboardData[contact.loadboard].contacts = [contact];
             }
             else
             {
-                loadboardData[`${contact.loadboard}`].contacts.push(newContact);
+                loadboardData[contact.loadboard].contacts.push(contact);
             }
         }
 
