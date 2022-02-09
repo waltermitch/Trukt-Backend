@@ -132,10 +132,7 @@ class OrderService
             { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier }
         );
 
-        const queryWithGraphModifiers = OrderService.addGraphModifiers(
-            queryAllFilters,
-            jobCategory
-        );
+        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
 
         const { total, results } = await queryWithGraphModifiers;
 
