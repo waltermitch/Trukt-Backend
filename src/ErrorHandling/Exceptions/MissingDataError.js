@@ -7,10 +7,8 @@ class MissingDataError extends ApplicationError
      */
     constructor(message)
     {
-        super(message);
+        super(message, 400);
         this.name = 'MissingDataError';
-        this.message = message;
-        this.status = 400;
     }
 }
 

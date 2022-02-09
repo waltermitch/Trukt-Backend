@@ -7,10 +7,8 @@ class ValidationError extends ApplicationError
      */
     constructor(message)
     {
-        super(message);
+        super(message, 400);
         this.name = 'ValidationError';
-        this.message = message;
-        this.status = 400;
     }
 }
 

@@ -7,10 +7,8 @@ class NotFoundError extends ApplicationError
      */
     constructor(message)
     {
-        super(message);
-        this.name = 'NotFoundError';
-        this.message = message;
-        this.status = 404;
+        super(message, 404);
+        this.name = this.constructor.name;
     }
 }
 

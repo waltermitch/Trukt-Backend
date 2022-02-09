@@ -7,10 +7,8 @@ class AuthenticationError extends ApplicationError
      */
     constructor(message)
     {
-        super(message);
+        super(message, 401);
         this.name = 'AuthenticationError';
-        this.message = message;
-        this.status = 401;
     }
 }
 

@@ -8,23 +8,23 @@ class ApplicationError extends Error
     /**
      * @type {string} - The message of the exception.
      */
-    message;
+    message = '';
 
     /**
      * @type {number} - The http status code of the exception.
      */
-    status;
+    status = 500;
 
     /**
-     *
-     * @param {string} message
+     * @param {string} message - The message of the exception.
+     * @param {number} status - The http status code of the exception.
      */
-    constructor(message)
+    constructor(message, status)
     {
         super(message);
-        this.name = 'ApplicationError';
+        this.name = this.constructor.name;
         this.message = message;
-        this.status = 500;
+        this.status = status;
     }
 
     toJSON()

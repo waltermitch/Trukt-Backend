@@ -7,10 +7,8 @@ class ApiError extends ApplicationError
      */
     constructor(message)
     {
-        super(message);
+        super(message, 500);
         this.name = 'ApiError';
-        this.message = message;
-        this.status = 500;
     }
 }
 
