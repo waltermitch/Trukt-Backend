@@ -1,4 +1,3 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LoadboardService = require('../Services/LoadboardService');
 const LoadboardRequest = require('../Models/LoadboardRequest');
@@ -8,7 +7,6 @@ const InvoiceLine = require('../Models/InvoiceLine');
 const { uuidRegexStr } = require('../Utils/Regexes');
 const emitter = require('../EventListeners/index');
 const knex = require('../Models/BaseModel').knex();
-const Loadboard = require('../Models/Loadboard');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const OrderJob = require('../Models/OrderJob');
@@ -17,7 +15,7 @@ const Currency = require('currency.js');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const R = require('ramda');
-
+const InvoiceLineLink = require('../Models/InvoiceLineLink');
 const Loadboards = require('../Loadboards/API');
 
 const regex = new RegExp(uuidRegexStr);
@@ -112,87 +110,98 @@ class OrderJobService
      */
     static deleteCommodities(orderGuid, jobGuid, commodities, trx)
     {
-        return OrderStopLink.query(trx)
-            .whereIn('commodityGuid', commodities)
-            .where('jobGuid', jobGuid)
-            .where('orderGuid', orderGuid)
-            .delete()
-            .returning('stopGuid')
-            .then((deletedStopLinks) =>
+        // Delete the links first so the trigger rcg_line_links_sum_calculator can be trigger and can get the lines information
+        // If it is trigger after lines delition, then it wont be able to get the information because the lines wont be ther
+        return InvoiceLineLink.query(trx)
+            .whereIn('line1Guid',
+                InvoiceLine.query(trx).select('guid').whereIn('commodityGuid', commodities)
+            ).orWhereIn('line2Guid',
+                InvoiceLine.query(trx).select('guid').whereIn('commodityGuid', commodities)
+            ).delete()
+            .then(() =>
             {
-                if (deletedStopLinks.length > 0)
-                {
-                    const stopGuids = [... new Set(deletedStopLinks.map(it => it.stopGuid))];
-
-                    // if the commodity only exists for the order, delete the commodity
-                    const deleteLooseOrderStopLinks = [];
-
-                    for (const stopGuid of stopGuids)
+                return OrderStopLink.query(trx)
+                    .whereIn('commodityGuid', commodities)
+                    .where('jobGuid', jobGuid)
+                    .where('orderGuid', orderGuid)
+                    .delete()
+                    .returning('stopGuid')
+                    .then((deletedStopLinks) =>
                     {
-                        deleteLooseOrderStopLinks.push(
+                        if (deletedStopLinks.length > 0)
+                        {
+                            const stopGuids = [... new Set(deletedStopLinks.map(it => it.stopGuid))];
 
-                            // delete stopLinks that are not attached to a job, but are attached to the order
-                            OrderStopLink.query(trx)
-                                .whereIn('commodityGuid', commodities)
-                                .where('orderGuid', orderGuid)
-                                .where('stopGuid', stopGuid)
-                                .whereNull('jobGuid')
-                                .whereNotExists(
+                            // if the commodity only exists for the order, delete the commodity
+                            const deleteLooseOrderStopLinks = [];
 
-                                    // and where there are no other stopLinks that are attached to the same stop that are attached to a job
+                            for (const stopGuid of stopGuids)
+                            {
+                                deleteLooseOrderStopLinks.push(
+
+                                    // delete stopLinks that are not attached to a job, but are attached to the order
                                     OrderStopLink.query(trx)
                                         .whereIn('commodityGuid', commodities)
-                                        .where('stopGuid', stopGuid)
                                         .where('orderGuid', orderGuid)
-                                        .whereNotNull('jobGuid'))
-                                .delete()
-                        );
-                    }
+                                        .where('stopGuid', stopGuid)
+                                        .whereNull('jobGuid')
+                                        .whereNotExists(
 
-                    return Promise.all([
-                        // delete related line items if the commodity is not attached to any other job
-                        InvoiceLine.query(trx).whereIn('commodityGuid', commodities)
-                            .whereNotExists(
+                                            // and where there are no other stopLinks that are attached to the same stop that are attached to a job
+                                            OrderStopLink.query(trx)
+                                                .whereIn('commodityGuid', commodities)
+                                                .where('stopGuid', stopGuid)
+                                                .where('orderGuid', orderGuid)
+                                                .whereNotNull('jobGuid'))
+                                        .delete()
+                                );
+                            }
 
-                                // where a link between another job doesnt exist
-                                OrderStopLink.query(trx)
-                                    .whereIn('commodityGuid', commodities)
-                                    .where('orderGuid', orderGuid)
-                                    .whereNotNull('jobGuid')).delete().returning('guid'),
-                        Promise.all(deleteLooseOrderStopLinks),
+                            return Promise.all([
+                                // delete related line items if the commodity is not attached to any other job
+                                InvoiceLine.query(trx).whereIn('commodityGuid', commodities)
+                                    .whereNotExists(
 
-                        // delete the commodities that are not linked to a stopLink that is only attached to an Order
-                        Commodity.query(trx)
-                            .whereIn('guid', commodities)
-                            .whereNotExists(
+                                        // where a link between another job doesnt exist
+                                        OrderStopLink.query(trx)
+                                            .whereIn('commodityGuid', commodities)
+                                            .where('orderGuid', orderGuid)
+                                            .whereNotNull('jobGuid')).delete().returning('guid'),
+                                Promise.all(deleteLooseOrderStopLinks),
 
-                                // where a link between another job doesnt exist
-                                OrderStopLink.query(trx)
-                                    .whereIn('commodityGuid', commodities)
-                                    .where('orderGuid', orderGuid)
-                                    .whereNotNull('jobGuid'))
-                            .delete()
-                            .returning('guid')
-                    ]).then((numDeletes) =>
-                    {
-                        const deletedComms = numDeletes[2].map(it => it.guid);
+                                // delete the commodities that are not linked to a stopLink that is only attached to an Order
+                                Commodity.query(trx)
+                                    .whereIn('guid', commodities)
+                                    .whereNotExists(
 
-                        // if there is a stop that is not attached to an order, delete the stop
-                        return OrderStop.query(trx)
-                            .whereIn('guid', stopGuids)
-                            .whereNotIn('guid', OrderStopLink.query(trx).select('stopGuid'))
-                            .delete()
-                            .returning('guid')
-                            .then((deletedStops) =>
+                                        // where a link between another job doesnt exist
+                                        OrderStopLink.query(trx)
+                                            .whereIn('commodityGuid', commodities)
+                                            .where('orderGuid', orderGuid)
+                                            .whereNotNull('jobGuid'))
+                                    .delete()
+                                    .returning('guid')
+                            ]).then((numDeletes) =>
                             {
-                                return { deleted: { commodities: deletedComms, stops: deletedStops.map(it => it.guid) }, modified: { stops: stopGuids, commodities: [] } };
+                                const deletedComms = numDeletes[2].map(it => it.guid);
+
+                                // if there is a stop that is not attached to an order, delete the stop
+                                return OrderStop.query(trx)
+                                    .whereIn('guid', stopGuids)
+                                    .whereNotIn('guid', OrderStopLink.query(trx).select('stopGuid'))
+                                    .delete()
+                                    .returning('guid')
+                                    .then((deletedStops) =>
+                                    {
+                                        return { deleted: { commodities: deletedComms, stops: deletedStops.map(it => it.guid) }, modified: { stops: stopGuids, commodities: [] } };
+                                    });
                             });
+                        }
+                        else
+                        {
+                            return { deleted: { commodities: [], stops: [] }, modified: { commodities: [], stops: [] } };
+                        }
                     });
-                }
-                else
-                {
-                    return { deleted: { commodities: [], stops: [] }, modified: { commodities: [], stops: [] } };
-                }
             });
     }
 
@@ -737,8 +746,8 @@ class OrderJobService
                 			os."sequence" pickup_sequence,
                 			os2."sequence" delivery_sequence,
                             osl.commodity_guid,
-                			CASE WHEN t.is_resolved THEN null ELSE CONCAT(t.street1, ' ', t.state, ' ', t.city, ' ',t.zip_code) END AS bad_pickup_address,
-                			CASE WHEN t2.is_resolved THEN null ELSE CONCAT(t2.street1, ' ', t2.state, ' ', t2.city, ' ',t2.zip_code) END AS bad_delivery_address
+                			CASE WHEN t.is_resolved THEN null ELSE CONCAT(t.street1, ' ', t.city, ' ', t.state, ' ',t.zip_code) END AS bad_pickup_address,
+                			CASE WHEN t2.is_resolved THEN null ELSE CONCAT(t2.street1, ' ', t2.city, ' ', t2.state, ' ',t2.zip_code) END AS bad_delivery_address
                 		FROM rcg_tms.order_stop_links osl
                 		LEFT JOIN rcg_tms.order_stops os ON osl.stop_guid = os.guid
                 		LEFT JOIN rcg_tms.terminals t ON os.terminal_guid = t.guid,

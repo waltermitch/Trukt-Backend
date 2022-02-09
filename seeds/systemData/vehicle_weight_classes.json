@@ -50,30 +50,6 @@
             "class": "8",
             "min_weight": 33001,
             "max_weight": 999999
-        },
-        {
-            "id": 9,
-            "class": "1A",
-            "min_weight": 0,
-            "max_weight": 3000
-        },
-        {
-            "id": 10,
-            "class": "1B",
-            "min_weight": 3001,
-            "max_weight": 4000
-        },
-        {
-            "id": 11,
-            "class": "1C",
-            "min_weight": 4001,
-            "max_weight": 5000
-        },
-        {
-            "id": 12,
-            "class": "1D",
-            "min_weight": 5001,
-            "max_weight": 6000
         }
     ]
 }
