@@ -440,6 +440,7 @@ Enums:
       - clientContactEmail
       - carrierName
       - grossProfitMargin
+      - clientContantName
     default: number
   stopStatus:
     type: string
