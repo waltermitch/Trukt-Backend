@@ -30,7 +30,7 @@ class ApplicationError extends Error
     toJSON()
     {
         return {
-            name: this.name,
+            errorType: this.name,
             message: this.message,
             status: this.status
         };
