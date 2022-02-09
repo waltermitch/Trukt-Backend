@@ -10,7 +10,8 @@
             "phone": "916-573-6568",
             "email": "management@rcglogistics.com",
             "username": "management@rcglogistics.com",
-            "external_id": "0B823063-3AF5-EB11-AAEA-065441B9C395"
+            "external_id": "0B823063-3AF5-EB11-AAEA-065441B9C395",
+            "is_active": false
         },
         {
             "id": 2,
@@ -19,7 +20,8 @@
             "phone": "972-866-4640",
             "email": "powersports@rcglogistics.com",
             "username": "powersports@rcglogistics.com",
-            "external_id": "E1C7A805-3C0A-EA11-AA1E-B0E52CCC70F6"
+            "external_id": "E1C7A805-3C0A-EA11-AA1E-B0E52CCC70F6",
+            "is_active": false
         },
         {
             "id": 3,
@@ -28,7 +30,8 @@
             "phone": "916-526-0262",
             "email": "heavyduty@rcglogistics.com",
             "username": "heavyduty@rcglogistics.com",
-            "external_id": "0D823063-3AF5-EB11-AAEA-065441B9C395"
+            "external_id": "0D823063-3AF5-EB11-AAEA-065441B9C395",
+            "is_active": false
         },
         {
             "id": 4,
@@ -37,7 +40,8 @@
             "phone": "402-318-3314",
             "email": "kmc@rcglogistics.com",
             "username": "kmc@rcglogistics.com",
-            "external_id": "0C823063-3AF5-EB11-AAEA-065441B9C395"
+            "external_id": "0C823063-3AF5-EB11-AAEA-065441B9C395",
+            "is_active": false
         },
         {
             "id": 5,
@@ -46,7 +50,8 @@
             "phone": "916-573-6630",
             "email": "ship@rcglogistics.com",
             "username": "ship@rcglogistics.com",
-            "external_id": "333F0E7B-B555-E911-AA1E-B0E52CCC70F6"
+            "external_id": "333F0E7B-B555-E911-AA1E-B0E52CCC70F6",
+            "is_active": true
         },
         {
             "id": 6,
@@ -55,16 +60,18 @@
             "phone": "770-338-3583",
             "email": "ymc@rcglogistics.com",
             "username": "ymc@rcglogistics.com",
-            "external_id": "5162D7A8-FF12-EB11-AA57-BCE1060DB88B"
+            "external_id": "5162D7A8-FF12-EB11-AA57-BCE1060DB88B",
+            "is_active": false
         },
         {
             "id": 7,
             "loadboard": "TRUCKSTOP",
-            "name": "Team 110",
+            "name": "Team LKQ",
             "phone": "916-573-6599",
             "email": "teamlkq@rcglogistics.com",
             "username": "teamlkq@rcglogistics.com",
-            "external_id": "BF298468-479E-EB11-AA57-BCE1060DB88B"
+            "external_id": "BF298468-479E-EB11-AA57-BCE1060DB88B",
+            "is_active": true
         },
         {
             "id": 8,
@@ -73,7 +80,8 @@
             "phone": "916-573-6574",
             "email": "freight@rcglogistics.com",
             "username": "freight@rcglogistics.com",
-            "external_id": "0A823063-3AF5-EB11-AAEA-065441B9C395"
+            "external_id": "0A823063-3AF5-EB11-AAEA-065441B9C395",
+            "is_active": true
         },
         {
             "id": 9,
@@ -82,7 +90,8 @@
             "phone": "972-866-4640",
             "email": "powersports@rcglogistics.com",
             "username": "powersports",
-            "external_id": "2475504"
+            "external_id": "2475504",
+            "is_active": false
         },
         {
             "id": 10,
@@ -91,16 +100,18 @@
             "phone": "770-338-3583",
             "email": "vkuzmenko@rcglogistics.com",
             "username": "rcglog",
-            "external_id": "2503307"
+            "external_id": "2503307",
+            "is_active": false
         },
         {
             "id": 11,
             "loadboard": "DAT",
-            "name": "Team LOG2",
-            "phone": "916-999-1234",
+            "name": "Team 190",
+            "phone": "916-573-6630",
             "email": "ymc@rcglogistics.com",
             "username": "rcglog2",
-            "external_id": "2503310"
+            "external_id": "2503310",
+            "is_active": true
         },
         {
             "id": 12,
@@ -109,16 +120,18 @@
             "phone": "972-866-4640",
             "email": "ship@rcglogistics.com",
             "username": "vmtrans",
-            "external_id": "1093209"
+            "external_id": "1093209",
+            "is_active": false
         },
         {
             "id": 13,
             "loadboard": "DAT",
-            "name": "Team QF11",
+            "name": "Team FRT",
             "phone": "916-573-6574",
             "email": "ekurudimov@rcglogistics.com",
             "username": "QF11",
-            "external_id": "2554621"
+            "external_id": "2554621",
+            "is_active": true
         },
         {
             "id": 14,
@@ -127,7 +140,8 @@
             "phone": "916-573-6574",
             "email": "edancev@rcglogistics.com",
             "username": "QF22",
-            "external_id": "2554624"
+            "external_id": "2554624",
+            "is_active": false
         },
         {
             "id": 15,
@@ -136,7 +150,8 @@
             "phone": "916-573-6599",
             "email": "teamlkq@rcglogistics.com",
             "username": "rcglkq",
-            "external_id": "2602403"
+            "external_id": "2602403",
+            "is_active": true
         }
     ]
 }
