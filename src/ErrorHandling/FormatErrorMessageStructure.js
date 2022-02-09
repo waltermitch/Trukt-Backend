@@ -147,8 +147,7 @@ function formatErrorMessageStructure(error)
                     errorType: 'UnknownError',
                     message: error.toString()
                 }
-            ],
-            data: {}
+            ]
         };
     }
 }

@@ -8,7 +8,7 @@ class DataConflictError extends ApplicationError
     constructor(message)
     {
         super(message, 400);
-        this.name = 'DataConflictError';
+        this.name = this.constructor.name;
     }
 }
 

@@ -8,7 +8,7 @@ class NotAllowedError extends ApplicationError
     constructor(message)
     {
         super(message, 403);
-        this.name = 'NotAllowedError';
+        this.name = this.constructor.name;
     }
 }
 
