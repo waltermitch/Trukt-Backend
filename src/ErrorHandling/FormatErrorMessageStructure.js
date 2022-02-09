@@ -1,12 +1,12 @@
-const { ValidationError, NotFoundError, DBError, ConstraintViolationError, UniqueViolationError, NotNullViolationError, ForeignKeyViolationError, CheckViolationError, DataError } = require('objection');
+const { ValidationError: ObjectionValidationError, NotFoundError: ObjectionNotFoundError, DBError, ConstraintViolationError, UniqueViolationError, NotNullViolationError, ForeignKeyViolationError, CheckViolationError, DataError } = require('objection');
+const { ValidationError, ApiError, AuthenticationError, DataConflictError, MissingDataError, NotAllowedError, NotFoundError } = require('./Exceptions');
 const validatorErrors = require('express-openapi-validator').error;
-const HttpError = require('./Exceptions/HttpError');
 const telemetryClient = require('./Insights');
 
 /**
  * Evaluates the error and returns the appropriate error message structure, also the error is logged to Azure App Insights.
  * @param {unknown} error
- * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data: Record<string, unknown}}
+ * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data?: Record<string, unknown}}
  */
 function formatErrorMessageStructure(error)
 {
@@ -36,7 +36,7 @@ function formatErrorMessageStructure(error)
                 };
         }
     }
-    else if (error instanceof NotFoundError)
+    else if (error instanceof ObjectionNotFoundError)
     {
         telemetryClient.trackException({
             exception: error,
@@ -96,38 +96,26 @@ function formatErrorMessageStructure(error)
             data: error.data
         };
     }
-    else if (error instanceof HttpError || error.constructor.name === 'HttpError')
+    else if (
+        error instanceof ApiError
+        || error instanceof AuthenticationError
+        || error instanceof DataConflictError
+        || error instanceof MissingDataError
+        || error instanceof NotAllowedError
+        || error instanceof NotFoundError
+        || error instanceof ValidationError
+    )
     {
+        const { status, ...errorMessage } = error.toJSON();
+
         telemetryClient.trackException({
             exception: error,
             severity: 2
         });
+        
         return {
-            status: error.status,
-            errors: [
-                {
-                    errorType: 'HttpError',
-                    message: error.message
-                }
-            ],
-            data: {}
-        };
-    }
-    else if (error instanceof Error)
-    {
-        telemetryClient.trackException({
-            exception: error,
-            severity: 3
-        });
-        return {
-            status: 500,
-            errors: [
-                {
-                    errorType: error.name,
-                    message: error.message
-                }
-            ],
-            data: {}
+            status,
+            errors: [errorMessage]
         };
     }
     else
