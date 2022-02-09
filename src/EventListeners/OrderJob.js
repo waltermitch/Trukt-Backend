@@ -397,7 +397,6 @@ listener.on('orderjob_uncanceled', ({ orderGuid, currentUser, jobGuid }) =>
     {
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
-            Super.updateStatus(jobGuid, 'canceled', 'notCanceled'),
             StatusManagerHandler.registerStatus({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,

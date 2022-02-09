@@ -117,9 +117,9 @@ class Super extends Loadboard
     {
         super.validateDispatch();
 
-        if(!this.data.vendor.sdGuid)
+        if (!this.data.vendor.sdGuid)
         {
-            if(!phoneNumberRegex.test(this.data.vendor.phoneNumber) ||
+            if (!phoneNumberRegex.test(this.data.vendor.phoneNumber) ||
                 !emailRegex.test(this.data.vendor.email) ||
                 !dotNumberRegex.test(this.data.vendor.dotNumber))
             {
@@ -131,7 +131,7 @@ class Super extends Loadboard
     cleanUp()
     {
         super.cleanUp();
-        if(this.data.vendor)
+        if (this.data.vendor)
         {
             this.data.vendor.phoneNumber = this.data.vendor?.phoneNumber?.replace(/[^0-9]/g, '');
             this.data.vendor.dotNumber = this.data.vendor?.dotNumber?.replace(/[^0-9]/g, '');
@@ -229,7 +229,7 @@ class Super extends Loadboard
     formatCommodities(commodities)
     {
         const vehicles = [];
-        for(let i = 0; i < commodities.length; i++)
+        for (let i = 0; i < commodities.length; i++)
         {
             const com = commodities[i];
             vehicles.push({
@@ -479,35 +479,35 @@ class Super extends Loadboard
 
                 dispatch.externalGuid = response.dispatchRes.guid;
                 dispatch.setUpdatedBy(dispatch.createdByGuid);
-                
+
                 const job = await OrderJob.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
                     order.[client], commodities(distinct, isNotDeleted).[vehicle]]`);
-                    
+
                 const commodityPromises = this.updateCommodity(job.commodities, response.order.vehicles);
                 for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                     allPromises.push(comPromise);
                 }
-                
+
                 const client = job.order.client;
                 if (client.sdGuid !== response.order.customer.counterparty_guid)
                 {
                     client.sdGuid = response.order.customer.counterparty_guid;
                     allPromises.push(SFAccount.query(trx).patch(client).findById(client.guid));
                 }
-                
+
                 const vendor = await SFAccount.query(trx)
                     .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                     .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
                     .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                     .select('salesforce.accounts.name as vendorName',
-                    'salesforce.accounts.guid as vendorGuid',
-                    'salesforce.accounts.dot_number as dotNumber',
-                    'salesforce.contacts.guid as agentGuid',
-                    'salesforce.contacts.name as agentName');
+                        'salesforce.accounts.guid as vendorGuid',
+                        'salesforce.accounts.dot_number as dotNumber',
+                        'salesforce.contacts.guid as agentGuid',
+                        'salesforce.contacts.name as agentName');
 
-                    await StatusManagerHandler.registerStatus({
+                await StatusManagerHandler.registerStatus({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
                     statusId: 10,
