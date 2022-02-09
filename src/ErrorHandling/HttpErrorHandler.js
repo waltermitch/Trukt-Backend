@@ -54,32 +54,21 @@ function formatErrorMessageStructure(error)
             data: error.data
         };
     }
-    else if (error instanceof UniqueViolationError || error instanceof ForeignKeyViolationError)
+    else if (
+        error instanceof ConstraintViolationError
+        || error instanceof UniqueViolationError
+        || error instanceof NotNullViolationError
+        || error instanceof ForeignKeyViolationError
+        || error instanceof CheckViolationError
+        || error instanceof DataError
+    )
     {
         telemetryClient.trackException({
             exception: error,
             severity: 3
         });
         return {
-            status: 409,
-            errors: [
-                {
-                    errorType: error.name,
-                    message: error.nativeError.detail,
-                    code: error.nativeError.code
-                }
-            ],
-            data: error.data
-        };
-    }
-    else if (error instanceof NotNullViolationError || error instanceof CheckViolationError || error instanceof DataError)
-    {
-        telemetryClient.trackException({
-            exception: error,
-            severity: 3
-        });
-        return {
-            status: 400,
+            status: 500,
             errors: [
                 {
                     errorType: error.name,
