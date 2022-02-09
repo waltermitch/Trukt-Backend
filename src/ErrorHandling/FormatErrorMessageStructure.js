@@ -1,6 +1,6 @@
 const { ValidationError: ObjectionValidationError, NotFoundError: ObjectionNotFoundError, DBError, ConstraintViolationError, UniqueViolationError, NotNullViolationError, ForeignKeyViolationError, CheckViolationError, DataError } = require('objection');
 const { ValidationError, ApiError, AuthenticationError, DataConflictError, MissingDataError, NotAllowedError, NotFoundError } = require('./Exceptions');
-const validatorErrors = require('express-openapi-validator').error;
+const OpenApiValidatorErrorTypes = require('express-openapi-validator').error;
 const telemetryClient = require('./Insights');
 
 /**
@@ -11,7 +11,7 @@ const telemetryClient = require('./Insights');
 function formatErrorMessageStructure(error)
 {
     // TODO: Set error types for custom app types
-    if (error instanceof ValidationError)
+    if (error instanceof ObjectionValidationError)
     {
         switch (error.type)
         {
@@ -116,6 +116,22 @@ function formatErrorMessageStructure(error)
         return {
             status,
             errors: [errorMessage]
+        };
+    }
+    else if (error.constructor?.name in OpenApiValidatorErrorTypes)
+    {
+        telemetryClient.trackException({
+            exception: error,
+            severity: 2
+        });
+        return {
+            status: 400,
+            errors: error.errors.length > 0 ? error.errors : [
+                {
+                    errorType: error.constructor.name,
+                    message: error.message
+                }
+            ]
         };
     }
     else
