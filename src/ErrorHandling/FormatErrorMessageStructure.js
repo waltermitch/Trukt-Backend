@@ -1,5 +1,5 @@
 const { ValidationError: ObjectionValidationError, NotFoundError: ObjectionNotFoundError, DBError, ConstraintViolationError, UniqueViolationError, NotNullViolationError, ForeignKeyViolationError, CheckViolationError, DataError } = require('objection');
-const { ValidationError, ApiError, AuthenticationError, DataConflictError, MissingDataError, NotAllowedError, NotFoundError } = require('./Exceptions');
+const { ValidationError, ApiError, AuthenticationError, DataConflictError, MissingDataError, NotAllowedError, NotFoundError, ApplicationError } = require('./Exceptions');
 const OpenApiValidatorErrorTypes = require('express-openapi-validator').error;
 const telemetryClient = require('./Insights');
 
@@ -132,6 +132,20 @@ function formatErrorMessageStructure(error)
                     message: error.message
                 }
             ]
+        };
+    }
+    else if (error instanceof ApplicationError)
+    {
+        const { status, ...errorMessage } = error.toJSON();
+
+        telemetryClient.trackException({
+            exception: error,
+            severity: 3
+        });
+        
+        return {
+            status,
+            errors: [errorMessage]
         };
     }
     else
