@@ -1,3 +1,4 @@
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
@@ -139,7 +140,7 @@ class TerminalService
     {
         // get all unresolved terminals, that have never been checked
         // we want to get the least recently checked ones first to avoid checking the same address over and over again
-        // we can also choose where we nulls go in the result set.
+        // we can also choose where we want the nulls to go in the result set.
         const terminals = await Terminal.query()
             .where('isResolved', false)
             .andWhere('resolvedTimes', '<', 1)
@@ -307,6 +308,10 @@ class TerminalService
     // this method will merge one terminal into another including all related records
     static async mergeTerminals(primaryTerminal, alternativeTerminal, trx)
     {
+        // if the two terminals are the same, we don't want to do anything
+        if (primaryTerminal.guid === alternativeTerminal.guid)
+            throw new Error('Cannot merge a terminal into itself');
+
         // update all orderStops and terminalContacts from current terminal to existing terminal
         await Promise.all(
             [
@@ -429,8 +434,12 @@ class TerminalService
 
     // this method is only for the /update endpoint and will update a terminal with the new information
     // terminals shouldn't be updated directly in other places like during order creation/update
-    static async update(terminal, currentUser, trx = undefined)
+    static async update(terminalGuid, terminal, currentUser, trx = undefined)
     {
+        // if there is no guid, throw an error
+        if (!terminalGuid)
+            throw new HttpError(400, 'Terminal Must Have A guid');
+
         const term = Terminal.fromJson(terminal);
 
         term.setDefaultValues();
@@ -438,9 +447,13 @@ class TerminalService
 
         term.isResolved = terminal.isResolved || false;
 
+        // we can't let terminals be resolved without lat/long
+
+        if (term.isResolved && (!term.latitude || !term.longitude))
+            throw new HttpError(400, 'Terminal Must Have Latitude And Longitude To Be Resolved');
+
         const newTerminal = await Terminal.query(trx)
-            .patchAndFetch(term)
-            .where('guid', terminal.guid);
+            .patchAndFetchById(terminalGuid, term);
 
         return newTerminal;
     }

@@ -87,6 +87,20 @@ class TerminalController
         return res;
     }
 
+    static async update(req, res, next)
+    {
+        try
+        {
+            const result = await TerminalService.update(req.params.terminalGuid, req.body, req.session.userGuid);
+
+            res.status(200).json(result);
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
     searchQueryCriteria(query)
     {
         const clone = Object.assign({}, query);
