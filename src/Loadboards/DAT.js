@@ -1,4 +1,5 @@
 const Loadboard = require('./Loadboard');
+const LoadboardPost = require('../Models/LoadboardPost');
 const currency = require('currency.js');
 const { DateTime } = require('luxon');
 
@@ -120,6 +121,11 @@ class DAT extends Loadboard
         payload.exposure.endWhen = tempLatestAvail.minus({ minutes: 20 });
 
         return payload;
+    }
+
+    static async handleUpdate(payloadMetadata, response)
+    {
+        return await super.handlePost(payloadMetadata, response);
     }
 }
 
