@@ -1,5 +1,4 @@
 const Loadboard = require('./Loadboard');
-const LoadboardPost = require('../Models/LoadboardPost');
 const currency = require('currency.js');
 const { DateTime } = require('luxon');
 
