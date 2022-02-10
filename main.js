@@ -124,6 +124,9 @@ function printRoutes(filepath, routes)
     console.log('\x1b[1m\x1b[3m\x1b[31m%s\x1b[0m', `${filepath.split('.')[0]}`);
     for (const route of routes)
     {
+        if (!route.route?.methods)
+            continue;
+
         const methods = Object.keys(route.route.methods);
         for (const method of methods)
         {
