@@ -434,7 +434,7 @@ class TerminalService
 
     // this method is only for the /update endpoint and will update a terminal with the new information
     // terminals shouldn't be updated directly in other places like during order creation/update
-    static async update(terminalGuid, terminal, currentUser, trx = undefined)
+    static async patchTerminal(terminalGuid, terminal, currentUser, trx = undefined)
     {
         // if there is no guid, throw an error
         if (!terminalGuid)

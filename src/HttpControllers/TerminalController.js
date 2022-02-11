@@ -91,7 +91,7 @@ class TerminalController
     {
         try
         {
-            const result = await TerminalService.update(req.params.terminalGuid, req.body, req.session.userGuid);
+            const result = await TerminalService.patchTerminal(req.params.terminalGuid, req.body, req.session.userGuid);
 
             res.status(200).json(result);
         }
