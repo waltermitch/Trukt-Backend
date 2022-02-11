@@ -4,7 +4,7 @@ const migration_tools = require('../../tools/migration');
 const OrderStop = require('../../src/Models/OrderStop');
 const Commodity = require('../../src/Models/Commodity');
 const SFAccount = require('../../src/Models/SFAccount');
-const StatusLog = require('../../src/Models/StatusLog');
+const ActivityLog = require('../../src/Models/StatusLog');
 const OrderJob = require('../../src/Models/OrderJob');
 const Terminal = require('../../src/Models/Terminal');
 const Vehicle = require('../../src/Models/Vehicle');
@@ -168,7 +168,7 @@ exports.seed = async function (trx)
     await OrderStopLink.query(trx).insertAndFetch(stopLinks);
 
     // Add created status to the log
-    await StatusLog.query(trx).insert({
+    await ActivityLog.query(trx).insert({
         userGuid: user.guid,
         orderGuid: order.guid,
         statusId: 1

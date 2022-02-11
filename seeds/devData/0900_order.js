@@ -9,7 +9,7 @@ const Commodity = require('../../src/Models/Commodity');
 const SFAccount = require('../../src/Models/SFAccount');
 const User = require('../../src/Models/User');
 const Enums = require('../../src/Models/Enums');
-const StatusLog = require('../../src/Models/StatusLog');
+const ActivityLog = require('../../src/Models/StatusLog');
 const migration_tools = require('../../tools/migration');
 const faker = require('faker');
 const { DateTime } = require('luxon');
@@ -168,7 +168,7 @@ exports.seed = async function (trx)
     await OrderStopLink.query(trx).insertAndFetch(stopLinks);
 
     // Add created status to the log
-    await StatusLog.query(trx).insert({
+    await ActivityLog.query(trx).insert({
         userGuid: user.guid,
         orderGuid: order.guid,
         statusId: 1

@@ -16,7 +16,7 @@ const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
 const Commodity = require('../Models/Commodity');
-const StatusLog = require('../Models/StatusLog');
+const ActivityLog = require('../Models/StatusLog');
 const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
@@ -1303,7 +1303,7 @@ class OrderService
             };
 
             return query.andWhere(comparisonDatesByStatus);
-        }, StatusLog.query().select('jobGuid'));
+        }, ActivityLog.query().select('jobGuid'));
 
         return baseQuery.whereIn('guid', datesQuery);
     }

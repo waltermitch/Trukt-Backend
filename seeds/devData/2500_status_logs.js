@@ -1,6 +1,6 @@
 const User = require('../../src/Models/User');
 const StatusLogType = require('../../src/Models/StatusLogType');
-const StatusLog = require('../../src/Models/StatusLog');
+const ActivityLog = require('../../src/Models/StatusLog');
 const Loadboard = require('../../src/Models/Loadboard');
 const OrderJob = require('../../src/Models/OrderJob');
 const { random } = require('faker');
@@ -25,8 +25,8 @@ exports.seed = async function (knex)
         }
 
         // get all status log types
-        const allStatusTypes = await StatusLogType.query(trx).select('id', 'name');
-        if (!allStatusTypes)
+        const allActivityTypes = await StatusLogType.query(trx).select('id', 'name');
+        if (!allActivityTypes)
         {
             throw new Error('No status types found. Did you created the status log schema?');
         }
@@ -39,9 +39,9 @@ exports.seed = async function (knex)
         }
 
         // Add 1 status to every order
-        const satusManagerLog = allOrdersJobs.map((order) =>
+        const activityManagerLog = allOrdersJobs.map((order) =>
         {
-            const randomStatus = random.arrayElement(allStatusTypes);
+            const randomStatus = random.arrayElement(allActivityTypes);
             return {
                 user_guid: random.arrayElement(allUsers).guid,
                 order_guid: order.orderGuid,
@@ -51,13 +51,13 @@ exports.seed = async function (knex)
             };
         });
 
-        return await StatusLog.query(trx).insert(satusManagerLog);
+        return await ActivityLog.query(trx).insert(activityManagerLog);
     });
 };
 
-function getExtraAnnotations(statusName, allLoadboards)
+function getExtraAnnotations(activityName, allLoadboards)
 {
-    if (statusName === 'Posted to' || statusName === 'Un-Posted from')
+    if (activityName === 'Posted to' || activityName === 'Un-Posted from')
     {
         const randomLaodboards = random.arrayElements(allLoadboards);
         return {

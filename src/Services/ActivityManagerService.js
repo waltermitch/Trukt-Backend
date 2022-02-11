@@ -1,7 +1,7 @@
 const PubSubService = require('../Services/PubSubService');
 const StatusLogType = require('../Models/StatusLogType');
 const { uuidRegex } = require('../Utils/Regexes');
-const StatusLog = require('../Models/StatusLog');
+const ActivityLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const User = require('../Models/User');
@@ -13,7 +13,7 @@ class ActivityManagerService
         const page = pg - 1;
 
         // gettting all activities relevant to the job
-        const activities = await StatusLog.query().select([
+        const activities = await ActivityLog.query().select([
             'id',
             'orderGuid',
             'dateCreated',
@@ -38,7 +38,7 @@ class ActivityManagerService
     static async getActivitybyId(jobGuid, id)
     {
         // getting current activity
-        const activity = await StatusLog.query().select([
+        const activity = await ActivityLog.query().select([
             'id',
             'orderGuid',
             'dateCreated',
@@ -69,7 +69,7 @@ class ActivityManagerService
         if (errored.status === 200)
         {
             // compose object with data for creation
-            const statusManager = StatusLog.fromJson({
+            const statusManager = ActivityLog.fromJson({
                 userGuid,
                 orderGuid,
                 jobGuid,
@@ -78,7 +78,7 @@ class ActivityManagerService
             });
 
             // create activity in system
-            const currentActivity = await StatusLog.query().skipUndefined()
+            const currentActivity = await ActivityLog.query().skipUndefined()
                 .insert(statusManager, {
                     allowRefs: true
                 })

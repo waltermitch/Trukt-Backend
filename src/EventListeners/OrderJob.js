@@ -4,7 +4,6 @@ const OrderJobService = require('../Services/OrderJobService');
 const PubSubService = require('../Services/PubSubService');
 const OrderService = require('../Services/OrderService');
 const SuperDispatch = require('../Loadboards/Super');
-const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
