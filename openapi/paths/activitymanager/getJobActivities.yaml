@@ -63,7 +63,7 @@ responses:
                     type: string
                     example: "hortiz@rcglogistics.com"
                     description: Email of the user on activity.
-              status:
+              activity:
                 type: object
                 properties:     
                   id:
