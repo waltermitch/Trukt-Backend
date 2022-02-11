@@ -1656,9 +1656,9 @@ class OrderService
             const orderGraph = Order.fromJson({
                 guid,
                 updatedByGuid: currentUser,
-                dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
-                referrerGuid: OrderService.getObjectContactReference(referrer),
-                salespersonGuid: OrderService.getObjectContactReference(salesperson),
+                dispatcherGuid: dispatcher?.guid,
+                referrerGuid: referrer?.guid,
+                salespersonGuid: salesperson?.guid,
                 clientGuid: client?.guid,
                 instructions,
                 clientContactGuid: orderContactCreated,
@@ -1795,12 +1795,6 @@ class OrderService
             );
 
         return InvoiceBill.fetchGraph(allInvoices, '[lines.link]', { transaction: trx });
-    }
-
-    // If contactObject is null -> reference should be removed
-    static getObjectContactReference(contactObject)
-    {
-        return contactObject?.guid || null;
     }
 
     static async validateReferencesBeforeUpdate(
@@ -2513,12 +2507,10 @@ class OrderService
         const { dispatcher, vendor, vendorAgent, vendorContact, ...jobData } = jobInput;
 
         return {
-            dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
-            vendorGuid: OrderService.getObjectContactReference(vendor),
-            vendorAgentGuid:
-                OrderService.getObjectContactReference(vendorAgent),
-            vendorContactGuid:
-                OrderService.getObjectContactReference(vendorContact),
+            dispatcherGuid: dispatcher?.guid,
+            vendorGuid: vendor?.guid,
+            vendorAgentGuid: vendorAgent?.guid,
+            vendorContactGuid: vendorContact?.guid,
             ...jobData
         };
     }

@@ -163,6 +163,7 @@ class Super extends Loadboard
     acceptDispatchToJSON()
     {
         const payload = {
+            order_guid: this.data.loadboardPost.externalGuid,
             carrier_guid: this.data.vendorSDGuid || this.data.vendor.sdGuid,
             carrier_phone: this.data.vendorPhone || this.data.vendor.phoneNumber,
             carrier_email: this.data.vendorEmail || this.data.vendor.email
