@@ -1,5 +1,6 @@
 /**
  * Homegrown authorization middleware for express.
+ * 🍃🌱
  */
 const Auth = require('../Services/Auth');
 
@@ -10,19 +11,19 @@ module.exports = {
         {
             try
             {
-                req.session.userGuid = (await Auth.verifyJWT(req.headers?.authorization)).oid;
+                req.session = { userGuid: (await Auth.verifyJWT(req.headers?.authorization)).oid };
 
                 if ('x-test-user' in req.headers && !req.session?.userGuid)
                 {
-                    req.session.userGuid = req.headers['x-test-user'];
+                    req.session = { userGuid: req.headers['x-test-user'] };
                 }
+
+                next();
             }
             catch (e)
             {
-                // do nothing
+                res.status(e.status).json(e);
             }
-
-            next();
         };
     },
     middlewareEDI: () =>
@@ -31,7 +32,7 @@ module.exports = {
         {
             if ('x-edi-code' in req.headers && req.headers['x-edi-code'] === process.env['edi.secret.code'])
             {
-                req.session.userGuid = process.env.SYSTEM_USER;
+                req.session = { userGuid: process.env.SYSTEM_USER };
                 next();
             }
             else
