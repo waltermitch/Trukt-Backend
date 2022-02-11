@@ -38,7 +38,7 @@ exports.seed = async function (knex)
             throw new Error('No loadboards found. Did you created the loadboard schema?');
         }
 
-        // Add 1 status to every order
+        // Add 1 activity to every order
         const activityManagerLog = allOrdersJobs.map((order) =>
         {
             const randomStatus = random.arrayElement(allActivityTypes);
@@ -46,7 +46,7 @@ exports.seed = async function (knex)
                 user_guid: random.arrayElement(allUsers).guid,
                 order_guid: order.orderGuid,
                 job_guid: order.guid,
-                status_id: randomStatus.id,
+                activity_id: randomStatus.id,
                 extra_annotations: getExtraAnnotations(randomStatus.name, allLoadboardNames) || null
             };
         });

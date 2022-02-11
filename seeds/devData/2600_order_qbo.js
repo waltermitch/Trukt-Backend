@@ -171,7 +171,7 @@ exports.seed = async function (trx)
     await ActivityLog.query(trx).insert({
         userGuid: user.guid,
         orderGuid: order.guid,
-        statusId: 1
+        activityId: 1
     });
 
     return trx;

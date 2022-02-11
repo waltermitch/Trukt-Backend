@@ -379,7 +379,7 @@ class LoadboardService
                 await ActivityManagerService.createAvtivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,
-                    statusId: 10,
+                    activityId: 10,
                     jobGuid: jobId,
                     extraAnnotations: {
                         loadboard: 'TRUKT',
@@ -504,7 +504,7 @@ class LoadboardService
                 await ActivityManagerService.createAvtivityLog({
                     orderGuid: dispatch.job.orderGuid,
                     userGuid: currentUser,
-                    statusId: 12,
+                    activityId: 12,
                     jobGuid,
                     extraAnnotations: {
                         loadboard: 'TRUKT',
@@ -613,7 +613,7 @@ class LoadboardService
             await ActivityManagerService.createAvtivityLog({
                 orderGuid: job.orderGuid,
                 userGuid: currentUser,
-                statusId: 11,
+                activityId: 11,
                 jobGuid: job.guid,
                 extraAnnotations: {
                     loadboard: dispatch.loadboardPost?.loadboard || 'TRUKT',
@@ -867,16 +867,16 @@ class LoadboardService
      * @param loadboardPosts required, json with the loadboards names sended by the client
      * @param userGuid required
      * @param orderGuid required
-     * @param statusId required, 4 => Posted to a loadboard, 5 => Un-posted from loadboard
+     * @param activityId required, 4 => Posted to a loadboard, 5 => Un-posted from loadboard
      * @param jobGuid required
     */
-    static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, statusId, jobGuid)
+    static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, activityId, jobGuid)
     {
         const loadboardNames = LoadboardService.getLoadboardNames(loadboardPosts);
         return ActivityManagerService.createAvtivityLog({
             orderGuid,
             userGuid,
-            statusId,
+            activityId,
             jobGuid,
             extraAnnotations: { 'loadboards': loadboardNames }
         });

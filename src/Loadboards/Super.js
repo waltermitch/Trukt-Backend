@@ -510,7 +510,7 @@ class Super extends Loadboard
                 await ActivityManagerService.createAvtivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
-                    statusId: 10,
+                    activityId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
                         loadboard: 'SUPERDISPATCH',
@@ -605,7 +605,7 @@ class Super extends Loadboard
             await ActivityManagerService.createAvtivityLog({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
-                statusId: 12,
+                activityId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
                     loadboard: 'SUPERDISPATCH',
@@ -676,7 +676,7 @@ class Super extends Loadboard
                 await ActivityManagerService.createAvtivityLog({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
-                    statusId: 14,
+                    activityId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
                         loadboard: 'SUPERDISPATCH',

@@ -1295,7 +1295,7 @@ class OrderService
                         const sqlQuery = OrderService.createDateComparisonSqlQuery(dateElement);
 
                         this.whereRaw(sqlQuery)
-                            .andWhere('statusId', dateElement.status);
+                            .andWhere('activityId', dateElement.status);
                     };
 
                     return query.orWhere(comparisonDateAndStatus);
@@ -1528,7 +1528,7 @@ class OrderService
                 orderGuid: order.guid,
                 userGuid: currentUser,
                 jobGuid: orderJob.guid,
-                statusId: 1
+                activityId: 1
             });
         }
     }

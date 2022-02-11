@@ -438,7 +438,7 @@ class Loadboard
                 await ActivityManagerService.createAvtivityLog({
                     orderGuid: orderRec.guid,
                     userGuid: process.env.SYSTEM_USER,
-                    statusId: 13,
+                    activityId: 13,
                     jobGuid: dispatchRec.jobGuid,
                     extraAnnotations: {
                         loadboard: dispatchRec.loadboardPost.loadboard,

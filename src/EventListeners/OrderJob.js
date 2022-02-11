@@ -22,7 +22,7 @@ listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 16
+                activityId: 16
             }),
             OrderService.markOrderReady(orderGuid, currentUser)
         ]);
@@ -58,7 +58,7 @@ listener.on('orderjob_hold_added', ({ orderGuid, jobGuid, currentUser }) =>
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 22
+                activityId: 22
             })
         ]);
 
@@ -77,7 +77,7 @@ listener.on('orderjob_hold_removed', ({ orderGuid, jobGuid, currentUser }) =>
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 16
+                activityId: 16
             })
         ]);
 
@@ -100,7 +100,7 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop 
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 29
+                activityId: 29
             });
         }
 
@@ -111,7 +111,7 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop 
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 27
+                activityId: 27
             });
         }
 
@@ -122,7 +122,7 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop 
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 31
+                activityId: 31
             });
         }
 
@@ -232,7 +232,7 @@ listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 27
+                activityId: 27
             })
         ]);
 
@@ -265,7 +265,7 @@ listener.on('orderjob_picked_up', ({ jobGuid, currentUser = SYSUSER, orderGuid }
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 29
+                activityId: 29
             })
         ]);
 
@@ -308,7 +308,7 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
                     orderGuid,
                     jobGuid,
                     userGuid: currentUser,
-                    statusId: 19
+                    activityId: 19
                 })
             );
         }
@@ -318,7 +318,7 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 17
+                activityId: 17
             }),
             OrderJobService.updateStatusField(jobGuid, currentUser),
             ...orderUpdatePromise
@@ -345,13 +345,13 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 18
+                activityId: 18
             }),
             ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 20
+                activityId: 20
             })
         ]);
 
@@ -375,7 +375,7 @@ listener.on('orderjob_canceled', ({ orderGuid, currentUser, jobGuid }) =>
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 23
+                activityId: 23
             })
         ]);
 
@@ -400,7 +400,7 @@ listener.on('orderjob_uncanceled', ({ orderGuid, currentUser, jobGuid }) =>
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 24
+                activityId: 24
             })
         ]);
 

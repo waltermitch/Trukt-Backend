@@ -63,7 +63,7 @@ listener.on('order_delivered', ({ orderGuid, userGuid, jobGuid }) =>
                 orderGuid,
                 jobGuid,
                 userGuid,
-                statusId: 28
+                activityId: 28
             })
         ]);
     });
@@ -78,7 +78,7 @@ listener.on('order_undelivered', ({ orderGuid, userGuid, jobGuid }) =>
                 orderGuid,
                 jobGuid,
                 userGuid,
-                statusId: 30
+                activityId: 30
             })
         ]);
     });
@@ -93,7 +93,7 @@ listener.on('tender_accepted', ({ jobGuid, orderGuid, currentUser }) =>
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 8
+                activityId: 8
             })
         ]);
     });
@@ -112,7 +112,7 @@ listener.on('tender_rejected', ({ jobGuid, orderGuid, currentUser }) =>
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 9
+                activityId: 9
             })
         ]);
     });

@@ -55,7 +55,7 @@ class LoadboardRequestService
                 orderGuid: lbPosting.orderGuid,
                 userGuid: payload.createdByGuid,
                 jobGuid: lbPosting.jobGuid,
-                statusId: 5,
+                activityId: 5,
                 extraAnnotations: {
                     loadboard: payload.loadboard,
                     carrier: {
@@ -82,7 +82,7 @@ class LoadboardRequestService
             orderGuid: lbPosting.orderGuid,
             userGuid: currentUser,
             jobGuid: lbPosting.jobGuid,
-            statusId: 4,
+            activityId: 4,
             extraAnnotations: {
                 loadboard: payload.loadboard,
                 carrier: {
@@ -126,7 +126,7 @@ class LoadboardRequestService
             orderGuid: lbPosting.orderGuid,
             userGuid: currentUser,
             jobGuid: lbPosting.jobGuid,
-            statusId: 5,
+            activityId: 5,
             extraAnnotations: {
                 loadboard: payload.loadboard,
                 carrier: {
@@ -214,7 +214,7 @@ class LoadboardRequestService
                 orderGuid: queryRequest.orderGuid,
                 userGuid: currentUser,
                 jobGuid: queryRequest.jobGuid,
-                statusId: 6,
+                activityId: 6,
                 extraAnnotations: {
                     loadboard: queryRequest.loadboard,
                     carrier: {
@@ -273,7 +273,7 @@ class LoadboardRequestService
             orderGuid: queryRequest.orderGuid,
             userGuid: currentUser,
             jobGuid: queryRequest.jobGuid,
-            statusId: 7,
+            activityId: 7,
             extraAnnotations: {
                 loadboard: queryRequest.loadboard,
                 carrier: {

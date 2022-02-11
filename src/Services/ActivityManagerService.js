@@ -57,13 +57,13 @@ class ActivityManagerService
      * @param activityLogData.userGuid required
      * @param activityLogData.orderGuid required
      * @param activityLogData.jobGuid required
-     * @param activityLogData.statusId required, id from status_log_types table
+     * @param activityLogData.activityId required, id from status_log_types table
      * @param activityLogData.extraAnnotations optional, json with extra information to add in the log
      */
-    static async createAvtivityLog({ userGuid, orderGuid, jobGuid, statusId, extraAnnotations })
+    static async createAvtivityLog({ userGuid, orderGuid, jobGuid, activityId, extraAnnotations })
     {
         // validate payload and data
-        const errored = await ActivityManagerService.validateAcivityPayload({ userGuid, orderGuid, jobGuid, activityId: statusId });
+        const errored = await ActivityManagerService.validateAcivityPayload({ userGuid, orderGuid, jobGuid, activityId });
 
         // if no errors create and push to pubsub
         if (errored.status === 200)
@@ -73,7 +73,7 @@ class ActivityManagerService
                 userGuid,
                 orderGuid,
                 jobGuid,
-                activityId: statusId,
+                activityId,
                 extraAnnotations
             });
 
@@ -113,7 +113,7 @@ class ActivityManagerService
      * @param activityLogData.userGuid required
      * @param activityLogData.orderGuid required
      * @param activityLogData.jobGuid required
-     * @param activityLogData.statusId required, id from status_log_types table
+     * @param activityLogData.activityId required, id from status_log_types table
      * @returns {Status}
      */
     static async validateAcivityPayload({ userGuid, orderGuid, jobGuid, activityId })
