@@ -1,4 +1,3 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -34,6 +33,9 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+const ActivityManagerService = require('./ActivityManagerService');
+
+// this is the apora that will hold the falling down requirments above.
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -1522,7 +1524,7 @@ class OrderService
     {
         for (const orderJob of order.jobs)
         {
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: order.guid,
                 userGuid: currentUser,
                 jobGuid: orderJob.guid,

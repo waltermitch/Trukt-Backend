@@ -4,12 +4,12 @@ const Attachment = require('../Models/Attachment');
 const OrderJob = require('../Models/OrderJob');
 const OrderStop = require('../Models/OrderStop');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const states = require('us-state-codes');
 const { DateTime } = require('luxon');
 const uuid = require('uuid');
 const R = require('ramda');
 const emitter = require('../EventListeners/index');
+const ActivityManagerService = require('../Services/ActivityManagerService');
 
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
 const systemUser = process.env['SYSTEM_USER'];
@@ -435,7 +435,7 @@ class Loadboard
                     }
                 }
 
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: orderRec.guid,
                     userGuid: process.env.SYSTEM_USER,
                     statusId: 13,

@@ -1,8 +1,7 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const ActivityManagerService = require('../Services/ActivityManagerService');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderService = require('../Services/OrderService');
 const OrderJob = require('../Models/OrderJob');
-const Order = require('../Models/Order');
 const listener = require('./index');
 
 listener.on('order_updated', ({ oldOrder, newOrder }) =>
@@ -60,7 +59,7 @@ listener.on('order_delivered', ({ orderGuid, userGuid, jobGuid }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid,
@@ -75,7 +74,7 @@ listener.on('order_undelivered', ({ orderGuid, userGuid, jobGuid }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid,
@@ -90,7 +89,7 @@ listener.on('tender_accepted', ({ jobGuid, orderGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
@@ -109,7 +108,7 @@ listener.on('tender_rejected', ({ jobGuid, orderGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,

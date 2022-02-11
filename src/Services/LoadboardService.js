@@ -1,4 +1,4 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const ActivityManagerService = require('./ActivityManagerService');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardContact = require('../Models/LoadboardContact');
@@ -376,7 +376,7 @@ class LoadboardService
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,
                     statusId: 10,
@@ -501,7 +501,7 @@ class LoadboardService
             if (!dispatch.loadboardPostGuid)
             {
                 // updating activity logger
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: dispatch.job.orderGuid,
                     userGuid: currentUser,
                     statusId: 12,
@@ -610,7 +610,7 @@ class LoadboardService
             await trx.commit();
             dispatch.status = OrderJob.STATUS.DISPATCHED;
 
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: job.orderGuid,
                 userGuid: currentUser,
                 statusId: 11,
@@ -873,7 +873,7 @@ class LoadboardService
     static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, statusId, jobGuid)
     {
         const loadboardNames = LoadboardService.getLoadboardNames(loadboardPosts);
-        return StatusManagerHandler.registerStatus({
+        return ActivityManagerService.createAvtivityLog({
             orderGuid,
             userGuid,
             statusId,
