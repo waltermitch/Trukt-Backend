@@ -448,7 +448,6 @@ class TerminalService
         term.isResolved = terminal.isResolved || false;
 
         // we can't let terminals be resolved without lat/long
-
         if (term.isResolved && (!term.latitude || !term.longitude))
             throw new HttpError(400, 'Terminal Must Have Latitude And Longitude To Be Resolved');
 
