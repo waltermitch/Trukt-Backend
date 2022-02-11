@@ -24,9 +24,9 @@ class ActivityManagerService
             .where({ 'jobGuid': jobGuid, 'orderGuid': orderGuid })
             .withGraphFetched({
                 user: true,
-                status: true
+                activity: true
             })
-            .modifyGraph('status', builder => builder.select('id', 'name'))
+            .modifyGraph('activity', builder => builder.select('id', 'name'))
             .orderBy('dateCreated', 'DESC').debug(true);
 
         activities.page = page + 1;
@@ -35,23 +35,23 @@ class ActivityManagerService
     }
 
     // FIXME: Not really needed
-    static async getActivitybyId(jobGuid, id)
-    {
-        // getting current activity
-        const activity = await ActivityLog.query().select([
-            'id',
-            'orderGuid',
-            'dateCreated',
-            'extraAnnotations',
-            'jobGuid'
-        ])
-            .findById(id)
-            .withGraphFetched({ user: true, status: true })
-            .modifyGraph('statusIDName')
-            .andWhere('jobGuid', jobGuid);
+    // static async getActivitybyId(jobGuid, id)
+    // {
+    //     // getting current activity
+    //     const activity = await ActivityLog.query().select([
+    //         'id',
+    //         'orderGuid',
+    //         'dateCreated',
+    //         'extraAnnotations',
+    //         'jobGuid'
+    //     ])
+    //         .findById(id)
+    //         .withGraphFetched({ user: true, status: true })
+    //         .modifyGraph('statusIDName')
+    //         .andWhere('jobGuid', jobGuid);
 
-        return activity;
-    }
+    //     return activity;
+    // }
 
     /**
      * @param activityLogData.userGuid required
@@ -63,7 +63,7 @@ class ActivityManagerService
     static async createAvtivityLog({ userGuid, orderGuid, jobGuid, statusId, extraAnnotations })
     {
         // validate payload and data
-        const errored = await ActivityManagerService.validateAcivityPayload({ userGuid, orderGuid, jobGuid, statusId });
+        const errored = await ActivityManagerService.validateAcivityPayload({ userGuid, orderGuid, jobGuid, activityId: statusId });
 
         // if no errors create and push to pubsub
         if (errored.status === 200)
@@ -73,7 +73,7 @@ class ActivityManagerService
                 userGuid,
                 orderGuid,
                 jobGuid,
-                statusId,
+                activityId: statusId,
                 extraAnnotations
             });
 
@@ -91,13 +91,13 @@ class ActivityManagerService
                 ])
                 .withGraphFetched({
                     user: true,
-                    status: true
+                    activity: true
                 })
-                .modifyGraph('status', builder => builder.select('id', 'name'));
+                .modifyGraph('activity', builder => builder.select('id', 'name'));
 
             // notify pubsub
             PubSubService.jobActivityUpdate(jobGuid, currentActivity);
-            console.log('Created Activity Using Activity!');
+            console.log('Created Activity Using Activity!', currentActivity);
             return currentActivity;
         }
     }
@@ -116,13 +116,13 @@ class ActivityManagerService
      * @param activityLogData.statusId required, id from status_log_types table
      * @returns {Status}
      */
-    static async validateAcivityPayload({ userGuid, orderGuid, jobGuid, statusId })
+    static async validateAcivityPayload({ userGuid, orderGuid, jobGuid, activityId })
     {
         const schema = {
             userGuid: value => uuidRegex.test(value),
             orderGuid: value => uuidRegex.test(value),
             jobGuid: value => uuidRegex.test(value),
-            statusId: value => parseInt(value) === Number(value)
+            activityId: value => parseInt(value) === Number(value)
         };
 
         const validate = (object, schema) => Object
@@ -130,7 +130,7 @@ class ActivityManagerService
             .filter(key => !schema[key](object[key]))
             .map(key => { return { data: `${key} input is invalid.` }; });
 
-        const errors = validate({ userGuid, orderGuid, jobGuid, statusId }, schema);
+        const errors = validate({ userGuid, orderGuid, jobGuid, activityId }, schema);
 
         if (errors.length > 0)
         {
@@ -147,7 +147,7 @@ class ActivityManagerService
         ] = await Promise.all([
             User.query().findById(userGuid),
             Order.query().findById(orderGuid),
-            ActivityLogType.query().findById(statusId),
+            ActivityLogType.query().findById(activityId),
             OrderJob.query().findById(jobGuid)
         ]);
 
@@ -162,7 +162,7 @@ class ActivityManagerService
         }
         if (!activityLogType)
         {
-            errorArray.push({ data: `Activity type ${statusId} doesnt exist.` });
+            errorArray.push({ data: `Activity type ${activityId} doesnt exist.` });
         }
         if (!job)
         {

@@ -4,7 +4,7 @@ class ActivityLogs extends BaseModel
 {
     static get tableName()
     {
-        return 'rcgTms.statusLogs';
+        return 'rcgTms.activityLogs';
     }
 
     static get idColumn()
@@ -20,19 +20,19 @@ class ActivityLogs extends BaseModel
         const OrderJob = require('./OrderJob');
 
         return {
-            status: {
+            activity: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: ActivityLogType,
                 join: {
-                    from: 'rcgTms.statusLogs.statusId',
-                    to: 'rcgTms.statusLogTypes.id'
+                    from: 'rcgTms.activityLogs.activityId',
+                    to: 'rcgTms.activityLogTypes.id'
                 }
             },
             user: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: User,
                 join: {
-                    from: 'rcgTms.statusLogs.userGuid',
+                    from: 'rcgTms.activityLogs.userGuid',
                     to: 'rcgTms.tmsUsers.guid'
                 }
             },
@@ -40,7 +40,7 @@ class ActivityLogs extends BaseModel
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Order,
                 join: {
-                    from: 'rcgTms.statusLogs.orderGuid',
+                    from: 'rcgTms.activityLogs.orderGuid',
                     to: 'rcgTms.orders.guid'
                 }
             },
@@ -48,7 +48,7 @@ class ActivityLogs extends BaseModel
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: OrderJob,
                 join: {
-                    from: 'rcgTms.statusLogs.jobGuid',
+                    from: 'rcgTms.activityLogs.jobGuid',
                     to: 'rcgTms.orderJobs.guid'
                 }
             }

@@ -143,12 +143,12 @@ class Order extends BaseModel
                     to: 'salesforce.accounts.guid'
                 }
             },
-            statusLogs: {
+            activityLogs: {
                 relation: BaseModel.HasManyRelation,
                 modelClass: require('./ActivityLogs'),
                 join: {
                     from: 'rcgTms.orders.guid',
-                    to: 'rcgTms.statusLogs.orderGuid'
+                    to: 'rcgTms.activityLogs.orderGuid'
                 }
             },
             ediData: {

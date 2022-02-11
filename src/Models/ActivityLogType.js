@@ -4,7 +4,7 @@ class ActivityLogTypes extends BaseModel
 {
     static get tableName()
     {
-        return 'rcgTms.statusLogTypes';
+        return 'rcgTms.activityLogTypes';
     }
 
     static get idColumn()
@@ -15,12 +15,12 @@ class ActivityLogTypes extends BaseModel
     static get relationMappings()
     {
         return {
-            statusLogs: {
+            activityLogs: {
                 relation: BaseModel.HasManyRelation,
                 modeClass: require('./ActivityLogs'),
                 join: {
-                    from: 'rcgTms.statusLogTypes.id',
-                    to: 'rcgTms.statusLogs.statusId'
+                    from: 'rcgTms.activityLogTypes.id',
+                    to: 'rcgTms.activityLogs.activityId'
                 }
 
             }

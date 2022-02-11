@@ -21,9 +21,9 @@ class StatusManagerService
 
         baseQuery = baseQuery.withGraphFetched({
             user: true,
-            status: true
+            activity: true
         })
-            .modifyGraph('status', builder => builder.select('id', 'name'))
+            .modifyGraph('activity', builder => builder.select('id', 'name'))
             .orderBy('date_created', 'DESC');
 
         const statusLogResults = await baseQuery;
