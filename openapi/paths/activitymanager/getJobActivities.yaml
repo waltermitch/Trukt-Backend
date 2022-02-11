@@ -1,0 +1,77 @@
+summary: Get activity logs by order and job guid
+operationId: getActivityLog
+description: Get activity logs by order and job guid
+tags:
+  - ActivityManager
+parameters:
+  - in: path
+    name: orderGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+  - in: query
+    name: pg
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/page'
+  - in: query
+    name: rc
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/rowCount'
+responses:
+  200:
+    description: Activity Logs
+    content:
+      application/json: 
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: number
+                example: 7813
+                description: The unique reference number of the activity.
+              orderGuid:
+                $ref: '../../components/schemas/Common.yaml#/guid'    
+              jobGuid:
+                $ref: '../../components/schemas/Common.yaml#/guid'  
+              dateCreated:
+                $ref: '../../components/schemas/Common.yaml#/dateCreated'
+              extraAnnotations: 
+                type: object
+                description: Object can containt and data that is not required. 
+                properties:
+                  randomString:
+                    type: string
+                    description: Any key value pair that you want to add to activity.
+                nullable: true
+              user:
+                type: object
+                properties:
+                  guid:
+                    $ref: '../../components/schemas/Common.yaml#/guid'   
+                  name:
+                    type: string
+                    example: "Henry Ortiz"
+                    description: Name of user on activity.
+                  email:
+                    type: string
+                    example: "hortiz@rcglogistics.com"
+                    description: Email of the user on activity.
+              status:
+                type: object
+                properties:     
+                  id:
+                    type: number
+                    example: 23 
+                    description: If of the activity that is passed in.
+                  name:
+                    type: string
+                    example: Job Canceled       
+                    description: Name of the activity.   
+

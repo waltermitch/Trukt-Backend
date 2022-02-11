@@ -127,9 +127,9 @@ paths:
   /statusmanager/{guid}:
     get:
       $ref: paths/statusmanager/get.yaml
-  /statusmanager/{guid}/{jobGuid}:
+  /activitylogs/{orderGuid}/{jobGuid}:
     get:
-      $ref: paths/statusmanager/jobGuid/get.yaml
+      $ref: paths/activitymanager/getJobActivities.yaml
   /terminal:
     get:
       $ref: paths/terminal/search.yaml
