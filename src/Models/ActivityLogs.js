@@ -1,6 +1,6 @@
 const BaseModel = require('./BaseModel');
 
-class StatusLogs extends BaseModel
+class ActivityLogs extends BaseModel
 {
     static get tableName()
     {
@@ -56,4 +56,4 @@ class StatusLogs extends BaseModel
     }
 }
 
-module.exports = StatusLogs;
+module.exports = ActivityLogs;

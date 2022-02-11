@@ -1,4 +1,4 @@
-const ActivityLog = require('../Models/ActivityLog');
+const ActivityLog = require('../Models/ActivityLogs');
 
 // DEPRICATED!!
 class StatusManagerService

@@ -145,7 +145,7 @@ class Order extends BaseModel
             },
             statusLogs: {
                 relation: BaseModel.HasManyRelation,
-                modelClass: require('./ActivityLog'),
+                modelClass: require('./ActivityLogs'),
                 join: {
                     from: 'rcgTms.orders.guid',
                     to: 'rcgTms.statusLogs.orderGuid'
