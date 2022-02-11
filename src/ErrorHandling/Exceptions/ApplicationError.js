@@ -6,19 +6,22 @@ class ApplicationError extends Error
     name;
 
     /**
+     * @private
      * @type {string} - The message of the exception.
      */
-    message;
+    #message;
 
     /**
+     * @private
      * @type {number} - The http status code of the exception.
      */
-    status;
+    #status;
 
     /**
+     * @private
      * @type {Record<string, unknown>} - Helpful data of the exception.
      */
-    helperInfo;
+    #helperInfo;
 
     /**
      * @param {string} message - The message of the exception.
@@ -29,18 +32,18 @@ class ApplicationError extends Error
     {
         super(message);
         this.name = this.constructor.name;
-        this.message = message;
-        this.status = status;
-        this.helperInfo = helperInfo;
+        this.#message = message;
+        this.#status = status;
+        this.#helperInfo = helperInfo;
     }
 
     toJSON()
     {
         return {
             errorType: this.name,
-            message: this.message,
-            status: this.status,
-            ...this.helperInfo
+            message: this.#message,
+            status: this.#status,
+            ...this.#helperInfo
         };
     }
 }
