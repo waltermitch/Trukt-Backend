@@ -1,6 +1,6 @@
 const User = require('../../src/Models/User');
 const StatusLogType = require('../../src/Models/StatusLogType');
-const ActivityLog = require('../../src/Models/StatusLog');
+const ActivityLog = require('../../src/Models/ActivityLog');
 const Loadboard = require('../../src/Models/Loadboard');
 const OrderJob = require('../../src/Models/OrderJob');
 const { random } = require('faker');

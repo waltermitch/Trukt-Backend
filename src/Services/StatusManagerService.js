@@ -1,4 +1,4 @@
-const StatusLog = require('../Models/StatusLog');
+const ActivityLog = require('../Models/ActivityLog');
 
 // DEPRICATED!!
 class StatusManagerService
@@ -6,7 +6,7 @@ class StatusManagerService
     static async getStatusLogs({ pg, rc, orderGuid, jobGuid })
     {
         const page = pg - 1;
-        let baseQuery = StatusLog.query().select([
+        let baseQuery = ActivityLog.query().select([
             'id',
             'orderGuid',
             'dateCreated',

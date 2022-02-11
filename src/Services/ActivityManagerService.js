@@ -1,7 +1,7 @@
 const PubSubService = require('../Services/PubSubService');
 const StatusLogType = require('../Models/StatusLogType');
 const { uuidRegex } = require('../Utils/Regexes');
-const ActivityLog = require('../Models/StatusLog');
+const ActivityLog = require('../Models/ActivityLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const User = require('../Models/User');
