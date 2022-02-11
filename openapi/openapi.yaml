@@ -124,7 +124,7 @@ paths:
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml
-  /statusmanager/{guid}:
+  /statusmanager/{guid}/{jobGuid}:
     get:
       $ref: paths/statusmanager/get.yaml
   /activitylogs/{orderGuid}/{jobGuid}:
