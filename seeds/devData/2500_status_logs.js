@@ -1,5 +1,5 @@
 const User = require('../../src/Models/User');
-const StatusLogType = require('../../src/Models/StatusLogType');
+const ActivityLogType = require('../../src/Models/ActivityLogType');
 const ActivityLog = require('../../src/Models/ActivityLogs');
 const Loadboard = require('../../src/Models/Loadboard');
 const OrderJob = require('../../src/Models/OrderJob');
@@ -25,7 +25,7 @@ exports.seed = async function (knex)
         }
 
         // get all status log types
-        const allActivityTypes = await StatusLogType.query(trx).select('id', 'name');
+        const allActivityTypes = await ActivityLogType.query(trx).select('id', 'name');
         if (!allActivityTypes)
         {
             throw new Error('No status types found. Did you created the status log schema?');

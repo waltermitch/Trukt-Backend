@@ -1,5 +1,5 @@
 const PubSubService = require('../Services/PubSubService');
-const StatusLogType = require('../Models/StatusLogType');
+const ActivityLogType = require('../Models/ActivityLogType');
 const { uuidRegex } = require('../Utils/Regexes');
 const ActivityLog = require('../Models/ActivityLogs');
 const OrderJob = require('../Models/OrderJob');
@@ -142,12 +142,12 @@ class ActivityManagerService
         const [
             user,
             order,
-            statusLogType,
+            activityLogType,
             job
         ] = await Promise.all([
             User.query().findById(userGuid),
             Order.query().findById(orderGuid),
-            StatusLogType.query().findById(statusId),
+            ActivityLogType.query().findById(statusId),
             OrderJob.query().findById(jobGuid)
         ]);
 
@@ -160,7 +160,7 @@ class ActivityManagerService
         {
             errorArray.push({ data: `Order ${orderGuid} doesnt exist.` });
         }
-        if (!statusLogType)
+        if (!activityLogType)
         {
             errorArray.push({ data: `Activity type ${statusId} doesnt exist.` });
         }

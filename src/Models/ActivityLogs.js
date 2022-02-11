@@ -14,7 +14,7 @@ class ActivityLogs extends BaseModel
 
     static get relationMappings()
     {
-        const StatusLogType = require('./StatusLogType');
+        const ActivityLogType = require('./ActivityLogType');
         const User = require('./User');
         const Order = require('./Order');
         const OrderJob = require('./OrderJob');
@@ -22,7 +22,7 @@ class ActivityLogs extends BaseModel
         return {
             status: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: StatusLogType,
+                modelClass: ActivityLogType,
                 join: {
                     from: 'rcgTms.statusLogs.statusId',
                     to: 'rcgTms.statusLogTypes.id'
