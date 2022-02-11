@@ -1,5 +1,23 @@
-const { ValidationError: ObjectionValidationError, NotFoundError: ObjectionNotFoundError, DBError, ConstraintViolationError, UniqueViolationError, NotNullViolationError, ForeignKeyViolationError, CheckViolationError, DataError } = require('objection');
-const { ValidationError, ApiError, AuthenticationError, DataConflictError, MissingDataError, NotAllowedError, NotFoundError, ApplicationError } = require('./Exceptions');
+const {
+    ValidationError: ObjectionValidationError,
+    NotFoundError: ObjectionNotFoundError,
+    DBError,
+    ConstraintViolationError,
+    UniqueViolationError,
+    NotNullViolationError,
+    ForeignKeyViolationError,
+    CheckViolationError,
+    DataError
+} = require('objection');
+const ValidationError = require('./Exceptions/ValidationError');
+const ApiError = require('./Exceptions/ApiError');
+const AuthenticationError = require('./Exceptions/AuthenticationError');
+const DataConflictError = require('./Exceptions/DataConflictError');
+const MissingDataError = require('./Exceptions/MissingDataError');
+const NotAllowedError = require('./Exceptions/NotAllowedError');
+const NotFoundError = require('./Exceptions/NotFoundError');
+const ApplicationError = require('./Exceptions/ApplicationError');
+
 const OpenApiValidatorErrorTypes = require('express-openapi-validator').error;
 const telemetryClient = require('./Insights');
 
@@ -10,7 +28,6 @@ const telemetryClient = require('./Insights');
  */
 function formatErrorMessageStructure(error)
 {
-    // TODO: Set error types for custom app types
     if (error instanceof ObjectionValidationError)
     {
         switch (error.type)
@@ -158,8 +175,8 @@ function formatErrorMessageStructure(error)
             status: 500,
             errors: [
                 {
-                    errorType: 'UnknownError',
-                    message: error.toString()
+                    errorType: error.constructor?.name ?? 'UnknownError',
+                    message: error?.message ?? JSON.stringify(error)
                 }
             ]
         };
