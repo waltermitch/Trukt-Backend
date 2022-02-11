@@ -34,30 +34,11 @@ class ActivityManagerService
         return activities;
     }
 
-    // FIXME: Not really needed
-    // static async getActivitybyId(jobGuid, id)
-    // {
-    //     // getting current activity
-    //     const activity = await ActivityLog.query().select([
-    //         'id',
-    //         'orderGuid',
-    //         'dateCreated',
-    //         'extraAnnotations',
-    //         'jobGuid'
-    //     ])
-    //         .findById(id)
-    //         .withGraphFetched({ user: true, status: true })
-    //         .modifyGraph('statusIDName')
-    //         .andWhere('jobGuid', jobGuid);
-
-    //     return activity;
-    // }
-
     /**
      * @param activityLogData.userGuid required
      * @param activityLogData.orderGuid required
      * @param activityLogData.jobGuid required
-     * @param activityLogData.activityId required, id from status_log_types table
+     * @param activityLogData.activityId required, id from activity_log_types table
      * @param activityLogData.extraAnnotations optional, json with extra information to add in the log
      */
     static async createAvtivityLog({ userGuid, orderGuid, jobGuid, activityId, extraAnnotations })
@@ -95,9 +76,8 @@ class ActivityManagerService
                 })
                 .modifyGraph('activity', builder => builder.select('id', 'name'));
 
-            // notify pubsub
+            // push to pubsub activity
             PubSubService.jobActivityUpdate(jobGuid, currentActivity);
-            console.log('Created Activity Using Activity!', currentActivity);
             return currentActivity;
         }
     }
@@ -113,7 +93,7 @@ class ActivityManagerService
      * @param activityLogData.userGuid required
      * @param activityLogData.orderGuid required
      * @param activityLogData.jobGuid required
-     * @param activityLogData.activityId required, id from status_log_types table
+     * @param activityLogData.activityId required, id from activity_log_types table
      * @returns {Status}
      */
     static async validateAcivityPayload({ userGuid, orderGuid, jobGuid, activityId })
