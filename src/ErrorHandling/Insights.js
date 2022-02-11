@@ -5,6 +5,9 @@ const appInsights = require('applicationinsights');
 // our local instances with azure.
 const fakeTelemetryClient = require('./FakeTelemetryClient');
 
+/**
+ * @type {appInsights.TelemetryClient}
+ */
 let client = {};
 
 if (process.env.local || process.env.LOCAL)
