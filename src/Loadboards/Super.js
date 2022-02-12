@@ -540,7 +540,6 @@ class Super extends Loadboard
         }
         catch (e)
         {
-            console.log(e);
             await trx.rollback();
             throw new Error(e.message);
         }
