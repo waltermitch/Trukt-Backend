@@ -1,4 +1,4 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const ActivityManagerService = require('../Services/ActivityManagerService');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
@@ -117,9 +117,9 @@ class Super extends Loadboard
     {
         super.validateDispatch();
 
-        if(!this.data.vendor.sdGuid)
+        if (!this.data.vendor.sdGuid)
         {
-            if(!phoneNumberRegex.test(this.data.vendor.phoneNumber) ||
+            if (!phoneNumberRegex.test(this.data.vendor.phoneNumber) ||
                 !emailRegex.test(this.data.vendor.email) ||
                 !dotNumberRegex.test(this.data.vendor.dotNumber))
             {
@@ -131,7 +131,7 @@ class Super extends Loadboard
     cleanUp()
     {
         super.cleanUp();
-        if(this.data.vendor)
+        if (this.data.vendor)
         {
             this.data.vendor.phoneNumber = this.data.vendor?.phoneNumber?.replace(/[^0-9]/g, '');
             this.data.vendor.dotNumber = this.data.vendor?.dotNumber?.replace(/[^0-9]/g, '');
@@ -163,6 +163,7 @@ class Super extends Loadboard
     acceptDispatchToJSON()
     {
         const payload = {
+            order_guid: this.data.loadboardPost.externalGuid,
             carrier_guid: this.data.vendorSDGuid || this.data.vendor.sdGuid,
             carrier_phone: this.data.vendorPhone || this.data.vendor.phoneNumber,
             carrier_email: this.data.vendorEmail || this.data.vendor.email
@@ -229,8 +230,9 @@ class Super extends Loadboard
     formatCommodities(commodities)
     {
         const vehicles = [];
-        for (const com of commodities)
+        for (let i = 0; i < commodities.length; i++)
         {
+            const com = commodities[i];
             vehicles.push({
                 vin: com.identifier || 'vin',
                 year: com.vehicle?.year || 2005,
@@ -241,7 +243,7 @@ class Super extends Loadboard
                 lot_number: com.lotNumber,
                 price: com.bill?.amount || 5,
                 tariff: com.invoice?.amount || 5,
-                guid: com.extraExternalData?.sdGuid
+                guid: com.extraExternalData?.sdGuid || `com${i}`
             });
         }
 
@@ -478,17 +480,17 @@ class Super extends Loadboard
 
                 dispatch.externalGuid = response.dispatchRes.guid;
                 dispatch.setUpdatedBy(dispatch.createdByGuid);
-                
+
                 const job = await OrderJob.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
                     order.[client], commodities(distinct, isNotDeleted).[vehicle]]`);
-                    
+
                 const commodityPromises = this.updateCommodity(job.commodities, response.order.vehicles);
                 for (const comPromise of commodityPromises)
                 {
                     comPromise.transacting(trx);
                     allPromises.push(comPromise);
                 }
-                
+
                 const client = job.order.client;
                 if (client.sdGuid !== response.order.customer.counterparty_guid)
                 {
@@ -506,15 +508,15 @@ class Super extends Loadboard
                     .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
                     .where({ 'salesforce.contacts.guid': dispatch.vendorAgentGuid || dispatch.vendorAgent.guid })
                     .select('salesforce.accounts.name as vendorName',
-                    'salesforce.accounts.guid as vendorGuid',
-                    'salesforce.accounts.dot_number as dotNumber',
-                    'salesforce.contacts.guid as agentGuid',
-                    'salesforce.contacts.name as agentName');
+                        'salesforce.accounts.guid as vendorGuid',
+                        'salesforce.accounts.dot_number as dotNumber',
+                        'salesforce.contacts.guid as agentGuid',
+                        'salesforce.contacts.name as agentName');
 
-                    await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
-                    statusId: 10,
+                    activityId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
                         loadboard: 'SUPERDISPATCH',
@@ -607,10 +609,10 @@ class Super extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
-                statusId: 12,
+                activityId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
                     loadboard: 'SUPERDISPATCH',
@@ -678,10 +680,10 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
-                    statusId: 14,
+                    activityId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
                         loadboard: 'SUPERDISPATCH',
@@ -736,7 +738,7 @@ class Super extends Loadboard
                     com.extraExternalData = {};
                 }
                 com.extraExternalData.sdGuid = commodity.guid;
-                newCommodities.shift(i);
+                newCommodities.splice(i, 1);
                 break;
             }
         }

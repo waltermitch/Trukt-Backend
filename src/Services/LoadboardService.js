@@ -1,4 +1,4 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const ActivityManagerService = require('./ActivityManagerService');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardContact = require('../Models/LoadboardContact');
@@ -376,10 +376,10 @@ class LoadboardService
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,
-                    statusId: 10,
+                    activityId: 10,
                     jobGuid: jobId,
                     extraAnnotations: {
                         loadboard: 'TRUKT',
@@ -501,10 +501,10 @@ class LoadboardService
             if (!dispatch.loadboardPostGuid)
             {
                 // updating activity logger
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: dispatch.job.orderGuid,
                     userGuid: currentUser,
-                    statusId: 12,
+                    activityId: 12,
                     jobGuid,
                     extraAnnotations: {
                         loadboard: 'TRUKT',
@@ -565,13 +565,13 @@ class LoadboardService
                 throw new HttpError(404, 'Dispatch not found');
 
             const lbPayload = [];
-            if (dispatch.loadboardName == 'SHIPCARS')
+            if (dispatch.loadboardPost?.loadboard == 'SHIPCARS')
             {
                 throw new HttpError(400, 'Cannot manually accept job that was dispatched to Ship.Cars');
             }
-            else if (dispatch.loadboardName == 'SUPERDISPATCH')
+            else if (dispatch.loadboardPost?.loadboard == 'SUPERDISPATCH')
             {
-                const lb = new loadboardClasses[`${dispatch.loadboardName}`](dispatch);
+                const lb = new loadboardClasses[`${dispatch.loadboardPost.loadboard}`](dispatch);
                 lbPayload.push(lb.manuallyAcceptDispatch());
             }
 
@@ -610,10 +610,10 @@ class LoadboardService
             await trx.commit();
             dispatch.status = OrderJob.STATUS.DISPATCHED;
 
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: job.orderGuid,
                 userGuid: currentUser,
-                statusId: 11,
+                activityId: 11,
                 jobGuid: job.guid,
                 extraAnnotations: {
                     loadboard: dispatch.loadboardPost?.loadboard || 'TRUKT',
@@ -867,16 +867,16 @@ class LoadboardService
      * @param loadboardPosts required, json with the loadboards names sended by the client
      * @param userGuid required
      * @param orderGuid required
-     * @param statusId required, 4 => Posted to a loadboard, 5 => Un-posted from loadboard
+     * @param activityId required, 4 => Posted to a loadboard, 5 => Un-posted from loadboard
      * @param jobGuid required
     */
-    static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, statusId, jobGuid)
+    static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, activityId, jobGuid)
     {
         const loadboardNames = LoadboardService.getLoadboardNames(loadboardPosts);
-        return StatusManagerHandler.registerStatus({
+        return ActivityManagerService.createAvtivityLog({
             orderGuid,
             userGuid,
-            statusId,
+            activityId,
             jobGuid,
             extraAnnotations: { 'loadboards': loadboardNames }
         });
