@@ -27,7 +27,7 @@ class ActivityManagerService
                 activity: true
             })
             .modifyGraph('activity', builder => builder.select('id', 'name'))
-            .orderBy('dateCreated', 'DESC').debug(true);
+            .orderBy('dateCreated', 'DESC');
 
         activities.page = page + 1;
         activities.rowCount = rc;
