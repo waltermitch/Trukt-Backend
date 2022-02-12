@@ -5,28 +5,32 @@
 const Auth = require('../Services/Auth');
 
 module.exports = {
-    middleware: () =>
+    middleware: (config) =>
     {
         return async (req, res, next) =>
         {
             try
             {
-                req.session = { userGuid: (await Auth.verifyJWT(req.headers?.authorization)).oid };
-
-                if ('x-test-user' in req.headers && !req.session?.userGuid)
+                if (!(config?.ignorePaths?.(req.path)))
                 {
-                    req.session = { userGuid: req.headers['x-test-user'] };
-                }
+                    req.session = { userGuid: (await Auth.verifyJWT(req.headers?.authorization)).oid };
 
+                    if ('x-test-user' in req.headers && !(req.session.userGuid))
+                    {
+                        req.session.userGuid = req.headers['x-test-user'];
+                    }
+                }
                 next();
             }
             catch (e)
             {
-                res.status(e.status).json(e);
+                // let error handler hand the error. :)
+                next(e);
             }
+
         };
     },
-    middlewareEDI: () =>
+    middlewareEDI: (config) =>
     {
         return async (req, res, next) =>
         {

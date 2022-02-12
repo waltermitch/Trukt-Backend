@@ -1,5 +1,4 @@
 const SystemManagementService = require('../Services/SystemManagementService');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusCacheManager = require('../EventManager/StatusCacheManager');
 const TerminalService = require('../Services/TerminalService');
 const QBO = require('../QuickBooks/API');
@@ -57,9 +56,4 @@ Cron.schedule(expressions.hourly, async () =>
 Cron.schedule(expressions.daily, async () =>
 {
     await QBO.syncListsToDB();
-});
-
-Cron.schedule(expressions.second, async () =>
-{
-    await StatusManagerHandler.checkStatus();
 });
