@@ -26,11 +26,15 @@ class EDIService
                     const [
                         commodities,
                         stopRec,
+
+                        // This is needed for Agistix, they require the pickup date when sending the 214 status updates
+                        pickupRec,
                         orderRec
                     ] = await Promise.all(
                         [
                             OrderStop.relatedQuery('commodities').for(stop.guid).distinctOn('guid'),
                             OrderStop.query().withGraphJoined('terminal').findById(stop.guid),
+                            Order.relatedQuery('stops').for(order.guid).findOne('stopType', 'pickup').orderBy('sequence', 'asc'),
                             Order.query().findById(order.guid).withGraphJoined('client')
                         ]);
                     const client = orderRec.client;
@@ -46,8 +50,9 @@ class EDIService
                         payload.addEDIData(edi204doc);
                         payload.addDatetime(datetime);
                         payload.addCommodities(commodities);
+                        payload.addPickupStop(pickupRec);
 
-                        const res = await EDIApi.send214(payload);
+                        await EDIApi.send214(payload).catch(EDIApi.handleError);
                     }
                 }
             });
