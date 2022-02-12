@@ -68,6 +68,7 @@ const shipmentStatusCodes = [
     'X8', // Arrived at Pick - up Location Loading Dock
     'XB' // Shipment Acknowledged
 ];
+
 const shipmentStatusCodeReason =
     [
         'A1', //  Missed Delivery
@@ -157,6 +158,7 @@ const shipmentStatusCodeReason =
         'T6', //  Trailer Volume Not Available
         'T7' //  Insufficient Delivery Time
     ];
+
 const shipmentAppointmentStatusCode =
     [
         'AA', //  Pick - up Appointment Date and / or Time
@@ -175,7 +177,6 @@ const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 
 class EDIController
 {
-
     static async createTender(req, res, next)
     {
         try
