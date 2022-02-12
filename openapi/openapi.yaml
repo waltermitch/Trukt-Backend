@@ -124,16 +124,15 @@ paths:
   /picklist/options:
     get:
       $ref: paths/picklist/get.yaml
-  /statusmanager/{guid}:
+  /activitylogs/{orderGuid}/{jobGuid}:
     get:
-      $ref: paths/statusmanager/get.yaml
-  /statusmanager/{guid}/{jobGuid}:
-    get:
-      $ref: paths/statusmanager/jobGuid/get.yaml
+      $ref: paths/activitymanager/getJobActivities.yaml
   /terminal:
     get:
       $ref: paths/terminal/search.yaml
   /terminal/{terminalGuid}:
+    patch:
+      $ref: paths/terminal/update.yaml
     get:
       $ref: paths/terminal/get.yaml
   /variables/{name}:

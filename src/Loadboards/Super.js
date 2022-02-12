@@ -1,4 +1,4 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const ActivityManagerService = require('../Services/ActivityManagerService');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
@@ -163,6 +163,7 @@ class Super extends Loadboard
     acceptDispatchToJSON()
     {
         const payload = {
+            order_guid: this.data.loadboardPost.externalGuid,
             carrier_guid: this.data.vendorSDGuid || this.data.vendor.sdGuid,
             carrier_phone: this.data.vendorPhone || this.data.vendor.phoneNumber,
             carrier_email: this.data.vendorEmail || this.data.vendor.email
@@ -507,10 +508,10 @@ class Super extends Loadboard
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
-                    statusId: 10,
+                    activityId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
                         loadboard: 'SUPERDISPATCH',
@@ -602,10 +603,10 @@ class Super extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
-                statusId: 12,
+                activityId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
                     loadboard: 'SUPERDISPATCH',
@@ -673,10 +674,10 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
-                    statusId: 14,
+                    activityId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
                         loadboard: 'SUPERDISPATCH',

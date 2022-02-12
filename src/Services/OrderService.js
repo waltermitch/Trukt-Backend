@@ -1,4 +1,3 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -17,7 +16,7 @@ const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
 const Commodity = require('../Models/Commodity');
-const StatusLog = require('../Models/StatusLog');
+const ActivityLog = require('../Models/ActivityLogs');
 const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
@@ -34,6 +33,9 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+const ActivityManagerService = require('./ActivityManagerService');
+
+// this is the apora that will hold the falling down requirments above.
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -1293,7 +1295,7 @@ class OrderService
                         const sqlQuery = OrderService.createDateComparisonSqlQuery(dateElement);
 
                         this.whereRaw(sqlQuery)
-                            .andWhere('statusId', dateElement.status);
+                            .andWhere('activityId', dateElement.status);
                     };
 
                     return query.orWhere(comparisonDateAndStatus);
@@ -1301,7 +1303,7 @@ class OrderService
             };
 
             return query.andWhere(comparisonDatesByStatus);
-        }, StatusLog.query().select('jobGuid'));
+        }, ActivityLog.query().select('jobGuid'));
 
         return baseQuery.whereIn('guid', datesQuery);
     }
@@ -1522,11 +1524,11 @@ class OrderService
     {
         for (const orderJob of order.jobs)
         {
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: order.guid,
                 userGuid: currentUser,
                 jobGuid: orderJob.guid,
-                statusId: 1
+                activityId: 1
             });
         }
     }
@@ -1656,9 +1658,9 @@ class OrderService
             const orderGraph = Order.fromJson({
                 guid,
                 updatedByGuid: currentUser,
-                dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
-                referrerGuid: OrderService.getObjectContactReference(referrer),
-                salespersonGuid: OrderService.getObjectContactReference(salesperson),
+                dispatcherGuid: dispatcher?.guid,
+                referrerGuid: referrer?.guid,
+                salespersonGuid: salesperson?.guid,
                 clientGuid: client?.guid,
                 instructions,
                 clientContactGuid: orderContactCreated,
@@ -1795,12 +1797,6 @@ class OrderService
             );
 
         return InvoiceBill.fetchGraph(allInvoices, '[lines.link]', { transaction: trx });
-    }
-
-    // If contactObject is null -> reference should be removed
-    static getObjectContactReference(contactObject)
-    {
-        return contactObject?.guid || null;
     }
 
     static async validateReferencesBeforeUpdate(
@@ -2513,12 +2509,10 @@ class OrderService
         const { dispatcher, vendor, vendorAgent, vendorContact, ...jobData } = jobInput;
 
         return {
-            dispatcherGuid: OrderService.getObjectContactReference(dispatcher),
-            vendorGuid: OrderService.getObjectContactReference(vendor),
-            vendorAgentGuid:
-                OrderService.getObjectContactReference(vendorAgent),
-            vendorContactGuid:
-                OrderService.getObjectContactReference(vendorContact),
+            dispatcherGuid: dispatcher?.guid,
+            vendorGuid: vendor?.guid,
+            vendorAgentGuid: vendorAgent?.guid,
+            vendorContactGuid: vendorContact?.guid,
             ...jobData
         };
     }
