@@ -131,6 +131,8 @@ paths:
     get:
       $ref: paths/terminal/search.yaml
   /terminal/{terminalGuid}:
+    patch:
+      $ref: paths/terminal/update.yaml
     get:
       $ref: paths/terminal/get.yaml
   /variables/{name}:
