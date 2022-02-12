@@ -497,7 +497,12 @@ class Super extends Loadboard
                     client.sdGuid = response.order.customer.counterparty_guid;
                     allPromises.push(SFAccount.query(trx).patch(client).findById(client.guid));
                 }
-
+                
+                // if a carrier is invited to superdispatch, we save the guid onto the account
+                // if it is not present on there
+                allPromises.push(SFAccount.query(trx).patch({ sdGuid: response.dispatchRes.carrier_guid })
+                .where({ guid: dispatch.vendorGuid, sdGuid: null }));
+                
                 const vendor = await SFAccount.query(trx)
                     .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                     .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
