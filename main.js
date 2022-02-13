@@ -55,7 +55,7 @@ app.use(
 
 app.use(
     Auth.middleware({
-        ignorePaths: path => path.startsWith('/api/docs')
+        ignorePaths: path => path.startsWith('/api/docs') || path.startsWith('/edi/')
     })
 );
 
