@@ -1,6 +1,6 @@
 {
     "schema": "rcg_tms",
-    "table": "status_log_types",
+    "table": "activity_log_types",
     "unique": "id",
     "data": [
         {

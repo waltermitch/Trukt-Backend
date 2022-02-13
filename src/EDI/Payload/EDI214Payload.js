@@ -37,6 +37,7 @@ class EDI214Payload
         this.reference;
         this.datetime;
         this.location;
+        this.pickupStop;
         this.status = {};
     }
 
@@ -111,7 +112,7 @@ class EDI214Payload
      */
     addDatetime(datetime)
     {
-        let datetimeObj;
+        let datetimeObj = datetime;
         if (typeof datetime === 'string')
         {
             datetimeObj = DateTime.fromISO(datetime);
@@ -130,6 +131,15 @@ class EDI214Payload
     addCommodities(comms)
     {
         this.commodities = comms;
+    }
+
+    /**
+     *
+     * @param {OrderStop} stop
+     */
+    addPickupStop(stop)
+    {
+        this.pickupStop = stop;
     }
 
     toJson()

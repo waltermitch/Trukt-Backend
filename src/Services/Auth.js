@@ -32,7 +32,6 @@ class Auth
         }
         catch (err)
         {
-            console.log(err);
             throw invalidToken;
         }
     }

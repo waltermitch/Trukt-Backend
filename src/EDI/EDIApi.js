@@ -1,5 +1,5 @@
 const axios = require('axios');
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
+const EDIError = require('../ErrorHandling/Exceptions/EDIError');
 
 class EDIApi
 {
@@ -20,13 +20,13 @@ class EDIApi
         });
     }
 
-    _checkIfAllowed()
+    #checkIfAllowed()
     {
         // we want the EDI_FUNCTIONALITY to only be set to true and no other truthy values.
         // JSON true value gets changed to "true" string
         if (!(process.env.EDI_ENABLED === 'true' || process.env.EDI_ENABLED === true))
         {
-            throw new HttpError(405, 'EDI functionality is not enabled in this app.');
+            throw new EDIError('EDI functionality is not enabled in this app.');
         }
     }
 
@@ -37,7 +37,7 @@ class EDIApi
      */
     send214(payload)
     {
-        this._checkIfAllowed();
+        this.#checkIfAllowed();
         return this.lapp214.post('', payload);
     }
 
@@ -48,7 +48,7 @@ class EDIApi
      */
     send204(payload)
     {
-        this._checkIfAllowed();
+        this.#checkIfAllowed();
         return this.lapp204.post('', payload);
     }
 
@@ -59,8 +59,30 @@ class EDIApi
      */
     send990(payload)
     {
-        this._checkIfAllowed();
+        this.#checkIfAllowed();
         return this.lapp990.post('', payload);
+    }
+
+    handleError(error)
+    {
+        let ediError;
+        if (error.response)
+        {
+            ediError = new EDIError(JSON.stringify(error.response.data));
+            ediError.addRequest(error.request);
+            ediError.addResponse(error.response);
+            throw ediError;
+        }
+        else if (error.request)
+        {
+            ediError = new EDIError('No response received');
+            ediError.addRequest(error.request);
+            throw ediError;
+        }
+        else
+        {
+            throw error;
+        }
     }
 
 }
