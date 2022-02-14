@@ -53,7 +53,11 @@ app.use(
     })
 );
 
-app.use(Auth.middleware());
+app.use(
+    Auth.middleware({
+        ignorePaths: path => path.startsWith('/api/docs') || path.startsWith('/edi/')
+    })
+);
 
 // wanted to have a dynamic way to add routes without having to modify main.js
 const filepaths = fs.readdirSync('./src/Routes');

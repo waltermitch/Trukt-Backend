@@ -2,7 +2,7 @@ const LoadboardContact = require('../Models/LoadboardContact');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
 const CommodityType = require('../Models/CommodityType');
-const StatusLogType = require('../Models/StatusLogType');
+const ActivityLogType = require('../Models/ActivityLogType');
 const knex = require('../Models/BaseModel').knex();
 const Loadboards = require('../Loadboards/API');
 const NodeCache = require('node-cache');
@@ -250,7 +250,7 @@ class PicklistService
 
     static async createStatusTypesPicklist()
     {
-        const statusTypesDB = await StatusLogType.query().select('id', 'orderFilterLabel as name')
+        const statusTypesDB = await ActivityLogType.query().select('id', 'orderFilterLabel as name')
             .whereNotNull('orderFilterLabel');
         return PicklistService.createPicklistObject(statusTypesDB);
     }
