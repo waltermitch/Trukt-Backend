@@ -23,10 +23,11 @@ const telemetryClient = require('./Insights');
 
 /**
  * Evaluates the error and returns the appropriate error message structure, also the error is logged to Azure App Insights.
- * @param {unknown} error
- * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data?: Record<string, unknown}}
+ * @param {unknown} error - The error to evaluate.
+ * @param {boolean} isCollection - Whether the error is evaluated inside a collection.
+ * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data?: Record<string, unknown} | {message: string}}
  */
-function formatErrorMessageStructure(error)
+function formatErrorMessageStructure(error, isCollection = false)
 {
     if (error instanceof ObjectionValidationError)
     {
@@ -37,6 +38,13 @@ function formatErrorMessageStructure(error)
             case 'UnallowedRelation':
             case 'InvalidGraph':
             default:
+                if (isCollection)
+                {
+                    return {
+                        message: error.message
+                    };
+                }
+
                 telemetryClient.trackException({
                     exception: error,
                     severity: 2
@@ -55,6 +63,13 @@ function formatErrorMessageStructure(error)
     }
     else if (error instanceof ObjectionNotFoundError)
     {
+        if(isCollection)
+        {
+            return {
+                message: error.message
+            };
+        }
+
         telemetryClient.trackException({
             exception: error,
             severity: 2
@@ -80,6 +95,14 @@ function formatErrorMessageStructure(error)
         || error instanceof DataError
     )
     {
+        if (isCollection)
+        {
+            return {
+                message: error.nativeError.detail,
+                code: error.nativeError.code
+            };
+        }
+
         telemetryClient.trackException({
             exception: error,
             severity: 3
@@ -98,6 +121,13 @@ function formatErrorMessageStructure(error)
     }
     else if (error instanceof DBError)
     {
+        if (isCollection)
+        {
+            return {
+                message: error.message
+            };
+        }
+
         telemetryClient.trackException({
             exception: error,
             severity: 4
@@ -125,6 +155,13 @@ function formatErrorMessageStructure(error)
     {
         const { status, ...errorMessage } = error.toJSON();
 
+        if (isCollection)
+        {
+            return {
+                message: errorMessage.message
+            };
+        }
+
         telemetryClient.trackException({
             exception: error,
             severity: 2
@@ -143,7 +180,7 @@ function formatErrorMessageStructure(error)
         });
         return {
             status: 400,
-            errors: error.errors.length > 0 ? error.errors : [
+            errors: error.errors?.length > 0 ? error.errors : [
                 {
                     errorType: error.constructor.name,
                     message: error.message
@@ -155,6 +192,13 @@ function formatErrorMessageStructure(error)
     {
         const { status, ...errorMessage } = error.toJSON();
 
+        if (isCollection)
+        {
+            return {
+                message: errorMessage.message
+            };
+        }
+        
         telemetryClient.trackException({
             exception: error,
             severity: 3
@@ -167,6 +211,15 @@ function formatErrorMessageStructure(error)
     }
     else
     {
+        const errorMessage = error?.message ?? JSON.stringify(error);
+
+        if (isCollection)
+        {
+            return {
+                message: errorMessage
+            };
+        }
+
         telemetryClient.trackException({
             exception: error,
             severity: 3
@@ -176,7 +229,7 @@ function formatErrorMessageStructure(error)
             errors: [
                 {
                     errorType: error.constructor?.name ?? 'UnknownError',
-                    message: error?.message ?? JSON.stringify(error)
+                    message: errorMessage
                 }
             ]
         };
