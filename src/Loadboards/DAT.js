@@ -121,6 +121,11 @@ class DAT extends Loadboard
 
         return payload;
     }
+
+    static async handleUpdate(payloadMetadata, response)
+    {
+        return await super.handlePost(payloadMetadata, response);
+    }
 }
 
 module.exports = DAT;

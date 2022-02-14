@@ -1,10 +1,10 @@
 const BaseModel = require('./BaseModel');
 
-class StatusLogs extends BaseModel
+class ActivityLogs extends BaseModel
 {
     static get tableName()
     {
-        return 'rcgTms.statusLogs';
+        return 'rcgTms.activityLogs';
     }
 
     static get idColumn()
@@ -14,25 +14,25 @@ class StatusLogs extends BaseModel
 
     static get relationMappings()
     {
-        const StatusLogType = require('./StatusLogType');
+        const ActivityLogType = require('./ActivityLogType');
         const User = require('./User');
         const Order = require('./Order');
         const OrderJob = require('./OrderJob');
 
         return {
-            status: {
+            activity: {
                 relation: BaseModel.BelongsToOneRelation,
-                modelClass: StatusLogType,
+                modelClass: ActivityLogType,
                 join: {
-                    from: 'rcgTms.statusLogs.statusId',
-                    to: 'rcgTms.statusLogTypes.id'
+                    from: 'rcgTms.activityLogs.activityId',
+                    to: 'rcgTms.activityLogTypes.id'
                 }
             },
             user: {
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: User,
                 join: {
-                    from: 'rcgTms.statusLogs.userGuid',
+                    from: 'rcgTms.activityLogs.userGuid',
                     to: 'rcgTms.tmsUsers.guid'
                 }
             },
@@ -40,7 +40,7 @@ class StatusLogs extends BaseModel
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: Order,
                 join: {
-                    from: 'rcgTms.statusLogs.orderGuid',
+                    from: 'rcgTms.activityLogs.orderGuid',
                     to: 'rcgTms.orders.guid'
                 }
             },
@@ -48,7 +48,7 @@ class StatusLogs extends BaseModel
                 relation: BaseModel.BelongsToOneRelation,
                 modelClass: OrderJob,
                 join: {
-                    from: 'rcgTms.statusLogs.jobGuid',
+                    from: 'rcgTms.activityLogs.jobGuid',
                     to: 'rcgTms.orderJobs.guid'
                 }
             }
@@ -56,4 +56,4 @@ class StatusLogs extends BaseModel
     }
 }
 
-module.exports = StatusLogs;
+module.exports = ActivityLogs;

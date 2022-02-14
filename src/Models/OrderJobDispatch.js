@@ -130,6 +130,17 @@ class OrderJobDispatch extends BaseModel
         this.dateCanceled = DateTime.now();
         this.canceledByGuid = userGuid;
     }
+
+    setToError(error)
+    {
+        this.isPending = false;
+        this.isAccepted = false;
+        this.isCanceled = false;
+        this.isDeclined = false;
+        this.isValid = false;
+        this.dateCanceled = null;
+        this.canceledByGuid = null;
+    }
 }
 
 Object.assign(OrderJobDispatch.prototype, RecordAuthorMixin);

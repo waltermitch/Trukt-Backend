@@ -1,4 +1,4 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const ActivityManagerService = require('../Services/ActivityManagerService');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
@@ -6,11 +6,11 @@ const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
 const OrderJob = require('../Models/OrderJob');
-const Job = require('../Models/OrderJob');
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
-
 const Loadboards = require('./API');
+
+const { emailRegex, phoneNumberRegex, dotNumberRegex } = require('../Utils/Regexes');
 
 class Super extends Loadboard
 {
@@ -113,12 +113,39 @@ class Super extends Loadboard
         return payload;
     }
 
+    validateDispatch()
+    {
+        super.validateDispatch();
+
+        if (!this.data.vendor.sdGuid)
+        {
+            if (!phoneNumberRegex.test(this.data.vendor.phoneNumber) ||
+                !emailRegex.test(this.data.vendor.email) ||
+                !dotNumberRegex.test(this.data.vendor.dotNumber))
+            {
+                throw new Error('Carrier is not registered with SuperDispatch. Please verify the carriers email, dot and phone number are correct.');
+            }
+        }
+    }
+
+    cleanUp()
+    {
+        super.cleanUp();
+        if (this.data.vendor)
+        {
+            this.data.vendor.phoneNumber = this.data.vendor?.phoneNumber?.replace(/[^0-9]/g, '');
+            this.data.vendor.dotNumber = this.data.vendor?.dotNumber?.replace(/[^0-9]/g, '');
+            this.data.vendor.email = this.data.vendor?.email?.replace(/\s+/g, '');
+        }
+    }
+
     dispatchJSON()
     {
         const payload = {
-            carrier_guid: this.data.vendor.sdGuid,
+            carrier_guid: this.data.vendor?.sdGuid,
             carrier_usdot: this.data.vendor.dotNumber,
-
+            carrier_phone: this.data.vendor.phoneNumber,
+            carrier_email: this.data.vendor.email,
             price: this.data.dispatch.price,
             pickup: {
                 date_type: this.setDateType(this.data.pickup.dateScheduledType),
@@ -136,6 +163,7 @@ class Super extends Loadboard
     acceptDispatchToJSON()
     {
         const payload = {
+            order_guid: this.data.loadboardPost.externalGuid,
             carrier_guid: this.data.vendorSDGuid || this.data.vendor.sdGuid,
             carrier_phone: this.data.vendorPhone || this.data.vendor.phoneNumber,
             carrier_email: this.data.vendorEmail || this.data.vendor.email
@@ -202,8 +230,9 @@ class Super extends Loadboard
     formatCommodities(commodities)
     {
         const vehicles = [];
-        for (const com of commodities)
+        for (let i = 0; i < commodities.length; i++)
         {
+            const com = commodities[i];
             vehicles.push({
                 vin: com.identifier || 'vin',
                 year: com.vehicle?.year || 2005,
@@ -214,7 +243,7 @@ class Super extends Loadboard
                 lot_number: com.lotNumber,
                 price: com.bill?.amount || 5,
                 tariff: com.invoice?.amount || 5,
-                guid: com.extraExternalData?.sdGuid
+                guid: com.extraExternalData?.sdGuid || `com${i}`
             });
         }
 
@@ -280,7 +309,7 @@ class Super extends Loadboard
             }
             else
             {
-                const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
+                const job = await OrderJob.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
                     order.[client], commodities(distinct, isNotDeleted).[vehicle]
                 ]`);
 
@@ -337,7 +366,7 @@ class Super extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched(`[
+                const job = await OrderJob.query().findById(objectionPost.jobGuid).withGraphFetched(`[
                     order.[client], commodities(distinct, isNotDeleted).[vehicle]
                 ]`);
 
@@ -388,7 +417,7 @@ class Super extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched(`[
+                const job = await OrderJob.query().findById(objectionPost.jobGuid).withGraphFetched(`[
                     order.[client], commodities(distinct, isNotDeleted).[vehicle]
                 ]`);
 
@@ -433,27 +462,26 @@ class Super extends Loadboard
         try
         {
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
-            dispatch.externalGuid = response.dispatchRes.guid;
-            dispatch.setUpdatedBy(dispatch.createdByGuid);
-            allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid));
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
             if (response.hasErrors)
             {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
+                objectionPost.isSynced = true;
                 objectionPost.hasError = true;
                 objectionPost.apiError = response.errors;
+
+                dispatch.setToError(response.errors);
+                dispatch.setUpdatedBy(dispatch.createdByGuid);
+                allPromises.push(OrderJob.query(trx).patch({ status: OrderJob.STATUS.READY }).findById(objectionPost.jobGuid));
             }
             else
             {
-                objectionPost.externalPostGuid = null;
-                objectionPost.status = 'unposted';
-                objectionPost.isCreated = true;
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = false;
+                objectionPost.setToUnposted();
                 objectionPost.externalGuid = response.order.guid;
 
-                const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
+                dispatch.externalGuid = response.dispatchRes.guid;
+                dispatch.setUpdatedBy(dispatch.createdByGuid);
+
+                const job = await OrderJob.query(trx).findById(objectionPost.jobGuid).withGraphFetched(`[
                     order.[client], commodities(distinct, isNotDeleted).[vehicle]]`);
 
                 const commodityPromises = this.updateCommodity(job.commodities, response.order.vehicles);
@@ -469,7 +497,12 @@ class Super extends Loadboard
                     client.sdGuid = response.order.customer.counterparty_guid;
                     allPromises.push(SFAccount.query(trx).patch(client).findById(client.guid));
                 }
-
+                
+                // if a carrier is invited to superdispatch, we save the guid onto the account
+                // if it is not present on there
+                allPromises.push(SFAccount.query(trx).patch({ sdGuid: response.dispatchRes.carrier_guid })
+                .where({ guid: dispatch.vendorGuid, sdGuid: null }));
+                
                 const vendor = await SFAccount.query(trx)
                     .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                     .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
@@ -480,13 +513,13 @@ class Super extends Loadboard
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
-                    statusId: 10,
+                    activityId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
-                        loadboard: this.loadboardName,
+                        loadboard: 'SUPERDISPATCH',
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
@@ -496,6 +529,7 @@ class Super extends Loadboard
                     }
                 });
             }
+            allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid));
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
 
@@ -517,7 +551,7 @@ class Super extends Loadboard
         const allPromises = [];
         try
         {
-            const job = Job.fromJson({
+            const job = OrderJob.fromJson({
                 vendorGuid: null,
                 vendorContactGuid: null,
                 vendorAgentGuid: null,
@@ -525,7 +559,7 @@ class Super extends Loadboard
                 status: 'ready'
             });
             job.setUpdatedBy(process.env.SYSTEM_USER);
-            allPromises.push(Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
+            allPromises.push(OrderJob.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.setToCanceled(dispatch.loadboardPost.updatedByGuid);
@@ -574,13 +608,13 @@ class Super extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
-                statusId: 12,
+                activityId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
-                    loadboard: this.loadboardName,
+                    loadboard: 'SUPERDISPATCH',
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,
@@ -596,7 +630,6 @@ class Super extends Loadboard
             await trx.rollback();
             throw new Error(e.message);
         }
-
     }
 
     static async handleCarrierDeclineDispatch(payloadMetadata, response)
@@ -633,12 +666,12 @@ class Super extends Loadboard
                             .distinctOn('stopGuid')
                     );
 
-                const job = Job.fromJson({
+                const job = OrderJob.fromJson({
                     dateStarted: null,
                     status: 'declined'
                 });
                 job.setUpdatedBy(process.env.SYSTEM_USER);
-                await Job.query(trx).patch(job).findById(objectionDispatch.jobGuid);
+                await OrderJob.query(trx).patch(job).findById(objectionDispatch.jobGuid);
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
@@ -646,13 +679,13 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
-                    statusId: 14,
+                    activityId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        loadboard: this.loadboardName,
+                        loadboard: 'SUPERDISPATCH',
                         code: 'declined',
                         vendorGuid: objectionDispatch.vendorGuid,
                         vendorAgentGuid: objectionDispatch.vendorAgentGuid,
@@ -704,7 +737,7 @@ class Super extends Loadboard
                     com.extraExternalData = {};
                 }
                 com.extraExternalData.sdGuid = commodity.guid;
-                newCommodities.shift(i);
+                newCommodities.splice(i, 1);
                 break;
             }
         }

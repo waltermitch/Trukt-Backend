@@ -1,4 +1,4 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const ActivityManagerService = require('../Services/ActivityManagerService');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
@@ -68,6 +68,16 @@ class ShipCars extends Loadboard
         };
 
         return payload;
+    }
+
+    validateDispatch(job)
+    {
+        super.validateDispatch(job);
+
+        if (!this.data.vendor.scId)
+        {
+            throw new Error('Please tell the carrier to register with ShipCars before dispatching to them.');
+        }
     }
 
     dispatchJSON()
@@ -294,26 +304,25 @@ class ShipCars extends Loadboard
         try
         {
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
-            dispatch.externalGuid = response.dispatchRes.id;
-            dispatch.setUpdatedBy(dispatch.createdByGuid);
-
-            allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid));
             const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+
             if (response.hasErrors)
             {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
+                objectionPost.isSynced = true;
                 objectionPost.hasError = true;
                 objectionPost.apiError = response.errors;
+
+                dispatch.setToError(response.errors);
+                dispatch.setUpdatedBy(dispatch.createdByGuid);
+                allPromises.push(Job.query(trx).patch({ status: Job.STATUS.READY }).findById(objectionPost.jobGuid));
             }
             else
             {
-                objectionPost.externalPostGuid = null;
-                objectionPost.status = 'unposted';
-                objectionPost.isCreated = true;
-                objectionPost.isSynced = true;
-                objectionPost.isPosted = false;
+                objectionPost.setToUnposted();
                 objectionPost.externalGuid = response.order.id;
+
+                dispatch.externalGuid = response.dispatchRes.id;
+                dispatch.setUpdatedBy(dispatch.createdByGuid);
 
                 const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
@@ -333,13 +342,13 @@ class ShipCars extends Loadboard
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
-                    statusId: 10,
+                    activityId: 10,
                     jobGuid: dispatch.jobGuid,
                     extraAnnotations: {
-                        loadboard: this.loadboardName,
+                        loadboard: 'SHIPCARS',
                         vendorGuid: vendor.vendorGuid,
                         vendorAgentGuid: vendor.agentGuid,
                         vendorName: vendor.vendorName,
@@ -349,6 +358,7 @@ class ShipCars extends Loadboard
                     }
                 });
             }
+            allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid));
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
             await Promise.all(allPromises);
@@ -442,13 +452,13 @@ class ShipCars extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
-                statusId: 12,
+                activityId: 12,
                 jobGuid: dispatch.jobGuid,
                 extraAnnotations: {
-                    loadboard: this.loadboardName,
+                    loadboard: 'SHIPCARS',
                     code: 'offer canceled',
                     vendorGuid: vendor.vendorGuid,
                     vendorAgentGuid: vendor.agentGuid,
@@ -545,13 +555,13 @@ class ShipCars extends Loadboard
 
                 await trx.commit();
 
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
-                    statusId: 14,
+                    activityId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
-                        loadboard: this.loadboardName,
+                        loadboard: 'SHIPCARS',
                         code: 'declined',
                         vendorGuid: objectionDispatch.vendorGuid,
                         vendorAgentGuid: objectionDispatch.vendorAgentGuid,

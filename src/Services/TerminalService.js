@@ -1,3 +1,4 @@
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
@@ -139,11 +140,12 @@ class TerminalService
     {
         // get all unresolved terminals, that have never been checked
         // we want to get the least recently checked ones first to avoid checking the same address over and over again
-        // we can also choose where we nulls go in the result set.
+        // we can also choose where we want the nulls to go in the result set.
         const terminals = await Terminal.query()
             .where('isResolved', false)
             .andWhere('resolvedTimes', '<', 1)
-            .orderByRaw('date_updated ASC NULLS FIRST');
+            .orderByRaw('date_updated ASC NULLS FIRST')
+            .limit(200);
 
         // put the terminals in the queue
         try
@@ -165,17 +167,16 @@ class TerminalService
 
     static async resolveTerminals(terminals = [])
     {
-        for (const terminal of terminals)
+        for (const t of terminals)
         {
-            const { guid } = terminal;
+            // first we want to ensure this terminal is not already resolved/deleted
+            const terminal = await Terminal.query().findById(t.guid).where('isResolved', false);
+
+            if (!terminal)
+                continue;
+
             try
             {
-                // first we want to ensure this terminal is not already resolved/deleted
-                const exists = await Terminal.query().findById(guid);
-
-                if (!exists)
-                    continue;
-
                 // convert object to string
                 const terminalAddress = Terminal.createStringAddress(terminal);
 
@@ -183,7 +184,7 @@ class TerminalService
                 const [candidate] = await ArcGIS.findMatches(terminalAddress);
 
                 // check score of first candidate
-                if (candidate?.score > 95)
+                if (candidate?.score >= 95)
                 {
                     const coords = ArcGIS.parseGeoCoords(candidate);
 
@@ -196,6 +197,7 @@ class TerminalService
                             .select('guid')
                             .where('latitude', coords.lat)
                             .andWhere('longitude', coords.long)
+                            .andWhereNot('guid', terminal.guid)
                             .first();
 
                         if (existingTerminal)
@@ -225,7 +227,8 @@ class TerminalService
                                 'state': terminal.state,
                                 'zipCode': terminal.zipCode
                             })
-                            .andWhereNot('guid', guid).first();
+                            .andWhereNot('guid', terminal.guid)
+                            .first();
 
                         if (existingTerminal)
                         {
@@ -235,7 +238,7 @@ class TerminalService
                         {
                             // if the score is less than 95, we will mark the terminal as unresolved and increment the resolvedTimes
                             await Terminal.query(trx)
-                                .where('guid', guid)
+                                .where('guid', terminal.guid)
                                 .update({ isResolved: false, resolvedTimes: 1, updatedByGuid: SYSTEM_USER });
                         }
                     });
@@ -248,7 +251,7 @@ class TerminalService
                  * in those cases we mark those terminals as resolved = false (Which is the default) and resolved_times = 3
                  * so we stop checking that terminal but still know that is not resolved.
                  */
-                const message = `Error, terminal ${guid} could not be updated: ${error?.nativeError?.detail || error?.message || error}`;
+                const message = `Error, terminal ${t.guid} could not be updated: ${error?.nativeError?.detail || error?.message || error}`;
                 console.error(message);
                 telemetryClient.trackException({
                     exception: error,
@@ -305,6 +308,10 @@ class TerminalService
     // this method will merge one terminal into another including all related records
     static async mergeTerminals(primaryTerminal, alternativeTerminal, trx)
     {
+        // if the two terminals are the same, we don't want to do anything
+        if (primaryTerminal.guid === alternativeTerminal.guid)
+            throw new Error('Cannot merge a terminal into itself');
+
         // update all orderStops and terminalContacts from current terminal to existing terminal
         await Promise.all(
             [
@@ -427,8 +434,12 @@ class TerminalService
 
     // this method is only for the /update endpoint and will update a terminal with the new information
     // terminals shouldn't be updated directly in other places like during order creation/update
-    static async update(terminal, currentUser, trx = undefined)
+    static async patchTerminal(terminalGuid, terminal, currentUser, trx = undefined)
     {
+        // if there is no guid, throw an error
+        if (!terminalGuid)
+            throw new HttpError(400, 'Terminal Must Have A guid');
+
         const term = Terminal.fromJson(terminal);
 
         term.setDefaultValues();
@@ -436,9 +447,12 @@ class TerminalService
 
         term.isResolved = terminal.isResolved || false;
 
+        // we can't let terminals be resolved without lat/long
+        if (term.isResolved && (!term.latitude || !term.longitude))
+            throw new HttpError(400, 'Terminal Must Have Latitude And Longitude To Be Resolved');
+
         const newTerminal = await Terminal.query(trx)
-            .patchAndFetch(term)
-            .where('guid', terminal.guid);
+            .patchAndFetchById(terminalGuid, term);
 
         return newTerminal;
     }

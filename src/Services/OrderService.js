@@ -1,4 +1,3 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -17,7 +16,7 @@ const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
 const Commodity = require('../Models/Commodity');
-const StatusLog = require('../Models/StatusLog');
+const ActivityLog = require('../Models/ActivityLogs');
 const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
@@ -34,6 +33,9 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+const ActivityManagerService = require('./ActivityManagerService');
+
+// this is the apora that will hold the falling down requirments above.
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -132,10 +134,7 @@ class OrderService
             { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier }
         );
 
-        const queryWithGraphModifiers = OrderService.addGraphModifiers(
-            queryAllFilters,
-            jobCategory
-        );
+        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
 
         const { total, results } = await queryWithGraphModifiers;
 
@@ -305,7 +304,7 @@ class OrderService
                 orderInformation
 
                 // jobInformation <- this is commented out because nobody is using it, no need to waste time fetching it
-            ] = await Promise.all([OrderService.buildCache(), Promise.all(orderInfoPromises)]); /*Promise.all(jobInfoPromises)*/
+            ] = await Promise.all([OrderService.buildCache(), Promise.all(orderInfoPromises)]);
 
             // checks if the data that was provided in the payload was found in the database
             // will throw an error if it wasn't found.
@@ -635,7 +634,8 @@ class OrderService
             order.jobs = orderJobs;
             order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
 
-            const orderCreated = await Order.query(trx).skipUndefined()
+            const orderCreated = await Order.query(trx)
+                .skipUndefined()
                 .insertGraph(order, { allowRefs: true });
 
             await trx.commit();
@@ -669,6 +669,7 @@ class OrderService
             lines: [],
             consigneeGuid: consignee?.guid
         });
+
         bill.setCreatedBy(currentUser);
         bill.lines.push(...lines);
 
@@ -697,7 +698,6 @@ class OrderService
                 throw new Error(`${key} record doesn't exist.`);
             }
         }
-
     }
 
     static async calculateTotalDistance(stops)
@@ -1295,7 +1295,7 @@ class OrderService
                         const sqlQuery = OrderService.createDateComparisonSqlQuery(dateElement);
 
                         this.whereRaw(sqlQuery)
-                            .andWhere('statusId', dateElement.status);
+                            .andWhere('activityId', dateElement.status);
                     };
 
                     return query.orWhere(comparisonDateAndStatus);
@@ -1303,7 +1303,7 @@ class OrderService
             };
 
             return query.andWhere(comparisonDatesByStatus);
-        }, StatusLog.query().select('jobGuid'));
+        }, ActivityLog.query().select('jobGuid'));
 
         return baseQuery.whereIn('guid', datesQuery);
     }
@@ -1524,11 +1524,11 @@ class OrderService
     {
         for (const orderJob of order.jobs)
         {
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: order.guid,
                 userGuid: currentUser,
                 jobGuid: orderJob.guid,
-                statusId: 1
+                activityId: 1
             });
         }
     }
