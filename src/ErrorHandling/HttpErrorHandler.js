@@ -1,4 +1,6 @@
+const ExceptionCollection = require('./Exceptions/ExceptionCollection');
 const formatErrorMessageStructure = require('./FormatErrorMessageStructure');
+const telemetryClient = require('./Insights');
 
 module.exports = (errors, request, response, next) =>
 {
@@ -11,6 +13,17 @@ module.exports = (errors, request, response, next) =>
             status: 200,
             errors: errors.map(formatErrorMessageStructure)
         });
+    }
+    else if (errors instanceof ExceptionCollection)
+    {
+        const formattedErrors = errors.toJSON();
+
+        telemetryClient.trackException({
+            exception: errors,
+            severity: 3
+        });
+        
+        response.status(formattedErrors.status).send(formattedErrors);
     }
     else
     {
