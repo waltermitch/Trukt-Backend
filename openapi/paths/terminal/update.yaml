@@ -1,0 +1,33 @@
+summary: Update Terminal
+operationId: updateTerminal
+description: Update Terminal.
+tags:
+  - Terminal
+parameters:
+  - in: path
+    name: terminalGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+requestBody:
+  content: 
+    application/json:
+      schema:
+        type: object
+        properties:
+          schema:
+            $ref: ../../components/schemas/Terminal.yaml#/TerminalIsResolved
+
+responses:
+  200:
+    description: OK
+    content:
+      application/json: {} 
+  404:
+    description: Terminal Not Found
+    content:
+      application/json: 
+        schema:
+          type: string
+          example: Terminal Not Found

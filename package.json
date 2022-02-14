@@ -19,7 +19,8 @@
         "postcheck-settings": "rm ./local.settings.copy2.json",
         "knex-debug": "set DEBUG=knex* && node main.js",
         "api-bundle": "openapi lint && openapi bundle main --output public/openapi/spec.yaml",
-        "bundle-run": "npm run api-bundle && nodemon"
+        "bundle-run": "npm run api-bundle && nodemon",
+        "validate:azure:env:dev": "node ./tools/validate-azure-env.js dev local.settings.json rcg_production truktbackend"
     },
     "author": "",
     "license": "ISC",
@@ -31,13 +32,11 @@
         "ajv-keywords": "^5.0.0",
         "applicationinsights": "^2.1.9",
         "axios": "^0.21.4",
-        "connect-session-knex": "^2.1.0",
         "cors": "^2.8.5",
         "currency.js": "^2.0.4",
         "express": "^4.17.1",
         "express-formidable": "^1.2.0",
         "express-openapi-validator": "^4.13.0",
-        "express-session": "^1.17.2",
         "jsonwebtoken": "^8.5.1",
         "jwk-to-pem": "^2.0.5",
         "knex": "^0.95.6",

@@ -1,10 +1,10 @@
 const BaseModel = require('./BaseModel');
 
-class StatusLogTypes extends BaseModel
+class ActivityLogTypes extends BaseModel
 {
     static get tableName()
     {
-        return 'rcgTms.statusLogTypes';
+        return 'rcgTms.activityLogTypes';
     }
 
     static get idColumn()
@@ -15,12 +15,12 @@ class StatusLogTypes extends BaseModel
     static get relationMappings()
     {
         return {
-            statusLogs: {
+            activityLogs: {
                 relation: BaseModel.HasManyRelation,
-                modeClass: require('./StatusLog'),
+                modeClass: require('./ActivityLogs'),
                 join: {
-                    from: 'rcgTms.statusLogTypes.id',
-                    to: 'rcgTms.statusLogs.statusId'
+                    from: 'rcgTms.activityLogTypes.id',
+                    to: 'rcgTms.activityLogs.activityId'
                 }
 
             }
@@ -28,4 +28,4 @@ class StatusLogTypes extends BaseModel
     }
 }
 
-module.exports = StatusLogTypes;
+module.exports = ActivityLogTypes;

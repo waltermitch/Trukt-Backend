@@ -65,6 +65,16 @@ TerminalOutbound:
           $ref: './Common.yaml#/guid'
     - $ref: '#/TerminalBase'
 
+TerminalIsResolved:
+  allOf:
+    - type: object
+      properties:
+          isResolved:
+            description: Whether or not this terminal has been resolved.
+            type: boolean
+            default: false
+    - $ref: '#/TerminalBase'
+
 TerminalInboundIndex:
   allOf:
     - $ref: './Common.yaml#/indexObject'

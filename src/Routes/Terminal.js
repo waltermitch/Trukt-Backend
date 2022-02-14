@@ -6,6 +6,7 @@ const prefix = '/terminal';
 
 router
     .get(`${prefix}/:terminalGuid(${uuidRegexStr})`, controller.getByGuid)
-    .get(`${prefix}`, controller.search);
+    .get(`${prefix}`, controller.search)
+    .patch(`${prefix}/:terminalGuid(${uuidRegexStr})`, controller.update);
 
 module.exports = router;

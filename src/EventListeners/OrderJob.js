@@ -1,10 +1,9 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const ActivityManagerService = require('../Services/ActivityManagerService');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderJobService = require('../Services/OrderJobService');
 const PubSubService = require('../Services/PubSubService');
 const OrderService = require('../Services/OrderService');
 const SuperDispatch = require('../Loadboards/Super');
-const StatusLog = require('../Models/StatusLog');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
@@ -19,11 +18,11 @@ listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 16
+                activityId: 16
             }),
             OrderService.markOrderReady(orderGuid, currentUser)
         ]);
@@ -55,11 +54,11 @@ listener.on('orderjob_hold_added', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 22
+                activityId: 22
             })
         ]);
 
@@ -74,11 +73,11 @@ listener.on('orderjob_hold_removed', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 16
+                activityId: 16
             })
         ]);
 
@@ -97,33 +96,33 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop 
         // when multi delivery on push activity on first pick up
         if (status === OrderJob.STATUS.PICKED_UP && jobStop.stop_type !== 'delivery')
         {
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 29
+                activityId: 29
             });
         }
 
         // when status for job is delivered then push activity as delivered
         else if (status === OrderJob.STATUS.DELIVERED)
         {
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 27
+                activityId: 27
             });
         }
 
         // when pick up date was removed from stop, becomes dispatched
         else if (status === OrderJob.STATUS.DISPATCHED)
         {
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 31
+                activityId: 31
             });
         }
 
@@ -229,11 +228,11 @@ listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }
     {
         const proms = await Promise.allSettled([
             OrderService.markOrderDelivered(orderGuid, currentUser, jobGuid),
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 27
+                activityId: 27
             })
         ]);
 
@@ -262,11 +261,11 @@ listener.on('orderjob_picked_up', ({ jobGuid, currentUser = SYSUSER, orderGuid }
     {
         const proms = await Promise.allSettled([
             OrderService.markOrderUndelivered(orderGuid, currentUser, jobGuid),
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 29
+                activityId: 29
             })
         ]);
 
@@ -305,21 +304,21 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
             const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
             orderUpdatePromise.push(
                 Order.query().patch(deleteStatusPayload).findById(orderGuid),
-                StatusManagerHandler.registerStatus({
+                ActivityManagerService.createAvtivityLog({
                     orderGuid,
                     jobGuid,
                     userGuid: currentUser,
-                    statusId: 19
+                    activityId: 19
                 })
             );
         }
 
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 17
+                activityId: 17
             }),
             OrderJobService.updateStatusField(jobGuid, currentUser),
             ...orderUpdatePromise
@@ -342,17 +341,17 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
         await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
             Super.updateStatus(jobGuid, 'deleted', 'notDeleted'),
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 18
+                activityId: 18
             }),
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 20
+                activityId: 20
             })
         ]);
 
@@ -372,11 +371,11 @@ listener.on('orderjob_canceled', ({ orderGuid, currentUser, jobGuid }) =>
     {
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 23
+                activityId: 23
             })
         ]);
 
@@ -397,12 +396,11 @@ listener.on('orderjob_uncanceled', ({ orderGuid, currentUser, jobGuid }) =>
     {
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
-            Super.updateStatus(jobGuid, 'canceled', 'notCanceled'),
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
-                statusId: 24
+                activityId: 24
             })
         ]);
 
@@ -418,30 +416,6 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
     {
         const currrentJob = await OrderJobService.getJobData(jobGuid);
         const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, currrentJob), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
-    });
-});
-
-listener.on('orderjob_activity_updated', ({ jobGuid, state }) =>
-{
-    setImmediate(async () =>
-    {
-        const currentActivity = await StatusLog.query().select([
-            'id',
-            'orderGuid',
-            'dateCreated',
-            'extraAnnotations',
-            'jobGuid'
-        ])
-            .findById(state.id)
-            .withGraphFetched({ user: true, status: true })
-            .modifyGraph('status', builder => builder.select('id', 'name'))
-            .andWhere('jobGuid', jobGuid);
-
-        const proms = await Promise.allSettled([(PubSubService.jobActivityUpdate(jobGuid, currentActivity))]);
 
         // for (const p of proms)
         //     if (p.status === 'rejected')

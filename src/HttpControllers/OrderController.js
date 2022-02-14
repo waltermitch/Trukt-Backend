@@ -1,7 +1,6 @@
 const OrderService = require('../Services/OrderService');
 const NotesService = require('../Services/NotesService');
 const emitter = require('../EventListeners/index');
-const Order = require('../Models/Order');
 
 class OrderController
 {
