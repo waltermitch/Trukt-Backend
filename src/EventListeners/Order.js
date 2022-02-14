@@ -3,6 +3,7 @@ const LoadboardService = require('../Services/LoadboardService');
 const OrderService = require('../Services/OrderService');
 const OrderJob = require('../Models/OrderJob');
 const listener = require('./index');
+const eventLogErrors = require('./eventLogErrors');
 
 listener.on('order_updated', ({ oldOrder, newOrder }) =>
 {
@@ -10,10 +11,8 @@ listener.on('order_updated', ({ oldOrder, newOrder }) =>
     {
         const dispatchesToUpdate = LoadboardService.updateDispatchPrice(newOrder.jobs);
         const proms = await Promise.allSettled([OrderService.validateStopsBeforeUpdate(oldOrder, newOrder), newOrder.jobs.map(async (job) => await LoadboardService.updatePostings(job.guid).catch(err => console.log(err))), ...dispatchesToUpdate]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        
+        eventLogErrors(proms, 'order_updated');
     });
 });
 
@@ -24,9 +23,7 @@ listener.on('order_created', (orderGuid) =>
     {
         const proms = await Promise.allSettled([OrderService.calculatedDistances(orderGuid), createSuperOrders(orderGuid)]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        eventLogErrors(proms, 'order_created');
     });
 });
 
@@ -35,10 +32,8 @@ listener.on('order_client_notes_updated', (orderGuid) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([getJobGuids(orderGuid).then(jobGuids => jobGuids.map(jobGuid => LoadboardService.updatePostings(jobGuid.guid)))]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        
+        eventLogErrors(proms, 'order_client_notes_updated');
     });
 });
 
@@ -48,9 +43,7 @@ listener.on('order_ready', ({ orderGuid, currentUser }) =>
     {
         const proms = await Promise.allSettled([]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        eventLogErrors(proms, 'order_ready');
     });
 });
 
@@ -66,6 +59,8 @@ listener.on('order_delivered', ({ orderGuid, userGuid, jobGuid }) =>
                 activityId: 28
             })
         ]);
+
+        eventLogErrors(proms, 'order_delivered');
     });
 });
 
@@ -81,6 +76,8 @@ listener.on('order_undelivered', ({ orderGuid, userGuid, jobGuid }) =>
                 activityId: 30
             })
         ]);
+
+        eventLogErrors(proms, 'order_undelivered');
     });
 });
 
@@ -96,11 +93,10 @@ listener.on('tender_accepted', ({ jobGuid, orderGuid, currentUser }) =>
                 activityId: 8
             })
         ]);
+
+        eventLogErrors(proms, 'tender_accepted');
     });
 
-    // for (const p of proms)
-    //     if (p.status === 'rejected')
-    //         console.log(p.reason?.response?.data || p.reason);
 });
 
 listener.on('tender_rejected', ({ jobGuid, orderGuid, currentUser }) =>
@@ -115,11 +111,9 @@ listener.on('tender_rejected', ({ jobGuid, orderGuid, currentUser }) =>
                 activityId: 9
             })
         ]);
-    });
 
-    // for (const p of proms)
-    //     if (p.status === 'rejected')
-    //         console.log(p.reason?.response?.data || p.reason);
+        eventLogErrors(proms, 'tender_rejected');
+    });
 });
 
 async function createSuperOrders(orderGuid)
