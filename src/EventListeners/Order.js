@@ -1,8 +1,7 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
+const ActivityManagerService = require('../Services/ActivityManagerService');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderService = require('../Services/OrderService');
 const OrderJob = require('../Models/OrderJob');
-const Order = require('../Models/Order');
 const listener = require('./index');
 
 listener.on('order_updated', ({ oldOrder, newOrder }) =>
@@ -60,11 +59,11 @@ listener.on('order_delivered', ({ orderGuid, userGuid, jobGuid }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid,
-                statusId: 28
+                activityId: 28
             })
         ]);
     });
@@ -75,11 +74,11 @@ listener.on('order_undelivered', ({ orderGuid, userGuid, jobGuid }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid,
-                statusId: 30
+                activityId: 30
             })
         ]);
     });
@@ -90,11 +89,11 @@ listener.on('tender_accepted', ({ jobGuid, orderGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 8
+                activityId: 8
             })
         ]);
     });
@@ -109,11 +108,11 @@ listener.on('tender_rejected', ({ jobGuid, orderGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
-                statusId: 9
+                activityId: 9
             })
         ]);
     });
