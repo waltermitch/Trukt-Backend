@@ -1,3 +1,4 @@
+const eventLogErrors = require('./eventLogErrors');
 const listener = require('./index');
 
 listener.on('orderstop_status_update', ({ stops, currentUser }) =>
@@ -9,8 +10,6 @@ listener.on('orderstop_status_update', ({ stops, currentUser }) =>
     {
         const proms = await Promise.allSettled([OrderStopService.validateStops(stops, currentUser)]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        eventLogErrors(proms, 'orderstop_status_update');
     });
 });
