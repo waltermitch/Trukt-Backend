@@ -11,7 +11,7 @@ class BulkException
     /**
      *
      * @param {string} key - Guid to identify the error collection
-     * @param {unknown} error - Error to be added to the collection
+     * @param {ExceptionCollection | unknown} error - Error to be added to the collection
      */
     constructor(key, error)
     {
@@ -21,13 +21,17 @@ class BulkException
 
     /**
      * @param {string} key - Guid to identify the error collection
-     * @param {unknown} error - Error to be added to the collection
+     * @param {ExceptionCollection | unknown} error - Error to be added to the collection
      */
     addError(key, error)
     {
         if (this.#errors[key] && this.#errors[key] instanceof ExceptionCollection)
         {
             this.#errors[key].addError(error);
+        }
+        else if (!this.#errors[key] && error instanceof ExceptionCollection)
+        {
+            this.#errors[key] = error;
         }
         else
         {

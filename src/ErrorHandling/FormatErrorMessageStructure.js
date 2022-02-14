@@ -22,6 +22,21 @@ const OpenApiValidatorErrorTypes = require('express-openapi-validator').error;
 const telemetryClient = require('./Insights');
 
 /**
+ * Evaluates the error and returns the appropriate error message structure.
+ * @param {Record<string, string | number | string[]} error - The error to return if is not collection.
+ * @param {boolean} isCollection - Whether the error is evaluated inside a collection.
+ * @param {Record<string, string | number} collectionErrorMessage - The error message structure to return if the error is evaluated inside a collection.
+ * @returns {error | collectionErrorMessage} The error message structure to return.
+ */
+function responseObjectToReturn(error, isCollection, collectionErrorMessage = {})
+{
+    if (isCollection)
+        return collectionErrorMessage;
+
+    return error;
+}
+
+/**
  * Evaluates the error and returns the appropriate error message structure, also the error is logged to Azure App Insights.
  * @param {unknown} error - The error to evaluate.
  * @param {boolean} isCollection - Whether the error is evaluated inside a collection.
@@ -38,18 +53,12 @@ function formatErrorMessageStructure(error, isCollection = false)
             case 'UnallowedRelation':
             case 'InvalidGraph':
             default:
-                if (isCollection)
-                {
-                    return {
-                        message: error.message
-                    };
-                }
-
-                telemetryClient.trackException({
-                    exception: error,
-                    severity: 2
-                });
-                return {
+                if (!isCollection)
+                    telemetryClient.trackException({
+                        exception: error,
+                        severity: 2
+                    });
+                return responseObjectToReturn({
                     status: 400,
                     errors: [
                         {
@@ -58,33 +67,32 @@ function formatErrorMessageStructure(error, isCollection = false)
                         }
                     ],
                     data: error.data
-                };
+                }, isCollection, {
+                    message: error.message
+                });
         }
     }
     else if (error instanceof ObjectionNotFoundError)
     {
-        if(isCollection)
-        {
-            return {
-                message: error.message
-            };
-        }
-
-        telemetryClient.trackException({
-            exception: error,
-            severity: 2
-        });
-        return {
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 2
+            });
+        return responseObjectToReturn({
             status: 404,
             errors: [
                 {
                     errorType: error.name,
                     message: error.message
-                    
                 }
             ],
             data: error.data
-        };
+        },
+        isCollection,
+        {
+            message: error.message
+        });
     }
     else if (
         error instanceof ConstraintViolationError
@@ -95,19 +103,12 @@ function formatErrorMessageStructure(error, isCollection = false)
         || error instanceof DataError
     )
     {
-        if (isCollection)
-        {
-            return {
-                message: error.nativeError.detail,
-                code: error.nativeError.code
-            };
-        }
-
-        telemetryClient.trackException({
-            exception: error,
-            severity: 3
-        });
-        return {
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 3
+            });
+        return responseObjectToReturn({
             status: 500,
             errors: [
                 {
@@ -117,22 +118,21 @@ function formatErrorMessageStructure(error, isCollection = false)
                 }
             ],
             data: error.data
-        };
+        },
+        isCollection,
+        {
+            message: error.nativeError.detail,
+            code: error.nativeError.code
+        });
     }
     else if (error instanceof DBError)
     {
-        if (isCollection)
-        {
-            return {
-                message: error.message
-            };
-        }
-
-        telemetryClient.trackException({
-            exception: error,
-            severity: 4
-        });
-        return {
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 4
+            });
+        return responseObjectToReturn({
             status: 500,
             errors: [
                 {
@@ -141,7 +141,11 @@ function formatErrorMessageStructure(error, isCollection = false)
                 }
             ],
             data: error.data
-        };
+        },
+        isCollection,
+        {
+            message: error.message
+        });
     }
     else if (
         error instanceof ApiError
@@ -154,23 +158,20 @@ function formatErrorMessageStructure(error, isCollection = false)
     )
     {
         const { status, ...errorMessage } = error.toJSON();
-
-        if (isCollection)
-        {
-            return {
-                message: errorMessage.message
-            };
-        }
-
-        telemetryClient.trackException({
-            exception: error,
-            severity: 2
-        });
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 2
+            });
         
-        return {
+        return responseObjectToReturn({
             status,
             errors: [errorMessage]
-        };
+        },
+        isCollection,
+        {
+            message: errorMessage.message
+        });
     }
     else if (error.constructor?.name in OpenApiValidatorErrorTypes)
     {
@@ -178,7 +179,7 @@ function formatErrorMessageStructure(error, isCollection = false)
             exception: error,
             severity: 2
         });
-        return {
+        return responseObjectToReturn({
             status: 400,
             errors: error.errors?.length > 0 ? error.errors : [
                 {
@@ -186,45 +187,37 @@ function formatErrorMessageStructure(error, isCollection = false)
                     message: error.message
                 }
             ]
-        };
+        }, false);
     }
     else if (error instanceof ApplicationError)
     {
         const { status, ...errorMessage } = error.toJSON();
-
-        if (isCollection)
-        {
-            return {
-                message: errorMessage.message
-            };
-        }
         
-        telemetryClient.trackException({
-            exception: error,
-            severity: 3
-        });
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 3
+            });
         
-        return {
+        return responseObjectToReturn({
             status,
             errors: [errorMessage]
-        };
+        },
+        isCollection,
+        {
+            message: errorMessage.message
+        });
     }
     else
     {
         const errorMessage = error?.message ?? JSON.stringify(error);
 
-        if (isCollection)
-        {
-            return {
-                message: errorMessage
-            };
-        }
-
-        telemetryClient.trackException({
-            exception: error,
-            severity: 3
-        });
-        return {
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 3
+            });
+        return responseObjectToReturn({
             status: 500,
             errors: [
                 {
@@ -232,7 +225,11 @@ function formatErrorMessageStructure(error, isCollection = false)
                     message: errorMessage
                 }
             ]
-        };
+        },
+        isCollection,
+        {
+            message: errorMessage
+        });
     }
 }
 

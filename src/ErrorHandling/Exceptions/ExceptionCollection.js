@@ -15,7 +15,7 @@ class ExceptionCollection
     #status = 500;
 
     /**
-     * @param {unknown[] | unknown} errors - The errors when class is instaciated.
+     * @param {unknown[] | unknown} errors - The errors when class is initialized.
      */
     constructor(errors = [])
     {
