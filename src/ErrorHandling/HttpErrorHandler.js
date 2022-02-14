@@ -1,3 +1,4 @@
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 const BulkException = require('./Exceptions/BulkException');
 const ExceptionCollection = require('./Exceptions/ExceptionCollection');
 const formatErrorMessageStructure = require('./FormatErrorMessageStructure');
@@ -10,7 +11,7 @@ module.exports = (errors, request, response, next) =>
     {
         telemetryClient.trackException({
             exception: errors,
-            severity: 3
+            severity: SeverityLevel.Error
         });
         
         response.status(200).json(errors.toJSON());
@@ -24,7 +25,7 @@ module.exports = (errors, request, response, next) =>
 
         telemetryClient.trackException({
             exception: errorsException,
-            severity: 3
+            severity: SeverityLevel.Error
         });
         
         response.status(formattedErrors.status).send(formattedErrors);
