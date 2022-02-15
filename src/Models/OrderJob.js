@@ -884,6 +884,13 @@ class OrderJob extends BaseModel
         if (isTender && !this.equipmentTypeId)
             this.equipmentTypeId = EDI_DEFAULT_EQUIPMENT_TYPE_ID;
     }
+
+    removeVendor()
+    {
+        this.vendorGuid = null;
+        this.vendorContactGuid = null;
+        this.vendorAgentGuid = null;
+    }
 }
 
 Object.assign(OrderJob.prototype, RecordAuthorMixin);
