@@ -98,7 +98,7 @@ class OrderJobDispatch extends BaseModel
         this.isAccepted = false;
         this.isCanceled = false;
         this.isDeclined = true;
-        this.isValid = true;
+        this.isValid = false;
         this.dateDeclined = DateTime.now();
         this.dateAccepted = null;
         this.dateCanceled = null;
