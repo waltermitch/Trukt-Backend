@@ -5,7 +5,7 @@ const OrderStopLink = require('../Models/OrderStopLink');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
-const Job = require('../Models/OrderJob');
+const OrderJob = require('../Models/OrderJob');
 const Loadboard = require('./Loadboard');
 const { DateTime } = require('luxon');
 
@@ -228,7 +228,7 @@ class ShipCars extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                const job = await OrderJob.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
                 for (const comPromise of commodityPromises)
                 {
@@ -272,7 +272,7 @@ class ShipCars extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                const job = await OrderJob.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
                 for (const comPromise of commodityPromises)
                 {
@@ -314,7 +314,7 @@ class ShipCars extends Loadboard
 
                 dispatch.setToError(response.errors);
                 dispatch.setUpdatedBy(dispatch.createdByGuid);
-                allPromises.push(Job.query(trx).patch({ status: Job.STATUS.READY }).findById(objectionPost.jobGuid));
+                allPromises.push(OrderJob.query(trx).patch({ status: OrderJob.STATUS.READY }).findById(objectionPost.jobGuid));
             }
             else
             {
@@ -324,7 +324,7 @@ class ShipCars extends Loadboard
                 dispatch.externalGuid = response.dispatchRes.id;
                 dispatch.setUpdatedBy(dispatch.createdByGuid);
 
-                const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                const job = await OrderJob.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
                 for (const comPromise of commodityPromises)
                 {
@@ -379,7 +379,7 @@ class ShipCars extends Loadboard
         const allPromises = [];
         try
         {
-            const job = Job.fromJson({
+            const job = OrderJob.fromJson({
                 vendorGuid: null,
                 vendorContactGuid: null,
                 vendorAgentGuid: null,
@@ -388,7 +388,7 @@ class ShipCars extends Loadboard
             });
             job.setUpdatedBy(process.env.SYSTEM_USER);
 
-            allPromises.push(Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
+            allPromises.push(OrderJob.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.setToCanceled(dispatch.loadboardPost.updatedByGuid);
