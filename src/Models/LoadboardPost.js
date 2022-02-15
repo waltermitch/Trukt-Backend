@@ -147,6 +147,7 @@ class LoadboardPost extends BaseModel
         this.deletedByGuid = null;
         this.hasError = false;
         this.apiError = null;
+        this.isCreated = true;
 
         // This is the "posting" in the external system
         this.externalPostGuid = null;
