@@ -122,6 +122,21 @@ class LoadboardPost extends BaseModel
         };
     }
 
+    setToCreated(externalGuid)
+    {
+        this.externalGuid = externalGuid;
+        this.externalPostGuid = null;
+        this.status = 'created';
+        this.isCreated = true;
+        this.isSynced = true;
+        this.isPosted = false;
+        this.isDeleted = false;
+        this.dateDeleted = null;
+        this.deletedByGuid = null;
+        this.apiError = null;
+        this.hasError = false;
+    }
+
     setToPosted(externalGuid)
     {
         this.externalGuid = externalGuid;
