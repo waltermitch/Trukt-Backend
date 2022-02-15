@@ -1657,18 +1657,18 @@ class OrderService
 
             const orderGraph = Order.fromJson({
                 guid,
-                updatedByGuid: currentUser,
-                dispatcherGuid: dispatcher?.guid,
-                referrerGuid: referrer?.guid,
-                salespersonGuid: salesperson?.guid,
-                clientGuid: client?.guid,
+                dispatcher: { '#dbRef': dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid },
+                referrer: { '#dbRef': referrer?.guid },
+                salesperson: { '#dbRef': salesperson?.guid },
+                client: { '#dbRef': client?.guid },
                 instructions,
-                clientContactGuid: orderContactCreated,
+                clientContact: { '#dbRef': orderContactCreated },
                 stops: stopsGraphsToUpdate,
                 invoices: orderInvoicesToUpdate,
                 jobs: jobsToUpdateWithExpenses,
                 ...orderData
             });
+            orderGraph.setUpdatedBy(currentUser);
 
             orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
 
@@ -2481,40 +2481,34 @@ class OrderService
 
     static createSingleJobGraph(jobInput, jobTypes, currentUser)
     {
-        const jobWithContactReferences = OrderService.createJobContactReferences(jobInput);
-        const jobGraph = OrderJob.fromJson(jobWithContactReferences);
+        const jobModel = OrderJob.fromJson(jobInput);
 
-        if (jobGraph?.jobType?.category && jobGraph?.jobType?.type)
+        for (const field of ['dispatcher', 'vendorAgent', 'vendorContact'])
+        {
+            if (jobInput[field]?.guid !== undefined)
+            {
+                jobInput[field] = { '#dbRef': jobInput[field]?.guid };
+            }
+        }
+
+        if (jobModel?.jobType?.category && jobModel?.jobType?.type)
         {
             const jobType = jobTypes?.find((jobType) =>
-                OrderJobType.compare(jobGraph, jobType)
+                OrderJobType.compare(jobModel, jobType)
             );
             if (!jobType)
             {
                 throw new Error(
-                    `unknown job type ${jobGraph.typeId ||
-                    jobGraph.jobType.category + jobGraph.jobType.type
+                    `unknown job type ${jobModel.typeId ||
+                    jobModel.jobType.category + jobModel.jobType.type
                     }`
                 );
             }
-            jobGraph.graphLink('jobType', jobType);
-            jobGraph.setIsTransport(jobType);
+            jobModel.graphLink('jobType', jobType);
+            jobModel.setIsTransport(jobType);
         }
-        jobGraph.setUpdatedBy(currentUser);
-        return jobGraph;
-    }
-
-    static createJobContactReferences(jobInput)
-    {
-        const { dispatcher, vendor, vendorAgent, vendorContact, ...jobData } = jobInput;
-
-        return {
-            dispatcherGuid: dispatcher?.guid,
-            vendorGuid: vendor?.guid,
-            vendorAgentGuid: vendorAgent?.guid,
-            vendorContactGuid: vendorContact?.guid,
-            ...jobData
-        };
+        jobModel.setUpdatedBy(currentUser);
+        return jobModel;
     }
 
     /**
