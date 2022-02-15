@@ -8,6 +8,8 @@ const SFAccount = require('../Models/SFAccount');
 const OrderJob = require('../Models/OrderJob');
 const Loadboard = require('./Loadboard');
 const { DateTime } = require('luxon');
+const telemetry = require('../ErrorHandling/Insights');
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 
 class ShipCars extends Loadboard
 {
@@ -503,35 +505,26 @@ class ShipCars extends Loadboard
 
                 // have to put table name because externalGuid is also on loadboard post and not
                 // specifying it makes the query ambiguous
-                allPromises.push(OrderJobDispatch.query(trx).patch(objectionDispatch).where({
-                    'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
-                    isPending: true,
-                    isCanceled: false
-                }));
+                allPromises.push(OrderJobDispatch.query(trx).patch(objectionDispatch).findById(dispatch.guid));
 
                 // 2. Remove vendor fields from the job
-                const job = Job.fromJson({
+                const job = OrderJob.fromJson({
                     dateStarted: null,
-                    status: 'declined'
+                    status: OrderJob.STATUS.DECLINED
                 });
+                job.removeVendor();
                 job.setUpdatedBy(process.env.SYSTEM_USER);
-                allPromises.push(Job.query(trx).patch(job).findById(objectionDispatch.jobGuid));
+                allPromises.push(OrderJob.query(trx).patch(job).findById(objectionDispatch.jobGuid));
 
                 // 3. Set the loadboard post record external guid to the new
                 // load that has been created
-                const objectionPost = LoadboardPost.fromJson({
-                    externalGuid: response.id,
-                    externalPostGuid: null,
-                    isCreated: true,
-                    isSynced: true,
-                    hasError: false,
-                    apiError: null
-                });
+                const objectionPost = LoadboardPost.fromJson();
+                objectionPost.setToCreated(response.id);
                 objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
                 allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionDispatch.loadboardPostGuid));
 
                 // 4. update the vehicle ship car ids
-                const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
+                const commodities = await Commodity.query(trx).where({ isDeleted: false }).whereIn('guid',
                     OrderStopLink.query().select('commodityGuid')
                         .where({ 'jobGuid': objectionDispatch.jobGuid })
                         .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
@@ -551,9 +544,7 @@ class ShipCars extends Loadboard
                             .distinctOn('stopGuid')
                     ));
 
-                await Promise.all(allPromises);
-
-                await trx.commit();
+                await Promise.all(allPromises).then(trx.commit);
 
                 await ActivityManagerService.createAvtivityLog({
                     orderGuid,
@@ -573,10 +564,17 @@ class ShipCars extends Loadboard
 
                 return objectionDispatch.jobGuid;
             }
-            catch (e)
+            catch (error)
             {
-                await trx.rollback(e);
-                throw new Error(e.message);
+                await trx.rollback();
+                telemetry.trackException({
+                    exception: error,
+                    properties: {
+                        action: 'carrierDeclineDispatch',
+                        post: payloadMetadata
+                    },
+                    severity: SeverityLevel.Error
+                });
             }
         }
     }
