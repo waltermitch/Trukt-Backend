@@ -10,6 +10,7 @@ const uuid = require('uuid');
 const R = require('ramda');
 const emitter = require('../EventListeners/index');
 const ActivityManagerService = require('../Services/ActivityManagerService');
+const LoadboardRequest = require('../Models/LoadboardRequest');
 
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
 const systemUser = process.env['SYSTEM_USER'];
@@ -283,6 +284,16 @@ class Loadboard
             objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
+
+            const objectionRequest = LoadboardRequest.fromJson({
+                ...LoadboardRequest.createStatusPayload(objectionPost.updatedByGuid).declined,
+                declineReason: LoadboardRequest.DECLINE_REASON.UNPOSTED
+            });
+
+            await LoadboardRequest.query(trx)
+            .patch(objectionRequest)
+            .where({ loadboardPostGuid: objectionPost.guid });
+
             await trx.commit();
 
             return objectionPost.jobGuid;
