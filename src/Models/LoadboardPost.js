@@ -139,7 +139,6 @@ class LoadboardPost extends BaseModel
 
     setToUnposted()
     {
-        this.externalPostGuid = null;
         this.status = 'unposted';
         this.isSynced = true;
         this.isPosted = false;
@@ -148,12 +147,23 @@ class LoadboardPost extends BaseModel
         this.deletedByGuid = null;
         this.hasError = false;
         this.apiError = null;
+
+        // This is the "posting" in the external system
+        this.externalPostGuid = null;
         if (this.loadboard != 'SUPERDISPATCH' &&
             this.loadboard != 'SHIPCARS' &&
             this.loadboard != 'CARDELIVERYNETWORK')
         {
+            // This is the "load" or "order" in the external system
             this.externalGuid = null;
         }
+    }
+
+    setAPIError(error)
+    {
+        this.isSynced = true;
+        this.hasError = true;
+        this.apiError = error;
     }
 }
 
