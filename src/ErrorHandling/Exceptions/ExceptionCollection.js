@@ -57,9 +57,10 @@ class ExceptionCollection
      * Throw the exception collection.
      * @throws {ExceptionCollection}
      */
-    throwErrors()
+    throwErrorsIfExist()
     {
-        throw this;
+        if (this.#errors.length > 0)
+            throw this;
     }
 }
 

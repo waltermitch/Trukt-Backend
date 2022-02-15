@@ -65,6 +65,15 @@ class BulkException
 
         return errors;
     }
+
+    /**
+     * @throws {BulkException}
+     */
+    throwErrorsIfExist()
+    {
+        if (Object.keys(this.#errors).length > 0)
+            throw this;
+    }
 }
 
 module.exports = BulkException;
