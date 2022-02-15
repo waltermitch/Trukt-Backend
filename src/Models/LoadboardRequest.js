@@ -84,6 +84,41 @@ class LoadboardRequest extends BaseModel
         };
     }
 
+    setDeleted()
+    {
+        this.status = 'deleted';
+        this.isValid = false;
+        this.isAccepted = false;
+        this.isDeclined = false;
+        this.isCanceled = false;
+        this.isSynced = false;
+        this.isDeleted = true;
+    }
+
+    setDeclined(reason)
+    {
+        this.status = 'declined';
+        this.isValid = false;
+        this.isAccepted = false;
+        this.isDeclined = true;
+        this.isCanceled = false;
+        this.isSynced = false;
+        this.isDeleted = false;
+        this.declineReason = reason || 'no reason provided';
+    }
+
+    setCanceled()
+    {
+        this.status = 'canceled';
+        this.isValid = false;
+        this.isAccepted = false;
+        this.isDeclined = false;
+        this.isCanceled = true;
+        this.isSynced = false;
+        this.isDeleted = false;
+
+    }
+
 }
 
 Object.assign(LoadboardRequest.prototype, RecordAuthorMixin);
