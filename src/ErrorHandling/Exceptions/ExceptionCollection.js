@@ -1,4 +1,4 @@
-const formatErrorMessageStructure = require("../FormatErrorMessageStructure");
+const formatErrorMessageStructure = require('../FormatErrorMessageStructure');
 
 class ExceptionCollection
 {
@@ -15,12 +15,14 @@ class ExceptionCollection
     #status = 500;
 
     /**
-     * @param {unknown[]} errors - The errors when class is instaciated.
+     * @param {unknown[] | unknown} errors - The errors when class is initialized.
      */
     constructor(errors = [])
     {
         this.name = this.constructor.name;
-        this.#errors = errors.map(formatErrorMessageStructure);
+        this.#errors = Array.isArray(errors)
+            ? errors.map((error) => formatErrorMessageStructure(error, true))
+            : [formatErrorMessageStructure(errors, true)];
     }
 
     /**
@@ -28,7 +30,7 @@ class ExceptionCollection
      */
     addError(error)
     {
-        this.#errors.push(formatErrorMessageStructure(error));
+        this.#errors.push(formatErrorMessageStructure(error, true));
     }
 
     /**
@@ -55,9 +57,10 @@ class ExceptionCollection
      * Throw the exception collection.
      * @throws {ExceptionCollection}
      */
-    throwErrors()
+    throwErrorsIfExist()
     {
-        throw this;
+        if (this.#errors.length > 0)
+            throw this;
     }
 }
 

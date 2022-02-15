@@ -22,11 +22,27 @@ const OpenApiValidatorErrorTypes = require('express-openapi-validator').error;
 const telemetryClient = require('./Insights');
 
 /**
- * Evaluates the error and returns the appropriate error message structure, also the error is logged to Azure App Insights.
- * @param {unknown} error
- * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data?: Record<string, unknown}}
+ * Evaluates the error and returns the appropriate error message structure.
+ * @param {Record<string, string | number | string[]} error - The error to return if is not collection.
+ * @param {boolean} isCollection - Whether the error is evaluated inside a collection.
+ * @param {Record<string, string | number} collectionErrorMessage - The error message structure to return if the error is evaluated inside a collection.
+ * @returns {error | collectionErrorMessage} The error message structure to return.
  */
-function formatErrorMessageStructure(error)
+function responseObjectToReturn(error, isCollection, collectionErrorMessage = {})
+{
+    if (isCollection)
+        return collectionErrorMessage;
+
+    return error;
+}
+
+/**
+ * Evaluates the error and returns the appropriate error message structure, also the error is logged to Azure App Insights.
+ * @param {unknown} error - The error to evaluate.
+ * @param {boolean} isCollection - Whether the error is evaluated inside a collection.
+ * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data?: Record<string, unknown} | {message: string}}
+ */
+function formatErrorMessageStructure(error, isCollection = false)
 {
     if (error instanceof ObjectionValidationError)
     {
@@ -37,11 +53,12 @@ function formatErrorMessageStructure(error)
             case 'UnallowedRelation':
             case 'InvalidGraph':
             default:
-                telemetryClient.trackException({
-                    exception: error,
-                    severity: 2
-                });
-                return {
+                if (!isCollection)
+                    telemetryClient.trackException({
+                        exception: error,
+                        severity: 2
+                    });
+                return responseObjectToReturn({
                     status: 400,
                     errors: [
                         {
@@ -50,26 +67,32 @@ function formatErrorMessageStructure(error)
                         }
                     ],
                     data: error.data
-                };
+                }, isCollection, {
+                    message: error.message
+                });
         }
     }
     else if (error instanceof ObjectionNotFoundError)
     {
-        telemetryClient.trackException({
-            exception: error,
-            severity: 2
-        });
-        return {
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 2
+            });
+        return responseObjectToReturn({
             status: 404,
             errors: [
                 {
                     errorType: error.name,
                     message: error.message
-                    
                 }
             ],
             data: error.data
-        };
+        },
+        isCollection,
+        {
+            message: error.message
+        });
     }
     else if (
         error instanceof ConstraintViolationError
@@ -80,11 +103,12 @@ function formatErrorMessageStructure(error)
         || error instanceof DataError
     )
     {
-        telemetryClient.trackException({
-            exception: error,
-            severity: 3
-        });
-        return {
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 3
+            });
+        return responseObjectToReturn({
             status: 500,
             errors: [
                 {
@@ -94,15 +118,21 @@ function formatErrorMessageStructure(error)
                 }
             ],
             data: error.data
-        };
+        },
+        isCollection,
+        {
+            message: error.nativeError.detail,
+            code: error.nativeError.code
+        });
     }
     else if (error instanceof DBError)
     {
-        telemetryClient.trackException({
-            exception: error,
-            severity: 4
-        });
-        return {
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 4
+            });
+        return responseObjectToReturn({
             status: 500,
             errors: [
                 {
@@ -111,7 +141,11 @@ function formatErrorMessageStructure(error)
                 }
             ],
             data: error.data
-        };
+        },
+        isCollection,
+        {
+            message: error.message
+        });
     }
     else if (
         error instanceof ApiError
@@ -124,16 +158,20 @@ function formatErrorMessageStructure(error)
     )
     {
         const { status, ...errorMessage } = error.toJSON();
-
-        telemetryClient.trackException({
-            exception: error,
-            severity: 2
-        });
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 2
+            });
         
-        return {
+        return responseObjectToReturn({
             status,
             errors: [errorMessage]
-        };
+        },
+        isCollection,
+        {
+            message: errorMessage.message
+        });
     }
     else if (error.constructor?.name in OpenApiValidatorErrorTypes)
     {
@@ -141,45 +179,57 @@ function formatErrorMessageStructure(error)
             exception: error,
             severity: 2
         });
-        return {
+        return responseObjectToReturn({
             status: 400,
-            errors: error.errors.length > 0 ? error.errors : [
+            errors: error.errors?.length > 0 ? error.errors : [
                 {
                     errorType: error.constructor.name,
                     message: error.message
                 }
             ]
-        };
+        }, false);
     }
     else if (error instanceof ApplicationError)
     {
         const { status, ...errorMessage } = error.toJSON();
-
-        telemetryClient.trackException({
-            exception: error,
-            severity: 3
-        });
         
-        return {
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 3
+            });
+        
+        return responseObjectToReturn({
             status,
             errors: [errorMessage]
-        };
+        },
+        isCollection,
+        {
+            message: errorMessage.message
+        });
     }
     else
     {
-        telemetryClient.trackException({
-            exception: error,
-            severity: 3
-        });
-        return {
+        const errorMessage = error?.message ?? JSON.stringify(error);
+
+        if (!isCollection)
+            telemetryClient.trackException({
+                exception: error,
+                severity: 3
+            });
+        return responseObjectToReturn({
             status: 500,
             errors: [
                 {
                     errorType: error.constructor?.name ?? 'UnknownError',
-                    message: error?.message ?? JSON.stringify(error)
+                    message: errorMessage
                 }
             ]
-        };
+        },
+        isCollection,
+        {
+            message: errorMessage
+        });
     }
 }
 
