@@ -499,12 +499,9 @@ class ShipCars extends Loadboard
                         'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
-
                 objectionDispatch.setToDeclined();
                 objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
-                // have to put table name because externalGuid is also on loadboard post and not
-                // specifying it makes the query ambiguous
                 allPromises.push(OrderJobDispatch.query(trx).patch(objectionDispatch).findById(dispatch.guid));
 
                 // 2. Remove vendor fields from the job
@@ -514,6 +511,7 @@ class ShipCars extends Loadboard
                 });
                 job.removeVendor();
                 job.setUpdatedBy(process.env.SYSTEM_USER);
+
                 allPromises.push(OrderJob.query(trx).patch(job).findById(objectionDispatch.jobGuid));
 
                 // 3. Set the loadboard post record external guid to the new
