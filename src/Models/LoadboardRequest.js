@@ -13,6 +13,12 @@ class LoadboardRequest extends BaseModel
         return 'guid';
     }
 
+    static DECLINE_REASON = {
+        UNPOSTED: 'Unposted from Loadboard',
+        PUT_ON_HOLD: 'Job set to On Hold',
+        CARRIER_CANCEL: 'Canceled by Carrier'
+    }
+
     static get relationMappings()
     {
         const relations = {
@@ -61,6 +67,16 @@ class LoadboardRequest extends BaseModel
                 isAccepted: false,
                 isDeclined: false,
                 isCanceled: true,
+                isSynced: false,
+                isDeleted: false,
+                updatedByGuid: userGuid
+            },
+            declined: {
+                status: 'declined',
+                isValid: false,
+                isAccepted: false,
+                isDeclined: true,
+                isCanceled: false,
                 isSynced: false,
                 isDeleted: false,
                 updatedByGuid: userGuid
