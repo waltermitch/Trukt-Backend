@@ -9,6 +9,8 @@ const OrderJob = require('../Models/OrderJob');
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const Loadboards = require('./API');
+const telemetry = require('../ErrorHandling/Insights');
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 
 const { emailRegex, phoneNumberRegex, dotNumberRegex } = require('../Utils/Regexes');
 
@@ -552,12 +554,10 @@ class Super extends Loadboard
         try
         {
             const job = OrderJob.fromJson({
-                vendorGuid: null,
-                vendorContactGuid: null,
-                vendorAgentGuid: null,
                 dateStarted: null,
-                status: 'ready'
+                status: OrderJob.STATUS.READY
             });
+            job.removeVendor();
             job.setUpdatedBy(process.env.SYSTEM_USER);
             allPromises.push(OrderJob.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
 
@@ -638,6 +638,7 @@ class Super extends Loadboard
         {
             const trx = await OrderJobDispatch.startTransaction();
 
+            const queries = [];
             try
             {
                 // getting the dispatch record because it has the job guid, which we need in order to operate
@@ -658,26 +659,26 @@ class Super extends Loadboard
                 objectionDispatch.setToDeclined();
                 objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
 
-                await OrderStop.query(trx)
+                queries.push(OrderStop.query(trx)
                     .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid')
                             .where({ 'jobGuid': objectionDispatch.jobGuid })
                             .distinctOn('stopGuid')
-                    );
+                    ));
 
                 const job = OrderJob.fromJson({
                     dateStarted: null,
-                    status: 'declined'
+                    status: OrderJob.STATUS.DECLINED
                 });
+                job.removeVendor();
                 job.setUpdatedBy(process.env.SYSTEM_USER);
-                await OrderJob.query(trx).patch(job).findById(objectionDispatch.jobGuid);
 
-                // have to put table name because externalGuid is also on loadboard post and not
-                // specifying it makes the query ambiguous
-                await OrderJobDispatch.query(trx).patch(objectionDispatch).findById(objectionDispatch.guid);
+                queries.push(OrderJob.query(trx).patch(job).findById(objectionDispatch.jobGuid));
 
-                await trx.commit();
+                queries.push(OrderJobDispatch.query(trx).patch(objectionDispatch).findById(objectionDispatch.guid));
+
+                await Promise.all(queries).then(trx.commit);
 
                 await ActivityManagerService.createAvtivityLog({
                     orderGuid,
@@ -700,10 +701,17 @@ class Super extends Loadboard
 
                 return objectionDispatch.jobGuid;
             }
-            catch (e)
+            catch (error)
             {
-                await trx.rollback(e);
-                throw new Error(e.message);
+                await trx.rollback();
+                telemetry.trackException({
+                    exception: error,
+                    properties: {
+                        action: 'carrierDeclineDispatch',
+                        post: payloadMetadata
+                    },
+                    severity: SeverityLevel.Error
+                });
             }
         }
     }
