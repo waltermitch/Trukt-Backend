@@ -1655,12 +1655,16 @@ class OrderService
                 currentUser
             );
 
+            /**
+             * orderContactCreated comes as a guid (If exists or was created) or null (if the user wants to remove it)
+             * referrer, salesperson and client need to use getObjectContactReference
+             */
             const orderGraph = Order.fromJson({
                 guid,
                 dispatcher: { '#dbRef': dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid },
-                referrer: { '#dbRef': referrer?.guid },
-                salesperson: { '#dbRef': salesperson?.guid },
-                client: { '#dbRef': client?.guid },
+                referrer: { '#dbRef': OrderService.getObjectContactReference(referrer) },
+                salesperson: { '#dbRef': OrderService.getObjectContactReference(salesperson) },
+                client: { '#dbRef': OrderService.getObjectContactReference(client) },
                 instructions,
                 clientContact: { '#dbRef': orderContactCreated },
                 stops: stopsGraphsToUpdate,
@@ -1773,6 +1777,12 @@ class OrderService
                 somelistGuids.splice(index, 1);
             }
         }
+    }
+
+    // If contactObject is null -> reference should be removed
+    static getObjectContactReference(contactObject)
+    {
+        return contactObject?.guid || null;
     }
 
     static async getJobBills(jobs, trx)
