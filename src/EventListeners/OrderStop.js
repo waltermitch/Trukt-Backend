@@ -1,4 +1,4 @@
-const eventLogErrors = require('./eventLogErrors');
+const logEventErrors = require('./logEventErrors');
 const listener = require('./index');
 
 listener.on('orderstop_status_update', ({ stops, currentUser }) =>
@@ -10,6 +10,6 @@ listener.on('orderstop_status_update', ({ stops, currentUser }) =>
     {
         const proms = await Promise.allSettled([OrderStopService.validateStops(stops, currentUser)]);
 
-        eventLogErrors(proms, 'orderstop_status_update');
+        logEventErrors(proms, 'orderstop_status_update');
     });
 });
