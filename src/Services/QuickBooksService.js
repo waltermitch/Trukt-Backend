@@ -1,7 +1,5 @@
 const Invoice = require('../QuickBooks/Invoice');
 const OrderStop = require('../Models/OrderStop');
-const Client = require('../QuickBooks/Client');
-const Vendor = require('../QuickBooks/Vendor');
 const Bill = require('../QuickBooks/Bill');
 const QBO = require('../QuickBooks/API');
 
@@ -173,94 +171,6 @@ class QuickBooksService
         results.push(...res);
 
         return results;
-    }
-
-    static async upsertClient(data)
-    {
-        const client = new Client(data);
-
-        // get client types
-        const clientTypes = await QBO.getClientTypes();
-
-        // set client type
-        client.setBusinessType(data.businessType, clientTypes);
-
-        if (!data.qbId)
-        {
-            // if duplicates, just update existing record :)
-            try
-            {
-                const res = await QBO.upsertClient(client);
-
-                return { qbId: res.Customer.Id };
-            }
-            catch (e)
-            {
-                // 6240 is QB error code for duplicates
-                if (e.response.data?.Fault?.Error[0].code == 6240)
-                {
-                    // find client by name
-                    const res = await QBO.getClientByName(client.DisplayName);
-
-                    return { qbId: res[0].Id };
-                }
-                else
-                    throw e;
-            }
-
-        }
-        else
-        {
-            // update
-            const SyncToken = await QBO.getSyncToken('Customer', data.qbId);
-
-            client.SyncToken = SyncToken;
-            client.Id = data.qbId;
-
-            await QBO.upsertClient(client);
-        }
-    }
-
-    static async upsertVendor(data)
-    {
-        const vendor = new Vendor(data);
-
-        if (!data.qbId)
-        {
-            // if duplicates, just update existing record :)
-            try
-            {
-                const res = await QBO.upsertVendor(vendor);
-
-                return { qbId: res.Vendor.Id };
-            }
-            catch (e)
-            {
-                // 6240 is QB error code for duplicates
-                if (e.response.data?.Fault?.Error[0].code == 6240)
-                {
-                    // find vendor by name
-                    const res = await QBO.getVendorByName(vendor.DisplayName);
-
-                    // compare DOT numbers
-
-                    return { qbId: res[0].Id };
-                }
-                else
-                    throw e;
-            }
-
-        }
-        else
-        {
-            // update
-            const SyncToken = await QBO.getSyncToken('Vendor', data.qbId);
-
-            vendor.SyncToken = SyncToken;
-            vendor.Id = data.qbId;
-
-            await QBO.upsertVendor(vendor);
-        }
     }
 
     static composeDescription(pTerminal, dTerminal, lineItem)
