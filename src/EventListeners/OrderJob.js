@@ -87,14 +87,21 @@ listener.on('orderjob_hold_removed', ({ orderGuid, jobGuid, currentUser }) =>
     });
 });
 
-listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop }) =>
+/**
+ * Sets the job stop status activity
+ */
+listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop, userAction }) =>
 {
     setImmediate(async () =>
     {
         const status = await OrderJobService.updateStatusField(jobGuid, currentUser);
+        const [[{ pickupsInProgress }], [{ isStatusForLastDelivery }]] =
+            await Promise.all([OrderJobService.getNumberOfPickupsInProgress(jobGuid), OrderJobService.isJobStatusForLastDelivery(jobGuid)]);
 
-        // when multi delivery on push activity on first pick up
-        if (status === OrderJob.STATUS.PICKED_UP && jobStop.stop_type !== 'delivery')
+        /**
+         * Registers the activity log to 'Pickup' only when the first commmodity of the job is pick up
+         */
+        if (jobStop.stop_type == 'pickup' && pickupsInProgress == 1 && userAction == 'completed')
         {
             await ActivityManagerService.createAvtivityLog({
                 orderGuid: orderGuid,
@@ -104,7 +111,9 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop 
             });
         }
 
-        // when status for job is delivered then push activity as delivered
+        /**
+        * Registers the activity log to 'delivered' only when the last commmodity of the job is delivered
+        */
         else if (status === OrderJob.STATUS.DELIVERED)
         {
             await ActivityManagerService.createAvtivityLog({
@@ -115,7 +124,9 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop 
             });
         }
 
-        // when pick up date was removed from stop, becomes dispatched
+        /**
+        * Registers the activity log to 'dispatched'
+        */
         else if (status === OrderJob.STATUS.DISPATCHED)
         {
             await ActivityManagerService.createAvtivityLog({
@@ -126,9 +137,18 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop 
             });
         }
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        /**
+         * Registers the activity log to 'Rollback to pickup' only when the last delivered commodity of the job is back to 'pick up'
+         */
+        else if (jobStop.stop_type == 'delivery' && userAction == 'started' && isStatusForLastDelivery)
+        {
+            await ActivityManagerService.createAvtivityLog({
+                orderGuid: orderGuid,
+                jobGuid: jobGuid,
+                userGuid: currentUser,
+                activityId: 32
+            });
+        }
     });
 });
 

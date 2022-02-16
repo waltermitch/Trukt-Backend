@@ -188,6 +188,12 @@
             "category": "job",
             "name": "Job Manually Dispatched",
             "order_filter_label": "Job Manually Dispatched"
+        },
+        {
+            "id": 32,
+            "category": "job",
+            "name": "Job Rolled Back To Pick Up",
+            "order_filter_label": "Job Rolled Back To Pick Up On"
         }
     ]
 }

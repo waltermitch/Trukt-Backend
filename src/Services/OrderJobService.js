@@ -17,6 +17,7 @@ const { DateTime } = require('luxon');
 const R = require('ramda');
 const InvoiceLineLink = require('../Models/InvoiceLineLink');
 const Loadboards = require('../Loadboards/API');
+const { raw } = require('objection');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -1791,6 +1792,30 @@ class OrderJobService
 
         // if we are here, we failed to update status
         throw new HttpError(400, 'Job Could Not Be Marked as Picked Up, Please Check All Stops Are Picked Up');
+    }
+
+    /**
+     * Returns the number of 'pick up' stops that are completed
+     */
+    static async getNumberOfPickupsInProgress(jobGuid)
+    {
+        return OrderStop.query().alias('OS').select(raw('count(CASE WHEN o_s.is_completed THEN 1 END) as pickups_in_progress'))
+            .innerJoin('rcgTms.orderStopLinks', 'guid', 'stopGuid')
+            .where('jobGuid', jobGuid)
+            .andWhere('OS.stopType', 'pickup');
+    }
+
+    /**
+     * Returns true if the job only has one 'delivery' stop not completed
+     */
+    static async isJobStatusForLastDelivery(jobGuid)
+    {
+        return OrderStop.query().alias('OS').select(raw(`
+            case when (count(CASE WHEN o_s.is_completed THEN 1 END)) = count(guid) - 1 then true else false end as is_status_for_last_delivery
+        `))
+            .innerJoin('rcgTms.orderStopLinks', 'guid', 'stopGuid')
+            .where('jobGuid', jobGuid)
+            .andWhere('OS.stopType', 'delivery');
     }
 }
 
