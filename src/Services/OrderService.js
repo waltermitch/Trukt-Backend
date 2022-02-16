@@ -1655,10 +1655,15 @@ class OrderService
                 currentUser
             );
 
-            const contacts = OrderService.getContactReferences({ referrer, salesperson, client, clientContact: orderContactCreated });
+            const contacts = OrderService.getContactReferences({
+                referrer: { guid: referrer?.guid || referrer },
+                salesperson: { guid: salesperson?.guid || salesperson },
+                client: { guid: client?.guid || client },
+                clientContact: { guid: orderContactCreated },
+                dispatcher: { guid: dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid }
+            });
             const orderGraph = Order.fromJson({
                 guid,
-                dispatcher: { '#dbRef': dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid },
                 instructions,
                 stops: stopsGraphsToUpdate,
                 invoices: orderInvoicesToUpdate,
@@ -1777,33 +1782,30 @@ class OrderService
          
          */
     /**
-     * If contacts.contactName is null -> reference should be removed
-     * If contacts.contactName.guid exists -> reference should be updated
-     * If contacts.contactName.guid is undefined -> do nothing
-     * ClientConytact does nto have the same structure as the other, so a speicif case was added for it
-     * @param {*} contacts object with the order referrer, salesperson, client and clientContact
-     * @returns object only with the contacts that should be updated or removed
+     * If contactName.guid is null -> reference should be removed
+     * If contactName.guid exists -> reference should be updated
+     * If contactName.guid is undefined -> do nothing
+     * @param {*} contacts object with the order referrer, salesperson, client, dispacther and clientContact
+     * @returns object only with the contacts that should be updated or removed.
      */
     static getContactReferences(contacts)
     {
-        const contactNames = ['referrer', 'salesperson', 'client'];
-        const contactsToReturn = contactNames.reduce((contactsToReturn, contactName) =>
+        const contactNames = [
+            'referrer',
+            'salesperson',
+            'client',
+            'clientContact',
+            'dispatcher'
+        ];
+        return contactNames.reduce((contactsToReturn, contactName) =>
         {
             if (contacts[contactName]?.guid)
                 contactsToReturn[contactName] = { '#dbRef': contacts[contactName].guid };
-            else if (contacts[contactName] === null)
+            else if (contacts[contactName]?.guid === null)
                 contactsToReturn[contactName] = { '#dbRef': null };
 
             return contactsToReturn;
         }, {});
-
-        if (contacts.clientContact === null)
-            contactsToReturn.clientContact = { '#dbRef': null };
-        else if (contacts.clientContact)
-            contactsToReturn.clientContact = { '#dbRef': contacts.clientContact };
-
-        return contactsToReturn;
-
     }
 
     static async getJobBills(jobs, trx)
