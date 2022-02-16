@@ -5,7 +5,7 @@ const telemetryClient = require('../ErrorHandling/Insights');
 /**
  * @param {PromiseSettledResult[]} errors
  */
-function eventLogErrors(errors, eventName = 'unknown')
+function logEventErrors(errors, eventName = 'unknown')
 {
 
     if (Array.isArray(errors) && errors.some((prom) => prom.status === 'rejected'))
@@ -37,4 +37,4 @@ function eventLogErrors(errors, eventName = 'unknown')
     }
 }
 
-module.exports = eventLogErrors;
+module.exports = logEventErrors;
