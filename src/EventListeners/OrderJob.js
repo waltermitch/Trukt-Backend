@@ -18,7 +18,7 @@ listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -54,7 +54,7 @@ listener.on('orderjob_hold_added', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -73,7 +73,7 @@ listener.on('orderjob_hold_removed', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -103,7 +103,7 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
          */
         if (jobStop.stop_type == 'pickup' && pickupsInProgress == 1 && userAction == 'completed')
         {
-            await ActivityManagerService.createAvtivityLog({
+            await ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -116,7 +116,7 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
         */
         else if (status === OrderJob.STATUS.DELIVERED)
         {
-            await ActivityManagerService.createAvtivityLog({
+            await ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -129,7 +129,7 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
         */
         else if (status === OrderJob.STATUS.DISPATCHED)
         {
-            await ActivityManagerService.createAvtivityLog({
+            await ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -142,7 +142,7 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
          */
         else if (jobStop.stop_type == 'delivery' && userAction == 'started' && isStatusForLastDelivery)
         {
-            await ActivityManagerService.createAvtivityLog({
+            await ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -248,7 +248,7 @@ listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }
     {
         const proms = await Promise.allSettled([
             OrderService.markOrderDelivered(orderGuid, currentUser, jobGuid),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
@@ -281,7 +281,7 @@ listener.on('orderjob_picked_up', ({ jobGuid, currentUser = SYSUSER, orderGuid }
     {
         const proms = await Promise.allSettled([
             OrderService.markOrderUndelivered(orderGuid, currentUser, jobGuid),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
@@ -324,7 +324,7 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
             const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
             orderUpdatePromise.push(
                 Order.query().patch(deleteStatusPayload).findById(orderGuid),
-                ActivityManagerService.createAvtivityLog({
+                ActivityManagerService.createActivityLog({
                     orderGuid,
                     jobGuid,
                     userGuid: currentUser,
@@ -334,7 +334,7 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
         }
 
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
@@ -361,13 +361,13 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
         await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
             Super.updateStatus(jobGuid, 'deleted', 'notDeleted'),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
                 activityId: 18
             }),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -391,7 +391,7 @@ listener.on('orderjob_canceled', ({ orderGuid, currentUser, jobGuid }) =>
     {
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -416,7 +416,7 @@ listener.on('orderjob_uncanceled', ({ orderGuid, currentUser, jobGuid }) =>
     {
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
