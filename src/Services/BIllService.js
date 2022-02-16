@@ -263,7 +263,7 @@ class BillService
                 const trx = await InvoiceBill.transaction();
 
                 // update all the bills and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateCharged: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.bill?.Id }).where('invoiceGuid', guid)]);
+                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, datePaid: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.bill?.Id, dateCharged: now }).where('invoiceGuid', guid)]);
 
                 if (proms[0].status == 'fulfilled')
                 {
