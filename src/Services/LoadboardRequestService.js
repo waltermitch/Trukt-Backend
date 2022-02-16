@@ -1,4 +1,3 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const LoadboardRequest = require('../Models/LoadboardRequest');
 const LoadboardPost = require('../Models/LoadboardPost');
 const emitter = require('../EventListeners/index');
@@ -6,6 +5,7 @@ const SFAccount = require('../Models/SFAccount');
 const { ref } = require('objection');
 const axios = require('axios');
 const https = require('https');
+const ActivityManagerService = require('./ActivityManagerService');
 
 const lbInstance = axios.create({
     baseURL: process.env['azure.loadboard.baseurl'],
@@ -51,11 +51,11 @@ class LoadboardRequestService
         {
             await LoadboardRequest.query().findById(lbRequest.guid).patch({ isValid: false, isCanceled: true, status: 'Canceled' });
 
-            await StatusManagerHandler.registerStatus({
+            await ActivityManagerService.createAvtivityLog({
                 orderGuid: lbPosting.orderGuid,
                 userGuid: payload.createdByGuid,
                 jobGuid: lbPosting.jobGuid,
-                statusId: 5,
+                activityId: 5,
                 extraAnnotations: {
                     loadboard: payload.loadboard,
                     carrier: {
@@ -78,11 +78,11 @@ class LoadboardRequestService
         const response = await LoadboardRequest.query().insert(payload);
 
         // update activities according to incoming request createBy
-        await StatusManagerHandler.registerStatus({
+        await ActivityManagerService.createAvtivityLog({
             orderGuid: lbPosting.orderGuid,
             userGuid: currentUser,
             jobGuid: lbPosting.jobGuid,
-            statusId: 4,
+            activityId: 4,
             extraAnnotations: {
                 loadboard: payload.loadboard,
                 carrier: {
@@ -122,11 +122,11 @@ class LoadboardRequestService
         });
 
         // update status of requests in status manger
-        await StatusManagerHandler.registerStatus({
+        await ActivityManagerService.createAvtivityLog({
             orderGuid: lbPosting.orderGuid,
             userGuid: currentUser,
             jobGuid: lbPosting.jobGuid,
-            statusId: 5,
+            activityId: 5,
             extraAnnotations: {
                 loadboard: payload.loadboard,
                 carrier: {
@@ -210,11 +210,11 @@ class LoadboardRequestService
         const [result, carrierInfo] = await Promise.all([
             LoadboardRequest.query().patchAndFetchById(requestGuid, queryRequest),
             SFAccount.query().modify('externalIdandDot', queryRequest.extraExternalData.carrierInfo.guid, queryRequest.carrierIdentifier),
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: queryRequest.orderGuid,
                 userGuid: currentUser,
                 jobGuid: queryRequest.jobGuid,
-                statusId: 6,
+                activityId: 6,
                 extraAnnotations: {
                     loadboard: queryRequest.loadboard,
                     carrier: {
@@ -269,11 +269,11 @@ class LoadboardRequestService
         }
 
         // pushing status notifications
-        await StatusManagerHandler.registerStatus({
+        await ActivityManagerService.createAvtivityLog({
             orderGuid: queryRequest.orderGuid,
             userGuid: currentUser,
             jobGuid: queryRequest.jobGuid,
-            statusId: 7,
+            activityId: 7,
             extraAnnotations: {
                 loadboard: queryRequest.loadboard,
                 carrier: {

@@ -114,10 +114,6 @@ requestBody:
                       allOf:
                         - $ref: '../../components/schemas/Common.yaml#/Enums/inspectionType'
                         - description: This field currently has not use.
-                    vendor:
-                      allOf:
-                        - $ref: '../../components/schemas/Common.yaml#/guidObjectNullable'
-                        - description: The vendor or carrier responsible for completing this job.
                     vendorContact:
                       allOf:
                         - description: The vendor or carrier contact that can be contacted if any questions arise.

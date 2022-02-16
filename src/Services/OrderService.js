@@ -1,4 +1,3 @@
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -17,7 +16,7 @@ const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
 const Commodity = require('../Models/Commodity');
-const StatusLog = require('../Models/StatusLog');
+const ActivityLog = require('../Models/ActivityLogs');
 const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
@@ -34,6 +33,9 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+const ActivityManagerService = require('./ActivityManagerService');
+
+// this is the apora that will hold the falling down requirments above.
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -1293,7 +1295,7 @@ class OrderService
                         const sqlQuery = OrderService.createDateComparisonSqlQuery(dateElement);
 
                         this.whereRaw(sqlQuery)
-                            .andWhere('statusId', dateElement.status);
+                            .andWhere('activityId', dateElement.status);
                     };
 
                     return query.orWhere(comparisonDateAndStatus);
@@ -1301,7 +1303,7 @@ class OrderService
             };
 
             return query.andWhere(comparisonDatesByStatus);
-        }, StatusLog.query().select('jobGuid'));
+        }, ActivityLog.query().select('jobGuid'));
 
         return baseQuery.whereIn('guid', datesQuery);
     }
@@ -1522,11 +1524,11 @@ class OrderService
     {
         for (const orderJob of order.jobs)
         {
-            StatusManagerHandler.registerStatus({
+            ActivityManagerService.createAvtivityLog({
                 orderGuid: order.guid,
                 userGuid: currentUser,
                 jobGuid: orderJob.guid,
-                statusId: 1
+                activityId: 1
             });
         }
     }
@@ -1653,20 +1655,24 @@ class OrderService
                 currentUser
             );
 
+            /**
+             * orderContactCreated comes as a guid (If exists or was created) or null (if the user wants to remove it)
+             * referrer, salesperson and client need to use getObjectContactReference
+             */
             const orderGraph = Order.fromJson({
                 guid,
-                updatedByGuid: currentUser,
-                dispatcherGuid: dispatcher?.guid,
-                referrerGuid: referrer?.guid,
-                salespersonGuid: salesperson?.guid,
-                clientGuid: client?.guid,
+                dispatcher: { '#dbRef': dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid },
+                referrer: { '#dbRef': OrderService.getObjectContactReference(referrer) },
+                salesperson: { '#dbRef': OrderService.getObjectContactReference(salesperson) },
+                client: { '#dbRef': OrderService.getObjectContactReference(client) },
                 instructions,
-                clientContactGuid: orderContactCreated,
+                clientContact: { '#dbRef': orderContactCreated },
                 stops: stopsGraphsToUpdate,
                 invoices: orderInvoicesToUpdate,
                 jobs: jobsToUpdateWithExpenses,
                 ...orderData
             });
+            orderGraph.setUpdatedBy(currentUser);
 
             orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
 
@@ -1771,6 +1777,12 @@ class OrderService
                 somelistGuids.splice(index, 1);
             }
         }
+    }
+
+    // If contactObject is null -> reference should be removed
+    static getObjectContactReference(contactObject)
+    {
+        return contactObject?.guid || null;
     }
 
     static async getJobBills(jobs, trx)
@@ -2479,40 +2491,34 @@ class OrderService
 
     static createSingleJobGraph(jobInput, jobTypes, currentUser)
     {
-        const jobWithContactReferences = OrderService.createJobContactReferences(jobInput);
-        const jobGraph = OrderJob.fromJson(jobWithContactReferences);
+        const jobModel = OrderJob.fromJson(jobInput);
 
-        if (jobGraph?.jobType?.category && jobGraph?.jobType?.type)
+        for (const field of ['dispatcher', 'vendorAgent', 'vendorContact'])
+        {
+            if (jobInput[field]?.guid !== undefined)
+            {
+                jobInput[field] = { '#dbRef': jobInput[field]?.guid };
+            }
+        }
+
+        if (jobModel?.jobType?.category && jobModel?.jobType?.type)
         {
             const jobType = jobTypes?.find((jobType) =>
-                OrderJobType.compare(jobGraph, jobType)
+                OrderJobType.compare(jobModel, jobType)
             );
             if (!jobType)
             {
                 throw new Error(
-                    `unknown job type ${jobGraph.typeId ||
-                    jobGraph.jobType.category + jobGraph.jobType.type
+                    `unknown job type ${jobModel.typeId ||
+                    jobModel.jobType.category + jobModel.jobType.type
                     }`
                 );
             }
-            jobGraph.graphLink('jobType', jobType);
-            jobGraph.setIsTransport(jobType);
+            jobModel.graphLink('jobType', jobType);
+            jobModel.setIsTransport(jobType);
         }
-        jobGraph.setUpdatedBy(currentUser);
-        return jobGraph;
-    }
-
-    static createJobContactReferences(jobInput)
-    {
-        const { dispatcher, vendor, vendorAgent, vendorContact, ...jobData } = jobInput;
-
-        return {
-            dispatcherGuid: dispatcher?.guid,
-            vendorGuid: vendor?.guid,
-            vendorAgentGuid: vendorAgent?.guid,
-            vendorContactGuid: vendorContact?.guid,
-            ...jobData
-        };
+        jobModel.setUpdatedBy(currentUser);
+        return jobModel;
     }
 
     /**

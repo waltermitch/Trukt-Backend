@@ -1,7 +1,7 @@
 const SystemManagementService = require('../Services/SystemManagementService');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const StatusCacheManager = require('../EventManager/StatusCacheManager');
 const TerminalService = require('../Services/TerminalService');
+const EDIService = require('../Services/EDIService');
 const QBO = require('../QuickBooks/API');
 const Cron = require('node-cron');
 
@@ -16,7 +16,8 @@ const expressions =
     thirtyMinutes: '0 */30 * * * *',
     hourly: '0 0 */1 * * *',
     biHourly: '0 0 */2 * * *',
-    daily: '0 0 1 */1 * *'
+    daily: '0 0 1 */1 * *',
+    ediUpdate: '30 8,12,4 * * *'
 };
 
 // every 5 seconds
@@ -59,7 +60,9 @@ Cron.schedule(expressions.daily, async () =>
     await QBO.syncListsToDB();
 });
 
-Cron.schedule(expressions.second, async () =>
+// Schedule 8:30am , 12:30pm and 4:40pm
+// notifying EID partners outside of work hours is completely pointless
+Cron.schedule(expressions.ediUpdate, async () =>
 {
-    await StatusManagerHandler.checkStatus();
-});
+    await EDIService.notifyEDIPartnerEnrouteOrders();
+}, { timezone: 'America/Los_Angeles' });

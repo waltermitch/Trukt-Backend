@@ -4,12 +4,15 @@ const Attachment = require('../Models/Attachment');
 const OrderJob = require('../Models/OrderJob');
 const OrderStop = require('../Models/OrderStop');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
-const StatusManagerHandler = require('../EventManager/StatusManagerHandler');
 const states = require('us-state-codes');
 const { DateTime } = require('luxon');
 const uuid = require('uuid');
 const R = require('ramda');
 const emitter = require('../EventListeners/index');
+const ActivityManagerService = require('../Services/ActivityManagerService');
+const LoadboardRequest = require('../Models/LoadboardRequest');
+const telemetry = require('../ErrorHandling/Insights');
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 
 const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
 const systemUser = process.env['SYSTEM_USER'];
@@ -265,31 +268,51 @@ class Loadboard
     static async handleUnpost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
-        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+        const postModel = LoadboardPost.fromJson(payloadMetadata.post);
 
         try
         {
+            const queries = [];
             if (response.hasErrors)
             {
-                objectionPost.isSynced = false;
-                objectionPost.isPosted = false;
-                objectionPost.hasError = true;
-                objectionPost.apiError = response.errors;
+                postModel.setAPIError(response.errors);
+                telemetry.trackException({
+                    exception: 'LoadboardAPIError',
+                    properties: {
+                        action: 'unpost',
+                        post: postModel,
+                        response: response
+                    },
+                    severity: SeverityLevel.Error
+                });
             }
             else
             {
-                objectionPost.setToUnposted();
+                postModel.setToUnposted();
+                const lbRequest = new LoadboardRequest();
+                lbRequest.setDeclined(LoadboardRequest.DECLINE_REASON.UNPOSTED);
+                lbRequest.setUpdatedBy(process.env.SYSTEM_USER);
+                queries.push(postModel.$relatedQuery('requests', trx).for(postModel).patch(lbRequest));
             }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
 
-            await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
-            await trx.commit();
+            postModel.setUpdatedBy(process.env.SYSTEM_USER);
+            queries.push(postModel.$query(trx).patch());
 
-            return objectionPost.jobGuid;
+            const resp = await Promise.all(queries).then(trx.commit);
+
+            return postModel.jobGuid;
         }
         catch (err)
         {
             await trx.rollback();
+            telemetry.trackException({
+                exception: err,
+                properties: {
+                    action: 'unpost',
+                    post: postModel
+                },
+                severity: SeverityLevel.Error
+            });
         }
     }
 
@@ -435,10 +458,10 @@ class Loadboard
                     }
                 }
 
-                await StatusManagerHandler.registerStatus({
+                await ActivityManagerService.createAvtivityLog({
                     orderGuid: orderRec.guid,
                     userGuid: process.env.SYSTEM_USER,
-                    statusId: 13,
+                    activityId: 13,
                     jobGuid: dispatchRec.jobGuid,
                     extraAnnotations: {
                         loadboard: dispatchRec.loadboardPost.loadboard,
