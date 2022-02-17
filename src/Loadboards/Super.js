@@ -513,7 +513,7 @@ class Super extends Loadboard
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
                     activityId: 10,
@@ -608,7 +608,7 @@ class Super extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            await ActivityManagerService.createAvtivityLog({
+            await ActivityManagerService.createActivityLog({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
                 activityId: 12,
@@ -679,7 +679,7 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid,
                     userGuid: process.env.SYSTEM_USER,
                     activityId: 14,

@@ -1524,7 +1524,7 @@ class OrderService
     {
         for (const orderJob of order.jobs)
         {
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: order.guid,
                 userGuid: currentUser,
                 jobGuid: orderJob.guid,

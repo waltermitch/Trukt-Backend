@@ -41,7 +41,7 @@ class ActivityManagerService
      * @param activityLogData.activityId required, id from activity_log_types table
      * @param activityLogData.extraAnnotations optional, json with extra information to add in the log
      */
-    static async createAvtivityLog({ userGuid, orderGuid, jobGuid, activityId, extraAnnotations })
+    static async createActivityLog({ userGuid, orderGuid, jobGuid, activityId, extraAnnotations })
     {
         // validate payload and data
         const errored = await ActivityManagerService.validateAcivityPayload({ userGuid, orderGuid, jobGuid, activityId });

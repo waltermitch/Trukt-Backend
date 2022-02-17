@@ -376,7 +376,7 @@ class LoadboardService
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,
                     activityId: 10,
@@ -501,7 +501,7 @@ class LoadboardService
             if (!dispatch.loadboardPostGuid)
             {
                 // updating activity logger
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: dispatch.job.orderGuid,
                     userGuid: currentUser,
                     activityId: 12,
@@ -610,7 +610,7 @@ class LoadboardService
             await trx.commit();
             dispatch.status = OrderJob.STATUS.DISPATCHED;
 
-            await ActivityManagerService.createAvtivityLog({
+            await ActivityManagerService.createActivityLog({
                 orderGuid: job.orderGuid,
                 userGuid: currentUser,
                 activityId: 11,
@@ -873,7 +873,7 @@ class LoadboardService
     static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, activityId, jobGuid)
     {
         const loadboardNames = LoadboardService.getLoadboardNames(loadboardPosts);
-        return ActivityManagerService.createAvtivityLog({
+        return ActivityManagerService.createActivityLog({
             orderGuid,
             userGuid,
             activityId,
