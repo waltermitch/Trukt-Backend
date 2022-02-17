@@ -1655,22 +1655,21 @@ class OrderService
                 currentUser
             );
 
-            /**
-             * orderContactCreated comes as a guid (If exists or was created) or null (if the user wants to remove it)
-             * referrer, salesperson and client need to use getObjectContactReference
-             */
+            const contacts = OrderService.getContactReferences({
+                referrer: { guid: referrer?.guid || referrer },
+                salesperson: { guid: salesperson?.guid || salesperson },
+                client: { guid: client?.guid || client },
+                clientContact: { guid: orderContactCreated },
+                dispatcher: { guid: dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid }
+            });
             const orderGraph = Order.fromJson({
                 guid,
-                dispatcher: { '#dbRef': dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid },
-                referrer: { '#dbRef': OrderService.getObjectContactReference(referrer) },
-                salesperson: { '#dbRef': OrderService.getObjectContactReference(salesperson) },
-                client: { '#dbRef': OrderService.getObjectContactReference(client) },
                 instructions,
-                clientContact: { '#dbRef': orderContactCreated },
                 stops: stopsGraphsToUpdate,
                 invoices: orderInvoicesToUpdate,
                 jobs: jobsToUpdateWithExpenses,
-                ...orderData
+                ...orderData,
+                ...contacts
             });
             orderGraph.setUpdatedBy(currentUser);
 
@@ -1779,10 +1778,34 @@ class OrderService
         }
     }
 
-    // If contactObject is null -> reference should be removed
-    static getObjectContactReference(contactObject)
+    /**
+         
+         */
+    /**
+     * If contactName.guid is null -> reference should be removed
+     * If contactName.guid exists -> reference should be updated
+     * If contactName.guid is undefined -> do nothing
+     * @param {*} contacts object with the order referrer, salesperson, client, dispacther and clientContact
+     * @returns object only with the contacts that should be updated or removed.
+     */
+    static getContactReferences(contacts)
     {
-        return contactObject?.guid || null;
+        const contactNames = [
+            'referrer',
+            'salesperson',
+            'client',
+            'clientContact',
+            'dispatcher'
+        ];
+        return contactNames.reduce((contactsToReturn, contactName) =>
+        {
+            if (contacts[contactName]?.guid)
+                contactsToReturn[contactName] = { '#dbRef': contacts[contactName].guid };
+            else if (contacts[contactName]?.guid === null)
+                contactsToReturn[contactName] = { '#dbRef': null };
+
+            return contactsToReturn;
+        }, {});
     }
 
     static async getJobBills(jobs, trx)
