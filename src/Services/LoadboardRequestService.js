@@ -304,7 +304,7 @@ class LoadboardRequestService
         const [result, carrierInfo] = await Promise.all([
             LoadboardRequest.query().patchAndFetchById(requestGuid, queryRequest),
             SFAccount.query().modify('externalIdandDot', queryRequest.extraExternalData.carrierInfo.guid, queryRequest.carrierIdentifier),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: queryRequest.orderGuid,
                 userGuid: currentUser,
                 jobGuid: queryRequest.jobGuid,
@@ -363,7 +363,7 @@ class LoadboardRequestService
         }
 
         // pushing status notifications
-        await ActivityManagerService.createAvtivityLog({
+        await ActivityManagerService.createActivityLog({
             orderGuid: queryRequest.orderGuid,
             userGuid: currentUser,
             jobGuid: queryRequest.jobGuid,
