@@ -1795,27 +1795,41 @@ class OrderJobService
     }
 
     /**
-     * Returns the number of 'pick up' stops that are completed
+     * Returns the number of 'pick up' stops that are completed, we group by guid when there are multiple commodities per stop
+     * that way we can treat them as 1 stop.
      */
     static async getNumberOfPickupsInProgress(jobGuid)
     {
-        return OrderStop.query().alias('OS').select(raw('count(CASE WHEN o_s.is_completed THEN 1 END) as pickups_in_progress'))
+        const pickupsGroupByStop = OrderStop.query().alias('OS').select('guid', 'OS.isCompleted')
             .innerJoin('rcgTms.orderStopLinks', 'guid', 'stopGuid')
             .where('jobGuid', jobGuid)
-            .andWhere('OS.stopType', 'pickup');
+            .andWhere('OS.stopType', 'pickup')
+            .groupBy('OS.guid', 'OS.isCompleted');
+
+        return OrderStop.query().alias('OS2').select(raw('count(CASE WHEN o_s2.is_completed THEN 1 END) as pickups_in_progress'))
+            .with('pickupsGroupByStop', pickupsGroupByStop)
+            .innerJoin('pickupsGroupByStop', 'pickupsGroupByStop.guid', 'OS2.guid');
     }
 
     /**
-     * Returns true if the job only has one 'delivery' stop not completed
+     * Returns true if the job only has one 'delivery' stop not completed, we group by guid when there are multiple commodities per stop
+     * that way we can treat them as 1 stop.
      */
     static async isJobStatusForLastDelivery(jobGuid)
     {
-        return OrderStop.query().alias('OS').select(raw(`
-            case when (count(CASE WHEN o_s.is_completed THEN 1 END)) = count(guid) - 1 then true else false end as is_status_for_last_delivery
-        `))
+
+        const deliveriesGroupByStop = OrderStop.query().alias('OS').select('guid', 'OS.isCompleted')
             .innerJoin('rcgTms.orderStopLinks', 'guid', 'stopGuid')
             .where('jobGuid', jobGuid)
-            .andWhere('OS.stopType', 'delivery');
+            .andWhere('OS.stopType', 'delivery')
+            .groupBy('OS.guid', 'OS.isCompleted');
+
+        return OrderStop.query().alias('OS2').select(raw(`
+            case when (count(CASE WHEN deliveries_group_by_stop.is_completed THEN 1 END)) = count(deliveries_group_by_stop.guid) - 1 
+            then true else false end as is_status_for_last_delivery
+        `))
+            .with('deliveriesGroupByStop', deliveriesGroupByStop)
+            .innerJoin('deliveriesGroupByStop', 'deliveriesGroupByStop.guid', 'OS2.guid');
     }
 }
 
