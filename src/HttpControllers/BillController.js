@@ -98,51 +98,29 @@ class BillController
         }
     }
 
-    static async exportBill(req, res)
+    static async exportBill(req, res, next)
     {
-        const orders = [req.params.orderGuid];
+        const { orderGuid } = req.params;
 
-        const result = (await BillService.exportBills(orders))?.[0];
-
-        if (result)
+        try
         {
-            if (result.error)
+            const result = await BillService.exportBills([orderGuid]);
+
+            const bill = result[orderGuid];
+
+            // transform single element array to object
+            bill.data = bill.data[0] || {};
+
+            if (bill.errors.length > 0)
                 res.status(400);
             else
                 res.status(200);
 
-            res.json(result);
+            res.json(bill);
         }
-        else
+        catch (err)
         {
-            res.status(404);
-            res.json({ 'error': 'Order Not Found' });
-        }
-    }
-
-    static async exportBills(req, res)
-    {
-        const orders = req.body?.orders;
-
-        if (!orders || orders == 0)
-        {
-            res.status(400);
-            res.json({ 'error': 'Missing Or Empty Array' });
-        }
-        else
-        {
-            const result = await BillService.exportBills(orders);
-
-            if (result)
-            {
-                res.status(200);
-                res.json(result);
-            }
-            else
-            {
-                res.status(404);
-                res.json({ 'error': 'Order Not Found' });
-            }
+            next(err);
         }
     }
 }
