@@ -1,7 +1,8 @@
+const OrderStop = require('../Models/OrderStop');
 const HTTPS = require('../AuthController');
 
-const url = process.env.AccountingFuncUrl;
-const code = process.env.AccountingFuncCode;
+const url = process.env.ACCOUNTING_FUNC_URL;
+const code = process.env.ACCOUNTING_FUNC_CODE;
 
 const opts =
 {
@@ -17,7 +18,7 @@ class AccountingFunc
     // the microservice will create the invoices in the necessary third party system
     static async exportInvoices(invoices)
     {
-        const { data } = await api.post('/exportInvoices', invoices);
+        const { data } = await api.post('/export/invoices', { invoices });
 
         return data;
     }
@@ -26,29 +27,41 @@ class AccountingFunc
     // the microservice will create the bills in the necessary third party system
     static async exportBills(bills)
     {
-        const { data } = await api.post('/exportBills', bills);
+        const { data } = await api.post('/export/bills', { bills });
 
         return data;
     }
 
     // this method composes the expected description in the AccountingFunc
-    static composeDescription(pTerminal, dTerminal, line)
+    static composeDescription(line)
     {
         const { commodity } = line;
 
-        let description = `${pTerminal.city}, ${pTerminal.state} to ${dTerminal.city}, ${dTerminal.state}\n`;
-
-        if (line?.item?.name?.localeCompare('Logistics') || line.item?.name?.includes('Vehicle Shipping'))
+        if (commodity)
         {
-            if (commodity.description)
-                description += commodity.description + '\n';
-            if (commodity.vehicle?.name)
-                description += commodity.vehicle.name + '\n';
-            if (commodity.identifier)
-                description += `VIN: ${commodity.identifier}`;
-        }
+            const stops = OrderStop.firstAndLast(commodity?.stops);
 
-        return description;
+            const pTerminal = stops[0]?.terminal;
+            const dTerminal = stops[1]?.terminal;
+
+            let description = `${pTerminal.city}, ${pTerminal.state} to ${dTerminal.city}, ${dTerminal.state}\n`;
+
+            if (line?.item?.name?.localeCompare('Logistics') || line.item?.name?.includes('Vehicle Shipping'))
+            {
+                if (commodity.description)
+                    description += commodity.description + '\n';
+                if (commodity.vehicle?.name)
+                    description += commodity.vehicle.name + '\n';
+                if (commodity.identifier)
+                    description += `VIN: ${commodity.identifier}`;
+            }
+
+            return description;
+        }
+        else
+        {
+            return line.notes || '';
+        }
     }
 }
 
