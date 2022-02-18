@@ -37,27 +37,6 @@ class QBO
         return qb.instance;
     }
 
-    static async batch(arr)
-    {
-        const api = await QBO.connect();
-
-        const results = [];
-
-        // qb has limit of 30 objects per batch
-        // break down into groups of 30
-        for (let i = 0, j = arr.length; i < j; i += 30)
-        {
-            const temp = arr.slice(i, i + 30);
-
-            const res = await api.post('/batch', { 'BatchItemRequest': temp });
-
-            // add results to array
-            results.push(...res.data.BatchItemResponse);
-        }
-
-        return results;
-    }
-
     static async getSyncToken(objectName, objectId)
     {
         const { SyncToken } = await QBO.get(objectName, objectId);
