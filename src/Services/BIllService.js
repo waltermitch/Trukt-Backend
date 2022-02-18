@@ -192,12 +192,11 @@ class BillService
         // query to get all the orders with related objects
         const orders = await Order.query()
             .whereIn('guid', unique)
-            .withGraphFetched('[jobs.[type, bills.[lines(isNonZero, isNotPaid).[commodity.[stops.[terminal], vehicle, commType], item.qbAccount]], vendor]]');
+            .withGraphFetched('[jobs.[type, bills.[lines(isNonZero, isNotPaid).[commodity.[stops.[terminal], vehicle, commType], item]], vendor]]');
 
         if (!orders.length)
             throw new HttpError(400, 'No Matching Orders Found');
 
-        // which system to send bills to
         const qbBills = [];
         const billMap = new Map();
 
@@ -318,8 +317,6 @@ class BillService
 
                 if (system == 'quickbooks')
                     Object.assign(curExternal, { 'quickbooks': { 'Id': data.qbId } });
-                else if (system == 'coupa')
-                    Object.assign(curExternal, { 'coupa': { 'invoiced': data.invoicedInCoupa || false } });
 
                 try
                 {
