@@ -40,15 +40,7 @@ class LoadboardController
         }
         catch (e)
         {
-            let status = 400;
-            if (e.toString() == 'Error: Job not found')
-            {
-                status = 404;
-            }
-            next({
-                status,
-                data: { message: e.message || 'Internal server error' }
-            });
+            next(e);
         }
 
     }
