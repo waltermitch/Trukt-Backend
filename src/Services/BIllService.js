@@ -230,7 +230,7 @@ class BillService
                         sdGuid: job.vendor.sdGuid
                     };
 
-                    if (bill.isPaid && Object.keys(bill?.externalSourceData).length > 0)
+                    if (bill.isPaid && Object.keys(bill.externalSourceData || {}).length > 0)
                     {
                         // TODO: add proper error class TBE-22
                         results[order.guid].status = 400;
@@ -339,6 +339,8 @@ class BillService
                     patchedBill.orderNumber = billObj.orderNumber;
 
                     results[billObj.orderGuid].data.push(patchedBill);
+
+                    await trx.commit();
                 }
                 catch (err)
                 {
