@@ -15,7 +15,7 @@ exports.seed = function (knex) {
         // Inserts seed entries
         return trx(table_name)
             .insert(vehicles)
-            .onConflict(["year", "make", "model", "trim"])
+            .onConflict(["year", "make", "model", "trim", "weight_class_id"])
             .ignore();
     });
 };
