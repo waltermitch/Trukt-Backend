@@ -37,25 +37,6 @@ class QBO
         return qb.instance;
     }
 
-    static async getSyncToken(objectName, objectId)
-    {
-        const { SyncToken } = await QBO.get(objectName, objectId);
-
-        return SyncToken;
-    }
-
-    static async get(objectName, objectId)
-    {
-        if (!objectName || !objectId)
-            throw { 'status': 400, 'error': 'Missing Object Name/Id' };
-
-        const api = await QBO.connect();
-
-        const res = await api.get(`/${objectName?.toLowerCase()}/${objectId}`);
-
-        return res.data[`${objectName}`];
-    }
-
     static async syncListsToDB(keepAlive = true)
     {
         let [methods, terms] = await Promise.all([QBO.getPaymentMethods(keepAlive), QBO.getPaymentTerms(keepAlive)]);
