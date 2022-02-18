@@ -51,7 +51,7 @@ class LoadboardRequestService
         {
             await LoadboardRequest.query().findById(lbRequest.guid).patch({ isValid: false, isCanceled: true, status: 'Canceled' });
 
-            await ActivityManagerService.createAvtivityLog({
+            await ActivityManagerService.createActivityLog({
                 orderGuid: lbPosting.orderGuid,
                 userGuid: payload.createdByGuid,
                 jobGuid: lbPosting.jobGuid,
@@ -78,7 +78,7 @@ class LoadboardRequestService
         const response = await LoadboardRequest.query().insert(payload);
 
         // update activities according to incoming request createBy
-        await ActivityManagerService.createAvtivityLog({
+        await ActivityManagerService.createActivityLog({
             orderGuid: lbPosting.orderGuid,
             userGuid: currentUser,
             jobGuid: lbPosting.jobGuid,
@@ -122,7 +122,7 @@ class LoadboardRequestService
         });
 
         // update status of requests in status manger
-        await ActivityManagerService.createAvtivityLog({
+        await ActivityManagerService.createActivityLog({
             orderGuid: lbPosting.orderGuid,
             userGuid: currentUser,
             jobGuid: lbPosting.jobGuid,
@@ -210,7 +210,7 @@ class LoadboardRequestService
         const [result, carrierInfo] = await Promise.all([
             LoadboardRequest.query().patchAndFetchById(requestGuid, queryRequest),
             SFAccount.query().modify('externalIdandDot', queryRequest.extraExternalData.carrierInfo.guid, queryRequest.carrierIdentifier),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: queryRequest.orderGuid,
                 userGuid: currentUser,
                 jobGuid: queryRequest.jobGuid,
@@ -269,7 +269,7 @@ class LoadboardRequestService
         }
 
         // pushing status notifications
-        await ActivityManagerService.createAvtivityLog({
+        await ActivityManagerService.createActivityLog({
             orderGuid: queryRequest.orderGuid,
             userGuid: currentUser,
             jobGuid: queryRequest.jobGuid,
