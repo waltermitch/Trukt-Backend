@@ -290,14 +290,8 @@ class LoadboardRequestService
         return;
     }
 
-        // remove fields that do not exist to update table correctly
-        delete queryRequest.jobGuid;
-        delete queryRequest.orderGuid;
 
-        // search data base by the guid that super provides and update to canceled
-        await LoadboardRequest.query().findById(requestGuid).patch(queryRequest);
 
-        emitter.emit('load_request_declined', { jobGuid: jobGuid, dispatcherGuid: currentUser, orderGuid: orderGuid });
 
 
     static toAcceptorDeclineJSON(input)
