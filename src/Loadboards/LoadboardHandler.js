@@ -9,6 +9,7 @@ const connectionString = process.env['azure.servicebus.loadboards.connectionStri
 const topicName = 'loadboard_incoming';
 const sbClient = new ServiceBusClient(connectionString);
 const receiver = sbClient.createReceiver(topicName, process.env['azure.servicebus.loadboards.subscription.to']);
+const { SYSTEM_USER } = process.env;
 
 const myMessageHandler = async (message) =>
 {
@@ -48,6 +49,9 @@ const myMessageHandler = async (message) =>
 
             switch (pubsubAction)
             {
+                case 'orderJobCanceled':
+                    await OrderJobService.cancelJob(jobGuid, SYSTEM_USER);
+                    break;
                 case 'dispatch':
                 case 'carrierAcceptDispatch':
                 case 'undispatch':
