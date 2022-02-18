@@ -20,6 +20,7 @@ const ApplicationError = require('./Exceptions/ApplicationError');
 
 const OpenApiValidatorErrorTypes = require('express-openapi-validator').error;
 const telemetryClient = require('./Insights');
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 
 /**
  * Evaluates the error and returns the appropriate error message structure.
@@ -56,7 +57,7 @@ function formatErrorMessageStructure(error, isCollection = false)
                 if (!isCollection)
                     telemetryClient.trackException({
                         exception: error,
-                        severity: 2
+                        severity: SeverityLevel.Warning
                     });
                 return responseObjectToReturn({
                     status: 400,
@@ -77,7 +78,7 @@ function formatErrorMessageStructure(error, isCollection = false)
         if (!isCollection)
             telemetryClient.trackException({
                 exception: error,
-                severity: 2
+                severity: SeverityLevel.Warning
             });
         return responseObjectToReturn({
             status: 404,
@@ -106,7 +107,7 @@ function formatErrorMessageStructure(error, isCollection = false)
         if (!isCollection)
             telemetryClient.trackException({
                 exception: error,
-                severity: 3
+                severity: SeverityLevel.Error
             });
         return responseObjectToReturn({
             status: 500,
@@ -130,7 +131,7 @@ function formatErrorMessageStructure(error, isCollection = false)
         if (!isCollection)
             telemetryClient.trackException({
                 exception: error,
-                severity: 4
+                severity: SeverityLevel.Critical
             });
         return responseObjectToReturn({
             status: 500,
@@ -161,7 +162,7 @@ function formatErrorMessageStructure(error, isCollection = false)
         if (!isCollection)
             telemetryClient.trackException({
                 exception: error,
-                severity: 2
+                severity: SeverityLevel.Warning
             });
         
         return responseObjectToReturn({
@@ -177,7 +178,7 @@ function formatErrorMessageStructure(error, isCollection = false)
     {
         telemetryClient.trackException({
             exception: error,
-            severity: 2
+            severity: SeverityLevel.Warning
         });
         return responseObjectToReturn({
             status: 400,
@@ -196,7 +197,7 @@ function formatErrorMessageStructure(error, isCollection = false)
         if (!isCollection)
             telemetryClient.trackException({
                 exception: error,
-                severity: 3
+                severity: SeverityLevel.Error
             });
         
         return responseObjectToReturn({
@@ -215,7 +216,7 @@ function formatErrorMessageStructure(error, isCollection = false)
         if (!isCollection)
             telemetryClient.trackException({
                 exception: error,
-                severity: 3
+                severity: SeverityLevel.Error
             });
         return responseObjectToReturn({
             status: 500,
