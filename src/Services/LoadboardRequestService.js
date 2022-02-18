@@ -234,8 +234,14 @@ class LoadboardRequestService
         return result;
     }
 
-    // functions trigged by the TMS user
-    static async declineRequest(requestGuid, payload, currentUser)
+    /**
+     * Method declines single request of the payload.
+     * @param {uuid} requestGuid
+     * @param {uuid} reason
+     * @param {uuid} currentUser
+     * @returns
+     */
+    static async declineRequest(requestGuid, reason, currentUser)
     {
         // find request by guid
         const queryRequest = await LoadboardRequest
@@ -244,35 +250,33 @@ class LoadboardRequestService
             .leftJoinRelated('posting.job')
             .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
 
-        // updating object with proper statuses
-        Object.assign(queryRequest, {
-            status: 'Declined',
-            isAccepted: false,
-            isDeclined: true,
-            isCanceled: false,
-            isValid: false,
-            declineReason: payload?.reason,
-            updatedByGuid: currentUser
-        });
+        // to pass it on to the event
+        const jobGuid = queryRequest.jobGuid;
+        const orderGuid = queryRequest.orderGuid;
+
+        // remove fields that do not exist to update table correctly
+        delete queryRequest.jobGuid;
+        delete queryRequest.orderGuid;
+
+        queryRequest.setDeclined(reason);
+        queryRequest.setUpdatedBy(currentUser);
 
         // send API request decline request and updating payload accordingly
-        const response = await lbInstance.post('/incomingLoadboardRequest', queryRequest);
-        if (response.status == 200)
+        const response = await lbInstance.post('/incomingLoadboardRequest', LoadboardRequestService.toAcceptorDeclineJSON(queryRequest));
+
+        if (response.status !== 200)
         {
-            queryRequest.isSynced = true;
-        }
-        else
-        {
-            queryRequest.isSynced = false;
             queryRequest.hasError = true;
-            queryRequest.externalError = response;
+            queryRequest.externalError = response?.data ?? 'Unable to get error.';
         }
+
+        await queryRequest.$query().patchAndFetch();
 
         // pushing status notifications
         await ActivityManagerService.createAvtivityLog({
-            orderGuid: queryRequest.orderGuid,
+            orderGuid: orderGuid,
             userGuid: currentUser,
-            jobGuid: queryRequest.jobGuid,
+            jobGuid: jobGuid,
             activityId: 7,
             extraAnnotations: {
                 loadboard: queryRequest.loadboard,
@@ -283,9 +287,8 @@ class LoadboardRequestService
             }
         });
 
-        // to pass it on to the event
-        const jobGuid = queryRequest.jobGuid;
-        const orderGuid = queryRequest.orderGuid;
+        return;
+    }
 
         // remove fields that do not exist to update table correctly
         delete queryRequest.jobGuid;
@@ -296,7 +299,16 @@ class LoadboardRequestService
 
         emitter.emit('load_request_declined', { jobGuid: jobGuid, dispatcherGuid: currentUser, orderGuid: orderGuid });
 
-        return;
+
+    static toAcceptorDeclineJSON(input)
+    {
+        return {
+            requestGuid: input.externalPostGuid,
+            externalOrderID: input.extraExternalData.externalOrderID,
+            status: input.status,
+            isAccepted: input.isAccepted,
+            isDeclined: input.isDeclined
+        };
     }
 }
 

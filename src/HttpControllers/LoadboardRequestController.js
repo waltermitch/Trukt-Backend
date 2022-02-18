@@ -90,16 +90,15 @@ class LoadboardRequestController
     {
         try
         {
-            if (req?.body)
+            const reason = req?.body.reason;
+            const requestGuid = req.params?.requestGuid;
+            if (!reason)
             {
-                await LoadboardRequestService.declineRequest(req?.params?.requestGuid, req.body, req.session.userGuid);
-                res.status(204).send();
+                // TODO: Update error with proper ErrorHandler
+                throw new Error('Unable to decline Request, missing reason');
             }
-            else
-            {
-                res.status(400);
-                res.send('Unable to decline Request, missing reason');
-            }
+            await LoadboardRequestService.declineRequest(requestGuid, reason, req.session.userGuid);
+            res.status(204).send();
         }
         catch (error)
         {
