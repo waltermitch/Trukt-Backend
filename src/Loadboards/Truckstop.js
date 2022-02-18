@@ -1,6 +1,7 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const { DateTime } = require('luxon');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 
 class Truckstop extends Loadboard
 {
@@ -17,19 +18,19 @@ class Truckstop extends Loadboard
         {
             if (!Object.keys(values).includes(requiredField))
             {
-                throw `${requiredField} is required`;
+                throw new HttpError(400, `${requiredField} is required`);
             }
             else if (requiredField == 'weight' && (values[requiredField] < 1 || values[requiredField] > 999999))
             {
-                throw `${requiredField} should be between 1 and 999999 pounds`;
+                throw new HttpError(400, `${requiredField} should be between 1 and 999999 pounds`);
             }
-            else if (requiredField == 'length' && (values[requiredField] < 1 || values[requiredField] > 55))
+            else if (requiredField == 'length' && (values[requiredField] < 1 || values[requiredField] > 999))
             {
-                throw `${requiredField} should be between 1 and 55 feet`;
+                throw new HttpError(400, `${requiredField} should be between 1 and 999 feet`);
             }
             else if (requiredField == 'equipmentOptions' && !Array.isArray(values[requiredField]))
             {
-                throw `${requiredField} should be array of truckstop valid equipment option ids`;
+                throw new HttpError(400, `${requiredField} should be array of truckstop valid equipment option ids`);
             }
         }
     }
