@@ -8,7 +8,7 @@ const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
 const Super = require('../Loadboards/Super');
-const eventLogErrors = require('./logEventErrors');
+const logEventErrors = require('./logEventErrors');
 
 // const { raw } = require('objection');
 
@@ -19,7 +19,7 @@ listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -28,7 +28,7 @@ listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
             OrderService.markOrderReady(orderGuid, currentUser)
         ]);
 
-        eventLogErrors(proms, 'orderjob_ready');
+        logEventErrors(proms, 'orderjob_ready');
 
         // This doesn't make any sense so I uncommented it for now
         // Order.query()
@@ -53,7 +53,7 @@ listener.on('orderjob_hold_added', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -61,7 +61,7 @@ listener.on('orderjob_hold_added', ({ orderGuid, jobGuid, currentUser }) =>
             })
         ]);
 
-        eventLogErrors(proms, 'orderjob_hold_added');
+        logEventErrors(proms, 'orderjob_hold_added');
     });
 });
 
@@ -70,7 +70,7 @@ listener.on('orderjob_hold_removed', ({ orderGuid, jobGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -78,68 +78,78 @@ listener.on('orderjob_hold_removed', ({ orderGuid, jobGuid, currentUser }) =>
             })
         ]);
 
-        eventLogErrors(proms, 'orderjob_hold_removed');
+        logEventErrors(proms, 'orderjob_hold_removed');
     });
 });
 
-listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop }) =>
+/**
+ * Sets the job stop status activity
+ */
+listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop, userAction }) =>
 {
     setImmediate(async () =>
     {
-        const status = await OrderJobService.updateStatusField(jobGuid, currentUser);
-
-        // when multi delivery on push activity on first pick up
-        if (status === OrderJob.STATUS.PICKED_UP && jobStop.stop_type !== 'delivery')
+        try
         {
-            try
+            const status = await OrderJobService.updateStatusField(jobGuid, currentUser);
+            const [[{ pickupsInProgress }], [{ isStatusForLastDelivery }]] =
+                await Promise.all([OrderJobService.getNumberOfPickupsInProgress(jobGuid), OrderJobService.isJobStatusForLastDelivery(jobGuid)]);
+    
+            /**
+             * Registers the activity log to 'Pickup' only when the first commmodity of the job is pick up
+             */
+            if (jobStop.stop_type == 'pickup' && pickupsInProgress == 1 && userAction == 'completed')
             {
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: orderGuid,
                     jobGuid: jobGuid,
                     userGuid: currentUser,
                     activityId: 29
                 });
             }
-            catch (error)
+    
+            /**
+            * Registers the activity log to 'delivered' only when the last commmodity of the job is delivered
+            */
+            else if (status === OrderJob.STATUS.DELIVERED)
             {
-                eventLogErrors(error, 'orderjob_stop_update');
-            }
-        }
-
-        // when status for job is delivered then push activity as delivered
-        else if (status === OrderJob.STATUS.DELIVERED)
-        {
-            try
-            {
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: orderGuid,
                     jobGuid: jobGuid,
                     userGuid: currentUser,
                     activityId: 27
                 });
             }
-            catch (error)
+    
+            /**
+            * Registers the activity log to 'dispatched'
+            */
+            else if (status === OrderJob.STATUS.DISPATCHED)
             {
-                eventLogErrors(error, 'orderjob_stop_update');
-            }
-        }
-
-        // when pick up date was removed from stop, becomes dispatched
-        else if (status === OrderJob.STATUS.DISPATCHED)
-        {
-            try
-            {
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: orderGuid,
                     jobGuid: jobGuid,
                     userGuid: currentUser,
                     activityId: 31
                 });
             }
-            catch (error)
+    
+            /**
+             * Registers the activity log to 'Rollback to pickup' only when the last delivered commodity of the job is back to 'pick up'
+             */
+            else if (jobStop.stop_type == 'delivery' && userAction == 'started' && isStatusForLastDelivery)
             {
-                eventLogErrors(error, 'orderjob_stop_update');
+                await ActivityManagerService.createActivityLog({
+                    orderGuid: orderGuid,
+                    jobGuid: jobGuid,
+                    userGuid: currentUser,
+                    activityId: 32
+                });
             }
+        }
+        catch (error)
+        {
+            logEventErrors(error, 'orderjob_stop_update');
         }
     });
 });
@@ -151,7 +161,7 @@ listener.on('orderjob_dispatch_offer_sent', async ({ jobGuid }) =>
         const job = await OrderJobService.getJobData(jobGuid);
         const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, job)]);
 
-        eventLogErrors(proms, 'orderjob_dispatch_offer_sent');
+        logEventErrors(proms, 'orderjob_dispatch_offer_sent');
     });
 });
 
@@ -162,7 +172,7 @@ listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, currentUser, orderGu
         const job = await OrderJobService.getJobData(jobGuid);
         const proms = await Promise.allSettled([OrderService.markAsScheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
-        eventLogErrors(proms, 'orderjob_dispatch_offer_accepted');
+        logEventErrors(proms, 'orderjob_dispatch_offer_accepted');
     });
 });
 
@@ -173,7 +183,7 @@ listener.on('orderjob_dispatch_offer_canceled', ({ jobGuid, currentUser, orderGu
         const job = await OrderJobService.getJobData(jobGuid);
         const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
-        eventLogErrors(proms, 'orderjob_dispatch_offer_canceled');
+        logEventErrors(proms, 'orderjob_dispatch_offer_canceled');
     });
 });
 
@@ -184,7 +194,7 @@ listener.on('orderjob_dispatch_offer_declined', ({ jobGuid, currentUser, orderGu
         const job = await OrderJobService.getJobData(jobGuid);
         const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
-        eventLogErrors(proms, 'orderjob_dispatch_offer_declined');
+        logEventErrors(proms, 'orderjob_dispatch_offer_declined');
     });
 });
 
@@ -194,7 +204,7 @@ listener.on('orderjob_dispatch_canceled', ({ jobGuid, currentUser, orderGuid }) 
     {
         const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser)]);
 
-        eventLogErrors(proms, 'orderjob_dispatch_canceled');
+        logEventErrors(proms, 'orderjob_dispatch_canceled');
     });
 });
 
@@ -205,7 +215,7 @@ listener.on('load_request_accepted', ({ jobGuid, currentUser, orderGuid, body })
     {
         const proms = await Promise.allSettled([LoadboardService.dispatchJob(jobGuid, body, currentUser)]);
 
-        eventLogErrors(proms, 'load_request_accepted');
+        logEventErrors(proms, 'load_request_accepted');
     });
 });
 
@@ -216,7 +226,7 @@ listener.on('load_request_declined', ({ jobGuid, currentUser, orderGuid, body })
     {
         const proms = await Promise.allSettled([]);
 
-        eventLogErrors(proms, 'load_request_declined');
+        logEventErrors(proms, 'load_request_declined');
     });
 });
 
@@ -226,7 +236,7 @@ listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }
     {
         const proms = await Promise.allSettled([
             OrderService.markOrderDelivered(orderGuid, currentUser, jobGuid),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
@@ -234,7 +244,7 @@ listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }
             })
         ]);
 
-        eventLogErrors(proms, 'orderjob_delivered');
+        logEventErrors(proms, 'orderjob_delivered');
     });
 });
 
@@ -244,7 +254,7 @@ listener.on('orderjob_undelivered', ({ jobGuid, currentUser = SYSUSER, orderGuid
     {
         const proms = await Promise.allSettled([OrderService.markOrderUndelivered(orderGuid, currentUser)]);
 
-        eventLogErrors(proms, 'orderjob_undelivered');
+        logEventErrors(proms, 'orderjob_undelivered');
     });
 });
 
@@ -254,7 +264,7 @@ listener.on('orderjob_picked_up', ({ jobGuid, currentUser = SYSUSER, orderGuid }
     {
         const proms = await Promise.allSettled([
             OrderService.markOrderUndelivered(orderGuid, currentUser, jobGuid),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
@@ -262,7 +272,7 @@ listener.on('orderjob_picked_up', ({ jobGuid, currentUser = SYSUSER, orderGuid }
             })
         ]);
 
-        eventLogErrors(proms, 'orderjob_picked_up');
+        logEventErrors(proms, 'orderjob_picked_up');
     });
 });
 
@@ -272,7 +282,7 @@ listener.on('orderjob_booked', ({ jobGuid, currentUser }) =>
     {
         const proms = await Promise.allSettled([(OrderJobService.updateStatusField(jobGuid, currentUser))]);
 
-        eventLogErrors(proms, 'orderjob_booked');
+        logEventErrors(proms, 'orderjob_booked');
     });
 });
 
@@ -294,7 +304,7 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
                 const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
                 orderUpdatePromise.push(
                     Order.query().patch(deleteStatusPayload).findById(orderGuid),
-                    ActivityManagerService.createAvtivityLog({
+                    ActivityManagerService.createActivityLog({
                         orderGuid,
                         jobGuid,
                         userGuid: currentUser,
@@ -302,9 +312,9 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
                     })
                 );
             }
-    
+
             const proms = await Promise.allSettled([
-                ActivityManagerService.createAvtivityLog({
+                ActivityManagerService.createActivityLog({
                     orderGuid,
                     jobGuid,
                     userGuid: currentUser,
@@ -314,11 +324,11 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
                 ...orderUpdatePromise
             ]);
     
-            eventLogErrors(proms, 'orderjob_deleted');
+            logEventErrors(proms, 'orderjob_deleted');
         }
         catch (error)
         {
-            eventLogErrors(error, 'orderjob_deleted');
+            logEventErrors(error, 'orderjob_deleted');
         }
     });
 });
@@ -334,13 +344,13 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
             Super.updateStatus(jobGuid, 'deleted', 'notDeleted'),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
                 activityId: 18
             }),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -348,7 +358,7 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
             })
         ]);
         
-        eventLogErrors(proms, 'orderjob_undeleted');
+        logEventErrors(proms, 'orderjob_undeleted');
     });
 });
 
@@ -362,7 +372,7 @@ listener.on('orderjob_canceled', ({ orderGuid, currentUser, jobGuid }) =>
     {
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -370,7 +380,7 @@ listener.on('orderjob_canceled', ({ orderGuid, currentUser, jobGuid }) =>
             })
         ]);
 
-        eventLogErrors(proms, 'orderjob_canceled');
+        logEventErrors(proms, 'orderjob_canceled');
     });
 });
 
@@ -385,7 +395,7 @@ listener.on('orderjob_uncanceled', ({ orderGuid, currentUser, jobGuid }) =>
     {
         const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
                 userGuid: currentUser,
@@ -393,7 +403,7 @@ listener.on('orderjob_uncanceled', ({ orderGuid, currentUser, jobGuid }) =>
             })
         ]);
 
-        eventLogErrors(proms, 'orderjob_uncanceled');
+        logEventErrors(proms, 'orderjob_uncanceled');
     });
 });
 
@@ -406,11 +416,11 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
             const currrentJob = await OrderJobService.getJobData(jobGuid);
             const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, currrentJob), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
     
-            eventLogErrors(proms, 'orderjob_status_updated');
+            logEventErrors(proms, 'orderjob_status_updated');
         }
         catch (error)
         {
-            eventLogErrors(error, 'orderjob_status_updated');
+            logEventErrors(error, 'orderjob_status_updated');
         }
     });
 });

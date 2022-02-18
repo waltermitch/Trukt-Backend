@@ -52,7 +52,7 @@ listener.on('order_delivered', ({ orderGuid, userGuid, jobGuid }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid,
@@ -69,7 +69,7 @@ listener.on('order_undelivered', ({ orderGuid, userGuid, jobGuid }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid,
@@ -86,7 +86,7 @@ listener.on('tender_accepted', ({ jobGuid, orderGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,
@@ -104,7 +104,7 @@ listener.on('tender_rejected', ({ jobGuid, orderGuid, currentUser }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid,
                 jobGuid,
                 userGuid: currentUser,

@@ -161,7 +161,7 @@ class OrderStopService
             const eventsToEmit = OrderStopService.getStopEvents([stopRec], [newStopRec]);
 
             // we emit event that stop has been updated
-            emitter.emit('orderjob_stop_update', { orderGuid, jobGuid, currentUser, jobStop: jobStop.rows[0], stopGuid });
+            emitter.emit('orderjob_stop_update', { orderGuid, jobGuid, currentUser, jobStop: jobStop.rows[0], stopGuid, userAction: status });
             for (const { event: eventName, ...params } of eventsToEmit)
             {
                 params.job = jobRec;
