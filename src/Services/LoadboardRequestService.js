@@ -8,10 +8,10 @@ const https = require('https');
 const ActivityManagerService = require('./ActivityManagerService');
 
 const lbInstance = axios.create({
-    baseURL: process.env['azure.loadboard.baseurl'],
+    baseURL: process.env.AZURE_LOADBOARD_BASEURL,
     httpsAgent: new https.Agent({ keepAlive: true }),
     headers: { 'Content-Type': 'application/json' },
-    params: { code: process.env['azure.loadboard.funcCode'] }
+    params: { code: process.env.AZURE_LOADBOARD_FUNCCODE }
 });
 
 class LoadboardRequestService

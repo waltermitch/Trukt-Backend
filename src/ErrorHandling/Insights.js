@@ -7,7 +7,7 @@ const fakeTelemetryClient = require('./FakeTelemetryClient');
 
 let client = {};
 
-if (process.env.local || process.env.LOCAL)
+if (process.env.LOCAL)
     client = fakeTelemetryClient;
 else
     switch (process.env.ENV)

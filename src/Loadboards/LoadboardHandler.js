@@ -5,10 +5,11 @@ const OrderJobService = require('../Services/OrderJobService');
 const PubSubService = require('../Services/PubSubService');
 const R = require('ramda');
 
-const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
+const connectionString = process.env.AZURE_SERVICEBUS_LOADBOARDS_CONNECTIONSTRING;
+const subscriptionTo = process.env.AZURE_SERVICEBUS_LOADBOARDS_SUBSCRIPTION_TO;
 const topicName = 'loadboard_incoming';
 const sbClient = new ServiceBusClient(connectionString);
-const receiver = sbClient.createReceiver(topicName, process.env['azure.servicebus.loadboards.subscription.to']);
+const receiver = sbClient.createReceiver(topicName, subscriptionTo);
 
 const myMessageHandler = async (message) =>
 {

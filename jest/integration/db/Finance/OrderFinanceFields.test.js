@@ -12,6 +12,7 @@ const BaseModel = require('../../../../src/Models/BaseModel');
 const currency = require('currency.js');
 const data = require('./OrderJobFinanceFields.data.json');
 
+const { SYSTEM_USER } = process.env;
 const ZERO_MONEY = '0.00';
 const EXPENSE_ID = data.InvoiceLineItems[0].id;
 const REVENUE_ID = data.InvoiceLineItems[1].id;
@@ -70,10 +71,10 @@ describe('Actual Finance Fields', () =>
         const invoice = InvoiceBill.fromJson(data.Invoice);
         const bill = InvoiceBill.fromJson(data.Bill);
 
-        order.setCreatedBy(process.env.SYSTEM_USER);
-        job.setCreatedBy(process.env.SYSTEM_USER);
-        invoice.setCreatedBy(process.env.SYSTEM_USER);
-        bill.setCreatedBy(process.env.SYSTEM_USER);
+        order.setCreatedBy(SYSTEM_USER);
+        job.setCreatedBy(SYSTEM_USER);
+        invoice.setCreatedBy(SYSTEM_USER);
+        bill.setCreatedBy(SYSTEM_USER);
 
         job.bills = [bill];
         order.jobs = [job];
@@ -88,14 +89,14 @@ describe('Actual Finance Fields', () =>
         context.invoiceLines = data.InvoiceLines.map((json) =>
         {
             const line = InvoiceLine.fromJson(json);
-            line.setCreatedBy(process.env.SYSTEM_USER);
+            line.setCreatedBy(SYSTEM_USER);
             line.invoiceGuid = context.order.invoices[0].guid;
             return line;
         });
         context.billLines = data.BillLines.map((json) =>
         {
             const line = InvoiceLine.fromJson(json);
-            line.setCreatedBy(process.env.SYSTEM_USER);
+            line.setCreatedBy(SYSTEM_USER);
             line.invoiceGuid = context.order.jobs[0].bills[0].guid;
             return line;
         });
@@ -267,13 +268,13 @@ describe('Actual Finance Fields', () =>
                         invoiceGuid: context.order.invoices[0].guid,
                         amount: '3200.00',
                         itemId: EXPENSE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     },
                     {
                         invoiceGuid: context.order.invoices[0].guid,
                         amount: '1200.56',
                         itemId: EXPENSE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     }
                 ];
 
@@ -339,13 +340,13 @@ describe('Actual Finance Fields', () =>
                         invoiceGuid: context.order.invoices[0].guid,
                         amount: '3200.00',
                         itemId: REVENUE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     },
                     {
                         invoiceGuid: context.order.invoices[0].guid,
                         amount: '1200.56',
                         itemId: REVENUE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     }
                 ];
 
@@ -393,9 +394,9 @@ describe('Actual Finance Fields', () =>
                  */
 
                 invoiceLines = await InvoiceLine.query(trx)
-                            .findByIds([sourceLines[0].guid, sourceLines[1].guid])
-                            .delete()
-                            .then(() => { return Promise.all(FIND_INVOICELINES); });
+                    .findByIds([sourceLines[0].guid, sourceLines[1].guid])
+                    .delete()
+                    .then(() => { return Promise.all(FIND_INVOICELINES); });
 
                 expect(invoiceLines[0]).toBe(undefined);
                 expect(invoiceLines[1]).toBe(undefined);
@@ -412,13 +413,13 @@ describe('Actual Finance Fields', () =>
                         invoiceGuid: context.order.invoices[0].guid,
                         amount: '3200.00',
                         itemId: REVENUE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     },
                     {
                         invoiceGuid: context.order.invoices[0].guid,
                         amount: '1200.56',
                         itemId: EXPENSE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     }
                 ];
 
@@ -466,9 +467,9 @@ describe('Actual Finance Fields', () =>
                  */
 
                 invoiceLines = await InvoiceLine.query(trx)
-                            .findByIds([sourceLines[0].guid, sourceLines[1].guid])
-                            .delete()
-                            .then(() => { return Promise.all(FIND_INVOICELINES); });
+                    .findByIds([sourceLines[0].guid, sourceLines[1].guid])
+                    .delete()
+                    .then(() => { return Promise.all(FIND_INVOICELINES); });
 
                 expect(invoiceLines[0]).toBe(undefined);
                 expect(invoiceLines[1]).toBe(undefined);
@@ -641,13 +642,13 @@ describe('Actual Finance Fields', () =>
                         invoiceGuid: context.order.jobs[0].bills[0].guid,
                         amount: '3200.00',
                         itemId: EXPENSE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     },
                     {
                         invoiceGuid: context.order.jobs[0].bills[0].guid,
                         amount: '1200.56',
                         itemId: EXPENSE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     }
                 ];
 
@@ -694,9 +695,9 @@ describe('Actual Finance Fields', () =>
                  */
 
                 invoiceLines = await InvoiceLine.query(trx)
-                            .findByIds([sourceLines[0].guid, sourceLines[1].guid])
-                            .delete()
-                            .then(() => { return Promise.all(FIND_INVOICELINES); });
+                    .findByIds([sourceLines[0].guid, sourceLines[1].guid])
+                    .delete()
+                    .then(() => { return Promise.all(FIND_INVOICELINES); });
 
                 expect(invoiceLines[0]).toBe(undefined);
                 expect(invoiceLines[1]).toBe(undefined);
@@ -714,13 +715,13 @@ describe('Actual Finance Fields', () =>
                         invoiceGuid: context.order.jobs[0].bills[0].guid,
                         amount: '3200.00',
                         itemId: REVENUE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     },
                     {
                         invoiceGuid: context.order.jobs[0].bills[0].guid,
                         amount: '1200.56',
                         itemId: REVENUE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     }
                 ];
 
@@ -768,9 +769,9 @@ describe('Actual Finance Fields', () =>
                  */
 
                 invoiceLines = await InvoiceLine.query(trx)
-                            .findByIds([sourceLines[0].guid, sourceLines[1].guid])
-                            .delete()
-                            .then(() => { return Promise.all(FIND_INVOICELINES); });
+                    .findByIds([sourceLines[0].guid, sourceLines[1].guid])
+                    .delete()
+                    .then(() => { return Promise.all(FIND_INVOICELINES); });
 
                 expect(invoiceLines[0]).toBe(undefined);
                 expect(invoiceLines[1]).toBe(undefined);
@@ -791,13 +792,13 @@ describe('Actual Finance Fields', () =>
                         invoiceGuid: context.order.jobs[0].bills[0].guid,
                         amount: '3200.00',
                         itemId: REVENUE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     },
                     {
                         invoiceGuid: context.order.jobs[0].bills[0].guid,
                         amount: '1200.56',
                         itemId: EXPENSE_ID,
-                        createdByGuid: process.env.SYSTEM_USER
+                        createdByGuid: SYSTEM_USER
                     }
                 ];
 

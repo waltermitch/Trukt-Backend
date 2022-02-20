@@ -1,7 +1,7 @@
 const HTTPS = require('../AuthController');
 
-const API_KEY = process.env['arcgis.apikey'];
-const NODE_ENV = process.env.NODE_ENV;
+const API_KEY = process.env.ARCGIS_APIKEY;
+const NODE_ENV = process.env.NODE_ENV || process.env.ENV;
 
 const opts =
 {

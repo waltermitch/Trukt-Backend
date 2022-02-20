@@ -1,3 +1,4 @@
+const ActivityManagerService = require('./ActivityManagerService');
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -7,6 +8,7 @@ const OrderStopLink = require('../Models/OrderStopLink');
 const CommodityType = require('../Models/CommodityType');
 const OrderJobType = require('../Models/OrderJobType');
 const SFRecordType = require('../Models/SFRecordType');
+const ActivityLog = require('../Models/ActivityLogs');
 const Contact = require('../Models/TerminalContact');
 const InvoiceBill = require('../Models/InvoiceBill');
 const InvoiceLine = require('../Models/InvoiceLine');
@@ -16,7 +18,6 @@ const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
 const Commodity = require('../Models/Commodity');
-const ActivityLog = require('../Models/ActivityLogs');
 const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
@@ -33,7 +34,6 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
-const ActivityManagerService = require('./ActivityManagerService');
 
 // this is the apora that will hold the falling down requirments above.
 
@@ -43,7 +43,7 @@ const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
 let dateFilterComparisonTypes;
 
 const logicAppInstance = axios.create({
-    baseURL: process.env['azure.logicApp.BaseUrl'],
+    baseURL: process.env.AZURE_LOGICAPP_BASEURL,
     httpsAgent: new https.Agent({ keepAlive: true }),
     headers: { 'Content-Type': 'application/json' }
 });
@@ -285,7 +285,6 @@ class OrderService
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
             orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
 
-            const jobInfoPromises = [];
             for (const job of orderObj.jobs)
             {
                 const jobPromises = [];
@@ -298,8 +297,7 @@ class OrderService
                 {
                     contactRecordType,
                     commTypes,
-                    jobTypes,
-                    invoiceLineItems
+                    jobTypes
                 },
                 orderInformation
 
@@ -1018,7 +1016,7 @@ class OrderService
         }));
 
         // sending multiple requests to logic app
-        const apiResponses = await Promise.allSettled(logicAppPayloads.map((item) => logicAppInstance.post(process.env['azure.logicApp.params'], item)));
+        const apiResponses = await Promise.allSettled(logicAppPayloads.map((item) => logicAppInstance.post(process.env.AZURE_LOGICAPP_PARAMS, item)));
 
         const failed = [];
         const goodGuids = [];

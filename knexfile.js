@@ -5,13 +5,13 @@ const { knexSnakeCaseMappers } = require('objection');
 
 const env = process.env.NODE_ENV || process.env.ENV;
 const conConfig = {
-    client: process.env['knex.client'] || process.env.KNEX_CLIENT,
+    client: process.env.KNEX_CLIENT,
     searchPath: ['rcg_tms', 'public', 'salesforce'],
     migrations: {
-        tableName: process.env['knex.migration.table']
+        tableName: process.env.KNEX_MIGRATION_TABLE
     },
     seeds: {
-        directory: process.env['knex.migration.seeds']
+        directory: process.env.KNEX_MIGRATION_SEEDS
     },
     ...knexSnakeCaseMappers({ underscoreBetweenUppercaseLetters: true })
 };
@@ -35,13 +35,13 @@ module.exports = () =>
         case 'test':
             conConfig.connection = {};
             for (const field of [
-                'user',
-                'password',
-                'port',
-                'database'
+                'USER',
+                'PASSWORD',
+                'PORT',
+                'DATABASE'
             ])
 
-                conConfig.connection[field] = process.env[`knex.connection.${field}`];
+                conConfig.connection[field] = process.env[`KNEX_MIGRATION_${field}`];
 
             break;
         case 'development':
