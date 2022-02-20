@@ -79,3 +79,5 @@ temp.*
 /public/openapi/spec.yaml
 
 azure.*.json
+.env*
+!.env.project
