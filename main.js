@@ -3,8 +3,7 @@
 // Important: applicationinsights must be setup and started before you import anything else.
 // There may be resulting telemetry loss if other libraries are imported first.
 const openApiValidator = require('express-openapi-validator');
-
-require('./local.settings');
+require('dotenv').config({ path: setPath() });
 const telemetryClient = require('./src/ErrorHandling/Insights');
 require('./src/HttpControllers/HttpRouteController');
 const express = require('express');
@@ -130,4 +129,21 @@ function registerEventListeners()
 
     for (const filepath of filepaths)
         require(`./src/EventListeners/${filepath}`);
+}
+
+function setPath()
+{
+    switch (process.env.NODE_ENV || 'local')
+    {
+        case 'production':
+        case 'prod':
+            return './envs/prod.env';
+        case 'staging':
+            return './envs/staging.env';
+        case 'development':
+        case 'dev':
+            return './envs/dev.env';
+        default:
+            return './envs/local.env';
+    }
 }

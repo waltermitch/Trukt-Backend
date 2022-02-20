@@ -1,4 +1,3 @@
-require('./local.settings.js');
 const urlParser = require('pg-connection-string').parse;
 const Heroku = require('./src/HerokuPlatformAPI');
 const { knexSnakeCaseMappers } = require('objection');
@@ -33,16 +32,12 @@ module.exports = () =>
             break;
         case 'local':
         case 'test':
-            conConfig.connection = {};
-            for (const field of [
-                'USER',
-                'PASSWORD',
-                'PORT',
-                'DATABASE'
-            ])
-
-                conConfig.connection[field] = process.env[`KNEX_MIGRATION_${field}`];
-
+            conConfig.connection = {
+                user: process.env.KNEX_CONNECTION_USER,
+                password: process.env.KNEX_CONNECTION_PASSWORD,
+                port: process.env.KNEX_CONNECTION_PORT,
+                database: process.env.KNEX_CONNECTION_DATABASE
+            };
             break;
         case 'development':
         case 'dev':

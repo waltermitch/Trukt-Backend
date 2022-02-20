@@ -18,7 +18,7 @@ const OrderJob = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
 const R = require('ramda');
 
-const connectionString = process.env.AZURE_SERVICEBUS_LOADBOARDS_CONNECTIONSTRING;
+const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
 const SYSUSER = process.env.SYSTEM_USER;
 
