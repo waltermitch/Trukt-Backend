@@ -52,6 +52,22 @@ class PubSubService
 
         await PubSub.publishToGroup(jobGuid, data);
     }
+
+    static async publishJobRequests(jobGuid, payload)
+    {
+        if (!jobGuid)
+            throw new Error('jobGuid is required to publish to job updates to pubsub');
+        else if (Object.keys(payload).length === 0)
+            throw new Error('non-empty payload is required to publish to job updates to pubsub, received: ' + JSON.stringify(payload));
+
+        const data =
+        {
+            'object': 'requests',
+            'data': payload
+        };
+
+        await PubSub.publishToGroup(jobGuid, data);
+    }
 }
 
 module.exports = PubSubService;

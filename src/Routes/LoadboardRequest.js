@@ -6,8 +6,8 @@ const prefix = '/loadboard/requests';
 
 router
     .get(`${prefix}/job/:jobGuid(${uuidRegexStr})`, controller.getByJobGuid)
-    .post(`${prefix}/create`, controller.postcreateRequest)
-    .post(`${prefix}/cancel`, controller.postcancelRequest)
+    .post(`${prefix}/create`, controller.createRequestFromIncomingWebHook)
+    .post(`${prefix}/cancel`, controller.cancelRequestFromIncomingWebHook)
     .put(`${prefix}/:requestGuid(${uuidRegexStr})/accept`, controller.acceptLoadRequest)
     .put(`${prefix}/:requestGuid(${uuidRegexStr})/decline`, controller.declineLoadRequest);
 
