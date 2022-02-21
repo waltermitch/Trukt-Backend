@@ -14,8 +14,16 @@ responses:
     content:
       application/json: 
         schema: 
-          type: string
-          example: Payload Canceled
+          type: object
+          properties:
+            status:
+              type: number
+              description: Response status code of requests.
+              example: 200
+            data:
+              type: array
+              items:
+                $ref: ../../../components/schemas/LoadboardRequest.yaml#/mainResponsePayload
 
   404:
     description: Posting doesn't exist
