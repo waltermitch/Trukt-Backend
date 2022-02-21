@@ -119,13 +119,13 @@
         },
         {
             "id": 20,
-            "category": "Order",
+            "category": "order",
             "name": "Order Undeleted",
             "order_filter_label": "Order Undeleted On"
         },
         {
             "id": 21,
-            "category": "Order",
+            "category": "order",
             "name": "Removed Order from",
             "order_filter_label": "Removed On"
         },
@@ -155,7 +155,7 @@
         },
         {
             "id": 26,
-            "category": "Order",
+            "category": "order",
             "name": "Order Uncanceled",
             "order_filter_label": "Order Uncanceled On"
         },
@@ -167,7 +167,7 @@
         },
         {
             "id": 28,
-            "category": "Order",
+            "category": "order",
             "name": "Order Delivered",
             "order_filter_label": "Order Delivered On"
         },
@@ -179,7 +179,7 @@
         },
         {
             "id": 30,
-            "category": "Order",
+            "category": "order",
             "name": "Order Pick Up",
             "order_filter_label": "Order Pick Up On"
         },
@@ -188,6 +188,12 @@
             "category": "job",
             "name": "Job Manually Dispatched",
             "order_filter_label": "Job Manually Dispatched"
+        },
+        {
+            "id": 32,
+            "category": "job",
+            "name": "Job Rolled Back To Pick Up",
+            "order_filter_label": "Job Rolled Back To Pick Up On"
         }
     ]
 }

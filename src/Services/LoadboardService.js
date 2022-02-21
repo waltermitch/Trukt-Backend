@@ -376,7 +376,7 @@ class LoadboardService
             // since there is no loadboard to dispatch to, we can write the status log right away
             if (!lbPost)
             {
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,
                     activityId: 10,
@@ -501,7 +501,7 @@ class LoadboardService
             if (!dispatch.loadboardPostGuid)
             {
                 // updating activity logger
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: dispatch.job.orderGuid,
                     userGuid: currentUser,
                     activityId: 12,
@@ -610,7 +610,7 @@ class LoadboardService
             await trx.commit();
             dispatch.status = OrderJob.STATUS.DISPATCHED;
 
-            await ActivityManagerService.createAvtivityLog({
+            await ActivityManagerService.createActivityLog({
                 orderGuid: job.orderGuid,
                 userGuid: currentUser,
                 activityId: 11,
@@ -662,23 +662,19 @@ class LoadboardService
         });
 
         if (!job)
-            throw new Error('Job not found');
+            throw new HttpError(404, 'Job not found');
 
         if (job.isOnHold)
-        {
-            throw new Error('Cannot get posting data for job that is on hold');
-        }
+            throw new HttpError(400, 'Cannot get posting data for job that is on hold');
 
         await this.createPostRecords(job, posts, currentUser);
 
         if (job.order.invoices.length != 0)
             this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
 
-        // delete job.order.invoices;
         if (job.bills.length != 0)
             this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
 
-        // delete job.bills;
         const stops = await this.getFirstAndLastStops(job.stops);
         Object.assign(job, stops);
 
@@ -805,14 +801,14 @@ class LoadboardService
         const errors = [];
 
         if (posts.length === 0)
-            errors.push(new Error(`a loadboard is required, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
+            errors.push(new HttpError(400, `a loadboard is required, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
 
         for (const post of posts)
         {
             const lbName = post.loadboard;
             if (!(lbName in dbLoadboardNames))
 
-                throw new Error(`the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
+                throw new HttpError(404, `the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
 
             if (dbLoadboardNames[lbName].requiresOptions && (action == 'post' || action == 'create'))
             {
@@ -873,7 +869,7 @@ class LoadboardService
     static registerLoadboardStatusManager(loadboardPosts, orderGuid, userGuid, activityId, jobGuid)
     {
         const loadboardNames = LoadboardService.getLoadboardNames(loadboardPosts);
-        return ActivityManagerService.createAvtivityLog({
+        return ActivityManagerService.createActivityLog({
             orderGuid,
             userGuid,
             activityId,

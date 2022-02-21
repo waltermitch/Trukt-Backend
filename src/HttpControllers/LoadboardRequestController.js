@@ -1,4 +1,5 @@
 const LoadboardRequestService = require('../Services/LoadboardRequestService');
+const LoadboardRequest = require('../Models/LoadboardRequest');
 
 class LoadboardRequestController
 {
@@ -17,14 +18,21 @@ class LoadboardRequestController
         }
     }
 
-    static async postcreateRequest(req, res, next)
+    static async createRequestFromIncomingWebHook(req, res, next)
     {
         try
         {
-            const result = await LoadboardRequestService.createRequest(req?.body, req.session.userGuid);
+            const externalPost = { guid: req.body.extraExternalData.externalOrderID };
+            const carrier = {
+                guid: req.body.extraExternalData.carrierInfo.guid,
+                usDot: req.body.carrierIdentifier,
+                name: req.body.extraExternalData.carrierInfo.name
+            };
+            const requestModel = LoadboardRequest.fromJson(req.body);
+            const result = await LoadboardRequestService.createRequestfromWebhook(requestModel, externalPost, carrier, req.session.userGuid);
 
             res.status(200);
-            res.json(result);
+            res.json({ status: 200, data: result });
         }
         catch (err)
         {
@@ -40,14 +48,21 @@ class LoadboardRequestController
         }
     }
 
-    static async postcancelRequest(req, res, next)
+    static async cancelRequestFromIncomingWebHook(req, res, next)
     {
         try
         {
-            await LoadboardRequestService.cancelRequests(req?.body, req.session.userGuid);
+            const externalPost = { guid: req.body?.extraExternalData?.externalOrderID };
+            const carrier = {
+                guid: req.body.extraExternalData.carrierInfo.guid,
+                usDot: req.body.carrierIdentifier,
+                name: req.body.extraExternalData.carrierInfo.name
+            };
+            const requestModel = LoadboardRequest.fromJson(req.body);
+            const result = await LoadboardRequestService.cancelRequestfromWebhook(requestModel, externalPost, carrier, req.session.userGuid);
 
             res.status(200);
-            res.json('Payload Canceled');
+            res.json({ status: 200, data: result });
         }
         catch (err)
         {

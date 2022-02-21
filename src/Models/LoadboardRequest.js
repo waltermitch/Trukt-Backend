@@ -116,9 +116,19 @@ class LoadboardRequest extends BaseModel
         this.isCanceled = true;
         this.isSynced = false;
         this.isDeleted = false;
-
+        this.declineReason = LoadboardRequest.DECLINE_REASON.CARRIER_CANCEL;
     }
 
+    setNew()
+    {
+        this.status = 'new';
+        this.isValid = true;
+        this.isCanceled = false;
+        this.isAccepted = false;
+        this.isDeclined = false;
+        this.isSynced = false;
+        this.isDeleted = false;
+    }
 }
 
 Object.assign(LoadboardRequest.prototype, RecordAuthorMixin);

@@ -458,7 +458,7 @@ class Loadboard
                     }
                 }
 
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: orderRec.guid,
                     userGuid: process.env.SYSTEM_USER,
                     activityId: 13,

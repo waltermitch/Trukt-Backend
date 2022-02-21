@@ -291,13 +291,13 @@ class OrderJob extends BaseModel
 
     static customSort(sortField = 'number')
     {
-        const SFAccount = require('./SFAccount');
-        const Order = require('./Order');
-        const Terminal = require('./Terminal');
-        const OrderStop = require('./OrderStop');
         const OrderStopLink = require('./OrderStopLink');
-        const User = require('./User');
+        const SFAccount = require('./SFAccount');
+        const OrderStop = require('./OrderStop');
         const SFContact = require('./SFContact');
+        const Terminal = require('./Terminal');
+        const Order = require('./Order');
+        const User = require('./User');
 
         switch (sortField)
         {
