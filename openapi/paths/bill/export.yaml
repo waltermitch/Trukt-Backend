@@ -18,7 +18,7 @@ responses:
         schema:
           $ref: ../../components/schemas/Finances.yaml#/Bill
   404:
-    description: Order Not Found
+    description: No Orders Found
     content:
       application/json: {}
   400:
