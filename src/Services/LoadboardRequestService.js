@@ -95,7 +95,7 @@ class LoadboardRequestService
                 else
                 {
                     activities.push(
-                        ActivityManagerService.createAvtivityLog({
+                        ActivityManagerService.createActivityLog({
                             orderGuid: job.orderGuid,
                             userGuid: currentUser,
                             jobGuid: job.guid,
@@ -121,7 +121,7 @@ class LoadboardRequestService
         const response = await requestModel.$query().insertGraph();
 
         // update activities according to incoming request createBy
-        await ActivityManagerService.createAvtivityLog({
+        await ActivityManagerService.createActivityLog({
             orderGuid: job.orderGuid,
             userGuid: currentUser,
             jobGuid: job.guid,
@@ -194,7 +194,7 @@ class LoadboardRequestService
                 .then(async result =>
                 {
                     await Promise.all([
-                        ActivityManagerService.createAvtivityLog({
+                        ActivityManagerService.createActivityLog({
                             orderGuid: job.orderGuid,
                             userGuid: currentUser,
                             jobGuid: job.guid,
