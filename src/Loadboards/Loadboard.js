@@ -482,6 +482,23 @@ class Loadboard
             }
         }
     }
+
+    static async handleOrderJobCanceled(payloadMetadata)
+    {
+        const externalGuid = payloadMetadata.externalGuid;
+
+        const loadboardPost = externalGuid && await LoadboardPost.query()
+            .findOne('externalGuid', externalGuid);
+
+        if (loadboardPost)
+        {
+            loadboardPost.setToRemoved();
+            await LoadboardPost.query().patch(loadboardPost).findById(loadboardPost.guid);
+            return loadboardPost.jobGuid;
+        }
+
+        return;
+    }
 }
 
 module.exports = Loadboard;
