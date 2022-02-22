@@ -227,6 +227,26 @@ class LoadboardController
             }
         }
     }
+
+    static async declineLoadRequest(req, res, next)
+    {
+        try
+        {
+            const reason = req?.body.reason;
+            const requestGuid = req.params?.requestGuid;
+            if (!reason)
+            {
+                // TODO: Update error with proper ErrorHandler
+                throw new Error('Unable to decline Request, missing reason');
+            }
+            await LoadboardService.declineRequestByGuid(requestGuid, reason, req.session.userGuid);
+            res.status(204).send();
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = LoadboardController;

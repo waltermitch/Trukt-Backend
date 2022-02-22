@@ -20,6 +20,7 @@ const R = require('ramda');
 const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 const telemetry = require('../ErrorHandling/Insights');
 const PubSubService = require('./PubSubService');
+const LoadboardsApi = require('../Loadboards/LoadboardsApi');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -1238,6 +1239,57 @@ class LoadboardService
         });
         const response = await Promise.all(promiseArray);
         return response;
+    }
+
+    /**
+     * Method declines single request of the payload.
+     * @param {uuid} requestGuid
+     * @param {uuid} reason
+     * @param {uuid} currentUser
+     * @returns
+     */
+    static async declineRequestByGuid(requestGuid, reason, currentUser)
+    {
+        const queryRequest = await LoadboardRequest
+            .query()
+            .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
+            .leftJoinRelated('posting.job')
+            .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
+
+        // to pass it on to the event
+        const jobGuid = queryRequest.jobGuid;
+        const orderGuid = queryRequest.orderGuid;
+
+        // remove fields that do not exist to update table correctly
+        delete queryRequest.jobGuid;
+        delete queryRequest.orderGuid;
+
+        queryRequest.setDeclined(reason);
+        queryRequest.setUpdatedBy(currentUser);
+
+        await LoadboardsApi.sendRequest(queryRequest).catch((error) =>
+        {
+            // TODO: update with proper errorhanlders
+            throw new Error(`Failed to decline request. Reason: ${error}`);
+        });
+
+        await queryRequest.$query().patch();
+
+        await ActivityManagerService.createActivityLog({
+            orderGuid: orderGuid,
+            userGuid: currentUser,
+            jobGuid: jobGuid,
+            activityId: 7,
+            extraAnnotations: {
+                loadboard: queryRequest.loadboard,
+                carrier: {
+                    guid: queryRequest.extraExternalData.guid,
+                    name: queryRequest.extraExternalData.name
+                }
+            }
+        });
+
+        return;
     }
 }
 
