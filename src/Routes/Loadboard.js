@@ -6,6 +6,7 @@ const prefix = '/loadboard';
 
 router
     .get(`${prefix}/:jobId(${uuidRegexStr})`, controller.getJobPostings)
+    .get(`${prefix}/requests/job/:jobGuid(${uuidRegexStr})`, controller.getRequestsByJobGuid)
     .post(`${prefix}/:jobId(${uuidRegexStr})`, controller.createJobPost)
     .put(`${prefix}/:jobId(${uuidRegexStr})`, controller.postJob)
     .delete(`${prefix}/:jobId(${uuidRegexStr})`, controller.unpostJob)

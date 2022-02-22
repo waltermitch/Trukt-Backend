@@ -1016,6 +1016,19 @@ class LoadboardService
         }
         return dispatches;
     }
+
+    /**
+     * Method queries all requests that belong to a job.
+     * @param {uuid} jobGuid
+     * @returns List of requests.
+     */
+    static async getRequestsbyJobID(jobGuid)
+    {
+        const requests = await LoadboardRequest.query().leftJoinRelated('posting').where('posting.jobGuid', jobGuid);
+
+        return requests;
+    }
+
 }
 
 module.exports = LoadboardService;

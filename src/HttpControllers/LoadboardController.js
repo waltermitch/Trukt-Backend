@@ -150,6 +150,23 @@ class LoadboardController
             next(err);
         }
     }
+
+    // TODO: add requests into here.
+    static async getRequestsByJobGuid(req, res)
+    {
+        const result = await LoadboardService.getRequestsbyJobID(req?.params?.jobGuid);
+
+        if (result)
+        {
+            res.status(200);
+            res.json(result);
+        }
+        else
+        {
+            res.status(404).send();
+        }
+    }
+
 }
 
 module.exports = LoadboardController;
