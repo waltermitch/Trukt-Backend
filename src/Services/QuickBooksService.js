@@ -102,7 +102,7 @@ class QuickBooksService
 
         for (const bill of bills)
         {
-            if (bill?.externalSourceData?.quickbooks.bill)
+            if (bill?.externalSourceData?.quickbooks?.bill)
             {
                 results.push({
                     error: `Bill ${bill.guid} already billed`,
