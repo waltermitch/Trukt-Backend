@@ -1,5 +1,6 @@
 const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LoadboardService = require('../Services/LoadboardService');
+const LoadboardRequest = require('../Models/LoadboardRequest');
 
 // this is imported here because the file needs to be imported somewhere
 // in order for it to be able to listen to incoming events from service bus
@@ -167,6 +168,65 @@ class LoadboardController
         }
     }
 
+    static async createRequestFromIncomingWebHook(req, res, next)
+    {
+        try
+        {
+            const externalPost = { guid: req.body.extraExternalData.externalOrderID };
+            const carrier = {
+                guid: req.body.extraExternalData.carrierInfo.guid,
+                usDot: req.body.carrierIdentifier,
+                name: req.body.extraExternalData.carrierInfo.name
+            };
+            const requestModel = LoadboardRequest.fromJson(req.body);
+            const result = await LoadboardService.createRequestfromWebhook(requestModel, externalPost, carrier, req.session.userGuid);
+
+            res.status(200);
+            res.json({ status: 200, data: result });
+        }
+        catch (err)
+        {
+            if (err.message == 'Posting Doesn\'t Exist')
+            {
+                res.status(404);
+                res.json(err.message);
+            }
+            else
+            {
+                next(err);
+            }
+        }
+    }
+
+    static async cancelRequestFromIncomingWebHook(req, res, next)
+    {
+        try
+        {
+            const externalPost = { guid: req.body?.extraExternalData?.externalOrderID };
+            const carrier = {
+                guid: req.body.extraExternalData.carrierInfo.guid,
+                usDot: req.body.carrierIdentifier,
+                name: req.body.extraExternalData.carrierInfo.name
+            };
+            const requestModel = LoadboardRequest.fromJson(req.body);
+            const result = await LoadboardService.cancelRequestfromWebhook(requestModel, externalPost, carrier, req.session.userGuid);
+
+            res.status(200);
+            res.json({ status: 200, data: result });
+        }
+        catch (err)
+        {
+            if (err.message == 'Posting Doesn\'t Exist')
+            {
+                res.status(404);
+                res.json(err.message);
+            }
+            else
+            {
+                next(err);
+            }
+        }
+    }
 }
 
 module.exports = LoadboardController;

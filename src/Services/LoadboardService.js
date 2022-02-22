@@ -17,6 +17,9 @@ const BillService = require('./BIllService');
 const OrderJob = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
 const R = require('ramda');
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
+const telemetry = require('../ErrorHandling/Insights');
+const PubSubService = require('./PubSubService');
 
 const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
 const queueName = 'loadboard_posts_outgoing';
@@ -1029,6 +1032,213 @@ class LoadboardService
         return requests;
     }
 
+    /**
+     * Method is used to create request in our system from incoming webhooks.
+     * @param {Model} requestModel
+     * @param {Object} externalPost
+     * @param {Object} carrier
+     * @param {string} currentUser
+     * @returns newly created request in out system.
+     */
+    static async createRequestfromWebhook(requestModel, externalPost, carrier, currentUser)
+    {
+        // query our database for requests from incoming payload
+        const lbPosting = await LoadboardPost.query().withGraphJoined('[job, requests(CarrierSpecific)]')
+            .modifiers({
+                CarrierSpecific: (request) =>
+                {
+                    request.where({
+                        isValid: true,
+                        carrierIdentifier: carrier.usDot
+                    });
+                }
+            })
+            .findOne({
+                'rcgTms.loadboardPosts.externalGuid': externalPost.guid
+            });
+
+        if (!lbPosting)
+        {
+            throw new Error(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+
+            // TODO: update this with proper ErrorHandlers.
+            // throw NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+        }
+
+        const job = lbPosting.job;
+
+        const existingRequests = lbPosting.requests;
+
+        // if requrest by carrier exist update it to invalid
+        if (existingRequests.length > 0)
+        {
+            const updates = existingRequests.map(req => { req.setCanceled(); req.setUpdatedBy(currentUser); return req.$query().patch(); });
+            const results = await Promise.allSettled(updates);
+            const activities = [];
+            for (const res of results)
+            {
+                if (res.status == 'rejected')
+                {
+                    telemetry.trackException({
+                        exception: res.reason,
+                        properties:
+                        {
+                            orderGuid: job.orderGuid,
+                            jobGuid: job.guid,
+                            requestExternalGuid: requestModel.externalPostGuid,
+                            extraAnnotations: {
+                                loadboard: lbPosting.loadboard,
+                                carrier: {
+                                    guid: carrier.guid,
+                                    name: carrier.name
+                                }
+                            }
+                        },
+                        severity: SeverityLevel.Error
+                    });
+                }
+                else
+                {
+                    activities.push(
+                        ActivityManagerService.createActivityLog({
+                            orderGuid: job.orderGuid,
+                            userGuid: currentUser,
+                            jobGuid: job.guid,
+                            activityId: 5,
+                            extraAnnotations: {
+                                loadboard: lbPosting.loadboard,
+                                carrier: {
+                                    guid: carrier.guid,
+                                    name: carrier.name
+                                }
+                            }
+                        })
+                    );
+                }
+            }
+            await Promise.all(activities);
+        }
+
+        requestModel.posting = { '#dbRef': lbPosting.guid };
+        requestModel.setNew();
+        requestModel.setCreatedBy(currentUser);
+
+        const response = await requestModel.$query().insertGraph();
+
+        // update activities according to incoming request createBy
+        await ActivityManagerService.createActivityLog({
+            orderGuid: job.orderGuid,
+            userGuid: currentUser,
+            jobGuid: job.guid,
+            activityId: 4,
+            extraAnnotations: {
+                loadboard: lbPosting.loadboard,
+                carrier: {
+                    guid: carrier.guid,
+                    name: carrier.name
+                }
+            }
+        });
+
+        // push to pushsub
+        PubSubService.publishJobRequests(job.guid, response);
+
+        return response;
+    }
+
+    /**
+     * Method is used to cancel request in our system from incoming webhooks.
+     * @param {Model} requestModel
+     * @param {Object} externalPost
+     * @param {Object} carrier
+     * @param {string} currentUser
+     * @returns
+     */
+    static async cancelRequestfromWebhook(requestModel, externalPost, carrier, currentUser)
+    {
+        // query our database for requests from incoming payload
+        const lbPosting = await LoadboardPost.query().withGraphJoined('[job, requests(CarrierSpecific)]')
+            .modifiers({
+                CarrierSpecific: (request) =>
+                {
+                    request.where({
+                        isValid: true,
+                        carrierIdentifier: carrier.usDot
+                    });
+                }
+            })
+            .findOne({
+                'rcgTms.loadboardPosts.externalGuid': externalPost.guid
+            });
+
+        if (!lbPosting)
+        {
+            throw new Error(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+
+            // TODO: update this with proper ErrorHandlers.
+            // throw NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+        }
+
+        const job = lbPosting.job;
+
+        const existingRequests = lbPosting.requests;
+
+        if (existingRequests.length === 0)
+        {
+            throw new Error(`The request doesn't exist for carrier ${carrier.name}`);
+
+            // TODO: update this with proper ErrorHandlers.
+            // throw NotFoundError(`The request doesn't exist for carrier ${carrier.usDot}`);
+        }
+
+        const promiseArray = await existingRequests.map(request =>
+        {
+            request.setCanceled();
+            request.setUpdatedBy(currentUser);
+            return request.$query().updateAndFetch()
+                .then(async result =>
+                {
+                    await Promise.all([
+                        ActivityManagerService.createActivityLog({
+                            orderGuid: job.orderGuid,
+                            userGuid: currentUser,
+                            jobGuid: job.guid,
+                            activityId: 5,
+                            extraAnnotations: {
+                                loadboard: lbPosting.loadboard,
+                                carrier: {
+                                    guid: carrier.guid,
+                                    name: carrier.name
+                                }
+                            }
+                        }),
+                        PubSubService.publishJobRequests(job.guid, result)
+                    ]);
+                    return result;
+                }).catch(error =>
+                {
+                    telemetry.trackException({
+                        exception: error,
+                        properties:
+                        {
+                            orderGuid: job.orderGuid,
+                            jobGuid: job.guid,
+                            requestExternalGuid: requestModel.externalPostGuid,
+                            extraAnnotations: {
+                                loadboard: lbPosting.loadboard,
+                                carrier: {
+                                    guid: carrier.guid,
+                                    name: carrier.name
+                                }
+                            }
+                        }
+                    });
+                    console.log(error);
+                });
+        });
+        const response = await Promise.all(promiseArray);
+        return response;
+    }
 }
 
 module.exports = LoadboardService;

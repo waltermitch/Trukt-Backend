@@ -8,11 +8,14 @@ router
     .get(`${prefix}/:jobId(${uuidRegexStr})`, controller.getJobPostings)
     .get(`${prefix}/requests/job/:jobGuid(${uuidRegexStr})`, controller.getRequestsByJobGuid)
     .post(`${prefix}/:jobId(${uuidRegexStr})`, controller.createJobPost)
-    .put(`${prefix}/:jobId(${uuidRegexStr})`, controller.postJob)
-    .delete(`${prefix}/:jobId(${uuidRegexStr})`, controller.unpostJob)
+    .post(`${prefix}/requests/create`, controller.createRequestFromIncomingWebHook)
+    .post(`${prefix}/requests/cancel`, controller.cancelRequestFromIncomingWebHook)
     .post(`${prefix}/:jobId(${uuidRegexStr})/dispatch`, controller.dispatchJob)
+    .post(`${prefix}/posting/booked`, controller.postingBooked)
+    .put(`${prefix}/requests/:requestGuid(${uuidRegexStr})/decline`, controller.declineLoadRequest)
+    .put(`${prefix}/:jobId(${uuidRegexStr})`, controller.postJob)
     .put(`${prefix}/:jobId(${uuidRegexStr})/dispatch`, controller.cancelDispatch)
     .put(`${prefix}/:jobId(${uuidRegexStr})/accept`, controller.acceptDispatch)
-    .post(`${prefix}/posting/booked`, controller.postingBooked);
+    .delete(`${prefix}/:jobId(${uuidRegexStr})`, controller.unpostJob);
 
 module.exports = router;
