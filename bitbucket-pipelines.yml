@@ -16,7 +16,7 @@ definitions:
         services:
           - mongo
         script:
-          - npm run decrypt -- ./envs/pipeline.enc ./envs/pipeline.env
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm test
     - step: &lint-test
@@ -31,7 +31,7 @@ definitions:
         caches:
           - node
         script:
-          - npm run decrypt -- ./envs/pipeline.enc ./envs/pipeline.env
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm run test:unit
     - step: &integration-db-test
@@ -41,7 +41,7 @@ definitions:
         caches:
           - node
         script:
-          - npm run decrypt -- ./envs/pipeline.enc ./envs/pipeline.env
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm install --only=dev
           - node ./tools/migrator.js init
@@ -57,7 +57,7 @@ definitions:
         caches:
           - node
         script:
-          - npm run decrypt -- ./envs/pipeline.enc ./envs/pipeline.env
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm install --only=dev
           - node ./tools/migrator.js init
@@ -73,7 +73,7 @@ definitions:
         script:
           - cd $BITBUCKET_CLONE_DIR && npm install
           - npm install -g knex
-          - npm run decrypt -- ./envs/pipeline.enc ./envs/pipeline.env
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
           - node ./tools/migrator.js seed systemData --all
@@ -112,7 +112,7 @@ definitions:
         script:
           - cd $BITBUCKET_CLONE_DIR && npm install
           - npm install -g knex
-          - npm run decrypt -- "./envs/$DOT_ENV_FILENAME.enc" "./envs/$DOT_ENV_FILENAME.env"
+          - npm run decrypt -- './envs/$DOT_ENV_FILENAME.enc' './envs/$DOT_ENV_FILENAME.env'
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
           - node ./tools/migrator.js seed systemData --all
@@ -138,7 +138,7 @@ definitions:
         script:
           - cd $BITBUCKET_CLONE_DIR && npm install
           - npm install -g knex
-          - npm run decrypt -- ./envs/prod.enc ./envs/prod.env
+          - npm run decrypt -- './envs/prod.enc' './envs/prod.env'
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
           - node ./tools/migrator.js seed systemData --all
