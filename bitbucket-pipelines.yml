@@ -157,6 +157,7 @@ definitions:
               #DO NOT PUT SLOT IN HERE BECAUSE PIPELINES WILL MESS UP
         artifacts:
           - '*.zip'
+
 pipelines:
   pull-requests:
     '**':
