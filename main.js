@@ -1,20 +1,23 @@
 /* eslint-disable no-console */
 
+// load environment variables
+require('./envs/index').load();
+
 // Important: applicationinsights must be setup and started before you import anything else.
 // There may be resulting telemetry loss if other libraries are imported first.
-const openApiValidator = require('express-openapi-validator');
-require('dotenv').config({ path: setPath() });
-const telemetryClient = require('./src/ErrorHandling/Insights');
-require('./src/HttpControllers/HttpRouteController');
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
+require('./src/ErrorHandling/Insights');
+
 const HttpErrorHandler = require('./src/ErrorHandling/HttpErrorHandler');
+const openApiValidator = require('express-openapi-validator');
+require('./src/EventManager/StatusCacheManager').startCache();
 const PGListener = require('./src/EventManager/PGListener');
+require('./src/HttpControllers/HttpRouteController');
 const Auth = require('./src/Authorization/Auth');
 const Mongo = require('./src/Mongo');
-require('./src/EventManager/StatusCacheManager').startCache();
+const express = require('express');
 require('./src/CronJobs/Manager');
+const cors = require('cors');
+const fs = require('fs');
 
 run().catch((err) =>
 {
@@ -70,13 +73,13 @@ for (const filepath of filepaths)
     }
 }
 
-app.all('*', (req, res) => { res.status(404).send('this endpoint does not exist.'); });
+app.all('*', (req, res) => { res.status(404).send('This Endpoint Does Not Exist.'); });
 app.use(HttpErrorHandler);
 
 app.listen(process.env.PORT, async (err) =>
 {
-    if (err) console.log('there is an error lol');
-    console.log('listening on port ', process.env.PORT);
+    if (err) console.log('there is an error lol 🍆');
+    console.log('Server Listening On Port ', process.env.PORT);
 });
 
 /**
@@ -129,21 +132,4 @@ function registerEventListeners()
 
     for (const filepath of filepaths)
         require(`./src/EventListeners/${filepath}`);
-}
-
-function setPath()
-{
-    switch (process.env.NODE_ENV || 'local')
-    {
-        case 'production':
-        case 'prod':
-            return './envs/prod.env';
-        case 'staging':
-            return './envs/staging.env';
-        case 'development':
-        case 'dev':
-            return './envs/dev.env';
-        default:
-            return './envs/local.env';
-    }
 }
