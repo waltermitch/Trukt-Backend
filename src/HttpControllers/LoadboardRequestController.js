@@ -1,20 +1,26 @@
 const LoadboardRequestService = require('../Services/LoadboardRequestService');
 const LoadboardRequest = require('../Models/LoadboardRequest');
+const { NotFoundError, MissingDataError } = require('../ErrorHandling/Exceptions');
 
 class LoadboardRequestController
 {
-    static async getByJobGuid(req, res)
+    static async getByJobGuid(req, res, next)
     {
-        const result = await LoadboardRequestService.getbyJobID(req?.params?.jobGuid);
-
-        if (result)
+        try
         {
-            res.status(200);
-            res.json(result);
+            const result = await LoadboardRequestService.getbyJobID(req?.params?.jobGuid);
+    
+            if (result.length)
+            {
+                res.status(200);
+                res.json(result);
+            }
+            else
+                throw new NotFoundError('');
         }
-        else
+        catch (error)
         {
-            res.status(404).send();
+            next(error);
         }
     }
 
@@ -36,15 +42,7 @@ class LoadboardRequestController
         }
         catch (err)
         {
-            if (err.message == 'Posting Doesn\'t Exist')
-            {
-                res.status(404);
-                res.json(err.message);
-            }
-            else
-            {
-                next(err);
-            }
+            next(err);
         }
     }
 
@@ -66,15 +64,7 @@ class LoadboardRequestController
         }
         catch (err)
         {
-            if (err.message == 'Posting Doesn\'t Exist')
-            {
-                res.status(404);
-                res.json(err.message);
-            }
-            else
-            {
-                next(err);
-            }
+            next(err);
         }
     }
 
@@ -90,10 +80,7 @@ class LoadboardRequestController
                 res.json(result);
             }
             else
-            {
-                res.status(400);
-                res.send('Unable to accept Request or no Guid');
-            }
+                throw new MissingDataError('Unable to accept Request, missing requestGuid');
         }
         catch (error)
         {
@@ -111,10 +98,7 @@ class LoadboardRequestController
                 res.status(204).send();
             }
             else
-            {
-                res.status(400);
-                res.send('Unable to decline Request, missing reason');
-            }
+                throw new MissingDataError('Unable to decline Request, missing requestGuid');
         }
         catch (error)
         {

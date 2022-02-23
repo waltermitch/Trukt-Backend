@@ -211,7 +211,13 @@ function formatErrorMessageStructure(error, isCollection = false)
     }
     else
     {
-        const errorMessage = error?.message ?? JSON.stringify(error);
+        let errorMessage = '';
+        if (error?.message)
+            errorMessage = error.message;
+        else if (typeof error === 'string')
+            errorMessage = error;
+        else
+            errorMessage = JSON.stringify(error);
 
         if (!isCollection)
             telemetryClient.trackException({

@@ -5,6 +5,7 @@ const SFAccount = require('../Models/SFAccount');
 const axios = require('axios');
 const https = require('https');
 const ActivityManagerService = require('./ActivityManagerService');
+const { NotFoundError } = require('../ErrorHandling/Exceptions');
 const PubSubService = require('./PubSubService');
 const telemetry = require('../ErrorHandling/Insights');
 const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
@@ -54,10 +55,7 @@ class LoadboardRequestService
 
         if (!lbPosting)
         {
-            throw new Error(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
-
-            // TODO: update this with proper ErrorHandlers.
-            // throw NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+            throw new NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
         }
 
         const job = lbPosting.job;
@@ -168,10 +166,7 @@ class LoadboardRequestService
 
         if (!lbPosting)
         {
-            throw new Error(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
-
-            // TODO: update this with proper ErrorHandlers.
-            // throw NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+            throw new NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
         }
 
         const job = lbPosting.job;
@@ -180,10 +175,7 @@ class LoadboardRequestService
 
         if (existingRequests.length === 0)
         {
-            throw new Error(`The request doesn't exist for carrier ${carrier.name}`);
-
-            // TODO: update this with proper ErrorHandlers.
-            // throw NotFoundError(`The request doesn't exist for carrier ${carrier.usDot}`);
+            throw new NotFoundError(`The request doesn't exist for carrier ${carrier.usDot}`);
         }
 
         const promiseArray = await existingRequests.map(request =>

@@ -10,18 +10,21 @@ class BulkException
 
     /**
      *
-     * @param {string} key - Guid to identify the error collection
-     * @param {ExceptionCollection | unknown} error - Error to be added to the collection
+     * @param {string} [key] - Guid to identify the error collection
+     * @param {ExceptionCollection | unknown} [error] - Error to be added to the collection
      */
-    constructor(key, error)
+    constructor(key = undefined, error = undefined)
     {
         this.#errors = {};
-        this.addError(key, error);
+        
+        if (key && error)
+            this.addError(key, error);
     }
 
     /**
      * @param {string} key - Guid to identify the error collection
      * @param {ExceptionCollection | unknown} error - Error to be added to the collection
+     * @returns {BulkException}
      */
     addError(key, error)
     {
@@ -37,11 +40,14 @@ class BulkException
         {
             this.#errors[key] = new ExceptionCollection(error);
         }
+        
+        return this;
     }
     
     /**
      * @param {string} key
      * @param {number} status
+     * @returns {BulkException}
      */
     setErrorCollectionStatus(key, status)
     {
@@ -54,13 +60,23 @@ class BulkException
             this.#errors[key] = new ExceptionCollection();
             this.#errors[key].setStatus(status);
         }
+        
+        return this;
     }
 
-    toJSON()
+    /**
+     * @param {string} [guidKey] - if not provided, all errors will be returned
+     * @returns {Record<string, unknown}
+     */
+    toJSON(guidKey = undefined)
     {
+        if (guidKey)
+            return this.#errors[guidKey].toJSON();
+
         const errors = Object.keys(this.#errors).reduce((errorsAcc, key) =>
         {
-            return { ...errorsAcc, [key]: this.#errors[key].toJSON() };
+            errorsAcc[key] = this.#errors[key].toJSON();
+            return errorsAcc;
         }, {});
 
         return errors;
@@ -71,8 +87,18 @@ class BulkException
      */
     throwErrorsIfExist()
     {
-        if (Object.keys(this.#errors).length > 0)
+        if (this.doErrorsExist())
             throw this;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    doErrorsExist()
+    {
+        const exceptionCollections = Object.values(this.#errors);
+
+        return exceptionCollections.some((collection) => collection.doErrorsExist());
     }
 }
 

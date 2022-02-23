@@ -5,14 +5,14 @@ const router = require('express').Router();
 const prefix = '/job';
 
 router
-    .get(`${prefix}/:jobGuid(${uuidRegexStr})/notes`, (req, res) => http(req, res, controller.getJobNotes))
+    .get(`${prefix}/:jobGuid(${uuidRegexStr})/notes`, controller.getJobNotes)
     .get(`${prefix}/statuses`, controller.getAllStatusCount)
-    .get(`${prefix}/:jobGuid(${uuidRegexStr})/dispatch/carrier`, (req, res) => http(req, res, controller.getCarrier))
+    .get(`${prefix}/:jobGuid(${uuidRegexStr})/dispatch/carrier`, controller.getCarrier)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/stop/:stopGuid(${uuidRegexStr})/status/:status`, controller.updateStopStatus)
     .post(`${prefix}/:jobGuid(${uuidRegexStr})/hold`, controller.addHold)
     .delete(`${prefix}/:jobGuid(${uuidRegexStr})/hold`, controller.removeHold)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/ready`, controller.setJobToReadySingle)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/complete`, (req, res) => http(req, res, controller.markJobAsComplete))
+    .put(`${prefix}/:jobGuid(${uuidRegexStr})/complete`, controller.markJobAsComplete)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/uncomplete`, (req, res) => http(req, res, controller.markJobAsUncomplete))
     .delete(`${prefix}/:jobGuid(${uuidRegexStr})`, controller.deleteJob)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/undelete`, controller.undeleteJob)

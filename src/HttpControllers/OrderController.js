@@ -1,14 +1,15 @@
 const OrderService = require('../Services/OrderService');
 const NotesService = require('../Services/NotesService');
 const emitter = require('../EventListeners/index');
+const { NotFoundError, MissingDataError } = require('../ErrorHandling/Exceptions');
 
 class OrderController
 {
     static async getOrder(req, res, next)
     {
-        if (req.params.orderGuid)
+        try
         {
-            try
+            if (req.params.orderGuid)
             {
                 const orderPayload = await OrderService.getOrderByGuid(req.params.orderGuid);
 
@@ -18,20 +19,14 @@ class OrderController
                     res.json(orderPayload);
                 }
                 else
-                {
-                    res.status(404);
-                    res.send();
-                }
+                    throw new NotFoundError('Order not found');
             }
-            catch (err)
-            {
-                next(err);
-            }
+            else
+                throw new MissingDataError('Order guid is missing');
         }
-        else
+        catch (err)
         {
-            res.status(400);
-            res.send();
+            next(err);
         }
     }
 
@@ -162,10 +157,7 @@ class OrderController
         }
         catch (error)
         {
-            next({
-                status: 500,
-                data: { message: error?.message || 'Internal server error' }
-            });
+            next(error);
         }
     }
 
@@ -177,16 +169,13 @@ class OrderController
             const result = await NotesService.getOrderNotes(req.params.orderGuid);
 
             if (!result)
-                res.status(404).json({ 'error': 'Order Not Found' });
+                throw new NotFoundError('Order not found');
             else
                 res.status(200).json(result);
         }
         catch (error)
         {
-            next({
-                status: 500,
-                data: { message: error?.message || 'Internal server error' }
-            });
+            next(error);
         }
     }
 
@@ -198,16 +187,13 @@ class OrderController
             const result = await NotesService.getAllNotes(req.params.orderGuid);
 
             if (!result)
-                res.status(404).json({ 'error': 'Order Not Found' });
+                throw new NotFoundError('Order not found');
             else
                 res.status(200).json(result);
         }
         catch (error)
         {
-            next({
-                status: 500,
-                data: { message: error?.message || 'Internal server error' }
-            });
+            next(error);
         }
     }
 
@@ -224,23 +210,25 @@ class OrderController
         }
         catch (error)
         {
-            let status;
-            if (error?.message == 'No order found')
-                status = 404;
-
-            next({
-                status,
-                data: { message: error?.message || 'Internal server error' }
-            });
+            next(error);
         }
     }
 
-    static async putOrderOnHold(req, res)
+    static async putOrderOnHold(req, res, next)
     {
-        const result = await OrderService.markOrderOnHold(req.params.orderGuid, req.session.userGuid);
-
-        if (result)
-            res.status(200).json(result);
+        try
+        {
+            const result = await OrderService.markOrderOnHold(req.params.orderGuid, req.session.userGuid);
+    
+            if (result)
+                res.status(200).json(result);
+            else
+                throw new NotFoundError('Order not found');
+        }
+        catch (error)
+        {
+            next(error);
+        }
     }
 
     static async removeHoldOnOrder(req, res, next)

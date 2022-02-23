@@ -27,18 +27,24 @@ class ExceptionCollection
 
     /**
      * @param {unknown} error - The error to add to the collection.
+     * @returns {ExceptionCollection}
      */
     addError(error)
     {
         this.#errors.push(formatErrorMessageStructure(error, true));
+
+        return this;
     }
 
     /**
      * @param {number} status - The http status code of the exception collection.
+     * @returns {ExceptionCollection}
      */
     setStatus(status)
     {
         this.#status = status;
+        
+        return this;
     }
 
     /**
@@ -59,8 +65,17 @@ class ExceptionCollection
      */
     throwErrorsIfExist()
     {
-        if (this.#errors.length > 0)
+        if (this.doErrorsExist())
             throw this;
+    }
+    
+    /**
+     * Validates if the exception collection has errors.
+     * @returns {boolean}
+     */
+    doErrorsExist()
+    {
+        return this.#errors.length > 0;
     }
 }
 

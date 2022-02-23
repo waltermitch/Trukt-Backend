@@ -1,4 +1,3 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const AccountingFunc = require('../Azure/AccountingFunc');
 const InvoiceLine = require('../Models/InvoiceLine');
@@ -9,6 +8,7 @@ const Order = require('../Models/Order');
 const currency = require('currency.js');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const { NotFoundError, DataConflictError, ExceptionCollection } = require('../ErrorHandling/Exceptions');
 
 let transportItem;
 
@@ -35,15 +35,11 @@ class BillService
 
             // if bill doesn't exist in table throw error
             if (!bill)
-
-                // TODO: add proper error class TBE-22
-                throw new Error('Bill does not exist.');
+                throw new NotFoundError('Bill does not exist.');
 
             // if wrong invoice has been provided
             if (invoiceGuid && !invoice)
-
-                // TODO: add proper error class TBE-22
-                throw new Error('Invoice does not exist.');
+                throw new NotFoundError('Invoice does not exist.');
 
             // for bulk insert
             const linksArray = [];
@@ -83,9 +79,7 @@ class BillService
 
         // if no bill throw error
         if (!bill)
-
-            // TODO: add proper error class TBE-22
-            throw new Error('Bill does not exist.');
+            throw new NotFoundError('Bill does not exist.');
 
         // linking and updateing
         line.linkBill(bill);
@@ -95,9 +89,7 @@ class BillService
 
         // if line doesn't exist
         if (!newLine)
-
-            // TODO: add proper error class TBE-22
-            throw new Error('Line does not exist.');
+            throw new NotFoundError('Line does not exist.');
 
         return newLine;
     }
@@ -109,27 +101,21 @@ class BillService
 
         // if no bill throw error
         if (!bill)
-
-            // TODO: add proper error class TBE-22
-            throw new Error('Bill does not exist.');
+            throw new NotFoundError('Bill does not exist.');
 
         // to double check and see if commodity is attached
         const checkLine = await InvoiceLine.query().findById(lineGuid);
 
         // if attached throw error
         if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
-
-            // TODO: add proper error class TBE-22
-            throw new Error('Deleting a transport line attached to a commodity is forbidden.');
+            throw new DataConflictError('Deleting a transport line attached to a commodity is forbidden.');
 
         // returning updated bill
         const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
 
         // if line doesn't exist
         if (!newLine)
-
-            // TODO: add proper error class TBE-22
-            throw new Error('Line does not exist.');
+            throw new NotFoundError('Line does not exist.');
 
         return;
     }
@@ -143,9 +129,7 @@ class BillService
 
             // if no bill throw error
             if (!bill)
-
-                // TODO: add proper error class TBE-22
-                throw new Error('Bill does not exist.');
+                throw new NotFoundError('Bill does not exist.');
 
             // deleteing lines in bulk :: users are forbidden from deleting transport lines with commodity attached to it.
             const deletedLines = await InvoiceLine.query(trx).delete().whereIn('guid', lineGuids).where('invoiceGuid', billGuid).modify('isNotTransport');
@@ -154,7 +138,7 @@ class BillService
             if (deletedLines != lineGuids.length)
             {
                 // error array for uniquee messages
-                const errorArray = [];
+                const errorCollection = new ExceptionCollection();
 
                 // query all guids, and throw error for which return because they still exist.
                 const failedLines = await InvoiceLine.query(trx).findByIds([lineGuids]);
@@ -164,16 +148,14 @@ class BillService
                 {
                     if (l.itemId == 1 && l.commodityGuid != null)
                     {
-                        errorArray.push(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid} `);
+                        errorCollection.addError(new DataConflictError(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid} `));
                     }
                     if (l.invoiceGuid != billGuid)
                     {
-                        errorArray.push(`Deleting a line the doesn't belong to the bill is forbidden. Guid: ${l.guid} `);
+                        errorCollection.addError(new DataConflictError(`Deleting a line the doesn't belong to the bill is forbidden. Guid: ${l.guid}`));
                     }
                 }
-
-                // TODO: add proper error class TBE-22
-                throw new Error(errorArray);
+                errorCollection.throwErrorsIfExist();
             }
 
             // if succeed then, returns nothing
@@ -195,7 +177,7 @@ class BillService
             .withGraphFetched('[jobs.[type, bills.[lines(isNonZero, isNotPaid).[commodity.[stops.[terminal], vehicle, commType], item]], vendor]]');
 
         if (!orders.length)
-            throw new HttpError(400, 'No Matching Orders Found');
+            throw new NotFoundError('No Matching Orders Found');
 
         const qbBills = [];
         const billMap = new Map();
@@ -209,7 +191,7 @@ class BillService
         for (const order of orders)
         {
             // initialize in map
-            results[order.guid] = { data: [], errors: [], status: null };
+            results[order.guid] = { data: [], errors: new ExceptionCollection(), status: null };
 
             for (const job of order.jobs)
             {
@@ -232,33 +214,36 @@ class BillService
 
                     if (bill.isPaid && Object.keys(bill.externalSourceData || {}).length > 0)
                     {
-                        // TODO: add proper error class TBE-22
                         results[order.guid].status = 400;
-                        results[order.guid].errors.push({
-                            guid: bill.guid,
-                            error: 'Bill Already Maked As Paid',
-                            data: bill
-                        });
+                        results[order.guid].errors.setStatus(400);
+                        results[order.guid].errors.addError(
+                            new DataConflictError('Bill Already Maked As Paid', {
+                                guid: bill.guid,
+                                data: bill
+                            })
+                        );
                     }
                     else if (bill.lines.length == 0)
                     {
-                        // TODO: add proper error class TBE-22
                         results[order.guid].status = 400;
-                        results[order.guid].errors.push({
-                            guid: bill.guid,
-                            error: 'Bill Has No Non Zero Lines',
-                            data: bill
-                        });
+                        results[order.guid].errors.setStatus(400);
+                        results[order.guid].errors.addError(
+                            new DataConflictError('Bill Has No Non Zero Lines', {
+                                guid: bill.guid,
+                                data: bill
+                            })
+                        );
                     }
                     else if (!bill.vendor.qbId)
                     {
-                        // TODO: add proper error class TBE-22
                         results[order.guid].status = 400;
-                        results[order.guid].errors.push({
-                            guid: bill.guid,
-                            error: `Bill ${bill.guid} has no vendor or vendor doesn't have a QBO Id`,
-                            data: bill
-                        });
+                        results[order.guid].errors.setStatus(400);
+                        results[order.guid].errors.addError(
+                            new DataConflictError(`Bill ${bill.guid} has no vendor or vendor doesn't have a QBO Id`, {
+                                guid: bill.guid,
+                                data: bill
+                            })
+                        );
                     }
                     else
                     {
@@ -297,17 +282,22 @@ class BillService
                 // just push error to results
                 const billObj = billMap.get(error?.guid);
 
-                // TODO: add proper error class TBE-22
                 results[billObj.orderGuid].status = status;
-                results[billObj.orderGuid].errors.push({
-                    guid: error.guid,
-                    error: error
-                });
+                results[billObj.orderGuid].errors = new ExceptionCollection();
+                results[billObj.orderGuid].errors.setStatus(status);
+                results[billObj.orderGuid].errors.addError(
+                    new DataConflictError(error, {
+                        guid: error.guid
+                    })
+                );
             }
             else
             {
                 // if all is good try to update the bill in the database
                 const billObj = billMap.get(data?.guid);
+
+                // keep errors tracked in the bill
+                results[billObj.orderGuid].errors = new ExceptionCollection();
 
                 // if no errors we will update the bill
                 const trx = await InvoiceBill.startTransaction();
@@ -331,7 +321,7 @@ class BillService
 
                     // only set 200 if all bills are successful
                     // any single error will set the status to 400
-                    if (results[billObj.orderGuid].errors.length == 0)
+                    if (!results[billObj.orderGuid].errors.doErrorsExist())
                         results[billObj.orderGuid].status = 200;
 
                     // rename guid as billGuid
@@ -346,9 +336,14 @@ class BillService
                 {
                     await trx.rollback();
 
-                    // TODO: add proper error class TBE-22
                     results[billObj.orderGuid].status = 500;
-                    results[billObj.orderGuid].errors.push({ guid: data.guid, error: err.message || err });
+                    results[billObj.orderGuid].errors.setStatus(500);
+                    results[billObj.orderGuid].errors.addError(
+                        new DataConflictError(err, {
+                            guid: data.guid
+                        })
+                    );
+
                 }
             }
         }));

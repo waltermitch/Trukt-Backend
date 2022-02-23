@@ -1,3 +1,5 @@
+const { ValidationError } = require('../ErrorHandling/Exceptions');
+
 class Expense
 {
     /**
@@ -73,7 +75,7 @@ class Expense
         }
         else
         {
-            throw new Error('orderjob param is not correct type');
+            throw new ValidationError('orderjob param is not correct type');
         }
 
         return new Expense(

@@ -6,14 +6,20 @@ const telemetryClient = require('./Insights');
 
 module.exports = (errors, request, response, next) =>
 {
-
-    if (errors instanceof BulkException)
+    if (
+        errors instanceof BulkException
+        || (errors?.onlySendErrorsToTelemetry && errors?.instance instanceof BulkException)
+    )
     {
+        const exception = errors?.onlySendErrorsToTelemetry ? errors.instance : errors;
+
         telemetryClient.trackException({
-            exception: errors,
+            exception: exception,
             severity: SeverityLevel.Error
         });
         
+        if (errors?.onlySendErrorsToTelemetry) return;
+
         response.status(200).json(errors.toJSON());
     }
     else if (errors instanceof ExceptionCollection || Array.isArray(errors))
