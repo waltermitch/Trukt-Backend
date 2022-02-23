@@ -469,7 +469,7 @@ function printSeedsAndData(config)
 
 async function seedHandler(argv)
 {
-    require('../envs/loadEnvs');
+    require('../envs/index').load();
     const yellow = colorme('yellow');
     const cyan = colorme('cyan');
     const green = colorme('green');

@@ -57,8 +57,8 @@ function setEnv(targetEnv)
         case 'development':
         case 'dev':
             return 'dev';
-        case 'pipelines':
-            return 'pipelines';
+        case 'pipeline':
+            return 'pipeline';
         default:
             return 'local';
     }
