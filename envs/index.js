@@ -47,7 +47,6 @@ function toAzureJSON(targetEnv)
 // helper function for choosing env
 function setEnv(targetEnv)
 {
-    console.log('env', targetEnv);
     switch (targetEnv || process.env.NODE_ENV || 'local')
     {
         case 'production':
