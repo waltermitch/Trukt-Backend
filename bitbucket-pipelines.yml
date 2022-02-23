@@ -16,7 +16,7 @@ definitions:
         services:
           - mongo
         script:
-          - npm run decrypt -- './envs/$ENV.enc' './envs/$ENV.env'
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm test
     - step: &lint-test
@@ -31,7 +31,7 @@ definitions:
         caches:
           - node
         script:
-          - npm run decrypt -- './envs/$ENV.enc' './envs/$ENV.env'
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm run test:unit
     - step: &integration-db-test
