@@ -3,7 +3,7 @@
  * This is MIG, makes migrating database stuff easier
  * Also comes with fancy tools
  */
-require('../local.settings');
+require('../envs/index').load();
 const yargs = require('yargs/yargs');
 const fs = require('fs');
 const path = require('path');
@@ -469,7 +469,7 @@ function printSeedsAndData(config)
 
 async function seedHandler(argv)
 {
-    require('../local.settings');
+    require('../envs/loadEnvs');
     const yellow = colorme('yellow');
     const cyan = colorme('cyan');
     const green = colorme('green');
