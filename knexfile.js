@@ -2,7 +2,7 @@ const urlParser = require('pg-connection-string').parse;
 const Heroku = require('./src/HerokuPlatformAPI');
 const { knexSnakeCaseMappers } = require('objection');
 
-const env = process.env.NODE_ENV || process.env.ENV;
+const env = process.env.NODE_ENV;
 const conConfig = {
     client: process.env.KNEX_CLIENT,
     searchPath: ['rcg_tms', 'public', 'salesforce'],
