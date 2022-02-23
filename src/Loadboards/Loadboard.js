@@ -265,6 +265,11 @@ class Loadboard
         }
     }
 
+    static async handleUpdate(payloadMetadata, response)
+    {
+        return await this.handlePost(payloadMetadata, response);
+    }
+
     static async handleUnpost(payloadMetadata, response)
     {
         const trx = await LoadboardPost.startTransaction();
