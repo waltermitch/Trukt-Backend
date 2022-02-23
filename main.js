@@ -79,7 +79,7 @@ app.use(HttpErrorHandler);
 app.listen(process.env.PORT, async (err) =>
 {
     if (err) console.log('there is an error lol 🍆');
-    console.log('Server Listening On Port ', process.env.PORT);
+    console.log('Server Listening On Port ', process.env.PORT || 8000);
 });
 
 /**
