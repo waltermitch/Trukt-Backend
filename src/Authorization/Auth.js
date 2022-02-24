@@ -34,7 +34,7 @@ module.exports = {
     {
         return async (req, res, next) =>
         {
-            if ('x-edi-code' in req.headers && req.headers['x-edi-code'] === process.env['edi.secret.code'])
+            if ('x-edi-code' in req.headers && req.headers['x-edi-code'] === process.env.EDI_SECRET_CODE)
             {
                 req.session = { userGuid: process.env.SYSTEM_USER };
                 next();

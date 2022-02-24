@@ -22,7 +22,7 @@ const telemetry = require('../ErrorHandling/Insights');
 const PubSubService = require('./PubSubService');
 const LoadboardsApi = require('../Loadboards/LoadboardsApi');
 
-const connectionString = process.env['azure.servicebus.loadboards.connectionString'];
+const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
 const SYSUSER = process.env.SYSTEM_USER;
 

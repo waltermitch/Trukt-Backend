@@ -4,10 +4,11 @@ const User = require('../Models/User');
 const { DateTime } = require('luxon');
 const Mongo = require('../Mongo');
 
-const clientSecret = process.env['azure.ad.appSecret'];
-const username = process.env['azure.ad.TMSusername'];
-const password = process.env['azure.ad.TMSpassword'];
-const clientId = process.env['azure.ad.appId'];
+const clientSecret = process.env.AZURE_AD_APPSECRET;
+const username = process.env.AZURE_AD_TMSUSERNAME;
+const password = process.env.AZURE_AD_TMSPASSWORD;
+const clientId = process.env.AZURE_AD_APPID;
+const groupId = process.env.AZURE_AD_GROUPID;
 
 class SystemManagementService
 {
@@ -25,7 +26,7 @@ class SystemManagementService
     static async syncUsers(keepAlive = true)
     {
         // gets users from AD Employee Group and from DB
-        const [usersFromAD, usersFromDB] = await Promise.all([Graph.getGroupMembers(process.env['azure.ad.groupId'], keepAlive), User.query()]);
+        const [usersFromAD, usersFromDB] = await Promise.all([Graph.getGroupMembers(groupId, keepAlive), User.query()]);
 
         // map db users to map
         const dbUsers = new Map(usersFromDB.map((user) => [user.guid, user]));

@@ -16,7 +16,7 @@ definitions:
         services:
           - mongo
         script:
-          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm test
     - step: &lint-test
@@ -31,7 +31,7 @@ definitions:
         caches:
           - node
         script:
-          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm run test:unit
     - step: &integration-db-test
@@ -41,7 +41,7 @@ definitions:
         caches:
           - node
         script:
-          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm install --only=dev
           - node ./tools/migrator.js init
@@ -57,7 +57,7 @@ definitions:
         caches:
           - node
         script:
-          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - npm install
           - npm install --only=dev
           - node ./tools/migrator.js init
@@ -73,7 +73,7 @@ definitions:
         script:
           - cd $BITBUCKET_CLONE_DIR && npm install
           - npm install -g knex
-          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
           - node ./tools/migrator.js seed systemData --all
@@ -84,8 +84,8 @@ definitions:
           - cd $BITBUCKET_CLONE_DIR && npm install
           - npm run api-bundle
           - apt update && apt install zip
-          - zip -r $ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js local.settings.js main.js package-lock.json package.json web.config openapi
-          - node ./tools/create-azure-env-file.js $ENV azure.env.json
+          - zip -r $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js envs main.js package-lock.json package.json web.config openapi
+          - node ./tools/create-azure-env-file.js azure.env.json $NODE_ENV
           - pipe: microsoft/azure-cli-run:1.1.0
             variables:
               AZURE_APP_ID: $AZURE_APP_ID
@@ -93,7 +93,7 @@ definitions:
               AZURE_TENANT_ID: $AZURE_TENANT_ID
               AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
               AZURE_APP_NAME: $AZURE_APP_NAME
-              CLI_COMMAND: 'az webapp config appsettings set -g $AZURE_RESOURCE_GROUP -n $AZURE_APP_NAME -s $ENV --settings @azure.env.json'
+              CLI_COMMAND: 'az webapp config appsettings set -g $AZURE_RESOURCE_GROUP -n $AZURE_APP_NAME -s $NODE_ENV --settings @azure.env.json'
           - pipe: microsoft/azure-web-apps-deploy:1.0.3
             variables:
               AZURE_APP_ID: $AZURE_APP_ID
@@ -101,8 +101,8 @@ definitions:
               AZURE_TENANT_ID: $AZURE_TENANT_ID
               AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
               AZURE_APP_NAME: $AZURE_APP_NAME
-              ZIP_FILE: $ENV-$BITBUCKET_BUILD_NUMBER.zip
-              SLOT: $ENV
+              ZIP_FILE: $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip
+              SLOT: $NODE_ENV
         artifacts:
           - '*.zip'
     - step: &full-deployment
@@ -112,14 +112,24 @@ definitions:
         script:
           - cd $BITBUCKET_CLONE_DIR && npm install
           - npm install -g knex
-          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm run decrypt -- './envs/$DOT_ENV_FILENAME.enc' './envs/$DOT_ENV_FILENAME.env'
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
           - node ./tools/migrator.js seed systemData --all
           - node ./tools/migrator.js seed deploymentData --all
           - npm run api-bundle
           - apt update && apt install zip
-          - zip -r $ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js local.settings.js main.js package-lock.json package.json web.config openapi
+          - node ./tools/create-azure-env-file.js azure.env.json $NODE_ENV
+          - pipe: microsoft/azure-cli-run:1.1.0
+            variables:
+              AZURE_APP_ID: $AZURE_APP_ID
+              AZURE_PASSWORD: $AZURE_APP_SECRET
+              AZURE_TENANT_ID: $AZURE_TENANT_ID
+              AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
+              AZURE_APP_NAME: $AZURE_APP_NAME
+              CLI_COMMAND: 'az webapp config appsettings set -g $AZURE_RESOURCE_GROUP -n $AZURE_APP_NAME -s $NODE_ENV --settings @azure.env.json'
+          
+          - zip -r $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js envs main.js package-lock.json package.json web.config openapi
           - pipe: microsoft/azure-web-apps-deploy:1.0.3
             variables:
               AZURE_APP_ID: $AZURE_APP_ID
@@ -127,8 +137,8 @@ definitions:
               AZURE_TENANT_ID: $AZURE_TENANT_ID
               AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
               AZURE_APP_NAME: $AZURE_APP_NAME
-              ZIP_FILE: $ENV-$BITBUCKET_BUILD_NUMBER.zip
-              SLOT: $ENV
+              ZIP_FILE: $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip
+              SLOT: $NODE_ENV
         artifacts:
           - '*.zip'
     - step: &full-deployment-prod
@@ -138,14 +148,24 @@ definitions:
         script:
           - cd $BITBUCKET_CLONE_DIR && npm install
           - npm install -g knex
-          - npm run decrypt -- local.settings.enc local.settings.json
+          - npm run decrypt -- './envs/prod.enc' './envs/prod.env'
           - node ./tools/migrator.js init
           - node ./tools/migrator.js up --all
           - node ./tools/migrator.js seed systemData --all
           - node ./tools/migrator.js seed deploymentData --all
           - npm run api-bundle
           - apt update && apt install zip
-          - zip -r $ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js local.settings.js main.js package-lock.json package.json web.config openapi
+          - node ./tools/create-azure-env-file.js azure.env.json $NODE_ENV
+          - pipe: microsoft/azure-cli-run:1.1.0
+            variables:
+              AZURE_APP_ID: $AZURE_APP_ID
+              AZURE_PASSWORD: $AZURE_APP_SECRET
+              AZURE_TENANT_ID: $AZURE_TENANT_ID
+              AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
+              AZURE_APP_NAME: $AZURE_APP_NAME
+              CLI_COMMAND: 'az webapp config appsettings set -g $AZURE_RESOURCE_GROUP -n $AZURE_APP_NAME --settings @azure.env.json'
+          
+          - zip -r $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js envs main.js package-lock.json package.json web.config openapi
           - pipe: microsoft/azure-web-apps-deploy:1.0.3
             variables:
               AZURE_APP_ID: $AZURE_APP_ID
@@ -153,7 +173,7 @@ definitions:
               AZURE_TENANT_ID: $AZURE_TENANT_ID
               AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
               AZURE_APP_NAME: $AZURE_APP_NAME
-              ZIP_FILE: $ENV-$BITBUCKET_BUILD_NUMBER.zip
+              ZIP_FILE: $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip
               #DO NOT PUT SLOT IN HERE BECAUSE PIPELINES WILL MESS UP
         artifacts:
           - '*.zip'

@@ -1549,7 +1549,7 @@ class OrderJobService
         if (job.isDeleted)
             throw new HttpError(400, 'This Order is deleted and can not be canceled.');
         if (job && jobIsDispatched)
-            throw new HttpError(400, 'Please un-dispatch the Order before deleting');
+            throw new HttpError(400, 'Please un-dispatch the Order before canceling');
         return job;
     }
 
