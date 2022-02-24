@@ -299,6 +299,42 @@ class ShipCars extends Loadboard
         }
     }
 
+    static async handleUpdate(payloadMetadata, response)
+    {
+        const trx = await LoadboardPost.startTransaction();
+        const objectionPost = LoadboardPost.fromJson(payloadMetadata.post);
+        const allPromises = [];
+        try
+        {
+            if (response.hasErrors)
+            {
+                objectionPost.setAPIError(response.errors);
+            }
+            else
+            {
+                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
+                for (const comPromise of commodityPromises)
+                {
+                    comPromise.transacting(trx);
+                }
+                allPromises.push(...commodityPromises);
+            }
+            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+
+            allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
+            await Promise.all(allPromises);
+            await trx.commit();
+
+            return objectionPost.jobGuid;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw new Error(err.message);
+        }
+    }
+
     static async handleDispatch(payloadMetadata, response)
     {
         const trx = await OrderJobDispatch.startTransaction();
