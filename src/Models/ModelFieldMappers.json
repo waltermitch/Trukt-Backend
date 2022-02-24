@@ -62,7 +62,6 @@
                     "isPartner",
                     "isPersonAccount",
                     "isSyncedInSuper",
-                    "jobTitle",
                     "lastModifiedDate",
                     "lastName",
                     "lastReferencedDate",
@@ -220,7 +219,7 @@
                     "vectorName",
                     "vectorAddress"
                 ],
-                "outa" : [
+                "outa": [
                     "vectorName",
                     "vectorAddress"
                 ]
@@ -240,7 +239,7 @@
                     "vectorName",
                     "vectorAddress"
                 ],
-                "outa":[
+                "outa": [
                     "vectorName",
                     "vectorAddress"
                 ]
@@ -434,12 +433,12 @@
                     "isDeleted",
                     "hasError",
                     "externalError",
-                    "dateCreated",
                     "dateUpdated",
                     "dateDeleted",
                     "createdByGuid",
                     "updatedByGuid",
-                    "deletedByGuid"
+                    "deletedByGuid",
+                    "posting"
                 ]
             }
         }

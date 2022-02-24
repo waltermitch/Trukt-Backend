@@ -57,7 +57,6 @@ CREATE TABLE salesforce.account (
 	insurance_on_file__c bool NULL,
 	cargo_insurance_expiration__c date NULL,
 	order_instructions__c text NULL,
-	job_title__c varchar(255) NULL,
 	delivery_notes__c varchar(255) NULL,
 	phone varchar(40) NULL,
 	truckstop_username__c varchar(255) NULL,

@@ -1,6 +1,7 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const { DateTime } = require('luxon');
+const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 
 class DAT extends Loadboard
 {
@@ -26,15 +27,15 @@ class DAT extends Loadboard
                 (values[requiredField].length < 1 ||
                     values[requiredField].length > 69))
             {
-                throw `${requiredField} should be between 1 and 70 characters`;
+                throw new HttpError(400, `${requiredField} should be between 1 and 70 characters`);
             }
             else if (requiredField == 'weight' && (values[requiredField] < 1 || values[requiredField] > 999999))
             {
-                throw `${requiredField} should be between 1 and 999999 pounds`;
+                throw new HttpError(400, `${requiredField} should be between 1 and 999999 pounds`);
             }
             else if (requiredField == 'length' && (values[requiredField] < 1 || values[requiredField] > 199))
             {
-                throw `${requiredField} should be between 1 and 199 feet`;
+                throw new HttpError(400, `${requiredField} should be between 1 and 199 feet`);
             }
         }
     }

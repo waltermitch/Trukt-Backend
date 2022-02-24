@@ -219,48 +219,29 @@ class InvoiceController
         }
     }
 
-    static async exportInvoice(req, res)
+    static async exportInvoice(req, res, next)
     {
-        const result = (await InvoiceService.exportInvoices([req.params.orderGuid]))?.[0];
+        const { orderGuid } = req.params;
 
-        if (result)
+        try
         {
-            if (result.error)
+            const result = await InvoiceService.exportInvoices([orderGuid]);
+
+            const invoice = result[orderGuid];
+
+            // transform single element array to object
+            invoice.data = invoice.data[0] || {};
+
+            if (invoice.errors.length > 0)
                 res.status(400);
             else
                 res.status(200);
 
-            res.json(result);
+            res.json(invoice);
         }
-        else
+        catch (err)
         {
-            res.status(404);
-        }
-    }
-
-    static async exportInvoices(req, res)
-    {
-        const orders = req.body?.orders;
-
-        if (!orders || orders.length == 0)
-        {
-            res.status(400);
-            res.json({ 'error': 'Missing Or Empty Array' });
-        }
-        else
-        {
-            const result = await InvoiceService.exportInvoices(orders);
-
-            if (result)
-            {
-                res.status(200);
-                res.json(result);
-            }
-            else
-            {
-                res.status(404);
-                res.json({ 'error': 'Order Not Found' });
-            }
+            next(err);
         }
     }
 

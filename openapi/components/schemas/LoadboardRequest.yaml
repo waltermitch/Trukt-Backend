@@ -106,6 +106,7 @@ postRequestPayload:
     - datePickupStart
     - dateDeliveryStart
     - loadboard
+    - carrierIdentifier
     - extraExternalData
 mainResponsePayload:
   type: object

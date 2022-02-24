@@ -17,6 +17,7 @@ const { DateTime } = require('luxon');
 const R = require('ramda');
 const InvoiceLineLink = require('../Models/InvoiceLineLink');
 const Loadboards = require('../Loadboards/API');
+const { raw } = require('objection');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -1548,7 +1549,7 @@ class OrderJobService
         if (job.isDeleted)
             throw new HttpError(400, 'This Order is deleted and can not be canceled.');
         if (job && jobIsDispatched)
-            throw new HttpError(400, 'Please un-dispatch the Order before deleting');
+            throw new HttpError(400, 'Please un-dispatch the Order before canceling');
         return job;
     }
 
@@ -1791,6 +1792,44 @@ class OrderJobService
 
         // if we are here, we failed to update status
         throw new HttpError(400, 'Job Could Not Be Marked as Picked Up, Please Check All Stops Are Picked Up');
+    }
+
+    /**
+     * Returns the number of 'pick up' stops that are completed, we group by guid when there are multiple commodities per stop
+     * that way we can treat them as 1 stop.
+     */
+    static async getNumberOfPickupsInProgress(jobGuid)
+    {
+        const pickupsGroupByStop = OrderStop.query().alias('OS').select('guid', 'OS.isCompleted')
+            .innerJoin('rcgTms.orderStopLinks', 'guid', 'stopGuid')
+            .where('jobGuid', jobGuid)
+            .andWhere('OS.stopType', 'pickup')
+            .groupBy('OS.guid', 'OS.isCompleted');
+
+        return OrderStop.query().alias('OS2').select(raw('count(CASE WHEN o_s2.is_completed THEN 1 END) as pickups_in_progress'))
+            .with('pickupsGroupByStop', pickupsGroupByStop)
+            .innerJoin('pickupsGroupByStop', 'pickupsGroupByStop.guid', 'OS2.guid');
+    }
+
+    /**
+     * Returns true if the job only has one 'delivery' stop not completed, we group by guid when there are multiple commodities per stop
+     * that way we can treat them as 1 stop.
+     */
+    static async isJobStatusForLastDelivery(jobGuid)
+    {
+
+        const deliveriesGroupByStop = OrderStop.query().alias('OS').select('guid', 'OS.isCompleted')
+            .innerJoin('rcgTms.orderStopLinks', 'guid', 'stopGuid')
+            .where('jobGuid', jobGuid)
+            .andWhere('OS.stopType', 'delivery')
+            .groupBy('OS.guid', 'OS.isCompleted');
+
+        return OrderStop.query().alias('OS2').select(raw(`
+            case when (count(CASE WHEN deliveries_group_by_stop.is_completed THEN 1 END)) = count(deliveries_group_by_stop.guid) - 1 
+            then true else false end as is_status_for_last_delivery
+        `))
+            .with('deliveriesGroupByStop', deliveriesGroupByStop)
+            .innerJoin('deliveriesGroupByStop', 'deliveriesGroupByStop.guid', 'OS2.guid');
     }
 }
 

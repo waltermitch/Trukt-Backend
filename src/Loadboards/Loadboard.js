@@ -458,7 +458,7 @@ class Loadboard
                     }
                 }
 
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: orderRec.guid,
                     userGuid: process.env.SYSTEM_USER,
                     activityId: 13,
@@ -481,6 +481,23 @@ class Loadboard
                 throw new Error(e.message);
             }
         }
+    }
+
+    static async handleOrderJobCanceled(payloadMetadata)
+    {
+        const externalGuid = payloadMetadata.externalGuid;
+
+        const loadboardPost = externalGuid && await LoadboardPost.query()
+            .findOne('externalGuid', externalGuid);
+
+        if (loadboardPost)
+        {
+            loadboardPost.setToRemoved();
+            await LoadboardPost.query().patch(loadboardPost).findById(loadboardPost.guid);
+            return loadboardPost.jobGuid;
+        }
+
+        return;
     }
 }
 
