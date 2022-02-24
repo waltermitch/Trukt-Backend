@@ -33,7 +33,6 @@ if (inTheCloud)
 }
 else
 {
-    console.log('Running in local mode, using fake telemetry client');
     client = fakeTelemetryClient;
 }
 
