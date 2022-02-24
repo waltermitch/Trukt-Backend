@@ -86,8 +86,8 @@ function handleDifferences(differences)
         // if save flag is set, save the missing envs, otherwise just print them
         if (save)
             fs.writeFileSync(`./cloud-envs-${ENV}.json`, JSON.stringify(differences, null, 2));
-
-        console.log(differences);
+        else
+            console.log(differences);
     }
 }
 
