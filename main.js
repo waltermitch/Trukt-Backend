@@ -9,15 +9,16 @@ require('./src/ErrorHandling/Insights');
 
 const HttpErrorHandler = require('./src/ErrorHandling/HttpErrorHandler');
 const openApiValidator = require('express-openapi-validator');
-require('./src/EventManager/StatusCacheManager').startCache();
 const PGListener = require('./src/EventManager/PGListener');
-require('./src/HttpControllers/HttpRouteController');
 const Auth = require('./src/Authorization/Auth');
 const Mongo = require('./src/Mongo');
 const express = require('express');
-require('./src/CronJobs/Manager');
 const cors = require('cors');
 const fs = require('fs');
+
+require('./src/HttpControllers/HttpRouteController');
+require('./src/EventManager/StatusCacheManager').startCache();
+require('./src/CronJobs/Manager');
 
 run().catch((err) =>
 {
