@@ -85,7 +85,7 @@ definitions:
           - npm run api-bundle
           - apt update && apt install zip
           - zip -r $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js envs main.js package-lock.json package.json web.config openapi
-          - node ./tools/create-azure-env-file.js azure.env.json $NODE_ENV
+          - npm run azure:create:env
           - pipe: microsoft/azure-cli-run:1.1.0
             variables:
               AZURE_APP_ID: $AZURE_APP_ID
@@ -119,7 +119,7 @@ definitions:
           - node ./tools/migrator.js seed deploymentData --all
           - npm run api-bundle
           - apt update && apt install zip
-          - zip -r $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js envs main.js package-lock.json package.json web.config openapi
+          - npm run azure:create:env
           - pipe: microsoft/azure-cli-run:1.1.0
             variables:
               AZURE_APP_ID: $AZURE_APP_ID
@@ -128,6 +128,8 @@ definitions:
               AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
               AZURE_APP_NAME: $AZURE_APP_NAME
               CLI_COMMAND: 'az webapp config appsettings set -g $AZURE_RESOURCE_GROUP -n $AZURE_APP_NAME -s $NODE_ENV --settings @azure.env.json'
+          
+          - zip -r $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js envs main.js package-lock.json package.json web.config openapi
           - pipe: microsoft/azure-web-apps-deploy:1.0.3
             variables:
               AZURE_APP_ID: $AZURE_APP_ID
@@ -153,7 +155,7 @@ definitions:
           - node ./tools/migrator.js seed deploymentData --all
           - npm run api-bundle
           - apt update && apt install zip
-          - zip -r $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js envs main.js package-lock.json package.json web.config openapi
+          - npm run azure:create:env
           - pipe: microsoft/azure-cli-run:1.1.0
             variables:
               AZURE_APP_ID: $AZURE_APP_ID
@@ -162,6 +164,8 @@ definitions:
               AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
               AZURE_APP_NAME: $AZURE_APP_NAME
               CLI_COMMAND: 'az webapp config appsettings set -g $AZURE_RESOURCE_GROUP -n $AZURE_APP_NAME --settings @azure.env.json'
+          
+          - zip -r $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js envs main.js package-lock.json package.json web.config openapi
           - pipe: microsoft/azure-web-apps-deploy:1.0.3
             variables:
               AZURE_APP_ID: $AZURE_APP_ID

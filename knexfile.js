@@ -1,42 +1,52 @@
 const urlParser = require('pg-connection-string').parse;
-const Heroku = require('./src/HerokuPlatformAPI');
 const { knexSnakeCaseMappers } = require('objection');
+const Heroku = require('./src/HerokuPlatformAPI');
 
-const env = process.env.NODE_ENV;
+const {
+    NODE_ENV,
+    KNEX_CLIENT,
+    KNEX_MIGRATION_TABLE,
+    KNEX_MIGRATION_SEEDS,
+    KNEX_CONNECTION_USER,
+    KNEX_CONNECTION_PASSWORD,
+    KNEX_CONNECTION_PORT,
+    KNEX_CONNECTION_DATABASE
+} = process.env;
+
 const conConfig = {
-    client: process.env.KNEX_CLIENT,
+    client: KNEX_CLIENT,
     searchPath: ['rcg_tms', 'public', 'salesforce'],
     migrations: {
-        tableName: process.env.KNEX_MIGRATION_TABLE
+        tableName: KNEX_MIGRATION_TABLE
     },
     seeds: {
-        directory: process.env.KNEX_MIGRATION_SEEDS
+        directory: KNEX_MIGRATION_SEEDS
     },
     ...knexSnakeCaseMappers({ underscoreBetweenUppercaseLetters: true })
 };
 
 module.exports = () =>
 {
-    switch (env)
+    switch (NODE_ENV)
     {
         case 'pipeline':
-            conConfig.client = process.env.KNEX_CLIENT;
-            conConfig.migrations.tableName = process.env.KNEX_MIGRATION_TABLE;
+            conConfig.client = KNEX_CLIENT;
+            conConfig.migrations.tableName = KNEX_MIGRATION_TABLE;
             conConfig.connection = {
-                user: process.env.KNEX_CONNECTION_USER,
-                password: process.env.KNEX_CONNECTION_PASSWORD,
-                port: process.env.KNEX_CONNECTION_PORT,
-                database: process.env.KNEX_CONNECTION_DATABASE
+                user: KNEX_CONNECTION_USER,
+                password: KNEX_CONNECTION_PASSWORD,
+                port: KNEX_CONNECTION_PORT,
+                database: KNEX_CONNECTION_DATABASE
             };
 
             break;
         case 'local':
         case 'test':
             conConfig.connection = {
-                user: process.env.KNEX_CONNECTION_USER,
-                password: process.env.KNEX_CONNECTION_PASSWORD,
-                port: process.env.KNEX_CONNECTION_PORT,
-                database: process.env.KNEX_CONNECTION_DATABASE
+                user: KNEX_CONNECTION_USER,
+                password: KNEX_CONNECTION_PASSWORD,
+                port: KNEX_CONNECTION_PORT,
+                database: KNEX_CONNECTION_DATABASE
             };
             break;
         case 'development':
@@ -54,7 +64,7 @@ module.exports = () =>
             conConfig.pool = { min: 1, max: 25 };
             break;
         default:
-            throw new Error('Unknown environment set : ' + env);
+            throw new Error('Unknown environment set : ' + NODE_ENV);
     }
     return conConfig;
 };
