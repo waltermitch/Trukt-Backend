@@ -1,7 +1,7 @@
 const Microsoft = require('../Azure/Microsoft');
 const jwt = require('jsonwebtoken');
 
-const appId = process.env['azure.ad.appId'];
+const appId = process.env.AZURE_AD_APPID;
 const invalidToken = { 'status': 401, 'data': 'Invalid Token' };
 
 class Auth

@@ -1,6 +1,7 @@
 const HTTPS = require('./AuthController');
 
-const herokuAccessToken = process.env['heroku.accessToken'];
+const herokuAccessToken = process.env.HEROKU_ACCESS_TOKEN;
+const herokuAppId = process.env.HEROKU_APPID;
 const opts =
 {
     url: 'https://api.heroku.com',
@@ -18,7 +19,7 @@ class Heroku
     static async getConfig()
     {
         // search for config
-        const res = await api.get(`/apps/${process.env['heroku.appId']}/config-vars`);
+        const res = await api.get(`/apps/${herokuAppId}/config-vars`);
 
         if (res.data?.DATABASE_URL)
         {

@@ -420,9 +420,10 @@ class InvoiceService
 
                         for (const line of invoice.lines)
                         {
-                            // set item name
-                            line.itemName = line.item.name;
-                            line.jobType = line.commodity?.commType?.category || 'transport';
+                            if (line.commodity?.commType?.category === 'freight')
+                                line.itemName = 'freight';
+                            else
+                                line.itemName = line.item.name;
 
                             line.description = AccountingFunc.composeDescription(line);
                         }

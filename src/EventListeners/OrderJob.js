@@ -12,7 +12,7 @@ const logEventErrors = require('./logEventErrors');
 
 // const { raw } = require('objection');
 
-const SYSUSER = process.env.SYSTEM_USER;
+const { SYSTEM_USER } = process.env;
 
 listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
 {
@@ -230,7 +230,7 @@ listener.on('load_request_declined', ({ jobGuid, currentUser, orderGuid, body })
     });
 });
 
-listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }) =>
+listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSTEM_USER, orderGuid }) =>
 {
     setImmediate(async () =>
     {
@@ -248,7 +248,7 @@ listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }
     });
 });
 
-listener.on('orderjob_undelivered', ({ jobGuid, currentUser = SYSUSER, orderGuid }) =>
+listener.on('orderjob_undelivered', ({ jobGuid, currentUser = SYSTEM_USER, orderGuid }) =>
 {
     setImmediate(async () =>
     {
@@ -258,7 +258,7 @@ listener.on('orderjob_undelivered', ({ jobGuid, currentUser = SYSUSER, orderGuid
     });
 });
 
-listener.on('orderjob_picked_up', ({ jobGuid, currentUser = SYSUSER, orderGuid }) =>
+listener.on('orderjob_picked_up', ({ jobGuid, currentUser = SYSTEM_USER, orderGuid }) =>
 {
     setImmediate(async () =>
     {

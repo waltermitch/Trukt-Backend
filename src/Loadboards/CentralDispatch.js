@@ -8,7 +8,7 @@ class CentralDispatch extends Loadboard
         super(data);
         this.loadboardName = 'CENTRALDISPATCH';
         this.postObject = data.postObjects[this.loadboardName];
-        this.senderId = process.env['loadboards.CentralDispatch.Id'];
+        this.senderId = process.env.LOADBOARDS_CENTRALDISPATCH_ID;
 
         // attaching the node env onto the job number so different environments unpost each others loads
         if (process.env.NODE_ENV != 'prod' && process.env.NODE_ENV != 'production')

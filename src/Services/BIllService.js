@@ -253,9 +253,10 @@ class BillService
                         // also process the bill lines
                         for (const line of bill.lines)
                         {
-                            // set job type on line
-                            line.jobType = job.type.category;
-                            line.itemName = line.item.name;
+                            if (line.commodity?.commType?.category === 'freight')
+                                line.itemName = 'freight';
+                            else
+                                line.itemName = line.item.name;
 
                             // compose description
                             line.description = AccountingFunc.composeDescription(line);
