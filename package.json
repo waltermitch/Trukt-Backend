@@ -4,6 +4,7 @@
     "description": "Backend for trukt app",
     "main": "main.js",
     "scripts": {
+        "dev": "nodemon -e js,json,env",
         "start": "node main.js",
         "test": "jest --coverage --detectOpenHandles --env=node --verbose  --forceExit",
         "test:unit": "jest --testPathPattern=jest/unit --passWithNoTests",

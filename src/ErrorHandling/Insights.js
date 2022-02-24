@@ -8,13 +8,13 @@ const fakeTelemetryClient = require('./FakeTelemetryClient');
 let client = {};
 
 // check if we are running in local mode
-const inTheCloud = !process.env.LOCAL && [
+const inTheCloud = [
     'dev',
     'development',
     'staging',
     'prod',
     'production'
-].includes(process.env.NODE_ENV);
+].includes(process.env.NODE_ENV) && !process.env.LOCAL?.localeCompare('false');
 
 if (inTheCloud)
 {
@@ -33,6 +33,7 @@ if (inTheCloud)
 }
 else
 {
+    console.log('Running in local mode, using fake telemetry client');
     client = fakeTelemetryClient;
 }
 
