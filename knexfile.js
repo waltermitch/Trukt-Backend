@@ -1,4 +1,3 @@
-require('./envs/index').load();
 const urlParser = require('pg-connection-string').parse;
 const { knexSnakeCaseMappers } = require('objection');
 const Heroku = require('./src/HerokuPlatformAPI');

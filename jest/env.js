@@ -1,1 +1,1 @@
-// do nothing
+require('../envs/index').load();
