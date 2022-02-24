@@ -76,10 +76,12 @@ for (const filepath of filepaths)
 app.all('*', (req, res) => { res.status(404).send('This Endpoint Does Not Exist.'); });
 app.use(HttpErrorHandler);
 
-app.listen(process.env.PORT, async (err) =>
+const port = process.env.PORT || 8000;
+
+app.listen(port, async (err) =>
 {
     if (err) console.log('there is an error lol 🍆');
-    console.log('Server Listening On Port ', process.env.PORT || 8000);
+    console.log('Server Listening On Port ', port);
 });
 
 /**
