@@ -1,17 +1,16 @@
-require('./local.settings.js');
 const urlParser = require('pg-connection-string').parse;
 const Heroku = require('./src/HerokuPlatformAPI');
 const { knexSnakeCaseMappers } = require('objection');
 
-const env = process.env.NODE_ENV || process.env.ENV;
+const env = process.env.NODE_ENV;
 const conConfig = {
-    client: process.env['knex.client'] || process.env.KNEX_CLIENT,
+    client: process.env.KNEX_CLIENT,
     searchPath: ['rcg_tms', 'public', 'salesforce'],
     migrations: {
-        tableName: process.env['knex.migration.table']
+        tableName: process.env.KNEX_MIGRATION_TABLE
     },
     seeds: {
-        directory: process.env['knex.migration.seeds']
+        directory: process.env.KNEX_MIGRATION_SEEDS
     },
     ...knexSnakeCaseMappers({ underscoreBetweenUppercaseLetters: true })
 };
@@ -33,16 +32,12 @@ module.exports = () =>
             break;
         case 'local':
         case 'test':
-            conConfig.connection = {};
-            for (const field of [
-                'user',
-                'password',
-                'port',
-                'database'
-            ])
-
-                conConfig.connection[field] = process.env[`knex.connection.${field}`];
-
+            conConfig.connection = {
+                user: process.env.KNEX_CONNECTION_USER,
+                password: process.env.KNEX_CONNECTION_PASSWORD,
+                port: process.env.KNEX_CONNECTION_PORT,
+                database: process.env.KNEX_CONNECTION_DATABASE
+            };
             break;
         case 'development':
         case 'dev':

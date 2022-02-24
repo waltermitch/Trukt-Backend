@@ -4,8 +4,8 @@ const jwktopem = require('jwk-to-pem');
 
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 60 * 60 * 24 });
 
-const tenantId = process.env['azure.ad.tenantId'];
-const appId = process.env['azure.ad.appId'];
+const tenantId = process.env.AZURE_AD_TENANTID;
+const appId = process.env.AZURE_AD_APPID;
 
 const opts = { url: 'https://login.microsoftonline.com' };
 

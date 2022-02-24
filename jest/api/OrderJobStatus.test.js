@@ -18,6 +18,8 @@ const Commodity = require('../../src/Models/Commodity');
 // Extra Data
 const data = require('./data.json');
 
+const { SYSTEM_USER } = process.env;
+
 const context = {};
 let trx;
 
@@ -139,8 +141,8 @@ describe('Status verification', () =>
             isTransport: true,
             typeId: 1
         });
-        order.setCreatedBy(process.env.SYSTEM_USER);
-        job.setCreatedBy(process.env.SYSTEM_USER);
+        order.setCreatedBy(SYSTEM_USER);
+        job.setCreatedBy(SYSTEM_USER);
         order.jobs = [job];
         context.client = client;
         context.order = await Order.query(trx).insertGraphAndFetch(order, { relate: true });
@@ -213,7 +215,7 @@ describe('Status verification', () =>
                 jobGuid: context.job.guid,
                 loadboard: 'SUPERDISPATCH',
                 isPosted: true,
-                createdByGuid: process.env.SYSTEM_USER
+                createdByGuid: SYSTEM_USER
             });
 
         // get data
@@ -235,7 +237,7 @@ describe('Status verification', () =>
                 jobGuid: context.job.guid,
                 loadboard: 'SUPERDISPATCH',
                 isPosted: true,
-                createdByGuid: process.env.SYSTEM_USER
+                createdByGuid: SYSTEM_USER
             });
         await LoadboardRequest.query(trx)
             .insert({
@@ -244,7 +246,7 @@ describe('Status verification', () =>
                 loadboard: post.loadboard,
                 loadboardPostGuid: post.guid,
                 isValid: true,
-                createdByGuid: process.env.SYSTEM_USER
+                createdByGuid: SYSTEM_USER
             });
 
         // get data
@@ -268,7 +270,7 @@ describe('Status verification', () =>
             // making the client the vendor cause I don't care
             vendorGuid: context.client.guid,
             isPending: true,
-            createdByGuid: process.env.SYSTEM_USER
+            createdByGuid: SYSTEM_USER
         });
 
         // get data
@@ -293,7 +295,7 @@ describe('Status verification', () =>
             vendorGuid: context.client.guid,
             isPending: false,
             isDeclined: true,
-            createdByGuid: process.env.SYSTEM_USER
+            createdByGuid: SYSTEM_USER
         });
 
         // get data
@@ -326,7 +328,7 @@ describe('Status verification', () =>
             isPending: false,
             isDeclined: false,
             isAccepted: true,
-            createdByGuid: process.env.SYSTEM_USER
+            createdByGuid: SYSTEM_USER
         });
 
         // mark all pickups as completed

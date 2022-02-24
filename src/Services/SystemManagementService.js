@@ -4,10 +4,10 @@ const User = require('../Models/User');
 const { DateTime } = require('luxon');
 const Mongo = require('../Mongo');
 
-const clientSecret = process.env['azure.ad.appSecret'];
-const username = process.env['azure.ad.TMSusername'];
-const password = process.env['azure.ad.TMSpassword'];
-const clientId = process.env['azure.ad.appId'];
+const clientSecret = process.env.AZURE_AD_APPSECRET;
+const username = process.env.AZURE_AD_TMSUSERNAME;
+const password = process.env.AZURE_AD_TMSPASSWORD;
+const clientId = process.env.AZURE_AD_APPID;
 
 class SystemManagementService
 {

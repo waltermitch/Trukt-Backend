@@ -1,7 +1,7 @@
 const { WebPubSubServiceClient } = require('@azure/web-pubsub');
 
-const connectionString = process.env['azure.pubsub.connectionString'];
-const hubName = process.env['azure.pubsub.hub'];
+const connectionString = process.env.AZURE_PUBSUB_CONNECTIONSTRING;
+const hubName = process.env.AZURE_PUBSUB_HUB;
 
 const service = new WebPubSubServiceClient(connectionString, hubName, { keepAliveOptions: { enable: true } });
 
