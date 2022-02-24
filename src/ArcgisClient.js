@@ -2,9 +2,9 @@
 const axios = require('axios');
 const https = require('https');
 
-const API_KEY = process.env['arcgis.apikey'];
-const BASE_URL = process.env['arcgis.baseUrl'];
+const API_KEY = process.env.ARCGIS_APIKEY;
 const NODE_ENV = process.env.NODE_ENV;
+const BASE_URL = 'https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer';
 
 class ArcgisClient
 {

@@ -13,6 +13,7 @@ const SFAccount = require('../../../../src/Models/SFAccount');
 const Terminal = require('../../../../src/Models/Terminal');
 const OrderJobService = require('../../../../src/Services/OrderJobService');
 
+const { SYSTEM_USER } = process.env;
 let context;
 let trx;
 
@@ -28,8 +29,8 @@ describe('Delete Commodity From Jobs', () =>
             const order = Order.fromJson({ client: SFAccount.fromJson({ name: 'Fake Client' }) });
             const job = OrderJob.fromJson({ jobType: { '#dbRef': 1 }, isTransport: true });
 
-            order.setCreatedBy(process.env.SYSTEM_USER);
-            job.setCreatedBy(process.env.SYSTEM_USER);
+            order.setCreatedBy(SYSTEM_USER);
+            job.setCreatedBy(SYSTEM_USER);
             order.jobs = [job, OrderJob.fromJson(job)];
             orders.push(order);
         }
@@ -40,17 +41,17 @@ describe('Delete Commodity From Jobs', () =>
         for (let i = 0; i < 6; i++)
         {
             const comm = Commodity.fromJson({});
-            comm.setCreatedBy(process.env.SYSTEM_USER);
+            comm.setCreatedBy(SYSTEM_USER);
             commodities.push(comm);
         }
         for (let i = 0; i < 6; i++)
         {
             const terminal = Terminal.fromJson({ name: 'Fake Terminal', street1: 'test' + i, zipCode: 12345 });
-            terminal.setCreatedBy(process.env.SYSTEM_USER);
+            terminal.setCreatedBy(SYSTEM_USER);
             const stop = OrderStop.fromJson({
                 terminal
             });
-            stop.setCreatedBy(process.env.SYSTEM_USER);
+            stop.setCreatedBy(SYSTEM_USER);
             stops.push(stop);
         }
 
@@ -79,7 +80,7 @@ describe('Delete Commodity From Jobs', () =>
                         commodityGuid: com.guid,
                         stopGuid: orderVisibleStops[index].guid
                     });
-                    orderLink.setCreatedBy(process.env.SYSTEM_USER);
+                    orderLink.setCreatedBy(SYSTEM_USER);
                     stopLinks.push(orderLink);
                 }
             }
@@ -98,7 +99,7 @@ describe('Delete Commodity From Jobs', () =>
                             commodityGuid: com.guid,
                             stopGuid: stop.guid
                         });
-                        jobLink.setCreatedBy(process.env.SYSTEM_USER);
+                        jobLink.setCreatedBy(SYSTEM_USER);
                         stopLinks.push(jobLink);
                     }
                 }

@@ -4,7 +4,7 @@ const QBAccount = require('../Models/QBAccount');
 const HTTPS = require('../AuthController');
 const DB = require('../Mongo');
 
-const url = process.env['quickbooks.apiUrl'];
+const url = process.env.QUICKBOOKS_APIURL;
 const tokenName = 'qb_access_token';
 
 let qb;

@@ -1,5 +1,8 @@
 const axios = require('axios');
 
+const baseURL = process.env.AZURE_GENERALFUNC_BASEURL;
+const code = process.env.AZURE_GENERALFUNC_CODE;
+
 class GeneralFunctionsApi
 {
     constructor()
@@ -14,9 +17,9 @@ class GeneralFunctionsApi
     static createConnectionObject()
     {
         return axios.create({
-            baseURL: process.env['azure.generalFunc.baseurl'],
+            baseURL,
             headers: { 'Content-Type': 'application/json' },
-            params: { code: process.env['azure.generalFunc.funcCode'] }
+            params: { code }
         });
     }
 
