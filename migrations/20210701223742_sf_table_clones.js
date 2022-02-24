@@ -48,7 +48,6 @@ exports.up = function (knex)
             insurance_expiration__c as insurance_expiration,
             insurance_on_file__c as insurance_on_file,
             internal_notes__c as internal_notes,
-            job_title__c as job_title,
             lastname as last_name,
             loadboard_instructions__c as loadboard_instructions,
             mc_number__c as mc_number,
