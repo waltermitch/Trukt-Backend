@@ -4,7 +4,7 @@ const LoadboardRequest = require('../Models/LoadboardRequest');
 // this is imported here because the file needs to be imported somewhere
 // in order for it to be able to listen to incoming events from service bus
 const LoadboardHandler = require('../Loadboards/LoadboardHandler');
-const { MissingDataError } = require('../ErrorHandling/Exceptions');
+const { MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class LoadboardController
 {
@@ -141,7 +141,6 @@ class LoadboardController
         }
     }
 
-    // TODO: add requests into here.
     static async getRequestsByJobGuid(req, res)
     {
         const result = await LoadboardService.getRequestsbyJobID(req?.params?.jobGuid);
@@ -149,12 +148,10 @@ class LoadboardController
         if (result)
         {
             res.status(200);
-            res.json(result);
+            res.json({ status: 200, data: result });
         }
         else
-        {
-            res.status(404).send();
-        }
+            throw new NotFoundError('Requests not Found');
     }
 
     static async createRequestFromIncomingWebHook(req, res, next)
@@ -175,15 +172,7 @@ class LoadboardController
         }
         catch (err)
         {
-            if (err.message == 'Posting Doesn\'t Exist')
-            {
-                res.status(404);
-                res.json(err.message);
-            }
-            else
-            {
-                next(err);
-            }
+            next(err);
         }
     }
 
@@ -205,15 +194,7 @@ class LoadboardController
         }
         catch (err)
         {
-            if (err.message == 'Posting Doesn\'t Exist')
-            {
-                res.status(404);
-                res.json(err.message);
-            }
-            else
-            {
-                next(err);
-            }
+            next(err);
         }
     }
 
@@ -225,11 +206,10 @@ class LoadboardController
             const requestGuid = req.params?.requestGuid;
             if (!reason)
             {
-                // TODO: Update error with proper ErrorHandler
-                throw new Error('Unable to decline Request, missing reason');
+                throw new MissingDataError('Unable to decline Request, missing reason');
             }
-            await LoadboardService.declineRequestByGuid(requestGuid, reason, req.session.userGuid);
-            res.status(204).send();
+            const result = await LoadboardService.declineRequestByGuid(requestGuid, reason, req.session.userGuid);
+            res.status(200).send({ status: 200, data: result });
         }
         catch (error)
         {
@@ -244,16 +224,13 @@ class LoadboardController
             const requestGuid = req.params?.requestGuid;
             if (requestGuid)
             {
-                const result = await LoadboardService.acceptRequest(requestGuid, req.session.userGuid);
+                const result = await LoadboardService.acceptRequestbyGuid(requestGuid, req.session.userGuid);
 
                 res.status(200);
                 res.json({ status: 200, data: result });
             }
             else
-            {
-                res.status(400);
-                res.send('Unable to accept Request or no Guid');
-            }
+                throw NotFoundError('Not Request guid provided');
         }
         catch (error)
         {

@@ -1234,7 +1234,7 @@ class LoadboardService
             throw error;
         });
 
-        await queryRequest.$query().patch();
+        const updatedRequest = await queryRequest.$query().patchAndFetch();
 
         await ActivityManagerService.createActivityLog({
             orderGuid: orderGuid,
@@ -1250,10 +1250,10 @@ class LoadboardService
             }
         });
 
-        return;
+        return updatedRequest;
     }
 
-    static async acceptRequest(requestGuid, currentUser)
+    static async acceptRequestbyGuid(requestGuid, currentUser)
     {
         const trx = await LoadboardRequest.startTransaction();
 
