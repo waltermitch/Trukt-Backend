@@ -8,6 +8,7 @@ const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const listener = require('./index');
 const Super = require('../Loadboards/Super');
+const logEventErrors = require('./logEventErrors');
 
 // const { raw } = require('objection');
 
@@ -27,6 +28,8 @@ listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
             OrderService.markOrderReady(orderGuid, currentUser)
         ]);
 
+        logEventErrors(proms, 'orderjob_ready');
+
         // This doesn't make any sense so I uncommented it for now
         // Order.query()
         //     .patch({
@@ -41,10 +44,6 @@ listener.on('orderjob_ready', ({ jobGuid, orderGuid, currentUser }) =>
 
         // this doesn't exists
         listener.emit('order_verified', orderGuid);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
     });
 });
 
@@ -62,9 +61,7 @@ listener.on('orderjob_hold_added', ({ orderGuid, jobGuid, currentUser }) =>
             })
         ]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_hold_added');
     });
 });
 
@@ -81,9 +78,7 @@ listener.on('orderjob_hold_removed', ({ orderGuid, jobGuid, currentUser }) =>
             })
         ]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_hold_removed');
     });
 });
 
@@ -94,60 +89,67 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
 {
     setImmediate(async () =>
     {
-        const status = await OrderJobService.updateStatusField(jobGuid, currentUser);
-        const [[{ pickupsInProgress }], [{ isStatusForLastDelivery }]] =
-            await Promise.all([OrderJobService.getNumberOfPickupsInProgress(jobGuid), OrderJobService.isJobStatusForLastDelivery(jobGuid)]);
-
-        /**
-         * Registers the activity log to 'Pickup' only when the first commmodity of the job is pick up
-         */
-        if (jobStop.stop_type == 'pickup' && pickupsInProgress == 1 && userAction == 'completed')
+        try
         {
-            await ActivityManagerService.createActivityLog({
-                orderGuid: orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                activityId: 29
-            });
+            const status = await OrderJobService.updateStatusField(jobGuid, currentUser);
+            const [[{ pickupsInProgress }], [{ isStatusForLastDelivery }]] =
+                await Promise.all([OrderJobService.getNumberOfPickupsInProgress(jobGuid), OrderJobService.isJobStatusForLastDelivery(jobGuid)]);
+    
+            /**
+             * Registers the activity log to 'Pickup' only when the first commmodity of the job is pick up
+             */
+            if (jobStop.stop_type == 'pickup' && pickupsInProgress == 1 && userAction == 'completed')
+            {
+                await ActivityManagerService.createActivityLog({
+                    orderGuid: orderGuid,
+                    jobGuid: jobGuid,
+                    userGuid: currentUser,
+                    activityId: 29
+                });
+            }
+    
+            /**
+            * Registers the activity log to 'delivered' only when the last commmodity of the job is delivered
+            */
+            else if (status === OrderJob.STATUS.DELIVERED)
+            {
+                await ActivityManagerService.createActivityLog({
+                    orderGuid: orderGuid,
+                    jobGuid: jobGuid,
+                    userGuid: currentUser,
+                    activityId: 27
+                });
+            }
+    
+            /**
+            * Registers the activity log to 'dispatched'
+            */
+            else if (status === OrderJob.STATUS.DISPATCHED)
+            {
+                await ActivityManagerService.createActivityLog({
+                    orderGuid: orderGuid,
+                    jobGuid: jobGuid,
+                    userGuid: currentUser,
+                    activityId: 31
+                });
+            }
+    
+            /**
+             * Registers the activity log to 'Rollback to pickup' only when the last delivered commodity of the job is back to 'pick up'
+             */
+            else if (jobStop.stop_type == 'delivery' && userAction == 'started' && isStatusForLastDelivery)
+            {
+                await ActivityManagerService.createActivityLog({
+                    orderGuid: orderGuid,
+                    jobGuid: jobGuid,
+                    userGuid: currentUser,
+                    activityId: 32
+                });
+            }
         }
-
-        /**
-        * Registers the activity log to 'delivered' only when the last commmodity of the job is delivered
-        */
-        else if (status === OrderJob.STATUS.DELIVERED)
+        catch (error)
         {
-            await ActivityManagerService.createActivityLog({
-                orderGuid: orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                activityId: 27
-            });
-        }
-
-        /**
-        * Registers the activity log to 'dispatched'
-        */
-        else if (status === OrderJob.STATUS.DISPATCHED)
-        {
-            await ActivityManagerService.createActivityLog({
-                orderGuid: orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                activityId: 31
-            });
-        }
-
-        /**
-         * Registers the activity log to 'Rollback to pickup' only when the last delivered commodity of the job is back to 'pick up'
-         */
-        else if (jobStop.stop_type == 'delivery' && userAction == 'started' && isStatusForLastDelivery)
-        {
-            await ActivityManagerService.createActivityLog({
-                orderGuid: orderGuid,
-                jobGuid: jobGuid,
-                userGuid: currentUser,
-                activityId: 32
-            });
+            logEventErrors(error, 'orderjob_stop_update');
         }
     });
 });
@@ -159,9 +161,7 @@ listener.on('orderjob_dispatch_offer_sent', async ({ jobGuid }) =>
         const job = await OrderJobService.getJobData(jobGuid);
         const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, job)]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_dispatch_offer_sent');
     });
 });
 
@@ -172,9 +172,7 @@ listener.on('orderjob_dispatch_offer_accepted', ({ jobGuid, currentUser, orderGu
         const job = await OrderJobService.getJobData(jobGuid);
         const proms = await Promise.allSettled([OrderService.markAsScheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_dispatch_offer_accepted');
     });
 });
 
@@ -185,9 +183,7 @@ listener.on('orderjob_dispatch_offer_canceled', ({ jobGuid, currentUser, orderGu
         const job = await OrderJobService.getJobData(jobGuid);
         const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_dispatch_offer_canceled');
     });
 });
 
@@ -198,9 +194,7 @@ listener.on('orderjob_dispatch_offer_declined', ({ jobGuid, currentUser, orderGu
         const job = await OrderJobService.getJobData(jobGuid);
         const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser), PubSubService.jobUpdated(jobGuid, job)]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_dispatch_offer_declined');
     });
 });
 
@@ -210,9 +204,7 @@ listener.on('orderjob_dispatch_canceled', ({ jobGuid, currentUser, orderGuid }) 
     {
         const proms = await Promise.allSettled([OrderService.markAsUnscheduled(orderGuid, currentUser)]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_dispatch_canceled');
     });
 });
 
@@ -224,9 +216,7 @@ listener.on('load_request_accepted', ({ jobGuid }) =>
 
         const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, job), PubSubService.publishJobRequests(jobGuid, resquests), PubSubService.publishJobPostings(jobGuid, posts)]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'load_request_accepted');
     });
 });
 
@@ -237,9 +227,7 @@ listener.on('load_request_declined', ({ jobGuid, currentUser, orderGuid, body })
     {
         const proms = await Promise.allSettled([]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'load_request_declined');
     });
 });
 
@@ -257,10 +245,7 @@ listener.on('orderjob_delivered', ({ jobGuid, currentUser = SYSTEM_USER, orderGu
             })
         ]);
 
-        // Log the reason why the order was not set as delivered
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_delivered');
     });
 });
 
@@ -270,9 +255,7 @@ listener.on('orderjob_undelivered', ({ jobGuid, currentUser = SYSTEM_USER, order
     {
         const proms = await Promise.allSettled([OrderService.markOrderUndelivered(orderGuid, currentUser)]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_undelivered');
     });
 });
 
@@ -290,10 +273,7 @@ listener.on('orderjob_picked_up', ({ jobGuid, currentUser = SYSTEM_USER, orderGu
             })
         ]);
 
-        // Log the reason why the order was not set as pick up
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_picked_up');
     });
 });
 
@@ -303,9 +283,7 @@ listener.on('orderjob_booked', ({ jobGuid, currentUser }) =>
     {
         const proms = await Promise.allSettled([(OrderJobService.updateStatusField(jobGuid, currentUser))]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_booked');
     });
 });
 
@@ -318,36 +296,41 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
      */
     setImmediate(async () =>
     {
-        const orderUpdatePromise = [];
-        const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
-        if (jobsOrder?.deleteorder)
+        try
         {
-            const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
-            orderUpdatePromise.push(
-                Order.query().patch(deleteStatusPayload).findById(orderGuid),
+            const orderUpdatePromise = [];
+            const [jobsOrder] = await OrderJob.query().modify('areAllOrderJobsDeleted', orderGuid);
+            if (jobsOrder?.deleteorder)
+            {
+                const deleteStatusPayload = Order.createStatusPayload(currentUser).deleted;
+                orderUpdatePromise.push(
+                    Order.query().patch(deleteStatusPayload).findById(orderGuid),
+                    ActivityManagerService.createActivityLog({
+                        orderGuid,
+                        jobGuid,
+                        userGuid: currentUser,
+                        activityId: 19
+                    })
+                );
+            }
+
+            const proms = await Promise.allSettled([
                 ActivityManagerService.createActivityLog({
                     orderGuid,
                     jobGuid,
                     userGuid: currentUser,
-                    activityId: 19
-                })
-            );
+                    activityId: 17
+                }),
+                OrderJobService.updateStatusField(jobGuid, currentUser),
+                ...orderUpdatePromise
+            ]);
+    
+            logEventErrors(proms, 'orderjob_deleted');
         }
-
-        const proms = await Promise.allSettled([
-            ActivityManagerService.createActivityLog({
-                orderGuid,
-                jobGuid,
-                userGuid: currentUser,
-                activityId: 17
-            }),
-            OrderJobService.updateStatusField(jobGuid, currentUser),
-            ...orderUpdatePromise
-        ]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        catch (error)
+        {
+            logEventErrors(error, 'orderjob_deleted');
+        }
     });
 });
 
@@ -359,7 +342,7 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
      */
     setImmediate(async () =>
     {
-        await Promise.allSettled([
+        const proms = await Promise.allSettled([
             OrderJobService.updateStatusField(jobGuid, currentUser),
             Super.updateStatus(jobGuid, 'deleted', 'notDeleted'),
             ActivityManagerService.createActivityLog({
@@ -375,10 +358,8 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
                 activityId: 20
             })
         ]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        
+        logEventErrors(proms, 'orderjob_undeleted');
     });
 });
 
@@ -400,9 +381,7 @@ listener.on('orderjob_canceled', ({ orderGuid, currentUser, jobGuid }) =>
             })
         ]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_canceled');
     });
 });
 
@@ -425,9 +404,7 @@ listener.on('orderjob_uncanceled', ({ orderGuid, currentUser, jobGuid }) =>
             })
         ]);
 
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        logEventErrors(proms, 'orderjob_uncanceled');
     });
 });
 
@@ -435,12 +412,17 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
 {
     setImmediate(async () =>
     {
-        const currrentJob = await OrderJobService.getJobData(jobGuid);
-        const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, currrentJob), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
-
-        // for (const p of proms)
-        //     if (p.status === 'rejected')
-        //         console.log(p.reason?.response?.data || p.reason);
+        try
+        {
+            const currrentJob = await OrderJobService.getJobData(jobGuid);
+            const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, currrentJob), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
+    
+            logEventErrors(proms, 'orderjob_status_updated');
+        }
+        catch (error)
+        {
+            logEventErrors(error, 'orderjob_status_updated');
+        }
     });
 });
 

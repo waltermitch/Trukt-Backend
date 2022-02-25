@@ -5,6 +5,7 @@ const Order = require('../Models/Order');
 const currency = require('currency.js');
 const { DateTime } = require('luxon');
 const R = require('ramda');
+const { NotFoundError, MissingDataError, ValidationError } = require('../ErrorHandling/Exceptions');
 
 const SCAC_CODE = 'RCGQ';
 
@@ -319,7 +320,7 @@ class EDIController
 
             if (!order)
             {
-                throw new Error('load tender with reference number: "' + req.query.reference + '" doesn\'t exist');
+                throw new NotFoundError('load tender with reference number: "' + req.query.reference + '" doesn\'t exist');
             }
 
             const payload = {
@@ -371,7 +372,7 @@ class EDIController
 
             if (missing.length > 0)
             {
-                throw new Error('missing field(s): ' + missing.join(', '));
+                throw new MissingDataError('missing field(s): ' + missing.join(', '));
             }
 
             const payload = req.body;
@@ -411,7 +412,7 @@ class EDIController
 
             if (!order)
             {
-                throw Error('order with reference number "' + payload.reference + '" doesn\'t exist');
+                throw new NotFoundError('order with reference number "' + payload.reference + '" doesn\'t exist');
             }
 
             if (payload.status.type == 'appointment')
@@ -448,7 +449,7 @@ class EDIController
                         //  Pick - up Appointment Secured on This Date and / or Time
                         break;
                     default:
-                        throw new Error('unknown appointment status code: ' + payload.status.code);
+                        throw new ValidationError('unknown appointment status code: ' + payload.status.code);
                 }
                 /* eslint-enable */
             }
@@ -583,12 +584,12 @@ class EDIController
                         // Shipment Acknowledged
                         break;
                     default:
-                        throw new Error('unknown status code: ' + payload.status.code);
+                        throw new ValidationError('unknown status code: ' + payload.status.code);
                 }
             }
             else
             {
-                throw new Error('unknown status type: ' + payload.status.type);
+                throw new ValidationError('unknown status type: ' + payload.status.type);
             }
 
             res.status(200);
@@ -619,11 +620,11 @@ class EDIController
             {
                 if (req.query.reference)
                 {
-                    throw new Error('load tender with reference number: "' + req.query.reference + '" doesn\'t exist');
+                    throw new NotFoundError('load tender with reference number: "' + req.query.reference + '" doesn\'t exist');
                 }
                 else
                 {
-                    throw new Error('No order / load tender was found. Please create a load tender first.');
+                    throw new NotFoundError('No order / load tender was found. Please create a load tender first.');
                 }
             }
             const stop = order.stops[Math.floor(Math.random() * order.stops.length)];

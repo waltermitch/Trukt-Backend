@@ -1,5 +1,4 @@
 const ActivityManagerService = require('./ActivityManagerService');
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardContact = require('../Models/LoadboardContact');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
@@ -21,6 +20,7 @@ const { SeverityLevel } = require('applicationinsights/out/Declarations/Contract
 const telemetry = require('../ErrorHandling/Insights');
 const PubSubService = require('./PubSubService');
 const LoadboardsApi = require('../Loadboards/LoadboardsApi');
+const { NotFoundError, DataConflictError, ValidationError, ExceptionCollection } = require('../ErrorHandling/Exceptions');
 
 const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
@@ -87,7 +87,7 @@ class LoadboardService
         }
 
         if (!job)
-            throw new HttpError(404, 'Job not found');
+            throw new NotFoundError('Job not found');
 
         const posts = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
@@ -100,22 +100,15 @@ class LoadboardService
         const payloads = [];
         let lbPayload;
 
-        try
+        for (const post of posts)
         {
-            for (const post of posts)
+            // to prevent creating multiples of the same loads, check if the posting already
+            // has an external guid. If it does and it alreadys exists, skip it.
+            if (job.postObjects[`${post.loadboard}`].externalGuid == null)
             {
-                // to prevent creating multiples of the same loads, check if the posting already
-                // has an external guid. If it does and it alreadys exists, skip it.
-                if (job.postObjects[`${post.loadboard}`].externalGuid == null)
-                {
-                    lbPayload = new loadboardClasses[`${post.loadboard}`](job);
-                    payloads.push(lbPayload['create']());
-                }
+                lbPayload = new loadboardClasses[`${post.loadboard}`](job);
+                payloads.push(lbPayload['create']());
             }
-        }
-        catch (e)
-        {
-            throw new Error(e.toString());
         }
 
         // sending all payloads as one big object so one big response can be returned
@@ -133,34 +126,26 @@ class LoadboardService
             }).first();
 
         if (dispatches)
-            throw new Error('Cannot post load with active dispatch offers');
+            throw new DataConflictError('Cannot post load with active dispatch offers');
 
         const job = await LoadboardService.getAllPostingData(jobId, posts, currentUser);
         const payloads = [];
         let lbPayload;
 
-        try
+        for (const post of posts)
         {
-            for (const post of posts)
-            {
-                lbPayload = new loadboardClasses[`${post.loadboard}`](job);
-                payloads.push(lbPayload['post']());
-            }
-
-            // sending all payloads as one big object so one big response can be returned
-            // and handler can then use one big transaction to update all records rather
-            // than have a single new transaction for each posting
-            if (payloads.length != 0)
-            {
-                await sender.sendMessages({ body: payloads });
-                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
-            }
-        }
-        catch (e)
-        {
-            throw new Error(e.toString());
+            lbPayload = new loadboardClasses[`${post.loadboard}`](job);
+            payloads.push(lbPayload['post']());
         }
 
+        // sending all payloads as one big object so one big response can be returned
+        // and handler can then use one big transaction to update all records rather
+        // than have a single new transaction for each posting
+        if (payloads.length != 0)
+        {
+            await sender.sendMessages({ body: payloads });
+            LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
+        }
     }
 
     static async unpostPostings(jobId, posts, currentUser)
@@ -169,26 +154,19 @@ class LoadboardService
         const payloads = [];
         let lbPayload;
 
-        try
+        for (const lbName of Object.keys(job.postObjects))
         {
-            for (const lbName of Object.keys(job.postObjects))
-            {
-                lbPayload = new loadboardClasses[`${lbName}`](job);
-                payloads.push(lbPayload['unpost']());
-            }
-
-            // sending all payloads as one big object so one big response can be returned
-            // and handler can then use one big transaction to update all records rather
-            // than have a single new transaction for each posting
-            if (payloads.length != 0)
-            {
-                await sender.sendMessages({ body: payloads });
-                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3, jobId);
-            }
+            lbPayload = new loadboardClasses[`${lbName}`](job);
+            payloads.push(lbPayload['unpost']());
         }
-        catch (e)
+
+        // sending all payloads as one big object so one big response can be returned
+        // and handler can then use one big transaction to update all records rather
+        // than have a single new transaction for each posting
+        if (payloads.length != 0)
         {
-            throw new Error(e.toString());
+            await sender.sendMessages({ body: payloads });
+            LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3, jobId);
         }
     }
 
@@ -219,7 +197,7 @@ class LoadboardService
         try
         {
             if (body.loadboard != null && !dispatchableLoadboards.includes(body.loadboard))
-                throw new Error(`${body.loadboard} cannot be dispatched to, you can only dispatch to ${dispatchableLoadboards}`);
+                throw new ValidationError(`${body.loadboard} cannot be dispatched to, you can only dispatch to ${dispatchableLoadboards}`);
 
             let job = {};
 
@@ -231,7 +209,7 @@ class LoadboardService
 
                 if (!job)
                 {
-                    throw new HttpError(404, 'Job not found');
+                    throw new NotFoundError('Job not found');
                 }
 
                 const stops = await this.getFirstAndLastStops(job.stops);
@@ -252,9 +230,9 @@ class LoadboardService
             const driver = body.driver;
 
             if (!carrier)
-                throw new Error('carrier not found, please pass in a valid guid, salesforce id, or dot number');
+                throw new NotFoundError('carrier not found, please pass in a valid guid, salesforce id, or dot number');
             else if (carrier.status == 'Inactive' || carrier.status == 'Blacklist' || carrier.blaclist == true)
-                throw new Error(`Carrier has a status of ${carrier.status} and cannot be dispatched to without manager approval`);
+                throw new DataConflictError(`Carrier has a status of ${carrier.status} and cannot be dispatched to without manager approval`);
 
             let carrierContact = driver.guid == null ? driver : await SFContact.query().modify('byId', driver.guid).first();
 
@@ -272,7 +250,7 @@ class LoadboardService
             else
             {
                 if (carrierContact.accountId != carrier.sfId)
-                    throw new Error('Please pass in valid driver for carrier');
+                    throw new ValidationError('Please pass in valid driver for carrier');
             }
 
             // updating invoice bills with proper payments methods
@@ -297,7 +275,7 @@ class LoadboardService
             // validating that pick date is before delivery
             if (job.delivery.dateScheduledStart < job.pickup.dateScheduledStart || job.delivery.dateScheduledEnd < job.pickup.dateScheduledEnd)
             {
-                throw new Error('Pickup dates should be before delivery date');
+                throw new ValidationError('Pickup dates should be before delivery date');
             }
 
             // update job status to pending and started date
@@ -317,7 +295,7 @@ class LoadboardService
             }
             catch (e)
             {
-                throw `Loadboard Post for ${body.loadboard} is out of sync. Please fix the job and the resync the loadboard post before dispatching`;
+                throw new DataConflictError(`Loadboard Post for ${body.loadboard} is out of sync. Please fix the job and the resync the loadboard post before dispatching`);
             }
 
             // composing dispatch object
@@ -436,11 +414,11 @@ class LoadboardService
                 .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
 
             if (!dispatch)
-                throw new HttpError(404, 'No active offers to undispatch');
+                throw new DataConflictError('No active offers to undispatch');
 
             // this is temporary fix, should make it data driven eventually
             if ([OrderJob.STATUS.PICKED_UP, OrderJob.STATUS.DELIVERED, OrderJob.STATUS.COMPLETED].includes(dispatch.job.status))
-                throw new HttpError(400, 'Can not cancel dispatch for a job that has already been picked up or delivered');
+                throw new DataConflictError('Can not cancel dispatch for a job that has already been picked up or delivered');
 
             // assign current user as updated by
             dispatch.setUpdatedBy(currentUser);
@@ -557,7 +535,7 @@ class LoadboardService
             ]);
             const order = job.order;
             if (!job)
-                throw new HttpError(404, 'Job not found');
+                throw new NotFoundError('Job not found');
 
             job.validateJobForAccepting();
 
@@ -566,12 +544,12 @@ class LoadboardService
                 .withGraphFetched('[vendor, vendorAgent, loadboardPost]');
 
             if (!dispatch)
-                throw new HttpError(404, 'Dispatch not found');
+                throw new NotFoundError(404, 'Dispatch not found');
 
             const lbPayload = [];
             if (dispatch.loadboardPost?.loadboard == 'SHIPCARS')
             {
-                throw new HttpError(400, 'Cannot manually accept job that was dispatched to Ship.Cars');
+                throw new DataConflictError('Cannot manually accept job that was dispatched to Ship.Cars');
             }
             else if (dispatch.loadboardPost?.loadboard == 'SUPERDISPATCH')
             {
@@ -666,10 +644,10 @@ class LoadboardService
         });
 
         if (!job)
-            throw new HttpError(404, 'Job not found');
+            throw new NotFoundError('Job not found');
 
         if (job.isOnHold)
-            throw new HttpError(400, 'Cannot get posting data for job that is on hold');
+            throw new DataConflictError('Cannot get posting data for job that is on hold');
 
         await this.createPostRecords(job, posts, currentUser);
 
@@ -705,7 +683,7 @@ class LoadboardService
         });
 
         if (!job)
-            throw new Error('Job not found');
+            throw new NotFoundError('Job not found');
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
@@ -762,7 +740,7 @@ class LoadboardService
                 const lbContact = await LoadboardContact.query().findById(post.values.contactId).where({ loadboard: post.loadboard });
 
                 if (!lbContact || lbContact.loadboard != post.loadboard)
-                    throw new HttpError(404, `Please provide a valid contact for posting to ${post.loadboard}`);
+                    throw new ValidationError(`Please provide a valid contact for posting to ${post.loadboard}`);
 
                 post.values.contact = lbContact;
             }
@@ -802,17 +780,17 @@ class LoadboardService
 
     static checkLoadboardsInput(posts, action)
     {
-        const errors = [];
+        const errorsCollection = new ExceptionCollection();
 
         if (posts.length === 0)
-            errors.push(new HttpError(400, `a loadboard is required, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
+            errorsCollection.addError(new ValidationError(`a loadboard is required, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
 
         for (const post of posts)
         {
             const lbName = post.loadboard;
             if (!(lbName in dbLoadboardNames))
 
-                throw new HttpError(404, `the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
+                throw new ValidationError(`the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
 
             if (dbLoadboardNames[lbName].requiresOptions && (action == 'post' || action == 'create'))
             {
@@ -821,8 +799,7 @@ class LoadboardService
             }
         }
 
-        if (errors.length !== 0)
-            throw errors;
+        errorsCollection.throwErrorsIfExist();
     }
 
     // TODO: this method is on the OrderStops model, use it from there
@@ -890,25 +867,18 @@ class LoadboardService
         let lbPayload;
         const activeExternalLBNames = [];
 
-        try
+        // Only send for non deleted loadboards
+        for (const lbName of Object.keys(job.postObjects))
         {
-            // Only send for non deleted loadboards
-            for (const lbName of Object.keys(job.postObjects))
-            {
-                lbPayload = new loadboardClasses[`${lbName}`](job);
-                payloads.push(lbPayload['remove'](userGuid));
-                activeExternalLBNames.push({ loadboard: lbName });
-            }
-
-            if (payloads?.length)
-            {
-                await sender.sendMessages({ body: payloads });
-                LoadboardService.registerLoadboardStatusManager(activeExternalLBNames, job.orderGuid, userGuid, 21, jobId);
-            }
+            lbPayload = new loadboardClasses[`${lbName}`](job);
+            payloads.push(lbPayload['remove'](userGuid));
+            activeExternalLBNames.push({ loadboard: lbName });
         }
-        catch (e)
+
+        if (payloads?.length)
         {
-            throw new Error(e.toString());
+            await sender.sendMessages({ body: payloads });
+            LoadboardService.registerLoadboardStatusManager(activeExternalLBNames, job.orderGuid, userGuid, 21, jobId);
         }
     }
 
@@ -919,7 +889,7 @@ class LoadboardService
 
         if (!job)
         {
-            throw new Error('Job not found');
+            throw new NotFoundError('Job not found');
         }
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
@@ -950,13 +920,13 @@ class LoadboardService
                 ]);
 
             if (!posting)
-                throw new HttpError(404, 'Posting Not Found');
+                throw new NotFoundError('Posting Not Found');
             else if (!vendor)
-                throw new HttpError(404, 'Vendor Not Found');
+                throw new NotFoundError('Vendor Not Found');
 
             // make sure the job is still in the correct status
             if (posting.job.vendorGuid)
-                throw new HttpError(400, 'Can not book a job that has already been booked');
+                throw new DataConflictError('Can not book a job that has already been booked');
 
             // if vendor and posting are valid
             // unpost the posting &
@@ -1060,10 +1030,7 @@ class LoadboardService
 
         if (!lbPosting)
         {
-            throw new Error(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
-
-            // TODO: update this with proper ErrorHandlers.
-            // throw NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+            throw new NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
         }
 
         const job = lbPosting.job;
@@ -1174,10 +1141,7 @@ class LoadboardService
 
         if (!lbPosting)
         {
-            throw new Error(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
-
-            // TODO: update this with proper ErrorHandlers.
-            // throw NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+            throw new NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
         }
 
         const job = lbPosting.job;
@@ -1186,10 +1150,7 @@ class LoadboardService
 
         if (existingRequests.length === 0)
         {
-            throw new Error(`The request doesn't exist for carrier ${carrier.name}`);
-
-            // TODO: update this with proper ErrorHandlers.
-            // throw NotFoundError(`The request doesn't exist for carrier ${carrier.usDot}`);
+            throw new NotFoundError(`The request doesn't exist for carrier ${carrier.name}`);
         }
 
         const promiseArray = await existingRequests.map(request =>
@@ -1269,8 +1230,8 @@ class LoadboardService
 
         await LoadboardsApi.sendRequest(queryRequest).catch((error) =>
         {
-            // TODO: update with proper errorhanlders
-            throw new Error(`Failed to decline request. Reason: ${error}`);
+            error.message = `Failed to decline request. Reason: ${error}`;
+            throw error;
         });
 
         await queryRequest.$query().patch();

@@ -5,6 +5,9 @@ const appInsights = require('applicationinsights');
 // our local instances with azure.
 const fakeTelemetryClient = require('./FakeTelemetryClient');
 
+/**
+ * @type {appInsights.TelemetryClient}
+ */
 let client = {};
 
 // check if we are running in local mode

@@ -2,21 +2,35 @@ const VariableService = require('../Services/VariableService');
 
 class VariableController
 {
-    static async get(req, res)
+    static async get(req, res, next)
     {
-        const q = req.params.name;
-
-        const result = await VariableService.get(q);
-
-        res.status(200);
-        res.json(result);
+        try
+        {
+            const q = req.params.name;
+    
+            const result = await VariableService.get(q);
+    
+            res.status(200);
+            res.json(result);
+        }
+        catch (error)
+        {
+            next(error);
+        }
     }
 
-    static async put(req, res)
+    static async put(req, res, next)
     {
-        await VariableService.update(req.body.name, req.body);
-
-        res.status(200).send();
+        try
+        {
+            await VariableService.update(req.body.name, req.body);
+    
+            res.status(200).send();
+        }
+        catch (error)
+        {
+            next(error);
+        }
     }
 }
 

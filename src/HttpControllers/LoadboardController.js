@@ -1,10 +1,10 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LoadboardService = require('../Services/LoadboardService');
 const LoadboardRequest = require('../Models/LoadboardRequest');
 
 // this is imported here because the file needs to be imported somewhere
 // in order for it to be able to listen to incoming events from service bus
 const LoadboardHandler = require('../Loadboards/LoadboardHandler');
+const { MissingDataError } = require('../ErrorHandling/Exceptions');
 
 class LoadboardController
 {
@@ -21,10 +21,7 @@ class LoadboardController
         }
         catch (e)
         {
-            next({
-                status: 500,
-                data: { message: e.toString() || 'Internal server error' }
-            });
+            next(e);
         }
     }
 
@@ -59,15 +56,7 @@ class LoadboardController
         }
         catch (e)
         {
-            let status = 400;
-            if (e.toString() == 'Error: Job not found')
-            {
-                status = 404;
-            }
-            next({
-                status,
-                data: { message: e.toString() || 'Internal server error' }
-            });
+            next(e);
         }
     }
 
@@ -136,11 +125,11 @@ class LoadboardController
 
             // do some validation
             if (!req.body.externalPostingGuid)
-                throw new HttpError(400, 'Missing external posting guid');
+                throw new MissingDataError('Missing external posting guid');
             else if (!req.body.loadboard)
-                throw new HttpError(400, 'Missing loadboard name');
+                throw new MissingDataError('Missing loadboard name');
             else if (!carrierGuid)
-                throw new HttpError(400, 'Carrier External Id or SF Id is missing');
+                throw new MissingDataError('Carrier External Id or SF Id is missing');
 
             await LoadboardService.postingBooked(req.body.externalPostingGuid, carrierGuid, req.body.loadboard);
 
