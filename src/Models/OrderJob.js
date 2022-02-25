@@ -1,8 +1,8 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const { ref, raw } = require('objection');
 const BaseModel = require('./BaseModel');
 const { snakeCaseString } = require('../Utils');
+const { DataConflictError, MissingDataError } = require('../ErrorHandling/Exceptions');
 
 const jobTypeFields = ['category', 'type'];
 const EDI_DEFAULT_INSPECTION_TYPE = 'standard';
@@ -711,44 +711,44 @@ class OrderJob extends BaseModel
     validateJobForDispatch()
     {
         if (this.isDummy)
-            throw new HttpError(400, 'Cannot dispatch dummy job');
+            throw new DataConflictError('Cannot dispatch dummy job');
 
         if (this.type.category != 'transport' && this.type.type != 'transport' && this.isTransport)
-            throw new HttpError(400, 'Cannot dispatch non transport job');
+            throw new DataConflictError('Cannot dispatch non transport job');
 
         if (this.isOnHold)
-            throw new HttpError(400, 'Cannot dispatch job that is on hold');
+            throw new DataConflictError('Cannot dispatch job that is on hold');
 
         if (!this.dispatcherGuid)
-            throw new HttpError(400, 'Cannot dispatch job that has no dispatcher');
+            throw new MissingDataError('Cannot dispatch job that has no dispatcher');
 
         if (!this.isReady)
-            throw new HttpError(400, 'Cannot dispatch job that is not ready');
+            throw new DataConflictError('Cannot dispatch job that is not ready');
 
         if (this.isDeleted)
-            throw new HttpError(400, 'Cannot dispatch deleted job');
+            throw new DataConflictError('Cannot dispatch deleted job');
 
         if (this.isCanceled)
-            throw new HttpError(400, 'Cannot dispatch canceled job');
+            throw new DataConflictError('Cannot dispatch canceled job');
 
         if (this.order.isTender)
-            throw new HttpError(400, 'Cannot dispatch job for tender order');
+            throw new DataConflictError('Cannot dispatch job for tender order');
 
         if (this.dispatches?.length > 0)
-            throw new HttpError(400, 'Cannot dispatch job with already active load offer');
+            throw new DataConflictError('Cannot dispatch job with already active load offer');
 
         if (this.bills.length === 0)
-            throw new HttpError(400, 'Job bill missing. Bill is required in order to set payment method and payment terms');
+            throw new MissingDataError('Job bill missing. Bill is required in order to set payment method and payment terms');
     }
 
     validateJobForAccepting()
     {
         if (!this.isReady)
-            throw new HttpError(400, 'Job is not ready');
+            throw new DataConflictError('Job is not ready');
         if (Number(this.validDispatchesCount) > 1)
-            throw new HttpError(400, 'Job has more than one valid pending dispatch');
+            throw new DataConflictError('Job has more than one valid pending dispatch');
         if (Number(this.validDispatchesCount) === 0)
-            throw new HttpError(400, 'Job has no valid pending dispatch');
+            throw new DataConflictError('Job has no valid pending dispatch');
     }
 
     static get fetch()

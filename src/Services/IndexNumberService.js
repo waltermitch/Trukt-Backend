@@ -1,5 +1,6 @@
 const { orderNumberRegex } = require('../Utils/Regexes');
 const IndexNumber = require('../Models/IndexNumber');
+const { DataConflictError } = require('../ErrorHandling/Exceptions');
 
 const knex = IndexNumber.knex();
 
@@ -46,7 +47,7 @@ class IndexNumberService
                     errorMsg = 'cannot create any more jobs for order ' + orderNumber;
                 }
 
-                throw new Error(errorMsg);
+                throw new DataConflictError(errorMsg);
             }
         }
         return jobNumber.length == 1 ? jobNumber[0] : jobNumber;

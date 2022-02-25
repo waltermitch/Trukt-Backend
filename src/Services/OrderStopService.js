@@ -1,4 +1,3 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderStopLinks = require('../Models/OrderStopLink');
 const knex = require('../Models/BaseModel').knex();
 const emitter = require('../EventListeners/index');
@@ -6,6 +5,7 @@ const OrderStop = require('../Models/OrderStop');
 const OrderJob = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
 const R = require('ramda');
+const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
 
 class OrderStopService
 {
@@ -82,13 +82,13 @@ class OrderStopService
         // if job doesn't exist
         if (!job)
         {
-            throw new HttpError(404, 'Job does not exist');
+            throw new NotFoundError('Job does not exist');
         }
 
         // if stop doens't exist
         if (!jobStop.rows[0])
         {
-            throw new HttpError(404, 'Stop does not exist');
+            throw new NotFoundError('Stop does not exist');
         }
 
         // throw error on commodities that don't exist
@@ -103,21 +103,19 @@ class OrderStopService
             {
                 comms = dbCommodities.rows[0].guid;
             }
-            const error = new HttpError(404, 'Commodities do not exist');
-            error.commodities = comms;
-            throw error;
+            throw new NotFoundError('Commodities do not exist', { commodities: comms });
         }
 
         // If the job is on hold, something is wrong with it and its stops should not be able to be updated
         if (job.is_on_hold)
         {
-            throw new HttpError(400, 'Please remove the hold on this job before updating pickup or delivery dates');
+            throw new DataConflictError('Please remove the hold on this job before updating pickup or delivery dates');
         }
 
         // Throw error when clearing pickup location if delivery is completed
         if (date == null && illegalPickUp.rows[0] != undefined)
         {
-            throw new HttpError(400, `Pickup/Delivery stop ${illegalPickUp.rows[0].stop_guid} cannot clear status ${status} because the commodity '${illegalPickUp.rows[0].commodity_guid}' is marked as delivered`);
+            throw new DataConflictError(`Pickup/Delivery stop ${illegalPickUp.rows[0].stop_guid} cannot clear status ${status} because the commodity '${illegalPickUp.rows[0].commodity_guid}' is marked as delivered`);
         }
 
         /**
@@ -175,7 +173,7 @@ class OrderStopService
         catch (error)
         {
             await trx.rollback();
-            throw new HttpError(400, error);
+            throw error;
         }
     }
 

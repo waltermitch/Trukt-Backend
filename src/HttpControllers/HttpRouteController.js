@@ -1,4 +1,3 @@
-const ErrorHandler = require('../ErrorHandling/ErrorHandler');
 const Auth = require('../Services/Auth');
 
 class HttpRouteController
@@ -16,10 +15,7 @@ class HttpRouteController
         {
             // handle error in here
             console.log(err);
-            const error = new ErrorHandler(err);
-
-            res.status(error.status || 500);
-            res.json({ 'error': error.data || 'Internal Server Error' });
+            next(err);
         }
     }
 
@@ -33,10 +29,7 @@ class HttpRouteController
         {
             // handle error in here
             console.log(err);
-            const error = new ErrorHandler(err);
-
-            res.status(error.status || 500);
-            res.json({ 'error': error.data || 'Internal Server Error' });
+            next(err);
         }
     }
 }

@@ -2,6 +2,7 @@ const OrderJob = require('../Models/OrderJob');
 const pubsub = require('../Azure/PubSub');
 const Notes = require('../Models/Notes');
 const Order = require('../Models/Order');
+const { NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class NotesService
 {
@@ -42,7 +43,7 @@ class NotesService
         // not doesn't exist
         if (updatedNote == undefined)
         {
-            throw new Error('Note does not exist');
+            throw new NotFoundError('Note does not exist');
         }
 
         // assigning guid
@@ -64,7 +65,7 @@ class NotesService
 
         // not doesn't exist
         if (!updatedNote)
-            throw new Error('Note does not exist');
+            throw new NotFoundError('Note does not exist');
 
         // assigning guid
         const guid = updatedNote.job?.guid || updatedNote.order?.guid;
