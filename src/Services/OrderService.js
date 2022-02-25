@@ -1750,6 +1750,11 @@ class OrderService
                                     emitter.emit('orderstop_status_update', { stops: modified.stops, currentUser });
                                 }
 
+                                if(deleted.commodities)
+                                {
+                                    emitter.emit('commodity_deleted', { orderGuid, jobGuid: job.guid, commodities: deleted.commodities, currentUser });
+                                }
+
                             });
                             delProms.push(deleteComsProm);
                             break;
