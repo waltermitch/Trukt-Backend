@@ -633,10 +633,12 @@ class OrderJobService
      */
     static async setJobToReady(jobGuid, currentUser)
     {
-        const resp = await OrderJobService.setJobsToReady([jobGuid], currentUser);
+        const { results, exceptions } = await OrderJobService.setJobsToReady([jobGuid], currentUser);
 
-        const response = Object.values(resp)[0];
-        response.errors = response.errors.map(str => { return { message: str, errorType: 'DataConflictError' }; });
+        const response = Object.values(results)[0];
+
+        if (exceptions.doErrorsExist())
+            exceptions.getCollectionInstance(jobGuid).throwErrorsIfExist();
 
         return response;
     }
