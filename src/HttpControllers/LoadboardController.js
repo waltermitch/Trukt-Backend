@@ -247,6 +247,30 @@ class LoadboardController
             next(error);
         }
     }
+
+    static async acceptLoadRequest(req, res, next)
+    {
+        try
+        {
+            const requestGuid = req.params?.requestGuid;
+            if (requestGuid)
+            {
+                const result = await LoadboardService.acceptRequest(requestGuid, req.session.userGuid);
+
+                res.status(200);
+                res.json({ status: 200, data: result });
+            }
+            else
+            {
+                res.status(400);
+                res.send('Unable to accept Request or no Guid');
+            }
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = LoadboardController;

@@ -13,6 +13,7 @@ router
     .post(`${prefix}/:jobId(${uuidRegexStr})/dispatch`, controller.dispatchJob)
     .post(`${prefix}/posting/booked`, controller.postingBooked)
     .put(`${prefix}/requests/:requestGuid(${uuidRegexStr})/decline`, controller.declineLoadRequest)
+    .put(`${prefix}/requests/:requestGuid(${uuidRegexStr})/accept`, controller.acceptLoadRequest)
     .put(`${prefix}/:jobId(${uuidRegexStr})`, controller.postJob)
     .put(`${prefix}/:jobId(${uuidRegexStr})/dispatch`, controller.cancelDispatch)
     .put(`${prefix}/:jobId(${uuidRegexStr})/accept`, controller.acceptDispatch)
