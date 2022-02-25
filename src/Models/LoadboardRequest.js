@@ -43,7 +43,7 @@ class LoadboardRequest extends BaseModel
             },
             validActive(builder)
             {
-                builder.where({ 'loadboardRequests.isValid': true, 'loadboardRequests.isSynced': true, 'loadboardRequests.isDeleted': false });
+                builder.where({ 'loadboardRequests.isValid': true, 'loadboardRequests.isDeleted': false });
             }
         };
     }
@@ -117,6 +117,17 @@ class LoadboardRequest extends BaseModel
         this.isSynced = false;
         this.isDeleted = false;
         this.declineReason = LoadboardRequest.DECLINE_REASON.CARRIER_CANCEL;
+    }
+
+    setAccepted()
+    {
+        this.status = 'accepted';
+        this.isValid = false;
+        this.isAccepted = true;
+        this.isDeclined = false;
+        this.isCanceled = false;
+        this.isSynced = false;
+        this.isDeleted = false;
     }
 
     setNew()
