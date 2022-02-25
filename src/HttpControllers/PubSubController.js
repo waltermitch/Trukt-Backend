@@ -6,7 +6,7 @@ class PubSubController
     {
         try
         {
-            const result = await PubSub.getSubToken(req.session.user.oid);
+            const result = await PubSub.getSubToken(req.session.userGuid);
     
             if (result)
             {
