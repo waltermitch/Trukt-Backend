@@ -1,8 +1,8 @@
 const HTTPS = require('../AuthController');
 
 const opts = {
-    url: process.env['azure.loadboard.baseurl'],
-    params: { code: process.env['azure.loadboard.funcCode'] }
+    url: process.env.AZURE_LOADBOARD_BASEURL,
+    params: { code: process.env.AZURE_LOADBOARD_FUNCCODE }
 };
 
 const conn = new HTTPS(opts).connect();

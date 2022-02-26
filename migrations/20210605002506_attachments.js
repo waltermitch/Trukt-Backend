@@ -1,4 +1,28 @@
-const documentTypes = require('../src/Schemas/attachmentTypes.json').enum;
+const documentTypes = [
+    'vendorInvoice',
+    'billOfLading',
+    'proofOfDelivery',
+    'lumperTicket',
+    'scaleTicket',
+    'inGateTicket',
+    'outGateTicket',
+    'miscellaneous',
+    'accessorialAgreement',
+    'rateConfirmation',
+    'loadTender',
+    'invoice',
+    'customsDocuments',
+    'invoiceWithPaperwork',
+    'detentionLoading',
+    'detentionUnloading',
+    'palletReceipt',
+    'spotApproval',
+    'truckNotUsed',
+    'exitPass',
+    'balanceDue',
+    'packingList',
+    'photo'
+];
 
 const TABLE_NAME = 'attachments';
 

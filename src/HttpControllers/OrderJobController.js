@@ -3,17 +3,25 @@ const OrderStopService = require('../Services/OrderStopService');
 const OrderJobService = require('../Services/OrderJobService');
 const NotesService = require('../Services/NotesService');
 const emitter = require('../EventListeners/index');
+const { NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class OrderJobController
 {
-    static async getJobNotes(req, res)
+    static async getJobNotes(req, res, next)
     {
-        const result = await NotesService.getJobNotes(req.params.jobGuid);
-
-        if (!result)
-            res.status(404).json({ 'error': 'Job Not Found' });
-        else
-            res.status(200).json(result);
+        try
+        {
+            const result = await NotesService.getJobNotes(req.params.jobGuid);
+    
+            if (!result)
+                throw new NotFoundError('Job Not Found');
+            else
+                res.status(200).json(result);
+        }
+        catch (error)
+        {
+            next(error);
+        }
     }
 
     static async updateStopStatus(req, res, next)
@@ -31,7 +39,7 @@ class OrderJobController
         }
     }
 
-    static async getAllStatusCount(req, res)
+    static async getAllStatusCount(req, res, next)
     {
         try
         {
@@ -45,17 +53,23 @@ class OrderJobController
         }
         catch (error)
         {
-            res.status(400);
-            res.json(error);
+            next(error);
         }
 
     }
 
-    static async getCarrier(req, res)
+    static async getCarrier(req, res, next)
     {
-        const { status, data } = await OrderJobService.getJobCarrier(req.params.jobGuid);
-
-        res.status(status).json(data);
+        try
+        {
+            const { status, data } = await OrderJobService.getJobCarrier(req.params.jobGuid);
+    
+            res.status(status).json(data);
+        }
+        catch (error)
+        {
+            next(error);
+        }
     }
 
     static async addHold(req, res, next)
@@ -101,18 +115,30 @@ class OrderJobController
         }
     }
 
-    static async markJobAsComplete(req, res)
+    static async markJobAsComplete(req, res, next)
     {
-        await OrderJobService.markJobAsComplete(req.params.jobGuid, req.session.userGuid);
-
-        res.status(200).send();
+        try
+        {
+            await OrderJobService.markJobAsComplete(req.params.jobGuid, req.session.userGuid);
+            res.status(200).send();
+        }
+        catch (error)
+        {
+            next(error);
+        }
     }
 
-    static async markJobAsUncomplete(req, res)
+    static async markJobAsUncomplete(req, res, next)
     {
-        await OrderJobService.markJobAsUncomplete(req.params.jobGuid, req.session.userGuid);
-
-        res.status(200).send();
+        try
+        {
+            await OrderJobService.markJobAsUncomplete(req.params.jobGuid, req.session.userGuid);
+            res.status(200).send();
+        }
+        catch (error)
+        {
+            next(error);
+        }
     }
 
     static async deleteJob(req, res, next)

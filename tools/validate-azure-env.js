@@ -1,55 +1,72 @@
-const fs = require('fs');
-const utils = require('util');
+const { toJSON } = require('../envs/index');
 const { spawn } = require('child_process');
+const fs = require('fs');
 
-const fsPromise = utils.promisify(fs.writeFile);
+// list of vars to ignore
+const ignoreList =
+    [
+        'APPINSIGHTS_PROFILERFEATURE_VERSION',
+        'APPINSIGHTS_SNAPSHOTFEATURE_VERSION',
+        'APPLICATIONINSIGHTS_CONNECTION_STRING',
+        'ApplicationInsightsAgent_EXTENSION_VERSION',
+        'DIAGNOSTICS_AZUREBLOBCONTAINERSASURL',
+        'DIAGNOSTICS_AZUREBLOBRETENTIONINDAYS',
+        'DiagnosticServices_EXTENSION_VERSION',
+        'InstrumentationEngine_EXTENSION_VERSION',
+        'SnapshotDebugger_EXTENSION_VERSION',
+        'WEBSITE_HTTPLOGGING_RETENTION_DAYS',
+        'WEBSITE_NODE_DEFAULT_VERSION',
+        'XDT_MicrosoftApplicationInsights_BaseExtensions',
+        'XDT_MicrosoftApplicationInsights_Java',
+        'XDT_MicrosoftApplicationInsights_Mode',
+        'XDT_MicrosoftApplicationInsights_NodeJS',
+        'XDT_MicrosoftApplicationInsights_PreemptSdk'
+    ];
 
-const ENV = process.argv[2];
-const LOCAL_SETTINGS_FILE_NAME = process.argv[3];
-const AZURE_RESOURCE_GROUP_NAME = process.argv[4];
-const AZURE_APP_NAME = process.argv[5];
+// desctructuring envs
+const [
+    , , ENV,
+    AZURE_RESOURCE_GROUP_NAME,
+    AZURE_APP_NAME
+] = process.argv;
 
-if (!ENV || !LOCAL_SETTINGS_FILE_NAME || !AZURE_RESOURCE_GROUP_NAME || !AZURE_APP_NAME)
-    throw new Error('Please pass all required arguments: ENV, LOCAL_SETTINGS_FILE_NAME, AZURE_RESOURCE_GROUP_NAME and AZURE_APP_NAME');
+// check for --save flag
+const save = process.argv.includes('--save');
 
-const NEW_AZURE_FILE_NAME = `azure.${ENV}.json`;
-const local_settings = require(`../${LOCAL_SETTINGS_FILE_NAME}`);
+if (!ENV || !AZURE_RESOURCE_GROUP_NAME || !AZURE_APP_NAME)
+    throw new Error('Please pass all required arguments: ENV, AZURE_RESOURCE_GROUP_NAME and AZURE_APP_NAME');
 
 /**
- * Compares the variables from in azure and local.settings for a specific environment.
+ * Compares the variables from in azure and in .env for a specific environment.
  * It creates a file with current azure envs
- * To test it please run: npm run validate:azure:env:dev
+ * To test it please run: npm run azure:validate:env
  */
 async function main()
 {
     /**
      * 1. Get proper envs to compare correclty
      * 2. Get azure envs from azure calling az command, you probably need to do az login first
-     * 3. Parse azure envs to key-value format so we have same formate for local.settings and azure envs
+     * 3. Parse azure envs to key-value format so we have same formate for .env and azure envs
      * 4. Create file with azure envs, this allows a graphic comparison ig you need it
-     * 5. Compare azure envs with local.settings and print the result
+     * 5. Compare azure envs with .env and print the result
      */
     try
     {
-        // STEP 1
-        const { local_settings_env, azureSlot } = checkEnv(ENV);
+        // STEP 1 load in the local/repo settings
+        const config = toJSON(ENV);
 
-        // STEP 2
-        const azureEnvVariablesJson = await getAzureEnvs(azureSlot);
+        // if config didn't load throw error
+        if (!config)
+            throw new Error(`Could not load ${ENV}.env`);
 
-        // STEP 3
-        const azureEnvVariableKeyValueFormat = formatAzureEnvsToLocalSettings(azureEnvVariablesJson);
+        // STEP 2 load in azure/cloud envs
+        const azureEnvVariablesJson = await getAzureEnvs(config.ENV);
 
-        // SETP 4
-        await createAzureEnvFile(NEW_AZURE_FILE_NAME, azureEnvVariableKeyValueFormat);
+        // STEP 3 compare azure envs with repo envs
+        const differences = compareVars(config, azureEnvVariablesJson);
 
-        // STEP 5
-        const envsCompared = await compareAzureWithLocalEnvs(NEW_AZURE_FILE_NAME, local_settings_env);
-
-        if (envsCompared.length)
-            console.log(envsCompared);
-        else
-            console.log(`All envs in Azure and in locall.setting for ${ENV} environment have the same values and there is no one missing`);
+        // STEP 4 deal with differences
+        handleDifferences(differences);
 
     }
     catch (error)
@@ -59,60 +76,86 @@ async function main()
     }
 }
 
-function compareAzureWithLocalEnvs(azureFileName, localSettingsEnv)
+function handleDifferences(differences)
 {
-    const azure_envs = require(`../${azureFileName}`);
-    if (!azure_envs)
-        throw new Error(`Azure envs not valid, please verify ${azureFileName} was created correclty`);
-
-    const envsLocalCompareToAzure = Object.keys(local_settings[localSettingsEnv] || {}).reduce((completeList, localEnvName) =>
+    // if differences is empty, there is no missing envs
+    if (Object.keys(differences).length === 0)
+        console.log(`Everything is in sync with Azure for ${ENV} environment`);
+    else
     {
-        const azureEnv = azure_envs[localEnvName];
-        if (!azureEnv)
-            completeList.push({ envName: localEnvName, message: 'NOT EXISTS IN AZURE' });
-        else if (azureEnv !== local_settings[localSettingsEnv][localEnvName])
-            completeList.push({ envName: localEnvName, message: 'HAS DIFFERENT VALUE IN AZURE' });
-
-        return completeList;
-    }, []);
-    const envsAzureCompareToLocal = Object.keys(azure_envs)?.reduce((completeList, azureEnvName) =>
-    {
-        const localEnv = local_settings[localSettingsEnv][azureEnvName];
-        if (!localEnv)
-            completeList.push({ envName: azureEnvName, message: 'NOT EXISTS IN LOCAL' });
-
-        return completeList;
-    }, []);
-
-    return [...envsLocalCompareToAzure, ...envsAzureCompareToLocal];
+        // if save flag is set, save the missing envs, otherwise just print them
+        if (save)
+            fs.writeFileSync(`./cloud-envs-${ENV}.json`, JSON.stringify(differences, null, 2));
+        else
+            console.log(differences);
+    }
 }
 
-async function createAzureEnvFile(newFileName, azureEnvJson)
+function compareVars(local, cloud)
 {
-    const azureEnvString = JSON.stringify(azureEnvJson);
-    return await fsPromise(newFileName, azureEnvString);
-}
+    // convert cloud to key-value format
+    const cloudKeyValueFormat = {};
 
-function formatAzureEnvsToLocalSettings(azureEnvVariablesJson)
-{
-    return azureEnvVariablesJson?.reduce((alleEnvs, azureEnv) =>
+    for (const e of cloud)
+        if (!ignoreList.includes(e.name))
+            cloudKeyValueFormat[e.name] = e.value;
+
+    // use rambda to compare
+    const differences = {};
+
+    for (const e of Object.keys(local))
     {
-        const envName = azureEnv.name.trim();
-        alleEnvs[envName] = azureEnv.value;
-        return alleEnvs;
-    }, {});
+        // check if its in the cloud object and if it has the same value
+        if (cloudKeyValueFormat[e] === local[e])
+        {
+            delete cloudKeyValueFormat[e];
+            continue;
+        }
+        else
+        {
+            differences[e] =
+            {
+                local: local[e] || null,
+                cloud: cloudKeyValueFormat[e] || null
+            };
+        }
+    }
+
+    // what is left in cloudKeyValueFormat is the missing ones
+    for (const e of Object.keys(cloudKeyValueFormat))
+        differences[e] =
+        {
+            local: null,
+            cloud: cloudKeyValueFormat[e]
+        };
+
+    return differences;
+
 }
 
-async function getAzureEnvs(slot)
+async function getAzureEnvs(ENV)
 {
+    // set proper env
+    let slot = '';
+    switch (ENV)
+    {
+        case 'production':
+        case 'prod':
+            slot = null;
+            break;
+        case 'staging':
+            slot = 'staging';
+            break;
+        case 'dev':
+        case 'development':
+            slot = 'dev';
+            break;
+    }
+
+    const azureCommand = createAzureCommand(slot);
+
     return new Promise((resolve, reject) =>
     {
-        if (!AZURE_RESOURCE_GROUP_NAME)
-            throw new Error(`Azure resource group: ${AZURE_RESOURCE_GROUP_NAME} is invalid`);
-        if (!AZURE_APP_NAME)
-            throw new Error(`Azure app name: ${AZURE_APP_NAME} is invalid`);
-
-        const azureCommand = createAzureCommand(slot);
         const az = spawn(azureCommand, [], { shell: true });
         let azureEnvsStirng = '';
 
@@ -133,29 +176,22 @@ async function getAzureEnvs(slot)
             const azureEnvsJson = JSON.parse(azureEnvsStirng);
             resolve(azureEnvsJson);
         });
-    });
 
+        az.on('error', (err) =>
+        {
+            console.error(err);
+            reject(err);
+        });
+    });
 }
 
 function createAzureCommand(slot)
 {
-    const azureBaseCommand = `az webapp config appsettings list -g ${AZURE_RESOURCE_GROUP_NAME} -n ${AZURE_APP_NAME}`;
+    let azureBaseCommand = `az webapp config appsettings list -g ${AZURE_RESOURCE_GROUP_NAME} -n ${AZURE_APP_NAME}`;
 
     // If slot is null, it is to check production envs
-    return (slot && azureBaseCommand.concat(` -s ${slot}`)) || azureBaseCommand;
-}
+    slot ? azureBaseCommand += ` -s ${slot}` : null;
 
-function checkEnv(ENV)
-{
-    switch (ENV)
-    {
-        case 'production':
-            return { local_settings_env: 'production', azureSlot: null };
-        case 'staging':
-            return { local_settings_env: 'staging', azureSlot: 'staging' };
-        default:
-            return { local_settings_env: 'development', azureSlot: 'dev' };
-    }
+    return azureBaseCommand;
 }
-
 main();

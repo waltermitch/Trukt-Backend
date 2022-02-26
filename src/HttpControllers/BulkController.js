@@ -1,42 +1,56 @@
 const OrderJobSerivce = require('../services/OrderJobService');
+const InvoiceService = require('../Services/InvoiceService');
 const OrderService = require('../services/OrderService');
 const BillService = require('../Services/BillService');
-const InvoiceService = require('../Services/InvoiceService');
-const emitter = require('../EventListeners/index');
 
 class BulkController
 {
-    static async updateOrderUsers(req, res)
+    static async updateOrderUsers(req, res, next)
     {
-        const results = await OrderService.bulkUpdateUsers(req.body);
+        const { results, exceptions } = await OrderService.bulkUpdateUsers(req.body);
 
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
         if (results)
             res.status(200).json(results);
     }
 
-    static async updateJobUsers(req, res)
+    static async updateJobUsers(req, res, next)
     {
-        const results = await OrderJobSerivce.bulkUpdateUsers(req.body);
+        const { results, exceptions } = await OrderJobSerivce.bulkUpdateUsers(req.body);
 
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
         if (results)
             res.status(200).json(results);
     }
 
-    static async updateJobDates(req, res)
+    static async updateJobDates(req, res, next)
     {
-        const results = await OrderJobSerivce.bulkUpdateDates(req.body, req.session.userGuid);
+        const { results, exceptions } = await OrderJobSerivce.bulkUpdateDates(req.body, req.session.userGuid);
+
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
+
         res.status(200).json(results);
     }
 
-    static async updateJobStatus(req, res)
+    static async updateJobStatus(req, res, next)
     {
-        const results = await OrderJobSerivce.bulkUpdateStatus(req.body, req.session.userGuid);
+        const { results, exceptions } = await OrderJobSerivce.bulkUpdateStatus(req.body, req.session.userGuid);
+
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
         res.status(200).json(results);
     }
 
-    static async updateJobPrices(req, res)
+    static async updateJobPrices(req, res, next)
     {
-        const results = await OrderJobSerivce.bulkUpdatePrices(req.body, req.session.userGuid);
+        const { results, exceptions } = await OrderJobSerivce.bulkUpdatePrices(req.body, req.session.userGuid);
+
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
+
         res.status(200).json(results);
     }
 
@@ -44,8 +58,11 @@ class BulkController
     {
         try
         {
-            const results = await OrderJobSerivce.setJobsToReady(req.body.jobGuids, req.session.userGuid);
+            const { results, exceptions } = await OrderJobSerivce.setJobsToReady(req.body.jobGuids, req.session.userGuid);
 
+            if (exceptions.doErrorsExist())
+                next({ instance: exceptions, onlySendErrorsToTelemetry: true });
+                
             res.status(202).json(results);
         }
         catch (error)
@@ -55,56 +72,36 @@ class BulkController
 
     }
 
-    static async exportBills(req, res)
+    static async exportBills(req, res, next)
     {
-        const orders = req.body.orders;
-        const ordersExportPromises = orders.map(orderGuid => BillService.exportBills([orderGuid]));
-        const ordersExported = await Promise.allSettled(ordersExportPromises);
+        const { orders } = req.body;
 
-        const results = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
+        try
         {
-            const orderGuid = orders[arrayIndex];
+            const results = await BillService.exportBills(orders);
 
-            const result = orderExported.value?.[0];
-            if (!result)
-                reduceResponse[orderGuid] = { status: 404, error: 'Order Not Found', data: null };
-            else if (result?.error)
-                reduceResponse[orderGuid] = { status: 400, error: orderExported.value, data: null };
-            else if (result?.success)
-                reduceResponse[orderGuid] = { status: 204, error: null, data: orderExported.value };
-            else
-                reduceResponse[orderGuid] = { status: 200, error: null, data: orderExported.value };
-
-            return reduceResponse;
-        }, {});
-
-        res.status(200).json(results);
+            res.status(200).json(results);
+        }
+        catch (err)
+        {
+            next(err);
+        }
     }
 
-    static async exportInvocies(req, res)
+    static async exportInvocies(req, res, next)
     {
-        const orders = req.body.orders;
-        const ordersExportPromises = orders.map(orderGuid => InvoiceService.exportInvoices([orderGuid]));
-        const ordersExported = await Promise.allSettled(ordersExportPromises);
+        const { orders } = req.body;
 
-        const results = ordersExported.reduce((reduceResponse, orderExported, arrayIndex) =>
+        try
         {
-            const orderGuid = orders[arrayIndex];
+            const results = await InvoiceService.exportInvoices(orders);
 
-            const result = orderExported.value?.[0];
-            if (!result)
-                reduceResponse[orderGuid] = { status: 500, error: 'Internal Server Error', data: null };
-            else if (result?.error)
-                reduceResponse[orderGuid] = { status: 400, error: orderExported.value, data: null };
-            else if (result?.success)
-                reduceResponse[orderGuid] = { status: 204, error: null, data: orderExported.value };
-            else
-                reduceResponse[orderGuid] = { status: 200, error: null, data: orderExported.value };
-
-            return reduceResponse;
-        }, {});
-
-        res.status(200).json(results);
+            res.status(200).json(results);
+        }
+        catch (err)
+        {
+            next(err);
+        }
     }
 
     // TODO: Added for bulk oporations
@@ -115,14 +112,24 @@ class BulkController
         try
         {
             let result;
+            let exception;
             if (req.params.action == 'accept')
             {
-                result = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+                const { results, exceptions } = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+
+                result = results;
+                exception = exceptions;
             }
             else if (req.params.action == 'reject')
             {
-                result = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+                const { results, exceptions } = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+                result = results;
+                exception = exceptions;
             }
+
+            if (exception.doErrorsExist())
+                next({ instance: exception, onlySendErrorsToTelemetry: true });
+
             res.status(200);
             res.json(result);
         }

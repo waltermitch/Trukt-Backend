@@ -1,6 +1,7 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const { DateTime } = require('luxon');
+const { ValidationError } = require('../ErrorHandling/Exceptions');
 
 class DAT extends Loadboard
 {
@@ -17,7 +18,7 @@ class DAT extends Loadboard
         {
             if (!Object.keys(values).includes(requiredField))
             {
-                throw `${requiredField} is required`;
+                throw new ValidationError(`${requiredField} is required`);
             }
             else if ((
                 requiredField == 'commodity' ||
@@ -26,15 +27,15 @@ class DAT extends Loadboard
                 (values[requiredField].length < 1 ||
                     values[requiredField].length > 69))
             {
-                throw `${requiredField} should be between 1 and 70 characters`;
+                throw new ValidationError(`${requiredField} should be between 1 and 70 characters`);
             }
             else if (requiredField == 'weight' && (values[requiredField] < 1 || values[requiredField] > 999999))
             {
-                throw `${requiredField} should be between 1 and 999999 pounds`;
+                throw new ValidationError(`${requiredField} should be between 1 and 999999 pounds`);
             }
             else if (requiredField == 'length' && (values[requiredField] < 1 || values[requiredField] > 199))
             {
-                throw `${requiredField} should be between 1 and 199 feet`;
+                throw new ValidationError(`${requiredField} should be between 1 and 199 feet`);
             }
         }
     }
@@ -120,11 +121,6 @@ class DAT extends Loadboard
         payload.exposure.endWhen = tempLatestAvail.minus({ minutes: 20 });
 
         return payload;
-    }
-
-    static async handleUpdate(payloadMetadata, response)
-    {
-        return await super.handlePost(payloadMetadata, response);
     }
 }
 

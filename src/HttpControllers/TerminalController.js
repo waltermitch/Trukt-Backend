@@ -1,3 +1,4 @@
+const { MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
 const TerminalService = require('../Services/TerminalService');
 const { uuidRegex } = require('../Utils/Regexes');
 
@@ -28,9 +29,7 @@ class TerminalController
             }
             else
             {
-                const err = new Error('Missing search parameters.');
-                err.status = 400;
-                throw err;
+                throw new MissingDataError('Missing search parameters.');
             }
         }
         catch (err)
@@ -39,23 +38,22 @@ class TerminalController
         }
     }
 
-    static async getByGuid(req, res)
+    static async getByGuid(req, res, next)
     {
-        let result = await TerminalService.getById(req.params.terminalGuid);
-        let status;
-        if (result.length > 0)
+        try
         {
-            status = 200;
-            result = result[0];
+            const result = await TerminalService.getById(req.params.terminalGuid);
+            
+            if (result.length > 0)
+                res.status(200).json(result[0]);
+            else
+                throw new NotFoundError('Terminal not found.');
+    
         }
-        else
+        catch (error)
         {
-            status = 404;
-            result = undefined;
+            next(error);
         }
-
-        res.status(status);
-        res.json(result);
     }
 
     async handleGet(context, req)

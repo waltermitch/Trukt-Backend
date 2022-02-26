@@ -1,21 +1,21 @@
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
+const ActivityManagerService = require('../Services/ActivityManagerService');
 const OrderStopService = require('../Services/OrderStopService');
-const LoadboardPost = require('../Models/LoadboardPost');
-const Attachment = require('../Models/Attachment');
-const OrderJob = require('../Models/OrderJob');
-const OrderStop = require('../Models/OrderStop');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const LoadboardRequest = require('../Models/LoadboardRequest');
+const LoadboardPost = require('../Models/LoadboardPost');
+const telemetry = require('../ErrorHandling/Insights');
+const Attachment = require('../Models/Attachment');
+const emitter = require('../EventListeners/index');
+const OrderStop = require('../Models/OrderStop');
+const OrderJob = require('../Models/OrderJob');
 const states = require('us-state-codes');
 const { DateTime } = require('luxon');
 const uuid = require('uuid');
 const R = require('ramda');
-const emitter = require('../EventListeners/index');
-const ActivityManagerService = require('../Services/ActivityManagerService');
-const LoadboardRequest = require('../Models/LoadboardRequest');
-const telemetry = require('../ErrorHandling/Insights');
-const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 
-const returnTo = process.env['azure.servicebus.loadboards.subscription.to'];
-const systemUser = process.env['SYSTEM_USER'];
+const returnTo = process.env.AZURE_SERVICEBUS_LOADBOARDS_SUBSCRIPTION_TO;
+const { SYSTEM_USER } = process.env;
 class Loadboard
 {
     constructor(data)
@@ -252,7 +252,7 @@ class Loadboard
             {
                 objectionPost.setToPosted(response.guid);
             }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+            objectionPost.setUpdatedBy(SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             await trx.commit();
@@ -263,6 +263,11 @@ class Loadboard
         {
             await trx.rollback();
         }
+    }
+
+    static async handleUpdate(payloadMetadata, response)
+    {
+        return await this.handlePost(payloadMetadata, response);
     }
 
     static async handleUnpost(payloadMetadata, response)
@@ -291,11 +296,11 @@ class Loadboard
                 postModel.setToUnposted();
                 const lbRequest = new LoadboardRequest();
                 lbRequest.setDeclined(LoadboardRequest.DECLINE_REASON.UNPOSTED);
-                lbRequest.setUpdatedBy(process.env.SYSTEM_USER);
+                lbRequest.setUpdatedBy(SYSTEM_USER);
                 queries.push(postModel.$relatedQuery('requests', trx).for(postModel).patch(lbRequest));
             }
 
-            postModel.setUpdatedBy(process.env.SYSTEM_USER);
+            postModel.setUpdatedBy(SYSTEM_USER);
             queries.push(postModel.$query(trx).patch());
 
             const resp = await Promise.all(queries).then(trx.commit);
@@ -375,7 +380,7 @@ class Loadboard
                     commodities: stop.commodities.map(com => com.guid),
                     date: response.completedAtTime
                 };
-                promises.push({ func: OrderStopService.updateStopStatus, params, body, systemUser });
+                promises.push({ func: OrderStopService.updateStopStatus, params, body, SYSTEM_USER });
             }
 
             const attachments = [];
@@ -390,14 +395,14 @@ class Loadboard
                     parent: stops[0].jobGuid,
                     parent_table: 'jobs',
                     visibility: '{internal}',
-                    createdByGuid: process.env.SYSTEM_USER
+                    createdByGuid: SYSTEM_USER
                 }));
             }
 
             if (attachments.length > 0)
                 await Attachment.query(trx).insert(attachments);
 
-            await Promise.all(promises.map(async (prom) => await prom.func(prom.params, prom.body, systemUser)));
+            await Promise.all(promises.map(async (prom) => await prom.func(prom.params, prom.body, SYSTEM_USER)));
 
             await trx.commit();
         }
@@ -424,8 +429,8 @@ class Loadboard
                 const jobRec = dispatchRec.job;
 
                 dispatchRec.setToAccepted();
-                dispatchRec.setUpdatedBy(process.env.SYSTEM_USER);
-                jobRec.setUpdatedBy(process.env.SYSTEM_USER);
+                dispatchRec.setUpdatedBy(SYSTEM_USER);
+                jobRec.setUpdatedBy(SYSTEM_USER);
 
                 const dbQueries = [];
                 dbQueries.push(dispatchRec.$query(trx).patch());
@@ -458,9 +463,9 @@ class Loadboard
                     }
                 }
 
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: orderRec.guid,
-                    userGuid: process.env.SYSTEM_USER,
+                    userGuid: SYSTEM_USER,
                     activityId: 13,
                     jobGuid: dispatchRec.jobGuid,
                     extraAnnotations: {
@@ -481,6 +486,23 @@ class Loadboard
                 throw new Error(e.message);
             }
         }
+    }
+
+    static async handleOrderJobCanceled(payloadMetadata)
+    {
+        const externalGuid = payloadMetadata.externalGuid;
+
+        const loadboardPost = externalGuid && await LoadboardPost.query()
+            .findOne('externalGuid', externalGuid);
+
+        if (loadboardPost)
+        {
+            loadboardPost.setToRemoved();
+            await LoadboardPost.query().patch(loadboardPost).findById(loadboardPost.guid);
+            return loadboardPost.jobGuid;
+        }
+
+        return;
     }
 }
 

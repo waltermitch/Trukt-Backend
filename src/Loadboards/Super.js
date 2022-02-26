@@ -10,6 +10,8 @@ const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const Loadboards = require('./API');
 
+const { SYSTEM_USER } = process.env;
+
 const { emailRegex, phoneNumberRegex, dotNumberRegex } = require('../Utils/Regexes');
 
 class Super extends Loadboard
@@ -333,7 +335,7 @@ class Super extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isDeleted = false;
             }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+            objectionPost.setUpdatedBy(SYSTEM_USER);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
 
             await Promise.all(allPromises);
@@ -386,7 +388,7 @@ class Super extends Loadboard
 
                 objectionPost.setToPosted(response.guid);
             }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+            objectionPost.setUpdatedBy(SYSTEM_USER);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
 
             await Promise.all(allPromises);
@@ -439,7 +441,7 @@ class Super extends Loadboard
                 objectionPost.isCreated = true;
                 objectionPost.isSynced = true;
             }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+            objectionPost.setUpdatedBy(SYSTEM_USER);
 
             await LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
@@ -497,12 +499,12 @@ class Super extends Loadboard
                     client.sdGuid = response.order.customer.counterparty_guid;
                     allPromises.push(SFAccount.query(trx).patch(client).findById(client.guid));
                 }
-                
+
                 // if a carrier is invited to superdispatch, we save the guid onto the account
                 // if it is not present on there
                 allPromises.push(SFAccount.query(trx).patch({ sdGuid: response.dispatchRes.carrier_guid })
-                .where({ guid: dispatch.vendorGuid, sdGuid: null }));
-                
+                    .where({ guid: dispatch.vendorGuid, sdGuid: null }));
+
                 const vendor = await SFAccount.query(trx)
                     .findById(dispatch.vendorGuid || dispatch.vendor.guid)
                     .leftJoin('salesforce.contacts', 'salesforce.accounts.sfId', 'salesforce.contacts.accountId')
@@ -513,7 +515,7 @@ class Super extends Loadboard
                         'salesforce.contacts.guid as agentGuid',
                         'salesforce.contacts.name as agentName');
 
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: dispatch.createdByGuid,
                     activityId: 10,
@@ -530,7 +532,7 @@ class Super extends Loadboard
                 });
             }
             allPromises.push(OrderJobDispatch.query(trx).patch(dispatch).findById(dispatch.guid));
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+            objectionPost.setUpdatedBy(SYSTEM_USER);
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
 
             await Promise.all(allPromises);
@@ -558,7 +560,7 @@ class Super extends Loadboard
                 dateStarted: null,
                 status: 'ready'
             });
-            job.setUpdatedBy(process.env.SYSTEM_USER);
+            job.setUpdatedBy(SYSTEM_USER);
             allPromises.push(OrderJob.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
@@ -570,7 +572,7 @@ class Super extends Loadboard
                 guid: dispatch.loadboardPost.guid
             });
             allPromises.push(OrderStop.query(trx)
-                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
+                .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: SYSTEM_USER })
                 .whereIn('guid',
                     OrderStopLink.query().select('stopGuid')
                         .where({ 'jobGuid': dispatch.jobGuid })
@@ -589,7 +591,7 @@ class Super extends Loadboard
                 objectionPost.isSynced = true;
                 objectionPost.isPosted = false;
             }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+            objectionPost.setUpdatedBy(SYSTEM_USER);
 
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
 
@@ -608,7 +610,7 @@ class Super extends Loadboard
             await Promise.all(allPromises);
             await trx.commit();
 
-            await ActivityManagerService.createAvtivityLog({
+            await ActivityManagerService.createActivityLog({
                 orderGuid: dispatch.job.orderGuid,
                 userGuid: dispatch.updatedByGuid,
                 activityId: 12,
@@ -656,10 +658,10 @@ class Super extends Loadboard
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
 
                 objectionDispatch.setToDeclined();
-                objectionDispatch.setUpdatedBy(process.env.SYSTEM_USER);
+                objectionDispatch.setUpdatedBy(SYSTEM_USER);
 
                 await OrderStop.query(trx)
-                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: SYSTEM_USER })
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid')
                             .where({ 'jobGuid': objectionDispatch.jobGuid })
@@ -670,7 +672,7 @@ class Super extends Loadboard
                     dateStarted: null,
                     status: 'declined'
                 });
-                job.setUpdatedBy(process.env.SYSTEM_USER);
+                job.setUpdatedBy(SYSTEM_USER);
                 await OrderJob.query(trx).patch(job).findById(objectionDispatch.jobGuid);
 
                 // have to put table name because externalGuid is also on loadboard post and not
@@ -679,9 +681,9 @@ class Super extends Loadboard
 
                 await trx.commit();
 
-                await ActivityManagerService.createAvtivityLog({
+                await ActivityManagerService.createActivityLog({
                     orderGuid,
-                    userGuid: process.env.SYSTEM_USER,
+                    userGuid: SYSTEM_USER,
                     activityId: 14,
                     jobGuid: objectionDispatch.jobGuid,
                     extraAnnotations: {
@@ -696,7 +698,7 @@ class Super extends Loadboard
                 });
 
                 // TODO: Add events to trigger disptch declined, when moved to service class
-                // emitter.emit('orderjob_dispatch_offer_declined', { jobGuid: objectionDispatch.jobGuid, currentUser: process.env.SYSTEM_USER, orderGuid: orderGuid });
+                // emitter.emit('orderjob_dispatch_offer_declined', { jobGuid: objectionDispatch.jobGuid, currentUser: SYSTEM_USER, orderGuid: orderGuid });
 
                 return objectionDispatch.jobGuid;
             }
@@ -715,7 +717,7 @@ class Super extends Loadboard
         {
             const com = ogCommodities.shift();
             this.commodityUpdater(com, newCommodities);
-            com.setUpdatedBy(process.env.SYSTEM_USER);
+            com.setUpdatedBy(SYSTEM_USER);
             comsToUpdate.push(Commodity.query().patch(com).findById(com.guid));
         }
 

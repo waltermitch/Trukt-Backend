@@ -13,9 +13,17 @@ responses:
   200:
     description: Request has been accepted
     content:
-      application/json:
+      application/json: 
         schema:
-          $ref: ../../../components/schemas/LoadboardRequest.yaml#/mainResponsePayload
+          type: object
+          properties:
+            status:
+              type: number
+              description: Response status code of requests.
+              example: 200
+            data:            
+                $ref: ../../../components/schemas/LoadboardRequest.yaml#/mainResponsePayload
+                
   404:
     description: Unable to accept request or missing request GUID
     content:

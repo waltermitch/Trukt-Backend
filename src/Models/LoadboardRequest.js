@@ -43,7 +43,7 @@ class LoadboardRequest extends BaseModel
             },
             validActive(builder)
             {
-                builder.where({ 'loadboardRequests.isValid': true, 'loadboardRequests.isSynced': true, 'loadboardRequests.isDeleted': false });
+                builder.where({ 'loadboardRequests.isValid': true, 'loadboardRequests.isDeleted': false });
             }
         };
     }
@@ -116,9 +116,30 @@ class LoadboardRequest extends BaseModel
         this.isCanceled = true;
         this.isSynced = false;
         this.isDeleted = false;
-
+        this.declineReason = LoadboardRequest.DECLINE_REASON.CARRIER_CANCEL;
     }
 
+    setAccepted()
+    {
+        this.status = 'accepted';
+        this.isValid = false;
+        this.isAccepted = true;
+        this.isDeclined = false;
+        this.isCanceled = false;
+        this.isSynced = false;
+        this.isDeleted = false;
+    }
+
+    setNew()
+    {
+        this.status = 'new';
+        this.isValid = true;
+        this.isCanceled = false;
+        this.isAccepted = false;
+        this.isDeclined = false;
+        this.isSynced = false;
+        this.isDeleted = false;
+    }
 }
 
 Object.assign(LoadboardRequest.prototype, RecordAuthorMixin);

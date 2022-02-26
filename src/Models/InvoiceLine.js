@@ -100,6 +100,10 @@ class InvoiceLine extends BaseModel
                     builder.whereNull('commodity_guid')
                         .orWhere('itemId', '<>', 1);
                 });
+            },
+            isNonZero(builder)
+            {
+                builder.where('amount', '>', 0);
             }
         };
         Object.assign(modifiers, isNotDeleted(InvoiceLine.tableName));

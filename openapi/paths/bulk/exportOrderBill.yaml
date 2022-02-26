@@ -44,3 +44,12 @@ responses:
                     - 204
                 data:
                   $ref: ../../components/schemas/Finances.yaml#/Bill
+  404:
+    description: No Orders Found
+    content:
+      application/json: 
+        schema:
+          type: object
+          properties:
+            error:
+              $ref: ../../components/schemas/Finances.yaml#/Error

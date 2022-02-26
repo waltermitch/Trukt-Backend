@@ -1,6 +1,6 @@
 const { delay, isServiceBusError, ServiceBusClient } = require('@azure/service-bus');
 
-const connectionString = process.env['azure.servicebus.connectionString'];
+const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 
 const serviceBusClient = new ServiceBusClient(connectionString);
 

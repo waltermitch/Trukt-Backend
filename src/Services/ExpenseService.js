@@ -2,6 +2,7 @@ const Line = require('../Models/InvoiceLine');
 const Invoice = require('../Models/Invoice');
 const Order = require('../Models/Order');
 const Bill = require('../Models/Bill');
+const { NotFoundError, MissingDataError } = require('../ErrorHandling/Exceptions');
 
 class ExpenseService
 {
@@ -75,7 +76,7 @@ class ExpenseService
                     const bill = await Bill.query().findOne({ 'job_guid': data.jobGuid });
 
                     if (!bill)
-                        throw { status: 400, data: `No bill found for Job: ${data.jobGuid}` };
+                        throw new NotFoundError(`No bill found for Job: ${data.jobGuid}`);
 
                     payload.invoiceGuid = bill.billGuid;
 
@@ -86,7 +87,7 @@ class ExpenseService
                     const invoice = await Invoice.query().findOne({ 'order_guid': data.orderGuid });
 
                     if (!invoice)
-                        throw { status: 400, data: `No invoice found for Order: ${data.orderGuid}` };
+                        throw new NotFoundError(`No invoice found for Order: ${data.orderGuid}`);
 
                     payload.invoiceGuid = invoice.invoiceGuid;
 
@@ -95,7 +96,7 @@ class ExpenseService
                 else
                 {
                     // throw error
-                    throw { 'status': 400, 'data': 'Job or Order Guid Required' };
+                    throw new MissingDataError('Order or Job Guid Required');
                 }
 
                 results.push(res);
@@ -164,7 +165,7 @@ class ExpenseService
     static async search(orderGuid)
     {
         if (!orderGuid)
-            throw { 'status': 400, 'data': 'Order Guid Required' };
+            throw new MissingDataError('Order Guid Required');
 
         // clean
         orderGuid = orderGuid.replace(/%/g, '');

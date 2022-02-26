@@ -5,6 +5,7 @@ const ActivityLog = require('../Models/ActivityLogs');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const User = require('../Models/User');
+const { ValidationError, ExceptionCollection, NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class ActivityManagerService
 {
@@ -41,7 +42,7 @@ class ActivityManagerService
      * @param activityLogData.activityId required, id from activity_log_types table
      * @param activityLogData.extraAnnotations optional, json with extra information to add in the log
      */
-    static async createAvtivityLog({ userGuid, orderGuid, jobGuid, activityId, extraAnnotations })
+    static async createActivityLog({ userGuid, orderGuid, jobGuid, activityId, extraAnnotations })
     {
         // validate payload and data
         const errored = await ActivityManagerService.validateAcivityPayload({ userGuid, orderGuid, jobGuid, activityId });
@@ -108,14 +109,16 @@ class ActivityManagerService
         const validate = (object, schema) => Object
             .keys(schema)
             .filter(key => !schema[key](object[key]))
-            .map(key => { return { data: `${key} input is invalid.` }; });
+            .map(key => (new ValidationError(`${key} input is invalid.`)));
 
         const errors = validate({ userGuid, orderGuid, jobGuid, activityId }, schema);
 
         if (errors.length > 0)
         {
-            // TODO: add new throw exception class
-            return { status: 400, errors: errors, data: {} };
+            const errorCollection = new ExceptionCollection(errors);
+            errorCollection.setStatus(400);
+
+            return errorCollection.toJSON();
         }
 
         // validate if actual data exists
@@ -131,28 +134,28 @@ class ActivityManagerService
             OrderJob.query().findById(jobGuid)
         ]);
 
-        const errorArray = [];
+        const errorCollection = new ExceptionCollection();
         if (!user)
         {
-            errorArray.push({ data: `User ${userGuid} doesnt exist.` });
+            errorCollection.addError(new NotFoundError(`User ${userGuid} doesnt exist.`));
         }
         if (!order)
         {
-            errorArray.push({ data: `Order ${orderGuid} doesnt exist.` });
+            errorCollection.addError(new NotFoundError(`Order ${orderGuid} doesnt exist.`));
         }
         if (!activityLogType)
         {
-            errorArray.push({ data: `Activity type ${activityId} doesnt exist.` });
+            errorCollection.addError(new NotFoundError(`Activity type ${activityId} doesnt exist.`));
         }
         if (!job)
         {
-            errorArray.push({ data: `Order job ${jobGuid} doesnt exist.` });
+            errorCollection.addError(new NotFoundError(`Order job ${jobGuid} doesnt exist.`));
         }
 
-        if (errorArray.length > 0)
+        if (errorCollection.doErrorsExist())
         {
-            // TODO: add new throw exception class
-            return { status: 404, errors: errorArray, data: {} };
+            errorCollection.setStatus(404);
+            return errorCollection.toJSON();
         }
 
         // if all good return clean payload
