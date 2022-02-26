@@ -20,7 +20,7 @@ const { SeverityLevel } = require('applicationinsights/out/Declarations/Contract
 const telemetry = require('../ErrorHandling/Insights');
 const PubSubService = require('./PubSubService');
 const LoadboardsApi = require('../Loadboards/LoadboardsApi');
-const { NotFoundError, DataConflictError, ValidationError, ExceptionCollection } = require('../ErrorHandling/Exceptions');
+const { NotFoundError, DataConflictError, ValidationError, ExceptionCollection, NotAllowedError } = require('../ErrorHandling/Exceptions');
 
 const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
@@ -1250,9 +1250,16 @@ class LoadboardService
             }
         });
 
+        PubSubService.publishJobRequests(jobGuid, updatedRequest);
         return updatedRequest;
     }
 
+    /**
+     * Methid accepts requests and creates a internal offer in our system.
+     * @param {uuid} requestGuid
+     * @param {uuid} currentUser
+     * @returns OfferObject
+     */
     static async acceptRequestbyGuid(requestGuid, currentUser)
     {
         const trx = await LoadboardRequest.startTransaction();
@@ -1344,6 +1351,15 @@ class LoadboardService
         return createdOffer;
     }
 
+    /**
+     * Method creates a offer internally and handles all un posting of loadboards.
+     * @param {Object} trx
+     * @param {uuid} jobGuid
+     * @param {uuid} internalPostGuid
+     * @param {Obejct} offerPayload
+     * @param {uuid} currentUser
+     * @returns Created offer
+     */
     static async createInternalOffer(trx, jobGuid, internalPostGuid, offerPayload, currentUser)
     {
         const promiseArray = [];
@@ -1371,7 +1387,7 @@ class LoadboardService
 
             if (!job)
             {
-                throw new Error('Job Not Found');
+                throw new NotFoundError('Job Not Found');
             }
 
             // validate job not be be in
@@ -1395,11 +1411,11 @@ class LoadboardService
             // validate carriers
             if (!carrier)
             {
-                throw new Error(`Carrier does not exist in our system. USDOT:${offerPayload.carrier.usdot}; Name:${offerPayload.carrier.name}`);
+                throw new NotFoundError(`Carrier does not exist in our system. USDOT:${offerPayload.carrier.usdot}; Name:${offerPayload.carrier.name}`);
             }
             else if (carrier.blacklist == true || carrier.active == false)
             {
-                throw new Error('Carrier is inactive or blacklisted.');
+                throw new NotAllowedError('Carrier is inactive or blacklisted.');
             }
 
             let carrierContact;
