@@ -168,3 +168,5 @@ mainResponsePayload:
     isCanceled:
       type: boolean
       example: true
+    updatedByGuid:
+      $ref: Common.yaml#/updatedByGuid
