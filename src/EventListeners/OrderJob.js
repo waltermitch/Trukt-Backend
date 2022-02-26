@@ -208,12 +208,13 @@ listener.on('orderjob_dispatch_canceled', ({ jobGuid, currentUser, orderGuid }) 
     });
 });
 
-// this is for request, temp will change as names get impoved
-listener.on('load_request_accepted', ({ jobGuid, currentUser, orderGuid, body }) =>
+listener.on('load_request_accepted', ({ jobGuid }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([LoadboardService.dispatchJob(jobGuid, body, currentUser)]);
+        const [job, resquests, posts] = await Promise.all([OrderJobService.getJobData(jobGuid), LoadboardService.getRequestsbyJobID(jobGuid), LoadboardService.getLoadboardPosts(jobGuid, [])]);
+
+        const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, job), PubSubService.publishJobRequests(jobGuid, resquests), PubSubService.publishJobPostings(jobGuid, posts)]);
 
         logEventErrors(proms, 'load_request_accepted');
     });

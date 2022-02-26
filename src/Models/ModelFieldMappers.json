@@ -436,7 +436,6 @@
                     "dateUpdated",
                     "dateDeleted",
                     "createdByGuid",
-                    "updatedByGuid",
                     "deletedByGuid",
                     "posting"
                 ]
