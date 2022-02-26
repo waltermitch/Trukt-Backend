@@ -148,7 +148,7 @@ class LoadboardController
         if (result)
         {
             res.status(200);
-            res.json({ status: 200, data: result });
+            res.json(result);
         }
         else
             throw new NotFoundError('Requests not Found');
@@ -168,7 +168,7 @@ class LoadboardController
             const result = await LoadboardService.createRequestfromWebhook(requestModel, externalPost, carrier, req.session.userGuid);
 
             res.status(200);
-            res.json({ status: 200, data: result });
+            res.json(result);
         }
         catch (err)
         {
@@ -190,7 +190,7 @@ class LoadboardController
             const result = await LoadboardService.cancelRequestfromWebhook(requestModel, externalPost, carrier, req.session.userGuid);
 
             res.status(200);
-            res.json({ status: 200, data: result });
+            res.json(result);
         }
         catch (err)
         {
@@ -209,7 +209,7 @@ class LoadboardController
                 throw new MissingDataError('Unable to decline Request, missing reason');
             }
             const result = await LoadboardService.declineRequestByGuid(requestGuid, reason, req.session.userGuid);
-            res.status(200).send({ status: 200, data: result });
+            res.status(200).send(result);
         }
         catch (error)
         {
@@ -227,7 +227,7 @@ class LoadboardController
                 const result = await LoadboardService.acceptRequestbyGuid(requestGuid, req.session.userGuid);
 
                 res.status(200);
-                res.json({ status: 200, data: result });
+                res.json(result);
             }
             else
                 throw NotFoundError('Not Request guid provided');
