@@ -1,20 +1,9 @@
-const Commodity = require('../Models/Commodity');
 const ActivityManagerService = require('./ActivityManagerService');
 
 class CommodityService
 {
-    static async registerDeletedCommodities(orderGuid, jobGuid, commodityGuids, currentUser)
+    static async registerDeletedCommodities(orderGuid, jobGuid, commodities, currentUser)
     {
-        const commodities = await Commodity.query().select(
-            [
-                'guid',
-                'description',
-                'identifier',
-                'lotNumber'
-            ]
-        ).findByIds(commodityGuids).withGraphFetched('[vehicle]')
-        .modifyGraph('vehicle', builder => builder.select('name'));
-
         const comPromies = [];
         for(const com of commodities)
         {

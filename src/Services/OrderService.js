@@ -1726,7 +1726,7 @@ class OrderService
                         case 'commodities':
                             // when a commodity is being deleted, remove it from the order.
                             const deleteComsProm = OrderJobService.deleteCommodities(orderGuid, job.guid, toDelete.commodities, trx);
-                            deleteComsProm.then(({ deleted, modified }) =>
+                            deleteComsProm.then(async ({ deleted, modified }) =>
                             {
                                 for (const stopGuid of deleted.stops || [])
                                 {
@@ -1750,9 +1750,22 @@ class OrderService
                                     emitter.emit('orderstop_status_update', { stops: modified.stops, currentUser });
                                 }
 
+                                // if any commodities are to be deleted, retrieve them from the database before they get deleted.
+                                // for now this data will be used to write activity logs for each deleted commodity
                                 if(deleted.commodities)
                                 {
-                                    emitter.emit('commodity_deleted', { orderGuid, jobGuid: job.guid, commodities: deleted.commodities, currentUser });
+                                    const commodities = await Commodity.query().select(
+                                        [
+                                            'guid',
+                                            'description',
+                                            'identifier',
+                                            'lotNumber'
+                                        ]
+                                    ).findByIds(deleted.commodities)
+                                    .withGraphFetched('[vehicle]')
+                                    .modifyGraph('vehicle', builder => builder.select('name'));
+
+                                    emitter.emit('commodity_deleted', { orderGuid, jobGuid: job.guid, commodities, currentUser });
                                 }
 
                             });
