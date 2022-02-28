@@ -762,6 +762,11 @@ class OrderJobService
                 	oj.status,
                 	oj."number",
                     oj.is_transport,
+                    oj.type_id,
+                    oj.verified_by_guid,
+                    oj.date_started,
+                    oj.date_completed,
+                    oj.date_verified,
                 	(SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
                 		LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbr.is_accepted AND lbp2.job_guid = oj.guid) AS has_accepted_requests,
                 	stop.pickup_requested_date,
@@ -884,7 +889,7 @@ class OrderJobService
                 errors.push('Please un-assign the Vendor first.');
  
             // validations for transport job type
-            if (job.service_type === 1)
+            if (job.type_id === 1)
             {
                 if (job.vendor_guid && job.is_transport === true)
                     errors.push('Please un-dispatch the Carrier first.');
