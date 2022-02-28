@@ -653,7 +653,7 @@ class OrderJobService
      */
     static async setJobsToReady(jobGuids, currentUser)
     {
-        // Validate jobs adn get failed exceptions
+        // Validate jobs and get failed exceptions
         const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState(jobGuids);
 
         // for storing responses
@@ -811,6 +811,11 @@ class OrderJobService
                         oj.status,
                         oj."number",
                         oj.is_transport,
+                        oj.type_id,
+                        oj.verified_by_guid,
+                        oj.date_started,
+                        oj.date_completed,
+                        oj.date_verified,
                         (SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
                             LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbr.is_accepted AND lbp2.job_guid = oj.guid) AS has_accepted_requests,
 	                    stop."commodityGuid",
@@ -861,65 +866,53 @@ class OrderJobService
         for (const job of allJobsData)
         {
             const errors = [];
+
+            // common validations for all job types
             if (!job.dispatcher_guid)
-            {
-                errors.push('Please assign a dispatcher.');
-            }
-            if (job.vendor_guid && job.is_transport === true)
-            {
-                errors.push('Please un-dispatch the Carrier first.');
-            }
-            if (job.vendor_guid && job.is_transport === false)
-            {
-                errors.push('Please un-assign the Vendor first.');
-            }
-            if (job.has_accepted_requests)
-            {
-                errors.push('Please cancel Carrier request.');
-            }
-            if (job.is_ready)
-            {
-                errors.push('Order has been verified already.');
-            }
-            if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
-            {
-                errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
-            }
-            if (job.not_resolved_address && job.is_transport === false)
-            {
-                errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
-            }
+                errors.push('Please assign a dispatcher first.');
             if (job.is_on_hold)
-            {
-                errors.push('Order is On Hold');
-            }
+                errors.push('Cannot set to "Ready" because the job is On Hold');
             if (job.is_canceled)
-            {
-                errors.push('Order is Canceled');
-            }
+                errors.push('Cannot set to "Ready" because the job is Canceled');
             if (job.is_deleted)
-            {
-                errors.push('Order is Deleted');
-            }
+                errors.push('Cannot set to "Ready" because the job is Deleted');
             if (job.is_complete)
+                errors.push('Cannot set to "Ready" because the job is Compelete');
+            if (job.is_ready || job.verified_by_guid || job.date_verified)
+                errors.push('Order has been verified already.');
+            if (job.vendor_guid && job.is_transport === false)
+                errors.push('Please un-assign the Vendor first.');
+ 
+            // validations for transport job type
+            if (job.service_type === 1)
             {
-                errors.push('Order is Compelete');
+                if (job.vendor_guid && job.is_transport === true)
+                    errors.push('Please un-dispatch the Carrier first.');
+                if (job.has_accepted_requests)
+                    errors.push('Please cancel Carrier request.');
+                if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
+                    errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
+                if (job.not_resolved_address && job.is_transport === false)
+                    errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
+                if (!job.pickup_requested_date || !job.delivery_requested_date)
+                    errors.push('Client requested pickup and delivery dates must be set.');
+                if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === true)
+                    errors.push('There must be at least one commodity to pick up and deliver.');
+                if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === false)
+                    errors.push('There must be at least one commodity to service.');
+                if (job.is_transport === false && job.stop_type != null)
+                    errors.push('There must be one service stop.');
             }
-            if (!job.pickup_requested_date || !job.delivery_requested_date)
+
+            // any other service type
+            else
             {
-                errors.push('Client requested pickup and delivery dates must be set.');
-            }
-            if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === true)
-            {
-                errors.push('There must be at least one commodity to pick up and deliver.');
-            }
-            if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === false)
-            {
-                errors.push('There must be at least one commodity to service.');
-            }
-            if (job.is_transport === false && job.stop_type != null)
-            {
-                errors.push('There must be one service stop.');
+                if (job.is_transport)
+                    errors.push('Service job must not be a transport job.');
+                if (job.date_started)
+                    errors.push('Job must not be started.');
+                if (job.date_complete)
+                    errors.push('Job must not be completed.');
             }
 
             // distinguishing jobs, for the special ones xD

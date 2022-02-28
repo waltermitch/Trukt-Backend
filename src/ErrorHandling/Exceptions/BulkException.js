@@ -104,7 +104,7 @@ class BulkException
     /**
      * Get the error collection instance for a specific guid
      * @param {guid} key - Guid to identify the error collection
-     * @returns
+     * @returns {ExceptionCollection}
      */
     getCollectionInstance(key)
     {

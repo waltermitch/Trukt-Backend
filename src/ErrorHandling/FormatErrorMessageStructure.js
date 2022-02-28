@@ -229,7 +229,8 @@ function formatErrorMessageStructure(error, isCollection = false)
             errors: [
                 {
                     errorType: error.constructor?.name ?? 'UnknownError',
-                    message: errorMessage
+                    message: errorMessage,
+                    ...(['local', 'dev', 'development'].includes(process.env.NODE_ENV) ? { stack: error.stack } : {})
                 }
             ]
         },

@@ -105,7 +105,7 @@ class OrderJobController
         try
         {
             const result = await OrderJobService.setJobToReady(jobGuid, req.session.userGuid);
-            const status = result.status || 200;
+            const status = result?.status || 200;
 
             res.status(status).json(result);
         }
