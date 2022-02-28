@@ -1337,10 +1337,9 @@ class LoadboardService
             activityId: 6,
             extraAnnotations: {
                 loadboard: queryRequest.loadboard,
-                carrier: {
-                    guid: queryRequest.extraExternalData.guid,
-                    name: queryRequest.extraExternalData.name
-                }
+                vendorGuid: createdOffer.vendor.guid,
+                vendorName: createdOffer.vendor.name,
+                dotNumber: createdOffer.vendor.dotNumber
             }
         });
 
