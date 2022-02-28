@@ -1,35 +1,44 @@
+const { NotFoundError, MissingDataError } = require('../ErrorHandling/Exceptions');
 const AccountService = require('../Services/AccountService');
 
 class AccountController
 {
-    static async getAccount(req, res)
+    static async getAccount(req, res, next)
     {
-        const result = await AccountService.getById(req.params.accountType, req.params.accountId);
-
-        if (result.length > 0)
+        try
         {
-            res.status(200);
-            res.json(result[0]);
+            const result = await AccountService.getById(req.params.accountType, req.params.accountId);
+    
+            if (result.length > 0)
+            {
+                res.status(200);
+                res.json(result[0]);
+            }
+            else
+                throw new NotFoundError();
         }
-        else
+        catch (error)
         {
-            res.status(404);
-            res.send();
+            next(error);
         }
     }
 
-    static async searchAccount(req, res)
+    static async searchAccount(req, res, next)
     {
-        if (req.query?.search)
+        try
         {
-            const result = await AccountService.searchByType(req.params.accountType, req.query);
-            res.status(200);
-            res.send(result);
+            if (req.query?.search)
+            {
+                const result = await AccountService.searchByType(req.params.accountType, req.query);
+                res.status(200);
+                res.send(result);
+            }
+            else
+                throw new MissingDataError('missing search query field');
         }
-        else
+        catch (error)
         {
-            res.status(400);
-            res.json({ message: 'missing search query field' });
+            next(error);
         }
     }
 }

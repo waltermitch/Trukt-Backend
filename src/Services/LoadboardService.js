@@ -1,5 +1,4 @@
 const ActivityManagerService = require('./ActivityManagerService');
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardContact = require('../Models/LoadboardContact');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
@@ -17,6 +16,11 @@ const BillService = require('./BIllService');
 const OrderJob = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
 const R = require('ramda');
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
+const telemetry = require('../ErrorHandling/Insights');
+const PubSubService = require('./PubSubService');
+const LoadboardsApi = require('../Loadboards/LoadboardsApi');
+const { NotFoundError, DataConflictError, ValidationError, ExceptionCollection, NotAllowedError } = require('../ErrorHandling/Exceptions');
 
 const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
@@ -83,7 +87,7 @@ class LoadboardService
         }
 
         if (!job)
-            throw new HttpError(404, 'Job not found');
+            throw new NotFoundError('Job not found');
 
         const posts = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
@@ -96,22 +100,15 @@ class LoadboardService
         const payloads = [];
         let lbPayload;
 
-        try
+        for (const post of posts)
         {
-            for (const post of posts)
+            // to prevent creating multiples of the same loads, check if the posting already
+            // has an external guid. If it does and it alreadys exists, skip it.
+            if (job.postObjects[`${post.loadboard}`].externalGuid == null)
             {
-                // to prevent creating multiples of the same loads, check if the posting already
-                // has an external guid. If it does and it alreadys exists, skip it.
-                if (job.postObjects[`${post.loadboard}`].externalGuid == null)
-                {
-                    lbPayload = new loadboardClasses[`${post.loadboard}`](job);
-                    payloads.push(lbPayload['create']());
-                }
+                lbPayload = new loadboardClasses[`${post.loadboard}`](job);
+                payloads.push(lbPayload['create']());
             }
-        }
-        catch (e)
-        {
-            throw new Error(e.toString());
         }
 
         // sending all payloads as one big object so one big response can be returned
@@ -129,34 +126,26 @@ class LoadboardService
             }).first();
 
         if (dispatches)
-            throw new Error('Cannot post load with active dispatch offers');
+            throw new DataConflictError('Cannot post load with active dispatch offers');
 
         const job = await LoadboardService.getAllPostingData(jobId, posts, currentUser);
         const payloads = [];
         let lbPayload;
 
-        try
+        for (const post of posts)
         {
-            for (const post of posts)
-            {
-                lbPayload = new loadboardClasses[`${post.loadboard}`](job);
-                payloads.push(lbPayload['post']());
-            }
-
-            // sending all payloads as one big object so one big response can be returned
-            // and handler can then use one big transaction to update all records rather
-            // than have a single new transaction for each posting
-            if (payloads.length != 0)
-            {
-                await sender.sendMessages({ body: payloads });
-                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
-            }
-        }
-        catch (e)
-        {
-            throw new Error(e.toString());
+            lbPayload = new loadboardClasses[`${post.loadboard}`](job);
+            payloads.push(lbPayload['post']());
         }
 
+        // sending all payloads as one big object so one big response can be returned
+        // and handler can then use one big transaction to update all records rather
+        // than have a single new transaction for each posting
+        if (payloads.length != 0)
+        {
+            await sender.sendMessages({ body: payloads });
+            LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 2, jobId);
+        }
     }
 
     static async unpostPostings(jobId, posts, currentUser)
@@ -165,26 +154,19 @@ class LoadboardService
         const payloads = [];
         let lbPayload;
 
-        try
+        for (const lbName of Object.keys(job.postObjects))
         {
-            for (const lbName of Object.keys(job.postObjects))
-            {
-                lbPayload = new loadboardClasses[`${lbName}`](job);
-                payloads.push(lbPayload['unpost']());
-            }
-
-            // sending all payloads as one big object so one big response can be returned
-            // and handler can then use one big transaction to update all records rather
-            // than have a single new transaction for each posting
-            if (payloads.length != 0)
-            {
-                await sender.sendMessages({ body: payloads });
-                LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3, jobId);
-            }
+            lbPayload = new loadboardClasses[`${lbName}`](job);
+            payloads.push(lbPayload['unpost']());
         }
-        catch (e)
+
+        // sending all payloads as one big object so one big response can be returned
+        // and handler can then use one big transaction to update all records rather
+        // than have a single new transaction for each posting
+        if (payloads.length != 0)
         {
-            throw new Error(e.toString());
+            await sender.sendMessages({ body: payloads });
+            LoadboardService.registerLoadboardStatusManager(posts, job.orderGuid, currentUser, 3, jobId);
         }
     }
 
@@ -215,7 +197,7 @@ class LoadboardService
         try
         {
             if (body.loadboard != null && !dispatchableLoadboards.includes(body.loadboard))
-                throw new Error(`${body.loadboard} cannot be dispatched to, you can only dispatch to ${dispatchableLoadboards}`);
+                throw new ValidationError(`${body.loadboard} cannot be dispatched to, you can only dispatch to ${dispatchableLoadboards}`);
 
             let job = {};
 
@@ -227,7 +209,7 @@ class LoadboardService
 
                 if (!job)
                 {
-                    throw new HttpError(404, 'Job not found');
+                    throw new NotFoundError('Job not found');
                 }
 
                 const stops = await this.getFirstAndLastStops(job.stops);
@@ -248,9 +230,9 @@ class LoadboardService
             const driver = body.driver;
 
             if (!carrier)
-                throw new Error('carrier not found, please pass in a valid guid, salesforce id, or dot number');
+                throw new NotFoundError('carrier not found, please pass in a valid guid, salesforce id, or dot number');
             else if (carrier.status == 'Inactive' || carrier.status == 'Blacklist' || carrier.blaclist == true)
-                throw new Error(`Carrier has a status of ${carrier.status} and cannot be dispatched to without manager approval`);
+                throw new DataConflictError(`Carrier has a status of ${carrier.status} and cannot be dispatched to without manager approval`);
 
             let carrierContact = driver.guid == null ? driver : await SFContact.query().modify('byId', driver.guid).first();
 
@@ -268,7 +250,7 @@ class LoadboardService
             else
             {
                 if (carrierContact.accountId != carrier.sfId)
-                    throw new Error('Please pass in valid driver for carrier');
+                    throw new ValidationError('Please pass in valid driver for carrier');
             }
 
             // updating invoice bills with proper payments methods
@@ -293,7 +275,7 @@ class LoadboardService
             // validating that pick date is before delivery
             if (job.delivery.dateScheduledStart < job.pickup.dateScheduledStart || job.delivery.dateScheduledEnd < job.pickup.dateScheduledEnd)
             {
-                throw new Error('Pickup dates should be before delivery date');
+                throw new ValidationError('Pickup dates should be before delivery date');
             }
 
             // update job status to pending and started date
@@ -313,7 +295,7 @@ class LoadboardService
             }
             catch (e)
             {
-                throw `Loadboard Post for ${body.loadboard} is out of sync. Please fix the job and the resync the loadboard post before dispatching`;
+                throw new DataConflictError(`Loadboard Post for ${body.loadboard} is out of sync. Please fix the job and the resync the loadboard post before dispatching`);
             }
 
             // composing dispatch object
@@ -432,11 +414,11 @@ class LoadboardService
                 .modifyGraph('vendorAgent', builder => builder.select('name', 'salesforce.contacts.guid'));
 
             if (!dispatch)
-                throw new HttpError(404, 'No active offers to undispatch');
+                throw new DataConflictError('No active offers to undispatch');
 
             // this is temporary fix, should make it data driven eventually
             if ([OrderJob.STATUS.PICKED_UP, OrderJob.STATUS.DELIVERED, OrderJob.STATUS.COMPLETED].includes(dispatch.job.status))
-                throw new HttpError(400, 'Can not cancel dispatch for a job that has already been picked up or delivered');
+                throw new DataConflictError('Can not cancel dispatch for a job that has already been picked up or delivered');
 
             // assign current user as updated by
             dispatch.setUpdatedBy(currentUser);
@@ -553,7 +535,7 @@ class LoadboardService
             ]);
             const order = job.order;
             if (!job)
-                throw new HttpError(404, 'Job not found');
+                throw new NotFoundError('Job not found');
 
             job.validateJobForAccepting();
 
@@ -562,12 +544,12 @@ class LoadboardService
                 .withGraphFetched('[vendor, vendorAgent, loadboardPost]');
 
             if (!dispatch)
-                throw new HttpError(404, 'Dispatch not found');
+                throw new NotFoundError(404, 'Dispatch not found');
 
             const lbPayload = [];
             if (dispatch.loadboardPost?.loadboard == 'SHIPCARS')
             {
-                throw new HttpError(400, 'Cannot manually accept job that was dispatched to Ship.Cars');
+                throw new DataConflictError('Cannot manually accept job that was dispatched to Ship.Cars');
             }
             else if (dispatch.loadboardPost?.loadboard == 'SUPERDISPATCH')
             {
@@ -662,10 +644,10 @@ class LoadboardService
         });
 
         if (!job)
-            throw new HttpError(404, 'Job not found');
+            throw new NotFoundError('Job not found');
 
         if (job.isOnHold)
-            throw new HttpError(400, 'Cannot get posting data for job that is on hold');
+            throw new DataConflictError('Cannot get posting data for job that is on hold');
 
         await this.createPostRecords(job, posts, currentUser);
 
@@ -701,7 +683,7 @@ class LoadboardService
         });
 
         if (!job)
-            throw new Error('Job not found');
+            throw new NotFoundError('Job not found');
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
 
@@ -758,7 +740,7 @@ class LoadboardService
                 const lbContact = await LoadboardContact.query().findById(post.values.contactId).where({ loadboard: post.loadboard });
 
                 if (!lbContact || lbContact.loadboard != post.loadboard)
-                    throw new HttpError(404, `Please provide a valid contact for posting to ${post.loadboard}`);
+                    throw new ValidationError(`Please provide a valid contact for posting to ${post.loadboard}`);
 
                 post.values.contact = lbContact;
             }
@@ -798,17 +780,17 @@ class LoadboardService
 
     static checkLoadboardsInput(posts, action)
     {
-        const errors = [];
+        const errorsCollection = new ExceptionCollection();
 
         if (posts.length === 0)
-            errors.push(new HttpError(400, `a loadboard is required, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
+            errorsCollection.addError(new ValidationError(`a loadboard is required, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));
 
         for (const post of posts)
         {
             const lbName = post.loadboard;
             if (!(lbName in dbLoadboardNames))
 
-                throw new HttpError(404, `the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
+                throw new ValidationError(`the loadboard: ${post.loadboard} is not supported, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`);
 
             if (dbLoadboardNames[lbName].requiresOptions && (action == 'post' || action == 'create'))
             {
@@ -817,8 +799,7 @@ class LoadboardService
             }
         }
 
-        if (errors.length !== 0)
-            throw errors;
+        errorsCollection.throwErrorsIfExist();
     }
 
     // TODO: this method is on the OrderStops model, use it from there
@@ -886,25 +867,18 @@ class LoadboardService
         let lbPayload;
         const activeExternalLBNames = [];
 
-        try
+        // Only send for non deleted loadboards
+        for (const lbName of Object.keys(job.postObjects))
         {
-            // Only send for non deleted loadboards
-            for (const lbName of Object.keys(job.postObjects))
-            {
-                lbPayload = new loadboardClasses[`${lbName}`](job);
-                payloads.push(lbPayload['remove'](userGuid));
-                activeExternalLBNames.push({ loadboard: lbName });
-            }
-
-            if (payloads?.length)
-            {
-                await sender.sendMessages({ body: payloads });
-                LoadboardService.registerLoadboardStatusManager(activeExternalLBNames, job.orderGuid, userGuid, 21, jobId);
-            }
+            lbPayload = new loadboardClasses[`${lbName}`](job);
+            payloads.push(lbPayload['remove'](userGuid));
+            activeExternalLBNames.push({ loadboard: lbName });
         }
-        catch (e)
+
+        if (payloads?.length)
         {
-            throw new Error(e.toString());
+            await sender.sendMessages({ body: payloads });
+            LoadboardService.registerLoadboardStatusManager(activeExternalLBNames, job.orderGuid, userGuid, 21, jobId);
         }
     }
 
@@ -915,7 +889,7 @@ class LoadboardService
 
         if (!job)
         {
-            throw new Error('Job not found');
+            throw new NotFoundError('Job not found');
         }
 
         job.postObjects = job.loadboardPosts.reduce((acc, curr) => (acc[curr.loadboard] = curr, acc), {});
@@ -946,13 +920,13 @@ class LoadboardService
                 ]);
 
             if (!posting)
-                throw new HttpError(404, 'Posting Not Found');
+                throw new NotFoundError('Posting Not Found');
             else if (!vendor)
-                throw new HttpError(404, 'Vendor Not Found');
+                throw new NotFoundError('Vendor Not Found');
 
             // make sure the job is still in the correct status
             if (posting.job.vendorGuid)
-                throw new HttpError(400, 'Can not book a job that has already been booked');
+                throw new DataConflictError('Can not book a job that has already been booked');
 
             // if vendor and posting are valid
             // unpost the posting &
@@ -1016,6 +990,566 @@ class LoadboardService
         }
         return dispatches;
     }
+
+    /**
+     * Method queries all requests that belong to a job.
+     * @param {uuid} jobGuid
+     * @returns List of requests.
+     */
+    static async getRequestsbyJobID(jobGuid)
+    {
+        const requests = await LoadboardRequest.query().leftJoinRelated('posting').where('posting.jobGuid', jobGuid);
+
+        return requests;
+    }
+
+    /**
+     * Method is used to create request in our system from incoming webhooks.
+     * @param {Model} requestModel
+     * @param {Object} externalPost
+     * @param {Object} carrier
+     * @param {string} currentUser
+     * @returns newly created request in out system.
+     */
+    static async createRequestfromWebhook(requestModel, externalPost, carrier, currentUser)
+    {
+        // query our database for requests from incoming payload
+        const lbPosting = await LoadboardPost.query().withGraphJoined('[job, requests(CarrierSpecific)]')
+            .modifiers({
+                CarrierSpecific: (request) =>
+                {
+                    request.where({
+                        isValid: true,
+                        carrierIdentifier: carrier.usDot
+                    });
+                }
+            })
+            .findOne({
+                'rcgTms.loadboardPosts.externalGuid': externalPost.guid
+            });
+
+        if (!lbPosting)
+        {
+            throw new NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+        }
+
+        const job = lbPosting.job;
+
+        const existingRequests = lbPosting.requests;
+
+        // if requrest by carrier exist update it to invalid
+        if (existingRequests.length > 0)
+        {
+            const updates = existingRequests.map(req => { req.setCanceled(); req.setUpdatedBy(currentUser); return req.$query().patch(); });
+            const results = await Promise.allSettled(updates);
+            const activities = [];
+            for (const res of results)
+            {
+                if (res.status == 'rejected')
+                {
+                    telemetry.trackException({
+                        exception: res.reason,
+                        properties:
+                        {
+                            orderGuid: job.orderGuid,
+                            jobGuid: job.guid,
+                            requestExternalGuid: requestModel.externalPostGuid,
+                            extraAnnotations: {
+                                loadboard: lbPosting.loadboard,
+                                carrier: {
+                                    guid: carrier.guid,
+                                    name: carrier.name
+                                }
+                            }
+                        },
+                        severity: SeverityLevel.Error
+                    });
+                }
+                else
+                {
+                    activities.push(
+                        ActivityManagerService.createActivityLog({
+                            orderGuid: job.orderGuid,
+                            userGuid: currentUser,
+                            jobGuid: job.guid,
+                            activityId: 5,
+                            extraAnnotations: {
+                                loadboard: lbPosting.loadboard,
+                                carrier: {
+                                    guid: carrier.guid,
+                                    name: carrier.name
+                                }
+                            }
+                        })
+                    );
+                }
+            }
+            await Promise.all(activities);
+        }
+
+        requestModel.posting = { '#dbRef': lbPosting.guid };
+        requestModel.setNew();
+        requestModel.setCreatedBy(currentUser);
+
+        const response = await requestModel.$query().insertGraph();
+
+        // update activities according to incoming request createBy
+        await ActivityManagerService.createActivityLog({
+            orderGuid: job.orderGuid,
+            userGuid: currentUser,
+            jobGuid: job.guid,
+            activityId: 4,
+            extraAnnotations: {
+                loadboard: lbPosting.loadboard,
+                carrier: {
+                    guid: carrier.guid,
+                    name: carrier.name
+                }
+            }
+        });
+
+        // push to pushsub
+        PubSubService.publishJobRequests(job.guid, response);
+
+        return response;
+    }
+
+    /**
+     * Method is used to cancel request in our system from incoming webhooks.
+     * @param {Model} requestModel
+     * @param {Object} externalPost
+     * @param {Object} carrier
+     * @param {string} currentUser
+     * @returns
+     */
+    static async cancelRequestfromWebhook(requestModel, externalPost, carrier, currentUser)
+    {
+        // query our database for requests from incoming payload
+        const lbPosting = await LoadboardPost.query().withGraphJoined('[job, requests(CarrierSpecific)]')
+            .modifiers({
+                CarrierSpecific: (request) =>
+                {
+                    request.where({
+                        isValid: true,
+                        carrierIdentifier: carrier.usDot
+                    });
+                }
+            })
+            .findOne({
+                'rcgTms.loadboardPosts.externalGuid': externalPost.guid
+            });
+
+        if (!lbPosting)
+        {
+            throw new NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
+        }
+
+        const job = lbPosting.job;
+
+        const existingRequests = lbPosting.requests;
+
+        if (existingRequests.length === 0)
+        {
+            throw new NotFoundError(`The request doesn't exist for carrier ${carrier.name}`);
+        }
+
+        const promiseArray = await existingRequests.map(request =>
+        {
+            request.setCanceled();
+            request.setUpdatedBy(currentUser);
+            return request.$query().updateAndFetch()
+                .then(async result =>
+                {
+                    await Promise.all([
+                        ActivityManagerService.createActivityLog({
+                            orderGuid: job.orderGuid,
+                            userGuid: currentUser,
+                            jobGuid: job.guid,
+                            activityId: 5,
+                            extraAnnotations: {
+                                loadboard: lbPosting.loadboard,
+                                carrier: {
+                                    guid: carrier.guid,
+                                    name: carrier.name
+                                }
+                            }
+                        }),
+                        PubSubService.publishJobRequests(job.guid, result)
+                    ]);
+                    return result;
+                }).catch(error =>
+                {
+                    telemetry.trackException({
+                        exception: error,
+                        properties:
+                        {
+                            orderGuid: job.orderGuid,
+                            jobGuid: job.guid,
+                            requestExternalGuid: requestModel.externalPostGuid,
+                            extraAnnotations: {
+                                loadboard: lbPosting.loadboard,
+                                carrier: {
+                                    guid: carrier.guid,
+                                    name: carrier.name
+                                }
+                            }
+                        }
+                    });
+                    console.log(error);
+                });
+        });
+        const response = await Promise.all(promiseArray);
+        return response;
+    }
+
+    /**
+     * Method declines single request of the payload.
+     * @param {uuid} requestGuid
+     * @param {uuid} reason
+     * @param {uuid} currentUser
+     * @returns
+     */
+    static async declineRequestByGuid(requestGuid, reason, currentUser)
+    {
+        const queryRequest = await LoadboardRequest
+            .query()
+            .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
+            .leftJoinRelated('posting.job')
+            .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
+
+        // to pass it on to the event
+        const jobGuid = queryRequest.jobGuid;
+        const orderGuid = queryRequest.orderGuid;
+
+        // remove fields that do not exist to update table correctly
+        delete queryRequest.jobGuid;
+        delete queryRequest.orderGuid;
+
+        queryRequest.setDeclined(reason);
+        queryRequest.setUpdatedBy(currentUser);
+
+        await LoadboardsApi.sendRequest(queryRequest).catch((error) =>
+        {
+            error.message = `Failed to decline request. Reason: ${error}`;
+            throw error;
+        });
+
+        const updatedRequest = await queryRequest.$query().patchAndFetch();
+
+        await ActivityManagerService.createActivityLog({
+            orderGuid: orderGuid,
+            userGuid: currentUser,
+            jobGuid: jobGuid,
+            activityId: 7,
+            extraAnnotations: {
+                loadboard: queryRequest.loadboard,
+                carrier: {
+                    guid: queryRequest.extraExternalData.guid,
+                    name: queryRequest.extraExternalData.name
+                }
+            }
+        });
+
+        PubSubService.publishJobRequests(jobGuid, updatedRequest);
+        return updatedRequest;
+    }
+
+    /**
+     * Methid accepts requests and creates a internal offer in our system.
+     * @param {uuid} requestGuid
+     * @param {uuid} currentUser
+     * @returns OfferObject
+     */
+    static async acceptRequestbyGuid(requestGuid, currentUser)
+    {
+        const trx = await LoadboardRequest.startTransaction();
+
+        const promiseArray = [];
+
+        // finding request to update and attach orderGUID and jobGUID
+        const queryRequest = await LoadboardRequest
+            .query(trx)
+            .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
+            .leftJoinRelated('posting.job')
+            .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
+
+        const jobGuid = queryRequest.jobGuid;
+        const orderGuid = queryRequest.orderGuid;
+        const internalPostGuid = queryRequest.loadboardPostGuid;
+
+        // remove fields that do not exist to update table correctly
+        delete queryRequest.jobGuid;
+        delete queryRequest.orderGuid;
+
+        // updating object for loadboard logic
+        queryRequest.setAccepted();
+        queryRequest.setUpdatedBy(currentUser);
+
+        let offerPayload;
+        try
+        {
+            offerPayload = await LoadboardsApi.sendRequest(queryRequest);
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            telemetry.trackException({
+                exception: error,
+                properties:
+                {
+                    jobGuid: jobGuid,
+                    postGuid: internalPostGuid,
+                    extraAnnotations: {
+                        loadboard: offerPayload.loadboard,
+                        carrier: {
+                            guid: offerPayload.carrier.guid,
+                            name: offerPayload.carrier.name
+                        }
+                    }
+                }
+            });
+            error.message = 'Failed to accept request';
+            throw error;
+        }
+
+        // create offer in our sysytem
+        const createdOffer = await LoadboardService.createInternalOffer(trx, jobGuid, internalPostGuid, offerPayload.data, currentUser);
+
+        // get all active requests for the current job
+        const activeRequests = await LoadboardRequest.query(trx).leftJoinRelated('posting').where('posting.guid', internalPostGuid).andWhereNot('loadboardRequests.guid', queryRequest.guid).modify('validActive');
+
+        // 'Load is no longer available.'
+        for (const request of activeRequests)
+        {
+            request.setDeclined('Load is no longer available.');
+            request.setUpdatedBy(currentUser);
+            promiseArray.push(request.$query(trx).patchAndFetch());
+        }
+
+        promiseArray.push(queryRequest.$query(trx).update());
+
+        await Promise.all(promiseArray).catch((error) => { throw error; });
+
+        await ActivityManagerService.createActivityLog({
+            orderGuid: orderGuid,
+            userGuid: currentUser,
+            jobGuid: jobGuid,
+            activityId: 6,
+            extraAnnotations: {
+                loadboard: queryRequest.loadboard,
+                vendorGuid: createdOffer.vendor.guid,
+                vendorName: createdOffer.vendor.name,
+                dotNumber: createdOffer.vendor.dotNumber
+            }
+        });
+
+        await trx.commit();
+
+        emitter.emit('load_request_accepted', { jobGuid });
+
+        return createdOffer;
+    }
+
+    /**
+     * Method creates a offer internally and handles all un posting of loadboards.
+     * @param {Object} trx
+     * @param {uuid} jobGuid
+     * @param {uuid} internalPostGuid
+     * @param {Obejct} offerPayload
+     * @param {uuid} currentUser
+     * @returns Created offer
+     */
+    static async createInternalOffer(trx, jobGuid, internalPostGuid, offerPayload, currentUser)
+    {
+        const promiseArray = [];
+
+        try
+        {
+            if (offerPayload.pickup.pickUpEnd < offerPayload.delivery.deliveryStart || offerPayload.delivery.deliveryEnd < offerPayload.pickup.pickUpStart)
+            {
+                throw new Error('Pickup dates should be before delivery date');
+            }
+
+            // get Job with all data
+            const job = await OrderJob
+                .query(trx)
+                .findById(jobGuid)
+                .withGraphFetched(`[
+                stops(distinct).[primaryContact, terminal], 
+                loadboardPosts(getPosted).requests(validActive),
+                commodities(distinct, isNotDeleted).[vehicle, commType], 
+                bills.lines(isNotDeleted, transportOnly).item,
+                dispatches(activeDispatch), 
+                type, 
+                order.[client, clientContact, dispatcher, invoices.lines(isNotDeleted, transportOnly).item]
+            ]`);
+
+            if (!job)
+            {
+                throw new NotFoundError('Job Not Found');
+            }
+
+            // validate job not be be in
+            job.validateJobForDispatch();
+
+            // get only first and last stop only
+            job.stops = OrderStop.firstAndLast(job.stops);
+            const bill = job?.bills[0];
+            const firstStop = job.stops[0];
+            const lastStop = job.stops[1];
+            const removePosts = job.loadboardPosts.filter(item => item?.guid !== internalPostGuid);
+            const unPosts = job.loadboardPosts.filter(item => item?.guid === internalPostGuid);
+            const upPostInternalPosting = unPosts[0];
+
+            upPostInternalPosting.setToUnposted();
+            upPostInternalPosting.setUpdatedBy(currentUser);
+            promiseArray.push(upPostInternalPosting.$query(trx).patch());
+
+            const carrier = await SFAccount.query(trx).modify('externalIdandDot', offerPayload.carrier.guid, offerPayload.carrier.usdot);
+
+            // validate carriers
+            if (!carrier)
+            {
+                throw new NotFoundError(`Carrier does not exist in our system. USDOT:${offerPayload.carrier.usdot}; Name:${offerPayload.carrier.name}`);
+            }
+            else if (carrier.blacklist == true || carrier.active == false)
+            {
+                throw new NotAllowedError('Carrier is inactive or blacklisted.');
+            }
+
+            let carrierContact;
+
+            // if driver being assigned through internal
+            if (offerPayload.driver.guid)
+            {
+                carrierContact = await SFContact.query(trx).modify('byId', offerPayload.driver.guid).first();
+            }
+            else
+            {
+                // creating carrier driver
+                carrierContact = SFContact.fromJson({
+                    name: offerPayload.driver.name,
+                    email: offerPayload.driver.email,
+                    phoneNumber: offerPayload.driver.phoneNumber,
+                    accountId: carrier.sfId
+                });
+                carrierContact = await carrierContact.$query(trx).insertAndFetch();
+            }
+
+            // split cost amongst commoditites
+            const lines = BillService.splitCarrierPay(bill, job.commodities, offerPayload.price, currentUser);
+            for (const line of lines)
+                line.transacting(trx);
+
+            promiseArray.push(...lines);
+
+            bill.paymentTermId = offerPayload.paymentTerm;
+            bill.setUpdatedBy(currentUser);
+            promiseArray.push(bill.$query(trx).patch());
+
+            firstStop.setScheduledDates(offerPayload.pickup.type, offerPayload.pickup.pickUpStart, offerPayload.pickup.pickUpEnd);
+            firstStop.setUpdatedBy(currentUser);
+            promiseArray.push(firstStop.$query(trx).patch());
+
+            lastStop.setScheduledDates(offerPayload.delivery.type, offerPayload.delivery.deliveryStart, offerPayload.delivery.deliveryEnd);
+            lastStop.setUpdatedBy(currentUser);
+            promiseArray.push(lastStop.$query(trx).patch());
+
+            // update job status
+            job.setUpdatedBy(currentUser);
+            promiseArray.push(job.$query(trx).patch({
+                status: OrderJob.STATUS.PENDING
+            }));
+
+            // create Offer in our system
+            const dispatch = OrderJobDispatch.fromJson({
+                job: { '#dbRef': jobGuid },
+                loadboardPost: { '#dbRef': internalPostGuid },
+                vendor: { '#dbRef': carrier.guid },
+                vendorAgent: { '#dbRef': carrierContact.guid },
+                externalGuid: offerPayload.externalPostGuid,
+                paymentTermId: offerPayload.paymentTerm,
+                price: offerPayload.price
+            });
+            dispatch.setCreatedBy(currentUser);
+            const myDispatch = await OrderJobDispatch.query(trx).insertGraphAndFetch(dispatch, { relate: true });
+
+            const postArray = [];
+
+            // unpost all active posts in and update related request
+            for (const post of removePosts)
+            {
+                postArray.push(LoadboardsApi.sendRequest(post));
+                post.setToUnposted();
+                post.setUpdatedBy(currentUser);
+                promiseArray.push(post.$query(trx).patch());
+                const lbRequest = new LoadboardRequest();
+                lbRequest.setDeclined(LoadboardRequest.DECLINE_REASON.UNPOSTED);
+                promiseArray.push(post.$relatedQuery('requests', trx).for(post).patch(lbRequest));
+            }
+
+            const res = await Promise.allSettled(postArray);
+            for (const r of res)
+            {
+                if (r.status == 'rejected')
+                {
+                    telemetry.trackException({
+                        exception: r.reason,
+                        properties:
+                        {
+                            jobGuid: jobGuid,
+                            postGuid: internalPostGuid,
+                            extraAnnotations: {
+                                loadboard: offerPayload.loadboard,
+                                carrier: {
+                                    guid: offerPayload.carrier.guid,
+                                    name: offerPayload.carrier.name
+                                }
+                            }
+                        }
+                    });
+                }
+                else if (r.value)
+                {
+                    const post = r.value.data.data;
+                    await ActivityManagerService.createActivityLog({
+                        orderGuid: job.orderGuid,
+                        userGuid: currentUser,
+                        activityId: 3,
+                        jobGuid: jobGuid,
+                        extraAnnotations: {
+                            loadboard: post.loadboard
+                        }
+                    });
+                }
+            }
+
+            // add for every success to say unposted push notification
+            await Promise.all(promiseArray);
+
+            return myDispatch;
+        }
+        catch (error)
+        {
+            telemetry.trackException({
+                exception: error,
+                properties:
+                {
+                    jobGuid: jobGuid,
+                    postGuid: internalPostGuid,
+                    extraAnnotations: {
+                        loadboard: offerPayload.loadboard,
+                        carrier: {
+                            guid: offerPayload.carrier.guid,
+                            name: offerPayload.carrier.name
+                        }
+                    }
+                }
+            });
+            await trx.rollback();
+        }
+    }
+
 }
 
 module.exports = LoadboardService;

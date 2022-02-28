@@ -2,6 +2,7 @@ const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAu
 const BaseModel = require('./BaseModel');
 const currency = require('currency.js');
 const { DateTime } = require('luxon');
+const { ValidationError } = require('../ErrorHandling/Exceptions');
 
 class Order extends BaseModel
 {
@@ -270,7 +271,7 @@ class Order extends BaseModel
     {
         if (note && note.length > 3000)
         {
-            throw new Error('Client notes cannot exceed 3000 characters');
+            throw new ValidationError('Client notes cannot exceed 3000 characters');
         }
         this.clientNotes = {
             note,

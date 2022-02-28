@@ -5,37 +5,51 @@ const BillService = require('../Services/BillService');
 
 class BulkController
 {
-    static async updateOrderUsers(req, res)
+    static async updateOrderUsers(req, res, next)
     {
-        const results = await OrderService.bulkUpdateUsers(req.body);
+        const { results, exceptions } = await OrderService.bulkUpdateUsers(req.body);
 
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
         if (results)
             res.status(200).json(results);
     }
 
-    static async updateJobUsers(req, res)
+    static async updateJobUsers(req, res, next)
     {
-        const results = await OrderJobSerivce.bulkUpdateUsers(req.body);
+        const { results, exceptions } = await OrderJobSerivce.bulkUpdateUsers(req.body);
 
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
         if (results)
             res.status(200).json(results);
     }
 
-    static async updateJobDates(req, res)
+    static async updateJobDates(req, res, next)
     {
-        const results = await OrderJobSerivce.bulkUpdateDates(req.body, req.session.userGuid);
+        const { results, exceptions } = await OrderJobSerivce.bulkUpdateDates(req.body, req.session.userGuid);
+
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
+
         res.status(200).json(results);
     }
 
-    static async updateJobStatus(req, res)
+    static async updateJobStatus(req, res, next)
     {
-        const results = await OrderJobSerivce.bulkUpdateStatus(req.body, req.session.userGuid);
+        const { results, exceptions } = await OrderJobSerivce.bulkUpdateStatus(req.body, req.session.userGuid);
+
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
         res.status(200).json(results);
     }
 
-    static async updateJobPrices(req, res)
+    static async updateJobPrices(req, res, next)
     {
-        const results = await OrderJobSerivce.bulkUpdatePrices(req.body, req.session.userGuid);
+        const { results, exceptions } = await OrderJobSerivce.bulkUpdatePrices(req.body, req.session.userGuid);
+
+        if (exceptions.doErrorsExist())
+            next({ instance: exceptions, onlySendErrorsToTelemetry: true });
 
         res.status(200).json(results);
     }
@@ -44,8 +58,11 @@ class BulkController
     {
         try
         {
-            const results = await OrderJobSerivce.setJobsToReady(req.body.jobGuids, req.session.userGuid);
+            const { results, exceptions } = await OrderJobSerivce.setJobsToReady(req.body.jobGuids, req.session.userGuid);
 
+            if (exceptions.doErrorsExist())
+                next({ instance: exceptions, onlySendErrorsToTelemetry: true });
+                
             res.status(202).json(results);
         }
         catch (error)
@@ -77,7 +94,7 @@ class BulkController
 
         try
         {
-            const results = await InvoiceService.exportInvocies(orders);
+            const results = await InvoiceService.exportInvoices(orders);
 
             res.status(200).json(results);
         }
@@ -95,14 +112,24 @@ class BulkController
         try
         {
             let result;
+            let exception;
             if (req.params.action == 'accept')
             {
-                result = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+                const { results, exceptions } = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+
+                result = results;
+                exception = exceptions;
             }
             else if (req.params.action == 'reject')
             {
-                result = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+                const { results, exceptions } = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+                result = results;
+                exception = exceptions;
             }
+
+            if (exception.doErrorsExist())
+                next({ instance: exception, onlySendErrorsToTelemetry: true });
+
             res.status(200);
             res.json(result);
         }

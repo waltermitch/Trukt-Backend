@@ -112,13 +112,13 @@ function corsMiddleware()
     {
         const whitelistedOrigins = process.env.CORS_ORIGINS.split(',').map((origin) =>
         {
-            if (/^\/.*\/$/.test(origin))
+            const matches = origin.match(/^\/(.*)\/$/);
+            if (matches && matches[1])
             {
-                return new RegExp(origin);
+                return new RegExp(matches[1]);
             }
             return origin;
         });
-
         return cors({
             origin: whitelistedOrigins
         });

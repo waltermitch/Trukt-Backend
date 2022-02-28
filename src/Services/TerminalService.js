@@ -1,4 +1,3 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
@@ -7,6 +6,7 @@ const Terminal = require('../Models/Terminal');
 const Queue = require('../Azure/ServiceBus');
 const { mergeDeepRight } = require('ramda');
 const ArcGIS = require('../ArcGIS/API');
+const { MissingDataError, DataConflictError } = require('../ErrorHandling/Exceptions');
 
 const { SYSTEM_USER } = process.env;
 const keywordFields =
@@ -310,7 +310,7 @@ class TerminalService
     {
         // if the two terminals are the same, we don't want to do anything
         if (primaryTerminal.guid === alternativeTerminal.guid)
-            throw new Error('Cannot merge a terminal into itself');
+            throw new DataConflictError('Cannot merge a terminal into itself');
 
         // update all orderStops and terminalContacts from current terminal to existing terminal
         await Promise.all(
@@ -438,7 +438,7 @@ class TerminalService
     {
         // if there is no guid, throw an error
         if (!terminalGuid)
-            throw new HttpError(400, 'Terminal Must Have A guid');
+            throw new MissingDataError('Terminal Must Have A guid');
 
         const term = Terminal.fromJson(terminal);
 
@@ -449,7 +449,7 @@ class TerminalService
 
         // we can't let terminals be resolved without lat/long
         if (term.isResolved && (!term.latitude || !term.longitude))
-            throw new HttpError(400, 'Terminal Must Have Latitude And Longitude To Be Resolved');
+            throw new MissingDataError('Terminal Must Have Latitude And Longitude To Be Resolved');
 
         const newTerminal = await Terminal.query(trx)
             .patchAndFetchById(terminalGuid, term);

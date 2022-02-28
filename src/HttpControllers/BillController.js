@@ -1,24 +1,31 @@
 const BillService = require('../Services/BillService');
 const InvoiceLine = require('../Models/InvoiceLine');
+const { NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class BillController
 {
-    static async getBill(req, res)
+    static async getBill(req, res, next)
     {
-        const result = await BillService.getBill(req.params.billGuid);
-        if (result)
+        try
         {
-            res.status(200);
-            res.json(result);
+            const result = await BillService.getBill(req.params.billGuid);
+            if (result)
+            {
+                res.status(200);
+                res.json(result);
+            }
+            else
+            {
+                throw new NotFoundError('Bill not found');
+            }
         }
-        else
+        catch (error)
         {
-            res.status(404);
-            res.send();
+            next(error);
         }
     }
 
-    static async updateBillLine(req, res)
+    static async updateBillLine(req, res, next)
     {
         const billGuid = req.params.billGuid;
         const lineGuid = req.params.lineGuid;
@@ -31,12 +38,11 @@ class BillController
         }
         catch (error)
         {
-            res.status(404);
-            res.json(error.message);
+            next(error);
         }
     }
 
-    static async deleteBillLine(req, res)
+    static async deleteBillLine(req, res, next)
     {
         const billGuid = req.params.billGuid;
         const lineGuid = req.params.lineGuid;
@@ -48,12 +54,11 @@ class BillController
         }
         catch (error)
         {
-            res.status(404);
-            res.json(error.message);
+            next(error);
         }
     }
 
-    static async deleteBillLines(req, res)
+    static async deleteBillLines(req, res, next)
     {
         const billGuid = req.params.billGuid;
         const lineGuids = req.body;
@@ -65,12 +70,11 @@ class BillController
         }
         catch (error)
         {
-            res.status(404);
-            res.json(error.message);
+            next(error);
         }
     }
 
-    static async createBillLine(req, res)
+    static async createBillLine(req, res, next)
     {
         const billGuid = req.params.billGuid;
         const invoiceGuid = (req.body.invoiceGuid || null);
@@ -85,16 +89,7 @@ class BillController
         }
         catch (error)
         {
-            if (error.message == 'Cannot link transport items!')
-            {
-                res.status(406);
-                res.json(error.message);
-            }
-            else
-            {
-                res.status(404);
-                res.json(error.message);
-            }
+            next(error);
         }
     }
 
@@ -111,12 +106,9 @@ class BillController
             // transform single element array to object
             bill.data = bill.data[0] || {};
 
-            if (bill.errors.length > 0)
-                res.status(400);
-            else
-                res.status(200);
+            bill.errors.throwErrorsIfExist();
 
-            res.json(bill);
+            res.status(200).json(bill);
         }
         catch (err)
         {

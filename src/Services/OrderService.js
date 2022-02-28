@@ -1,5 +1,3 @@
-const ActivityManagerService = require('./ActivityManagerService');
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
@@ -34,6 +32,8 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+const ActivityManagerService = require('./ActivityManagerService');
+const { MissingDataError, DataConflictError, NotFoundError, ValidationError, BulkException } = require('../ErrorHandling/Exceptions');
 
 // this is the apora that will hold the falling down requirments above.
 
@@ -387,7 +387,7 @@ class OrderService
                 if (!commType)
                 {
                     const commTypeStr = commodity.typeId ? commodity.typeId : `${commodity.commType?.category} ${commodity.commType?.type}`;
-                    throw new Error(`Unknown commodity type: ${commTypeStr}`);
+                    throw new ValidationError(`Unknown commodity type: ${commTypeStr}`);
                 }
 
                 commodity.graphLink('commType', commType);
@@ -472,7 +472,7 @@ class OrderService
                 if (isUseful(job.vendor))
                 {
                     if (!jobVendor)
-                        throw new Error('Vendor doesnt exist');
+                        throw new NotFoundError('Vendor doesnt exist');
 
                     job.graphLink('vendor', jobVendor);
                 }
@@ -480,7 +480,7 @@ class OrderService
                 if (isUseful(job.vendorContact))
                 {
                     if (!jobVendorContact)
-                        throw new Error('Vendor contact doesnt exist');
+                        throw new NotFoundError('Vendor contact doesnt exist');
 
                     job.graphLink('vendorContact', jobVendorContact);
                 }
@@ -489,7 +489,7 @@ class OrderService
                 if (isUseful(job.vendorAgent))
                 {
                     if (!jobVendorAgent)
-                        throw new Error('Vendor agent doesnt exist');
+                        throw new NotFoundError('Vendor agent doesnt exist');
 
                     job.graphLink('vendorAgent', jobVendorAgent);
                 }
@@ -497,7 +497,7 @@ class OrderService
                 if (isUseful(job.dispatcher))
                 {
                     if (!jobDispatcher)
-                        throw new Error(`Dispatcher ${job.dispatcher.guid} doesnt exist`);
+                        throw new NotFoundError(`Dispatcher ${job.dispatcher.guid} doesnt exist`);
 
                     job.graphLink('dispatcher', jobDispatcher);
                 }
@@ -507,7 +507,7 @@ class OrderService
                 );
                 if (!jobType)
                 {
-                    throw new Error(
+                    throw new ValidationError(
                         `unknown job type ${job.typeId ||
                         job.jobType.category + job.jobType.type
                         }`
@@ -686,14 +686,14 @@ class OrderService
         keys.sort();
         if (keys.length != dataRecs.length)
         {
-            throw new Error('_dataCheck dataCheck keys length do not match the dataRecs length');
+            throw new ValidationError('_dataCheck dataCheck keys length do not match the dataRecs length');
         }
 
         for (const [i, key] of keys.entries())
         {
             if (dataCheck[key] && !dataRecs[i])
             {
-                throw new Error(`${key} record doesn't exist.`);
+                throw new NotFoundError(`${key} record doesn't exist.`);
             }
         }
     }
@@ -866,7 +866,7 @@ class OrderService
      * Method is to accepts load tenders. Validates, sends requests and updates the database in our system.
      * @param {string []} orderGuids
      * @param {string} currentUser
-     * @returns {Promise<{guid: string, status: number, message: string} []>} currentUser
+     * @returns {{results: Promise<{guid: string, status: number, message: string} []>, exceptions: BulkException}} currentUser
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
@@ -880,18 +880,19 @@ class OrderService
 
         failedTenders.push(...failedOrders);
 
+        const bulkExceptions = new BulkException();
+
         // add errored orders to body message
         for (const order of failedTenders)
         {
-            resBody[order.orderGuid] = {
-                jobGuid: order.jobGuid,
-                status: order.status,
-                errors: order.errors
-            };
+            bulkExceptions
+                .addError(order.orderGuid, order.errors)
+                .setErrorCollectionStatus(order.orderGuid, order.status);
+            resBody[order.orderGuid] = bulkExceptions.toJSON(order.orderGuid);
         }
 
         if (!goodOrders.length)
-            return resBody;
+            return { results: resBody, exceptions: bulkExceptions };
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -924,7 +925,7 @@ class OrderService
             }
         }
 
-        return resBody;
+        return { results: resBody, exceptions: bulkExceptions };
     }
 
     /**
@@ -945,18 +946,21 @@ class OrderService
 
         failedTenders.push(...failedOrders);
 
+        const bulkExceptions = new BulkException();
+
         // add errored orders to body message
         for (const order of failedTenders)
         {
+            bulkExceptions
+                .addError(order.orderGuid, order.errors)
+                .setErrorCollectionStatus(order.orderGuid, order.status);
             resBody[order.orderGuid] = {
-                jobGuid: order.jobGuid,
-                status: order.status,
-                errors: order.errors
+                ...bulkExceptions.toJSON(order.orderGuid)
             };
         }
 
         if (!goodOrders.length)
-            return resBody;
+            return { results: resBody, exceptions: bulkExceptions };
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -988,7 +992,7 @@ class OrderService
             }
         }
 
-        return resBody;
+        return { results: resBody, exceptions: bulkExceptions };
     }
 
     /**
@@ -1122,7 +1126,7 @@ class OrderService
         const numOfUpdatedOrders = await Order.query().patch(order).findById(orderGuid);
         if (numOfUpdatedOrders == 0)
         {
-            throw new Error('No order found');
+            throw new NotFoundError('No order found');
         }
 
         return order;
@@ -1701,9 +1705,8 @@ class OrderService
         }
         catch (error)
         {
-            console.log(error);
             await trx.rollback();
-            throw new HttpError(500, error.message || error);
+            throw error;
         }
     }
 
@@ -2104,7 +2107,7 @@ class OrderService
                 CommodityType.compare(commodity, commodityType)
             );
             if (!commType)
-                throw new Error(
+                throw new ValidationError(
                     `Unknown commodity ${commodity.commType?.category} ${commodity.commType?.type}`
                 );
 
@@ -2547,7 +2550,7 @@ class OrderService
             );
             if (!jobType)
             {
-                throw new Error(
+                throw new ValidationError(
                     `unknown job type ${jobModel.typeId ||
                     jobModel.jobType.category + jobModel.jobType.type
                     }`
@@ -2843,7 +2846,7 @@ class OrderService
                     const bill = invoiceBills.find(bill => bill.job?.guid === job.guid);
 
                     if (!bill)
-                        throw new HttpError(500, 'Job Is Missing Bill');
+                        throw new MissingDataError('Job Is Missing Bill');
 
                     bill.lines.push(jobInvoiceLineToCreate);
                     if (!jobBillsWithLinesToUpdate.has(bill.guid))
@@ -2871,7 +2874,7 @@ class OrderService
             if (!orderInvoiceFromDB.isPaid)
                 orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
             else
-                throw new HttpError(400, 'Cannot update consignee on paid invoice');
+                throw new DataConflictError('Cannot update consignee on paid invoice');
         }
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
@@ -2947,28 +2950,37 @@ class OrderService
         const cleaned = R.pickBy((it) => it !== undefined, payload);
 
         if (Object.keys(cleaned).length === 0)
-            throw new HttpError(400, 'Missing Update Values');
+            throw new MissingDataError('Missing Update Values');
 
         const promises = await Promise.allSettled(orders.map(async (order) =>
         {
             // need to catch and throw in order to be able to return the guid for mapping of errors
             const res = await Order.query().findById(order).patch(payload).returning('guid')
-                .catch((err) => { throw { 'guid': order, 'data': err }; });
+                .catch((err) => { throw { guid: order, data: err }; });
 
-            return { 'guid': order, 'data': res };
+            return { guid: order, data: res };
         }));
 
+        const bulkExceptions = new BulkException();
         for (const e of promises)
         {
             if (e.reason)
-                results[e.reason.guid] = { 'error': e.reason.data, 'status': 400 };
+            {
+                bulkExceptions
+                    .addError(e.reason.guid, e.reason.data)
+                    .setErrorCollectionStatus(e.reason.guid, 400);
+            }
             else if (e.value?.data === undefined)
-                results[e.value.guid] = { 'error': 'Order Not Found', 'status': 404 };
+            {
+                bulkExceptions
+                    .addError(e.value.guid, new NotFoundError('Order Not Found'))
+                    .setErrorCollectionStatus(e.value.guid, 404);
+            }
             else if (e.value.data)
-                results[e.value.guid] = { 'status': 200 };
+                results[e.value.guid] = { status: 200 };
         }
 
-        return results;
+        return { results: { ...results, ...bulkExceptions.toJSON() }, exceptions: bulkExceptions };
     }
 
     static async getTransportJobsIds(orderGuid)
@@ -2991,18 +3003,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (order.isOnHold)
             return 200;
 
         // check that there are no vendors on any of the jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw new HttpError(400, `Related Job ${job.number} shouldn't have a vendor`);
+                throw new DataConflictError(`Related Job ${job.number} shouldn't have a vendor`);
 
         // if we got here mark all jobs on hold and the order on hold
         try
@@ -3046,18 +3058,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (!order.isOnHold)
             return 200;
 
         // check that there are no vendors on any of the jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw new HttpError(400, `Related Job ${job.number} shouldn't have a vendor`);
+                throw new DataConflictError(`Related Job ${job.number} shouldn't have a vendor`);
 
         // if we got here mark all jobs on hold and the order on hold
         try
@@ -3099,26 +3111,26 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (order.isOnHold)
-            throw new HttpError(400, 'Order is On Hold');
+            throw new DataConflictError('Order is On Hold');
         else if (!order.isReady)
-            throw new HttpError(400, 'Order is Not Ready');
+            throw new DataConflictError('Order is Not Ready');
         else if (order.isComplete)
             return 200;
 
         // check that each transport job has a vendor and all commodities are delivered
         for (const job of order.jobs)
             if (!job.vendorGuid)
-                throw new HttpError(400, `Related Job ${job.number} doesn't have a Vendor`);
+                throw new MissingDataError(`Related Job ${job.number} doesn't have a Vendor`);
 
         for (const commodity of order.commodities)
             if (commodity.deliveryStatus !== 'delivered')
-                throw new HttpError(400, `Commodity ${commodity.vehicle.number} is not Delivered`);
+                throw new DataConflictError(`Commodity ${commodity.vehicle.number} is not Delivered`);
 
         // if we got here mark all jobs complete and the order complete
         await Promise.all(
@@ -3150,11 +3162,11 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (!order.isComplete)
             return 200;
 
@@ -3188,15 +3200,15 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (!order.isReady)
-            throw new HttpError(400, 'Order is Not Ready');
+            throw new DataConflictError('Order is Not Ready');
         else if (order.isOnHold)
-            throw new HttpError(400, 'Order is On Hold');
+            throw new DataConflictError('Order is On Hold');
         else if (order.status === 'scheduled')
             return 200;
 
@@ -3207,7 +3219,7 @@ class OrderService
                 hasVendor = true;
 
         if (!hasVendor)
-            throw new HttpError(400, 'Order\'s Jobs Have No Vendors Assigned');
+            throw new MissingDataError('Order\'s Jobs Have No Vendors Assigned');
 
         // if we got here mark the order scheduled
         await Order.query().patch({
@@ -3230,18 +3242,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (order.status === 'ready')
             return 200;
 
         // make sure there are no jobs with vendors assigned
         for (const job of order.jobs)
             if (job.isTransport && job.vendorGuid)
-                throw new HttpError(400, 'Order\'s Jobs Should Not Have Vendors Assigned');
+                throw new DataConflictError('Order\'s Jobs Should Not Have Vendors Assigned');
 
         await Order.query().patch({
             'updatedByGuid': currentUser,
@@ -3264,14 +3276,14 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
             return 200;
 
         // make sure no vendor is assigned to any jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw new HttpError(400, 'Order\'s Jobs Should Not Have Vendors Assigned');
+                throw new DataConflictError('Order\'s Jobs Should Not Have Vendors Assigned');
 
         // if we got here mark all jobs deleted and the order deleted
         try
@@ -3315,7 +3327,7 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (!order.isDeleted)
             return 200;
 
@@ -3361,27 +3373,27 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (order.status === 'delivered')
             return 200;
         else if (order.status !== 'picked up')
-            throw new HttpError(400, 'Order Must First Be Picked Up');
+            throw new DataConflictError('Order Must First Be Picked Up');
 
         // make sure vendor is assigned to all transport jobs and all jobs are delivered
         for (const job of order.jobs)
             if ((job.isTransport && !job.vendorGuid))
-                throw new HttpError(400, `Order's Job ${job.number} Has No Vendor Assigned`);
+                throw new MissingDataError(`Order's Job ${job.number} Has No Vendor Assigned`);
             else if (job.status !== 'delivered')
-                throw new HttpError(400, `Order's Job ${job.number} Is Not Delivered`);
+                throw new DataConflictError(`Order's Job ${job.number} Is Not Delivered`);
 
         // make sure all commodities are marked as delivered
         for (const commodity of order.commodities)
             if (commodity.deliveryStatus !== 'delivered')
-                throw new HttpError(400, `Order's Commodity ${commodity.vehicle.name} Has Not Been Delivered`);
+                throw new DataConflictError(`Order's Commodity ${commodity.vehicle.name} Has Not Been Delivered`);
 
         // if we got here mark order as delivered
         await Order.query().patch({
@@ -3402,19 +3414,19 @@ class OrderService
             .first();
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            new HttpError(400, 'Order is Canceled');
+            new DataConflictError('Order is Canceled');
         else if (order.status === 'picked up')
             return 200;
         else if (order.status !== 'delivered')
-            throw new HttpError(400, 'Order Must First Be Delivered');
+            throw new DataConflictError('Order Must First Be Delivered');
 
         for (const job of order.jobs)
             if (job.status !== 'pick up')
-                throw new HttpError(400, `Job ${job.guid} Is Not Pick Up`);
+                throw new DataConflictError(`Job ${job.guid} Is Not Pick Up`);
 
         // if we got here mark the order undelivered
         await Order.query().patch({
@@ -3438,11 +3450,11 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (['completed', 'delivered'].includes(order.status))
-            throw new HttpError(400, 'Can Not Cancel Completed or Delivered Order');
+            throw new DataConflictError('Can Not Cancel Completed or Delivered Order');
         else if (order.isCanceled)
             return 200;
 
@@ -3489,9 +3501,9 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
             return 200;
 
@@ -3546,7 +3558,7 @@ class OrderService
         }
         catch (error)
         {
-            throw new HttpError(400, 'Order Cannot be set to ready.');
+            throw new DataConflictError('Order Cannot be set to ready.');
         }
 
     }

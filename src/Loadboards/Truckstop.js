@@ -1,7 +1,7 @@
 const Loadboard = require('./Loadboard');
 const currency = require('currency.js');
 const { DateTime } = require('luxon');
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
+const { ValidationError } = require('../ErrorHandling/Exceptions');
 
 class Truckstop extends Loadboard
 {
@@ -18,19 +18,19 @@ class Truckstop extends Loadboard
         {
             if (!Object.keys(values).includes(requiredField))
             {
-                throw new HttpError(400, `${requiredField} is required`);
+                throw new ValidationError(`${requiredField} is required`);
             }
             else if (requiredField == 'weight' && (values[requiredField] < 1 || values[requiredField] > 999999))
             {
-                throw new HttpError(400, `${requiredField} should be between 1 and 999999 pounds`);
+                throw new ValidationError(`${requiredField} should be between 1 and 999999 pounds`);
             }
             else if (requiredField == 'length' && (values[requiredField] < 1 || values[requiredField] > 999))
             {
-                throw new HttpError(400, `${requiredField} should be between 1 and 999 feet`);
+                throw new ValidationError(`${requiredField} should be between 1 and 999 feet`);
             }
             else if (requiredField == 'equipmentOptions' && !Array.isArray(values[requiredField]))
             {
-                throw new HttpError(400, `${requiredField} should be array of truckstop valid equipment option ids`);
+                throw new ValidationError(`${requiredField} should be array of truckstop valid equipment option ids`);
             }
         }
     }
@@ -39,7 +39,7 @@ class Truckstop extends Loadboard
     {
         if (this.data.pickup.notes.length > 250 || this.data.delivery.notes.length > 250)
         {
-            throw new Error('First pickup and last delivery stop notes must be less than 250 characters');
+            throw new ValidationError('First pickup and last delivery stop notes must be less than 250 characters');
         }
         const payload = {
             postAsUserId: this.postObject.values.contact.externalId,

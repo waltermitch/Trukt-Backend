@@ -2,7 +2,7 @@ const NotesService = require('../Services/NotesService');
 
 class NotesController
 {
-    static async createNoteByGuid(req, res)
+    static async createNoteByGuid(req, res, next)
     {
         try
         {
@@ -24,12 +24,11 @@ class NotesController
         }
         catch (error)
         {
-            res.status(400);
-            res.json(error);
+            next(error);
         }
     }
 
-    static async updateNote(req, res)
+    static async updateNote(req, res, next)
     {
         try
         {
@@ -40,20 +39,11 @@ class NotesController
         }
         catch (error)
         {
-            if (error.message == 'Note does not exist')
-            {
-                res.status(404);
-                res.json('Note does not exist');
-            }
-            else
-            {
-                res.status(400);
-                res.json(error);
-            }
+            next(error);
         }
     }
 
-    static async deleteNote(req, res)
+    static async deleteNote(req, res, next)
     {
         try
         {
@@ -64,8 +54,7 @@ class NotesController
         }
         catch (error)
         {
-            res.status(404);
-            res.json('Note does not exist');
+            next(error);
         }
     }
 }
