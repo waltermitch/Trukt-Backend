@@ -100,6 +100,16 @@ class BulkException
 
         return exceptionCollections.some((collection) => collection.doErrorsExist());
     }
+
+    /**
+     * Get the error collection instance for a specific guid
+     * @param {guid} key - Guid to identify the error collection
+     * @returns {ExceptionCollection}
+     */
+    getCollectionInstance(key)
+    {
+        return this.#errors[key];
+    }
 }
 
 module.exports = BulkException;
