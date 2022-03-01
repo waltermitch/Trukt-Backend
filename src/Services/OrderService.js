@@ -245,7 +245,8 @@ class OrderService
         {
             // client is required and always should be checked.
             // vehicles are not checked and are created or found
-            const dataCheck = { client: true, vehicles: false, terminals: false };
+            // referrerRebate should be check in case it is pass but no referrer is send
+            const dataCheck = { client: true, vehicles: false, terminals: false, referrerRebate: true };
 
             // order object will be used to link OrderStopLink from the job
             const order = Order.fromJson({
@@ -284,6 +285,7 @@ class OrderService
 
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
             orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
+            orderInfoPromises.push(dataCheck.referrerRebate = orderObj?.referrerRebate && !orderObj?.referrer?.guid ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null);
 
             for (const job of orderObj.jobs)
             {
@@ -627,6 +629,16 @@ class OrderService
                 jobData.actualRevenue = revenue.value;
 
                 orderJobs.push(jobData);
+            }
+
+            if (order?.referrer)
+            {
+                const referrerRebateInvoiceAmount = orderObj?.referrerRebate || '0.00';
+
+                // This id is static, it is always 7 for "rebate" invoices
+                const referrerRebateItemId = 7;
+                const referrerRebateInvoice = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, referrerRebateItemId, currentUser, null);
+                orderInvoices.push(referrerRebateInvoice);
             }
 
             order.jobs = orderJobs;

@@ -142,6 +142,15 @@ Order:
       allOf:
         - $ref: './Common.yaml#/guidObject'
         - description: The account that referred this order to us.
+    referrerRebate:
+      allOf:
+        - oneOf:
+          - type: number
+          - type: string
+            format: currency
+            example: '99.99'
+            default: "0.00"
+        - description: Pricing for rebate invoice attach to referrer.
     salesperson:
       allOf:
         - $ref: './Common.yaml#/guidObject'
