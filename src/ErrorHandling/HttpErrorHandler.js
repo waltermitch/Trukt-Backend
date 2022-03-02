@@ -1,6 +1,6 @@
 const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 const BulkException = require('./Exceptions/BulkException');
-const ExceptionCollection = require('./Exceptions/ExceptionCollection');
+const AppResponse = require('./Responses/AppResponse');
 const formatErrorMessageStructure = require('./FormatErrorMessageStructure');
 const telemetryClient = require('./Insights');
 
@@ -22,10 +22,10 @@ module.exports = (errors, request, response, next) =>
 
         response.status(200).json(errors.toJSON());
     }
-    else if (errors instanceof ExceptionCollection || Array.isArray(errors))
+    else if (errors instanceof AppResponse || Array.isArray(errors))
     {
         const errorsException = Array.isArray(errors)
-            ? new ExceptionCollection(errors)
+            ? new AppResponse(errors)
             : errors;
         const formattedErrors = errorsException.toJSON();
 

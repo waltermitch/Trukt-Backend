@@ -5,7 +5,8 @@ const ActivityLog = require('../Models/ActivityLogs');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const User = require('../Models/User');
-const { ValidationError, ExceptionCollection, NotFoundError } = require('../ErrorHandling/Exceptions');
+const { ValidationError, NotFoundError } = require('../ErrorHandling/Exceptions');
+const { AppResponse } = require('../ErrorHandling/Responses');
 
 class ActivityManagerService
 {
@@ -115,7 +116,7 @@ class ActivityManagerService
 
         if (errors.length > 0)
         {
-            const errorCollection = new ExceptionCollection(errors);
+            const errorCollection = new AppResponse(errors);
             errorCollection.setStatus(400);
 
             return errorCollection.toJSON();
@@ -134,7 +135,7 @@ class ActivityManagerService
             OrderJob.query().findById(jobGuid)
         ]);
 
-        const errorCollection = new ExceptionCollection();
+        const errorCollection = new AppResponse();
         if (!user)
         {
             errorCollection.addError(new NotFoundError(`User ${userGuid} doesnt exist.`));

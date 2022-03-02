@@ -1,6 +1,6 @@
 const formatErrorMessageStructure = require('../FormatErrorMessageStructure');
 
-class ExceptionCollection
+class AppResponse
 {
     /**
      * @private
@@ -27,7 +27,7 @@ class ExceptionCollection
 
     /**
      * @param {unknown} error - The error to add to the collection.
-     * @returns {ExceptionCollection}
+     * @returns {AppResponse}
      */
     addError(error)
     {
@@ -38,7 +38,7 @@ class ExceptionCollection
 
     /**
      * @param {number} status - The http status code of the exception collection.
-     * @returns {ExceptionCollection}
+     * @returns {AppResponse}
      */
     setStatus(status)
     {
@@ -61,7 +61,7 @@ class ExceptionCollection
 
     /**
      * Throw the exception collection.
-     * @throws {ExceptionCollection}
+     * @throws {AppResponse}
      */
     throwErrorsIfExist()
     {
@@ -79,4 +79,4 @@ class ExceptionCollection
     }
 }
 
-module.exports = ExceptionCollection;
+module.exports = AppResponse;

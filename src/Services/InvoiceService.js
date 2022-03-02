@@ -7,7 +7,8 @@ const Invoice = require('../Models/Invoice');
 const Order = require('../Models/Order');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
-const { NotFoundError, DataConflictError, ExceptionCollection } = require('../ErrorHandling/Exceptions');
+const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
+const { AppResponse } = require('../ErrorHandling/Responses');
 
 class InvoiceService
 {
@@ -244,7 +245,7 @@ class InvoiceService
             if (deletedLines != lineGuids.length)
             {
                 // error array for unique messages
-                const errorCollection = new ExceptionCollection();
+                const errorCollection = new AppResponse();
 
                 // query all guids, and throw error for which return because they still exist.
                 const failedLines = await InvoiceLine.query(trx).findByIds([lineGuids]);
@@ -354,7 +355,7 @@ class InvoiceService
             // if order has invoices
             if (order.invoices.length)
             {
-                results[order.guid] = { data: [], errors: new ExceptionCollection(), status: null };
+                results[order.guid] = { data: [], errors: new AppResponse(), status: null };
 
                 for (const invoice of order.invoices)
                 {
@@ -449,7 +450,7 @@ class InvoiceService
                 const invoiceObj = invoiceMap.get(error.guid);
 
                 results[invoiceObj.orderGuid].status = status;
-                results[invoiceObj.orderGuid].errors = new ExceptionCollection();
+                results[invoiceObj.orderGuid].errors = new AppResponse();
                 results[invoiceObj.orderGuid].errors.setStatus(status);
                 results[invoiceObj.orderGuid].errors.addError(
                     new DataConflictError(error,
@@ -462,7 +463,7 @@ class InvoiceService
             {
                 const invoiceObj = invoiceMap.get(data.guid);
 
-                results[invoiceObj.orderGuid].errors = new ExceptionCollection();
+                results[invoiceObj.orderGuid].errors = new AppResponse();
 
                 // if no errors we will update the bill
                 const trx = await InvoiceBill.startTransaction();
