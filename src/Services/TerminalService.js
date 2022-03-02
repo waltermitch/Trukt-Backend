@@ -472,7 +472,7 @@ class TerminalService
 
             // we ignore unresolved terminals
             if (terminal.latitude && terminal.longitude)
-                coords.push([terminal.latitude, terminal.longitude]);
+                coords.push([{ lat: terminal.latitude, long: terminal.longitude }]);
         }
 
         // we check if we have at least 2 points; otherwise we throw an error
