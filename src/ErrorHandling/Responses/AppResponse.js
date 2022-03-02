@@ -12,7 +12,13 @@ class AppResponse
      * @private
      * @type {number} - The http status code of the exception collection.
      */
-    #status = 500;
+    #status = undefined;
+
+    /**
+     * @private
+     * @type {unknown} - Any data to be returned with the app response.
+     */
+    #data = undefined;
 
     /**
      * @param {unknown[] | unknown} errors - The errors when class is initialized.
@@ -20,9 +26,7 @@ class AppResponse
     constructor(errors = [])
     {
         this.name = this.constructor.name;
-        this.#errors = Array.isArray(errors)
-            ? errors.map((error) => formatErrorMessageStructure(error, true))
-            : [formatErrorMessageStructure(errors, true)];
+        this.#errors = errors;
     }
 
     /**
@@ -31,8 +35,19 @@ class AppResponse
      */
     addError(error)
     {
-        this.#errors.push(formatErrorMessageStructure(error, true));
+        this.#errors.push(error);
 
+        return this;
+    }
+
+    /**
+     * @param {unknown} data - Any data to be returned with the app response.
+     * @returns {unknown}
+     */
+    setData(data)
+    {
+        this.#data = data;
+        
         return this;
     }
 
@@ -48,15 +63,39 @@ class AppResponse
     }
 
     /**
-     * @returns {{errorType: string, status: number, errors: ({errorType: string, message: string, code?: number | string} | unknown)[], data?: Record<string, unknown>}}
+     * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data?: Record<string, unknown>}}
      */
     toJSON()
     {
+        const errorCodes = [];
+        const errors = [];
+
+        if (this.doErrorsExist())
+            for (let index = 0; index < this.#errors.length; index++)
+            {
+                const formattedError = formatErrorMessageStructure(this.#errors[index]);
+                errorCodes.push(formattedError.status);
+                errors.push(...formattedError.errors);
+            }
+
         return {
-            errorType: this.name,
-            status: this.#status,
-            errors: this.#errors
+            status: this.#status ?? this.#getHighestErrorCode(errors),
+            errors,
+            data: this.#data
         };
+    }
+
+    /**
+     * @param {number[]} errorCodes
+     */
+    #getHighestErrorCode(errorCodes)
+    {
+        const highestErrorCode = Math.max(errorCodes);
+
+        if (isNaN(highestErrorCode))
+            return 500;
+
+        return highestErrorCode === 0 ? 200 : highestErrorCode;
     }
 
     /**
