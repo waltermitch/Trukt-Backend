@@ -26,7 +26,7 @@ class AppResponse
     constructor(errors = [])
     {
         this.name = this.constructor.name;
-        this.#errors = errors;
+        this.#errors = Array.isArray(errors) ? errors : [errors];
     }
 
     /**
@@ -96,6 +96,35 @@ class AppResponse
             return 500;
 
         return highestErrorCode === 0 ? 200 : highestErrorCode;
+    }
+
+    /**
+     * @param {AppResponse} appResponse
+     */
+    combineResponse(appResponse)
+    {
+        const dataToCombine = appResponse.getResponseToCombine();
+        const uniqueErrors = [...new Set([...this.#errors, ...dataToCombine.errors])];
+ 
+        this.#errors = uniqueErrors;
+
+        if (!dataToCombine.data)
+            this.#data = dataToCombine.data;
+
+        return this;
+    }
+
+    /**
+     * DO NOT USE THIS METHOD.
+     * it's only to be used by the combineResponse method.
+     * @returns {{errors: unknown[], data: unknown}}
+     */
+    getResponseToCombine()
+    {
+        return {
+            errors: this.#errors,
+            data: this.#data
+        };
     }
 
     /**
