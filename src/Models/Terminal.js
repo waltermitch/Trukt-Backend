@@ -106,15 +106,6 @@ class Terminal extends BaseModel
         return json;
     }
 
-    toApiString()
-    {
-        if (this.latitude && this.longitude)
-        {
-            return `{ "geometry" :{"x": ${this.longitude}, "y": ${this.latitude}}}`;
-        }
-        return `${this.street1}, ${this.city}, ${this.state} ${this.zipCode}`;
-    }
-
     isDifferent(terminal)
     {
         if (this.street1 !== terminal.street1)
