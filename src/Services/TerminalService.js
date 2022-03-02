@@ -1,12 +1,13 @@
+const { MissingDataError, DataConflictError, ValidationError } = require('../ErrorHandling/Exceptions');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
+const GeneralFuncs = require('../Azure/GeneralFunc');
 const OrderStops = require('../Models/OrderStop');
 const Terminal = require('../Models/Terminal');
 const Queue = require('../Azure/ServiceBus');
 const { mergeDeepRight } = require('ramda');
 const ArcGIS = require('../ArcGIS/API');
-const { MissingDataError, DataConflictError } = require('../ErrorHandling/Exceptions');
 
 const { SYSTEM_USER } = process.env;
 const keywordFields =
@@ -455,6 +456,30 @@ class TerminalService
             .patchAndFetchById(terminalGuid, term);
 
         return newTerminal;
+    }
+
+    // method to calculate the distance between a set of coords
+    static async calculateTotalDistance(stops)
+    {
+        // go through every order stop
+        stops.sort(OrderStops.sortBySequence);
+
+        // converting terminals into address strings
+        const coords = [];
+        for (const stop of stops)
+        {
+            const { terminal } = stop;
+
+            // we ignore unresolved terminals
+            if (terminal.latitude && terminal.longitude)
+                coords.push([terminal.latitude, terminal.longitude]);
+        }
+
+        // we check if we have at least 2 points; otherwise we throw an error
+        if (coords.length < 2)
+            throw new ValidationError('At least 2 points are required to calculate the distance');
+        else
+            return await GeneralFuncs.calculateDistance(coords);
     }
 }
 
