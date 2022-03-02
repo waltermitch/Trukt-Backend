@@ -631,18 +631,10 @@ class OrderService
                 orderJobs.push(jobData);
             }
 
-            if (order?.referrer)
-            {
-                const referrerRebateInvoiceAmount = orderObj?.referrerRebate || '0.00';
-
-                // This id is static, it is always 7 for "rebate" invoices
-                const referrerRebateItemId = 7;
-                const referrerRebateInvoice = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, referrerRebateItemId, currentUser, null);
-                orderInvoices.push(referrerRebateInvoice);
-            }
+            const referrerInvoice = OrderService.createReferrerRebateInvoice(orderObj?.referrerRebate, referrer, currentUser);
 
             order.jobs = orderJobs;
-            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
+            order.invoices = [OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee), ...referrerInvoice];
 
             const orderCreated = await Order.query(trx)
                 .skipUndefined()
@@ -656,6 +648,22 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser)
+    {
+        const referrerInvoice = [];
+        if (referrer)
+        {
+            const referrerRebateInvoiceAmount = referrerRebateAmount || '0.00';
+
+            // This id is static, it is always 7 for "rebate" invoices
+            const referrerRebateItemId = 7;
+            const referrerRebateLine = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, referrerRebateItemId, currentUser, null);
+
+            referrerInvoice.push(OrderService.createInvoiceBillGraph([referrerRebateLine], true, currentUser, referrer));
+        }
+        return referrerInvoice;
     }
 
     static createInvoiceLineGraph(amount, itemId, currentUser, commodity)
@@ -1570,6 +1578,7 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
+            referrerRebate,
             ...orderData
         } = orderInput;
 
@@ -1589,7 +1598,8 @@ class OrderService
                 orderInvoices,
                 referencesChecked,
                 oldStopData,
-                oldOrder
+                oldOrder,
+                referrerInvoice
             ] = await Promise.all([
                 OrderService.buildCache(),
 
@@ -1603,7 +1613,8 @@ class OrderService
                     terminals
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
-                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload)
+                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
+                OrderService.getOrderReferrerInvoice(guid, trx)
             ]);
 
             // terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
@@ -1668,6 +1679,7 @@ class OrderService
                 consignee,
                 currentUser
             );
+            const referrerInvoiceToUpdate = OrderService.updateReferrerRebateInvoiceGraph(referrer, referrerRebate, referrerInvoice, currentUser);
 
             const contacts = OrderService.getContactReferences({
                 referrer: { guid: referrer?.guid || referrer },
@@ -1680,7 +1692,7 @@ class OrderService
                 guid,
                 instructions,
                 stops: stopsGraphsToUpdate,
-                invoices: orderInvoicesToUpdate,
+                invoices: [...orderInvoicesToUpdate, ...referrerInvoiceToUpdate],
                 jobs: jobsToUpdateWithExpenses,
                 ...orderData,
                 ...contacts
@@ -1834,15 +1846,42 @@ class OrderService
             .modifyGraph('job', (builder) => builder.select('guid'));
     }
 
+    // Excludes invoices that are use for referrer rebate, this is so we don't add lines ment for commodities in rebate invoices later on
     static async getOrderInvoices(orderGuid, trx)
     {
         const allInvoices = await InvoiceBill.query(trx).select('*')
             .whereIn(
                 'guid',
                 Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
+            )
+
+            // Not use invoices that have lines use for referrer rebate -> itemId 7
+            .whereNotIn(
+                'guid',
+                InvoiceLine.query(trx).select('invoiceGuid')
+                    .where('itemId', '7')
+                    .whereIn('invoiceGuid',
+                        Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
+                    )
             );
 
         return InvoiceBill.fetchGraph(allInvoices, '[lines.link]', { transaction: trx });
+    }
+
+    static async getOrderReferrerInvoice(orderGuid, trx)
+    {
+        const referrerInvoice = await InvoiceBill.query(trx).select('*')
+            .whereIn(
+                'guid',
+                InvoiceLine.query(trx).select('invoiceGuid')
+                    .where('itemId', '7')
+                    .whereIn('invoiceGuid',
+                        Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
+                    )
+            );
+
+        const [invoice] = await InvoiceBill.fetchGraph(referrerInvoice, '[lines.link]', { transaction: trx });
+        return invoice;
     }
 
     static async validateReferencesBeforeUpdate(
@@ -2872,6 +2911,54 @@ class OrderService
         }
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
+    }
+
+    /**
+     * Rules:
+     * 1) If referrer is new -> create invoice and line, if non referrerRebate was provided use default 0.00
+     * 2) If referrer or referrerRebate change -> update invoice consigne for new referrer and update line value
+     * 3) If referrer not provided but referrerRebate is -> throw error
+     * @param {*} referrer referrer Guid provided in request payload
+     * @param {*} referrerRebate amount provided in request payload, this is the invoiceLine amount
+     * @param {*} referrerInvoice invoice (If exists) with referrer rebate line
+     * @returns {
+     *  referrerInvoice: Invoice with the referrer line. If no rule apply, return an empty array so nothing is updated
+     * }
+     */
+    static updateReferrerRebateInvoiceGraph(referrer, referrerRebateAmount, referrerInvoice, currentUser)
+    {
+        const referrerInvoiceToReturn = [];
+
+        // Rule 1
+        if (referrer?.guid && !referrerInvoice)
+        {
+            const [referrerInvoiceToCreate] = OrderService.createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser);
+            referrerInvoiceToReturn.push(referrerInvoiceToCreate);
+        }
+
+        // Rule 2
+        else if (referrerInvoice && (referrer?.guid || referrerRebateAmount))
+        {
+            if (referrer?.guid)
+            {
+                referrerInvoice.consigneeGuid = referrer.guid;
+                referrerInvoice.setUpdatedBy(currentUser);
+            }
+
+            if (referrerRebateAmount)
+            {
+                referrerInvoice.lines[0].amount = referrerRebateAmount;
+                referrerInvoice.lines[0].setUpdatedBy(currentUser);
+            }
+
+            referrerInvoiceToReturn.push(referrerInvoice);
+        }
+
+        // Rule 3
+        else if (!referrer && !referrerInvoice && referrerRebateAmount)
+            throw new MissingDataError('referrerRebate price can not be set without referrer');
+
+        return referrerInvoiceToReturn;
     }
 
     /**
