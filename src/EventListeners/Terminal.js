@@ -8,7 +8,7 @@ listener.on('terminal_resolved', ({ terminalGuid }) =>
     {
         const proms = await Promise.allSettled([
             // need to recalc distance for all orders that use this terminal
-            OrderService.recalcDistanceBasedOnTerminal(terminalGuid)
+            OrderService.recalcDistancesAfterTerminalResolution(terminalGuid)
         ]);
 
         logEventErrors(proms, 'terminal_resolved');
