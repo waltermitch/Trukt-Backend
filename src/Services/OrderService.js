@@ -697,9 +697,9 @@ class OrderService
         }
     }
 
-    static async calculatedDistances(OrderGuid)
+    static async calculatedDistances(orderGuid)
     {
-        // relations obejct for none repetitive code
+        // relations object for none repetitive code
         const stopRelationObj = {
             $modify: ['distinctAllData'],
             terminal: true
@@ -711,16 +711,18 @@ class OrderService
         await Order.transaction(async (trx) =>
         {
             // get OrderStops and JobStops from database Fancy smancy queries
-            const order = await Order.query(trx).withGraphJoined({
-                jobs: { stops: stopRelationObj },
-                stops: stopRelationObj
-            }).findById(OrderGuid);
+            const order = await Order.query(trx)
+                .withGraphJoined({
+                    jobs: { stops: stopRelationObj },
+                    stops: stopRelationObj
+                })
+                .findById(orderGuid);
 
             // array for transaction promises
             const patchPromises = [];
 
             let orderCounted = false;
-            for (const orderjob of [order, ...order.jobs])
+            for (const object of [order, ...order.jobs])
             {
                 // logic to handle order vs jobs model
                 let model;
@@ -736,9 +738,9 @@ class OrderService
 
                 // pushing distance call and update into array
                 patchPromises.push(
-                    TerminalService.calculateTotalDistance(orderjob.stops).then(async (distance) =>
+                    TerminalService.calculateTotalDistance(object.stops).then(async (distance) =>
                     {
-                        await model.query(trx).patch({ distance }).findById(orderjob.guid);
+                        await model.query(trx).patch({ distance }).findById(object.guid);
                     })
                 );
             }
@@ -746,6 +748,7 @@ class OrderService
             // execute all promises
             await Promise.all(patchPromises);
         });
+
         return;
     }
 
@@ -3526,7 +3529,19 @@ class OrderService
         {
             throw new DataConflictError('Order Cannot be set to ready.');
         }
+    }
 
+    static async recalcDistancesAfterTerminalResolution(terminalGuid)
+    {
+        // get orders that have stops that use this terminal
+        const orders = await Order.query()
+            .select('orders.guid')
+            .whereNull('distance')
+            .withGraphJoined('stops')
+            .where('stops.terminalGuid', terminalGuid);
+
+        for (const order of orders)
+            await OrderService.calculatedDistances(order.guid);
     }
 }
 
