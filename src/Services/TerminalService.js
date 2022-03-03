@@ -3,6 +3,7 @@ const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
 const GeneralFuncs = require('../Azure/GeneralFunc');
+const emitter = require('../EventListeners/index');
 const OrderStops = require('../Models/OrderStop');
 const Terminal = require('../Models/Terminal');
 const Queue = require('../Azure/ServiceBus');
@@ -234,6 +235,9 @@ class TerminalService
                         if (existingTerminal)
                         {
                             await TerminalService.mergeTerminals(existingTerminal, terminal, trx);
+
+                            // emit event - we pass in the existing one, so we can recalc the distance for those orders
+                            emitter.emit('terminal_resolved', { terminalGuid: existingTerminal.guid });
                         }
                         else
                         {
@@ -241,6 +245,9 @@ class TerminalService
                             await Terminal.query(trx)
                                 .where('guid', terminal.guid)
                                 .update({ isResolved: false, resolvedTimes: 1, updatedByGuid: SYSTEM_USER });
+
+                            // emit event
+                            emitter.emit('terminal_resolved', { terminalGuid: terminal.guid });
                         }
                     });
                 }
