@@ -3536,6 +3536,7 @@ class OrderService
         // get orders that have stops that use this terminal
         const orders = await Order.query()
             .select('orders.guid')
+            .whereNull('distance')
             .withGraphJoined('stops')
             .where('stops.terminalGuid', terminalGuid);
 
