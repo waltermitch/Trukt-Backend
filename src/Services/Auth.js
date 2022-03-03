@@ -1,15 +1,15 @@
 const Microsoft = require('../Azure/Microsoft');
 const jwt = require('jsonwebtoken');
+const { AuthenticationError } = require('../ErrorHandling/Exceptions');
 
 const appId = process.env.AZURE_AD_APPID;
-const invalidToken = { 'status': 401, 'data': 'Invalid Token' };
 
 class Auth
 {
     static async verifyJWT(token)
     {
         if (!token)
-            throw invalidToken;
+            throw new AuthenticationError('Invalid Token');
 
         // remove bearer and ensure no empty strings
         const cleanToken = Auth.extractToken(token);
@@ -20,7 +20,7 @@ class Auth
         // oid is the unique identifier for the user
         // aud is the audience for the token (groupId)
         if (!decoded || !decoded.payload?.oid || decoded.payload?.aud != appId)
-            throw invalidToken;
+            throw new AuthenticationError('Invalid Token');
 
         // get keys
         const keys = await Microsoft.getKeys();
@@ -32,7 +32,7 @@ class Auth
         }
         catch (err)
         {
-            throw invalidToken;
+            throw new AuthenticationError('Invalid Token');
         }
     }
 
@@ -42,7 +42,7 @@ class Auth
 
         // verify length
         if (token?.length <= 40 || !token?.startsWith('e'))
-            throw invalidToken;
+            throw new AuthenticationError('Invalid Token');
 
         return token;
     }
