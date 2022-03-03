@@ -1,4 +1,5 @@
-const { MissingDataError, DataConflictError, NotFoundError, ValidationError, BulkException } = require('../ErrorHandling/Exceptions');
+const { MissingDataError, DataConflictError, NotFoundError, ValidationError } = require('../ErrorHandling/Exceptions');
+const { BulkResponse } = require('../ErrorHandling/Responses');
 const ActivityManagerService = require('./ActivityManagerService');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -853,7 +854,7 @@ class OrderService
      * Method is to accepts load tenders. Validates, sends requests and updates the database in our system.
      * @param {string []} orderGuids
      * @param {string} currentUser
-     * @returns {{results: Promise<{guid: string, status: number, message: string} []>, exceptions: BulkException}} currentUser
+     * @returns {{results: Promise<{guid: string, status: number, message: string} []>, exceptions: BulkResponses}} currentUser
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
@@ -867,7 +868,7 @@ class OrderService
 
         failedTenders.push(...failedOrders);
 
-        const bulkExceptions = new BulkException();
+        const bulkExceptions = new BulkResponse();
 
         // add errored orders to body message
         for (const order of failedTenders)
@@ -933,7 +934,7 @@ class OrderService
 
         failedTenders.push(...failedOrders);
 
-        const bulkExceptions = new BulkException();
+        const bulkExceptions = new BulkResponse();
 
         // add errored orders to body message
         for (const order of failedTenders)
@@ -2930,7 +2931,7 @@ class OrderService
             return { guid: order, data: res };
         }));
 
-        const bulkExceptions = new BulkException();
+        const bulkExceptions = new BulkResponse();
         for (const e of promises)
         {
             if (e.reason)

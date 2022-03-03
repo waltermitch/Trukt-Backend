@@ -1,5 +1,5 @@
 const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
-const BulkException = require('./Exceptions/BulkException');
+const BulkResponse = require('./Responses/BulkResponse');
 const AppResponse = require('./Responses/AppResponse');
 const formatErrorMessageStructure = require('./FormatErrorMessageStructure');
 const telemetryClient = require('./Insights');
@@ -7,8 +7,8 @@ const telemetryClient = require('./Insights');
 module.exports = (errors, request, response, next) =>
 {
     if (
-        errors instanceof BulkException
-        || (errors?.onlySendErrorsToTelemetry && errors?.instance instanceof BulkException)
+        errors instanceof BulkResponse
+        || (errors?.onlySendErrorsToTelemetry && errors?.instance instanceof BulkResponse)
     )
     {
         const exception = errors?.onlySendErrorsToTelemetry ? errors.instance : errors;

@@ -1,17 +1,17 @@
-const ExceptionCollection = require('./ExceptionCollection');
+const AppResponse = require('./AppResponse');
 
-class BulkException
+class BulkResponse
 {
     /**
      * @private
-     * @type {Record<string, ExceptionCollection}
+     * @type {Record<string, AppResponse}
      */
     #errors;
 
     /**
      *
      * @param {string} [key] - Guid to identify the error collection
-     * @param {ExceptionCollection | unknown} [error] - Error to be added to the collection
+     * @param {AppResponse | unknown} [error] - Error to be added to the collection
      */
     constructor(key = undefined, error = undefined)
     {
@@ -23,22 +23,22 @@ class BulkException
 
     /**
      * @param {string} key - Guid to identify the error collection
-     * @param {ExceptionCollection | unknown} error - Error to be added to the collection
-     * @returns {BulkException}
+     * @param {AppResponse | unknown} error - Error to be added to the collection
+     * @returns {BulkResponse}
      */
     addError(key, error)
     {
-        if (this.#errors[key] && this.#errors[key] instanceof ExceptionCollection)
+        if (this.#errors[key] && this.#errors[key] instanceof AppResponse)
         {
             this.#errors[key].addError(error);
         }
-        else if (!this.#errors[key] && error instanceof ExceptionCollection)
+        else if (!this.#errors[key] && error instanceof AppResponse)
         {
             this.#errors[key] = error;
         }
         else
         {
-            this.#errors[key] = new ExceptionCollection(error);
+            this.#errors[key] = new AppResponse(error);
         }
         
         return this;
@@ -47,17 +47,17 @@ class BulkException
     /**
      * @param {string} key
      * @param {number} status
-     * @returns {BulkException}
+     * @returns {BulkResponse}
      */
     setErrorCollectionStatus(key, status)
     {
-        if (this.#errors[key] && this.#errors[key] instanceof ExceptionCollection)
+        if (this.#errors[key] && this.#errors[key] instanceof AppResponse)
         {
             this.#errors[key].setStatus(status);
         }
         else
         {
-            this.#errors[key] = new ExceptionCollection();
+            this.#errors[key] = new AppResponse();
             this.#errors[key].setStatus(status);
         }
         
@@ -83,7 +83,7 @@ class BulkException
     }
 
     /**
-     * @throws {BulkException}
+     * @throws {BulkResponse}
      */
     throwErrorsIfExist()
     {
@@ -104,7 +104,7 @@ class BulkException
     /**
      * Get the error collection instance for a specific guid
      * @param {guid} key - Guid to identify the error collection
-     * @returns {ExceptionCollection}
+     * @returns {AppResponse}
      */
     getCollectionInstance(key)
     {
@@ -112,4 +112,4 @@ class BulkException
     }
 }
 
-module.exports = BulkException;
+module.exports = BulkResponse;
