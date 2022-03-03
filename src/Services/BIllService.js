@@ -140,7 +140,7 @@ class BillService
             if (deletedLines != lineGuids.length)
             {
                 // error array for uniquee messages
-                const errorCollection = new AppResponse();
+                const appResponse = new AppResponse();
 
                 // query all guids, and throw error for which return because they still exist.
                 const failedLines = await InvoiceLine.query(trx).findByIds([lineGuids]);
@@ -150,14 +150,15 @@ class BillService
                 {
                     if (l.itemId == 1 && l.commodityGuid != null)
                     {
-                        errorCollection.addError(new DataConflictError(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid} `));
+                        appResponse.addError(new DataConflictError(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid}`));
                     }
                     if (l.invoiceGuid != billGuid)
                     {
-                        errorCollection.addError(new DataConflictError(`Deleting a line the doesn't belong to the bill is forbidden. Guid: ${l.guid}`));
+                        appResponse.addError(new DataConflictError(`Deleting a line the doesn't belong to the bill is forbidden. Guid: ${l.guid}`));
                     }
                 }
-                errorCollection.throwErrorsIfExist();
+                if (appResponse.doErrorsExist())
+                    return appResponse;
             }
 
             // if succeed then, returns nothing

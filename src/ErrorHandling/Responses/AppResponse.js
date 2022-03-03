@@ -79,7 +79,7 @@ class AppResponse
             }
 
         return {
-            status: this.#status ?? this.#getHighestErrorCode(errors),
+            status: this.#status ?? this.#getHighestErrorCode(errorCodes),
             errors,
             data: this.#data
         };
