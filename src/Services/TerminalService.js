@@ -235,9 +235,6 @@ class TerminalService
                         if (existingTerminal)
                         {
                             await TerminalService.mergeTerminals(existingTerminal, terminal, trx);
-
-                            // emit event - we pass in the existing one, so we can recalc the distance for those orders
-                            emitter.emit('terminal_resolved', { terminalGuid: existingTerminal.guid });
                         }
                         else
                         {
@@ -246,8 +243,6 @@ class TerminalService
                                 .where('guid', terminal.guid)
                                 .update({ isResolved: false, resolvedTimes: 1, updatedByGuid: SYSTEM_USER });
 
-                            // emit event
-                            emitter.emit('terminal_resolved', { terminalGuid: terminal.guid });
                         }
                     });
                 }
@@ -311,6 +306,9 @@ class TerminalService
         await Terminal.query(trx)
             .where('guid', terminal.guid)
             .patch(payload);
+
+        // emit event
+        emitter.emit('terminal_resolved', { terminalGuid: terminal.guid });
     }
 
     // this method will merge one terminal into another including all related records
@@ -338,6 +336,9 @@ class TerminalService
             {
                 // now that there is nothing attached to this terminal, we can delete it
                 await Terminal.query(trx).deleteById(alternativeTerminal.guid);
+
+                // emit event
+                emitter.emit('terminal_resolved', { terminalGuid: primaryTerminal.guid });
             });
     }
 
