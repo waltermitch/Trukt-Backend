@@ -7,10 +7,10 @@ const api = new HTTPS({ url: baseURL, params: { code } }).connect();
 
 class GeneralFunctions
 {
-    static async calculateDistances(object)
+    static async calculateDistance(stops)
     {
         // sending requrest to General Fun API
-        const { data } = await api.post('/calculateDistance', object);
+        const { data } = await api.post('/calculateDistance', stops);
 
         // returning distance only
         return data.data;
