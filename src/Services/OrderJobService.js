@@ -939,7 +939,7 @@ class OrderJobService
     // TODO: DEPRICATE SOON
     static async getJobForReadyCheck(jobGuids)
     {
-        const jobsNotFoundExceptions = new ExceptionCollection();
+        const jobsNotFoundExceptions = new AppResponse();
 
         // getting all jobs guid and tranport field to help differentiate job types
         const jobsGuidsFound = await OrderJob.query().select('guid', 'isTransport').findByIds(jobGuids);
@@ -1375,7 +1375,7 @@ class OrderJobService
 
             if (queryRes.jobs.length < 1)
             {
-                throw queryRes.exceptions;
+                queryRes.exceptions.throwErrorsIfExist();
             }
             const job = queryRes.jobs[0];
             let res;

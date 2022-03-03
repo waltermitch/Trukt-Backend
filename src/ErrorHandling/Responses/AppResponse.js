@@ -63,7 +63,7 @@ class AppResponse
     }
 
     /**
-     * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data?: Record<string, unknown>}}
+     * @returns {{errors: unknown[], data: unknown, status: number}}
      */
     toJSON()
     {

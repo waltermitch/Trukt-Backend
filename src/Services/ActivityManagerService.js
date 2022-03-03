@@ -116,10 +116,10 @@ class ActivityManagerService
 
         if (errors.length > 0)
         {
-            const errorCollection = new AppResponse(errors);
-            errorCollection.setStatus(400);
+            const appResponse = new AppResponse(errors);
+            appResponse.setStatus(400);
 
-            return errorCollection.toJSON();
+            return appResponse.toJSON();
         }
 
         // validate if actual data exists
@@ -135,28 +135,28 @@ class ActivityManagerService
             OrderJob.query().findById(jobGuid)
         ]);
 
-        const errorCollection = new AppResponse();
+        const appResponse = new AppResponse();
         if (!user)
         {
-            errorCollection.addError(new NotFoundError(`User ${userGuid} doesnt exist.`));
+            appResponse.addError(new NotFoundError(`User ${userGuid} doesnt exist.`));
         }
         if (!order)
         {
-            errorCollection.addError(new NotFoundError(`Order ${orderGuid} doesnt exist.`));
+            appResponse.addError(new NotFoundError(`Order ${orderGuid} doesnt exist.`));
         }
         if (!activityLogType)
         {
-            errorCollection.addError(new NotFoundError(`Activity type ${activityId} doesnt exist.`));
+            appResponse.addError(new NotFoundError(`Activity type ${activityId} doesnt exist.`));
         }
         if (!job)
         {
-            errorCollection.addError(new NotFoundError(`Order job ${jobGuid} doesnt exist.`));
+            appResponse.addError(new NotFoundError(`Order job ${jobGuid} doesnt exist.`));
         }
 
-        if (errorCollection.doErrorsExist())
+        if (appResponse.doErrorsExist())
         {
-            errorCollection.setStatus(404);
-            return errorCollection.toJSON();
+            appResponse.setStatus(404);
+            return appResponse.toJSON();
         }
 
         // if all good return clean payload

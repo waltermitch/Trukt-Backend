@@ -87,9 +87,9 @@ class InvoiceController
 
         try
         {
-            await InvoiceService.deleteInvoiceLines(invoiceGuid, lineGuids);
+            const response = await InvoiceService.deleteInvoiceLines(invoiceGuid, lineGuids);
 
-            res.status(200).send();
+            res.status(response?.status ?? 200).send(response);
         }
         catch (error)
         {
