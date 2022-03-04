@@ -95,14 +95,14 @@ class OrderJobService
             if (e.reason)
             {
                 bulkExceptions
-                    .addError(e.reason.guid, e.reason.data)
-                    .setErrorCollectionStatus(e.reason.guid, 400);
+                    .addResponse(e.reason.guid, e.reason.data)
+                    .getResponse(e.reason.guid).setStatus(400);
             }
             else if (e.value?.data == undefined || e.value.data == 0)
             {
                 bulkExceptions
-                    .addError(e.value.guid, new NotFoundError('Job Not Found'))
-                    .setErrorCollectionStatus(e.value.guid, 404);
+                    .addResponse(e.value.guid, new NotFoundError('Job Not Found'))
+                    .getResponse(e.value.guid).setStatus(404);
             }
             else
                 results[e.value.guid] = { status: 200 };
@@ -230,7 +230,7 @@ class OrderJobService
 
             if (error)
             {
-                bulkExceptions.addError(jobGuid, error).setErrorCollectionStatus(jobGuid, status);
+                bulkExceptions.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status);
                 response[jobGuid] = bulkExceptions.toJSON(jobGuid);
                 return response;
             }
@@ -348,7 +348,9 @@ class OrderJobService
 
                 if (error)
                 {
-                    bulkExceptions.addError(jobGuid, error).setErrorCollectionStatus(jobGuid, status);
+                    bulkExceptions
+                        .addResponse(jobGuid, error)
+                        .getResponse(jobGuid).setStatus(status);
                     response[jobGuid] = bulkExceptions.toJSON(jobGuid);
                     return response;
                 }
@@ -476,7 +478,8 @@ class OrderJobService
             
             if (error)
             {
-                bulkExceptions.addError(jobGuid, error).setErrorCollectionStatus(jobGuid, status);
+                bulkExceptions.addResponse(jobGuid, error)
+                    .getResponse(jobGuid).setStatus(status);
                 response[jobGuid] = bulkExceptions.toJSON(jobGuid);
                 return response;
             }
@@ -639,7 +642,7 @@ class OrderJobService
         const response = Object.values(results)[0];
 
         if (exceptions.doErrorsExist())
-            exceptions.getCollectionInstance(jobGuid).throwErrorsIfExist();
+            exceptions.getResponse(jobGuid).throwErrorsIfExist();
 
         return response;
     }
@@ -672,16 +675,18 @@ class OrderJobService
             if (failedJob.status === 404)
             {
                 resBody[failedJob.guid] = bulkExceptions
-                    .addError(failedJob.guid, failedJob.errors)
-                    .setErrorCollectionStatus(failedJob.guid, 404)
-                    .toJSON(failedJob.guid);
+                    .addResponse(failedJob.guid, failedJob.errors)
+                    .getResponse(failedJob.guid)
+                    .setStatus(404)
+                    .toJSON();
             }
             else
             {
                 resBody[failedJob.guid] = bulkExceptions
-                    .addError(failedJob.guid, failedJob.errors)
-                    .setErrorCollectionStatus(failedJob.guid, 409)
-                    .toJSON(failedJob.guid);
+                    .addResponse(failedJob.guid, failedJob.errors)
+                    .getResponse(failedJob.guid)
+                    .setStatus(409)
+                    .toJSON();
             }
         }
 

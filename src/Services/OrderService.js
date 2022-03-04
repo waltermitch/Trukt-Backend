@@ -874,8 +874,9 @@ class OrderService
         for (const order of failedTenders)
         {
             bulkExceptions
-                .addError(order.orderGuid, order.errors)
-                .setErrorCollectionStatus(order.orderGuid, order.status);
+                .addResponse(order.orderGuid, order.errors)
+                .getResponse(order.orderGuid)
+                .setStatus(order.status);
             resBody[order.orderGuid] = bulkExceptions.toJSON(order.orderGuid);
         }
 
@@ -940,8 +941,9 @@ class OrderService
         for (const order of failedTenders)
         {
             bulkExceptions
-                .addError(order.orderGuid, order.errors)
-                .setErrorCollectionStatus(order.orderGuid, order.status);
+                .addResponse(order.orderGuid, order.errors)
+                .getResponse(order.orderGuid)
+                .setStatus(order.status);
             resBody[order.orderGuid] = {
                 ...bulkExceptions.toJSON(order.orderGuid)
             };
@@ -2937,14 +2939,16 @@ class OrderService
             if (e.reason)
             {
                 bulkExceptions
-                    .addError(e.reason.guid, e.reason.data)
-                    .setErrorCollectionStatus(e.reason.guid, 400);
+                    .addResponse(e.reason.guid, e.reason.data)
+                    .getResponse(e.reason.guid)
+                    .setStatus(400);
             }
             else if (e.value?.data === undefined)
             {
                 bulkExceptions
-                    .addError(e.value.guid, new NotFoundError('Order Not Found'))
-                    .setErrorCollectionStatus(e.value.guid, 404);
+                    .addResponse(e.value.guid, new NotFoundError('Order Not Found'))
+                    .getResponse(e.value.guid)
+                    .setStatus(404);
             }
             else if (e.value.data)
                 results[e.value.guid] = { status: 200 };
