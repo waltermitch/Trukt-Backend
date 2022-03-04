@@ -1700,6 +1700,7 @@ class OrderService
     static async handleDeletes(orderGuid, jobs, commodities, stops, trx, currentUser)
     {
         const delProms = [];
+        const jobsWithDeletedItems = [];
         for (const job of jobs || [])
         {
             const toDelete = job.delete;
@@ -1744,7 +1745,7 @@ class OrderService
                                 // for now this data will be used to write activity logs for each deleted commodity
                                 if(deleted.commodities)
                                 {
-                                    const commodities = await Commodity.query().select(
+                                    const commodityPromises = Commodity.query().select(
                                         [
                                             'guid',
                                             'description',
@@ -1755,7 +1756,10 @@ class OrderService
                                     .withGraphFetched('[vehicle]')
                                     .modifyGraph('vehicle', builder => builder.select('name'));
 
-                                    emitter.emit('commodity_deleted', { orderGuid, jobGuid: job.guid, commodities, currentUser });
+                                    jobsWithDeletedItems.push({
+                                        jobGuid: job.guid,
+                                        commodityPromises
+                                    });
                                 }
 
                             });
@@ -1770,6 +1774,15 @@ class OrderService
         }
 
         delProms && await Promise.all(delProms);
+
+        // we want to make sure the commodities are definitely deleted before we start writing logs saying they
+        // were deleted, so that is why the events for each job are emitted after the transactions have been
+        // successfully committed.
+        for(const job of jobsWithDeletedItems)
+        {
+            const commodities = await job.commodityPromises;
+            emitter.emit('commodity_deleted', { orderGuid, jobGuid: job.jobGuid, commodities, currentUser });
+        }
     }
 
     static _removeByGuid(someGuid, somelistGuids)
