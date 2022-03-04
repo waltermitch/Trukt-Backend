@@ -274,6 +274,9 @@ class OrderService
                 createdByGuid: currentUser
             });
 
+            // Add stops default notes to terminals
+            const terminalWithDefaultNotes = OrderService.getTerminalWithDefaultStopNotes(orderObj.terminals, orderObj.stops);
+
             // DO NOT change the ordering of these promises, it will mess up _dataCheck and other destructured code
             let orderInfoPromises = [];
             orderInfoPromises.push(SFAccount.query(trx).modify('client', orderObj.client.guid));
@@ -281,7 +284,7 @@ class OrderService
             orderInfoPromises.push(dataCheck.dispatcher = isUseful(orderObj.dispatcher) ? User.query(trx).findById(orderObj.dispatcher.guid) : null);
             orderInfoPromises.push(dataCheck.referrer = isUseful(orderObj.referrer) ? SFAccount.query(trx).findById(orderObj.referrer.guid) : null);
             orderInfoPromises.push(dataCheck.salesperson = isUseful(orderObj.salesperson) ? SFAccount.query(trx).findById(orderObj.salesperson.guid) : null);
-            orderInfoPromises.push(Promise.all(orderObj.terminals.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender }))));
+            orderInfoPromises.push(Promise.all(terminalWithDefaultNotes.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender }))));
 
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
             orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
@@ -664,6 +667,20 @@ class OrderService
             referrerInvoice.push(OrderService.createInvoiceBillGraph([referrerRebateLine], true, currentUser, referrer));
         }
         return referrerInvoice;
+    }
+
+    // Adds the stop notes to the terminal notes if the terminal does not have any notes
+    static getTerminalWithDefaultStopNotes(terminals, stops)
+    {
+        return terminals.map(terminal =>
+        {
+            const stopLinkToTerminal = stops.find(stop => stop?.terminal === terminal?.index);
+
+            if (stopLinkToTerminal?.notes && !terminal.notes)
+                terminal.notes = stopLinkToTerminal.notes;
+
+            return terminal;
+        });
     }
 
     static createInvoiceLineGraph(amount, itemId, currentUser, commodity)
@@ -1562,6 +1579,9 @@ class OrderService
         {
             const jobsWithDeletedItems = await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
 
+            // Add stops default notes to terminals
+            const terminalWithDefaultNotes = OrderService.getTerminalWithDefaultStopNotes(terminals, stops);
+
             // create new order
             const [
                 {
@@ -1586,7 +1606,7 @@ class OrderService
                     clientContact,
                     guid,
                     stops,
-                    terminals
+                    terminalWithDefaultNotes
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
                 Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
@@ -1701,7 +1721,7 @@ class OrderService
             }
 
             emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: orderUpdated });
-            for(const job of jobsWithDeletedItems)
+            for (const job of jobsWithDeletedItems)
             {
                 emitter.emit('commodity_deleted', { orderGuid: guid, jobGuid: job.jobGuid, commodities: job.commodities, currentUser });
             }
@@ -1770,9 +1790,9 @@ class OrderService
                                     'lotNumber'
                                 ]
                             ).findByIds(toDelete.commodities)
-                            .withGraphFetched('[vehicle]')
-                            .modifyGraph('vehicle', builder => builder.select('name'));
-                        
+                                .withGraphFetched('[vehicle]')
+                                .modifyGraph('vehicle', builder => builder.select('name'));
+
                             jobsWithDeletedItems.push({
                                 jobGuid: job.guid,
                                 commodities: commoditiesForLogs
