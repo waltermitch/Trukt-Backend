@@ -1717,7 +1717,7 @@ class OrderService
                         case 'commodities':
                             // when a commodity is being deleted, remove it from the order.
                             const deleteComsProm = OrderJobService.deleteCommodities(orderGuid, job.guid, toDelete.commodities, trx);
-                            deleteComsProm.then(async ({ deleted, modified }) =>
+                            deleteComsProm.then(({ deleted, modified }) =>
                             {
                                 for (const stopGuid of deleted.stops || [])
                                 {
