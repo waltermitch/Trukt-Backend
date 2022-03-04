@@ -1,7 +1,8 @@
+const { MissingDataError, DataConflictError, NotFoundError, ValidationError, BulkException } = require('../ErrorHandling/Exceptions');
+const ActivityManagerService = require('./ActivityManagerService');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
-const GeneralFuncApi = require('../Azure/GeneralFuncApi');
 const OrderStopLink = require('../Models/OrderStopLink');
 const CommodityType = require('../Models/CommodityType');
 const OrderJobType = require('../Models/OrderJobType');
@@ -32,8 +33,6 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
-const ActivityManagerService = require('./ActivityManagerService');
-const { MissingDataError, DataConflictError, NotFoundError, ValidationError, BulkException } = require('../ErrorHandling/Exceptions');
 
 // this is the apora that will hold the falling down requirments above.
 
@@ -698,24 +697,9 @@ class OrderService
         }
     }
 
-    static async calculateTotalDistance(stops)
+    static async calculatedDistances(orderGuid)
     {
-        // go through every order stop
-        stops.sort(OrderStop.sortBySequence);
-
-        // converting terminals into address strings
-        const terminalStrings = stops.map((stop) =>
-        {
-            return JSON.parse(stop.terminal.toApiString());
-        });
-
-        // send all terminals to the General Function app and recieve only the distance value
-        return await GeneralFuncApi.calculateDistances(terminalStrings);
-    }
-
-    static async calculatedDistances(OrderGuid)
-    {
-        // relations obejct for none repetitive code
+        // relations object for none repetitive code
         const stopRelationObj = {
             $modify: ['distinctAllData'],
             terminal: true
@@ -727,16 +711,18 @@ class OrderService
         await Order.transaction(async (trx) =>
         {
             // get OrderStops and JobStops from database Fancy smancy queries
-            const order = await Order.query(trx).withGraphJoined({
-                jobs: { stops: stopRelationObj },
-                stops: stopRelationObj
-            }).findById(OrderGuid);
+            const order = await Order.query(trx)
+                .withGraphJoined({
+                    jobs: { stops: stopRelationObj },
+                    stops: stopRelationObj
+                })
+                .findById(orderGuid);
 
             // array for transaction promises
             const patchPromises = [];
 
             let orderCounted = false;
-            for (const orderjob of [order, ...order.jobs])
+            for (const object of [order, ...order.jobs])
             {
                 // logic to handle order vs jobs model
                 let model;
@@ -752,9 +738,9 @@ class OrderService
 
                 // pushing distance call and update into array
                 patchPromises.push(
-                    OrderService.calculateTotalDistance(orderjob.stops).then(async (distance) =>
+                    TerminalService.calculateTotalDistance(object.stops).then(async (distance) =>
                     {
-                        await model.query(trx).patch({ distance }).findById(orderjob.guid);
+                        await model.query(trx).patch({ distance }).findById(object.guid);
                     })
                 );
             }
@@ -762,6 +748,7 @@ class OrderService
             // execute all promises
             await Promise.all(patchPromises);
         });
+
         return;
     }
 
@@ -777,7 +764,7 @@ class OrderService
         if (oldOrder.stops.length != updatedOrder.stops.length)
         {
             // calculate distance and push update distance into an array
-            patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+            patchArray.push(TerminalService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
             {
                 await Order.query().patch({ distance }).findById(updatedOrder.guid);
             }));
@@ -799,7 +786,7 @@ class OrderService
                 if (!R.equals(newTerminal, oldTerminal))
                 {
                     // calculate distance of all stops and push update distance into an array
-                    patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+                    patchArray.push(TerminalService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
                     {
                         await Order.query().patch({ distance }).findById(updatedOrder.guid);
                     }));
@@ -821,7 +808,7 @@ class OrderService
             if (currentJob.stops.length != oldOrder.jobs[i].stops.length)
             {
                 // calculate distance of all stops and push update distance into an array
-                patchArray.push(OrderService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
+                patchArray.push(TerminalService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
                 {
                     await OrderJob.query().patch({ distance }).findById(currentJob.guid);
                 }));
@@ -843,7 +830,7 @@ class OrderService
                     if (!R.equals(newTerminal, oldTerminal))
                     {
                         // calculate distance of all stops and push update distance into an array
-                        patchArray.push(OrderService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
+                        patchArray.push(TerminalService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
                         {
                             await OrderJob.query().patch({ distance }).findById(currentJob.guid);
                         }));
@@ -3560,7 +3547,19 @@ class OrderService
         {
             throw new DataConflictError('Order Cannot be set to ready.');
         }
+    }
 
+    static async recalcDistancesAfterTerminalResolution(terminalGuid)
+    {
+        // get orders that have stops that use this terminal
+        const orders = await Order.query()
+            .select('orders.guid')
+            .whereNull('distance')
+            .withGraphJoined('stops')
+            .where('stops.terminalGuid', terminalGuid);
+
+        for (const order of orders)
+            await OrderService.calculatedDistances(order.guid);
     }
 }
 

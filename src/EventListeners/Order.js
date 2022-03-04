@@ -1,9 +1,9 @@
 const ActivityManagerService = require('../Services/ActivityManagerService');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderService = require('../Services/OrderService');
+const logEventErrors = require('./logEventErrors');
 const OrderJob = require('../Models/OrderJob');
 const listener = require('./index');
-const logEventErrors = require('./logEventErrors');
 
 listener.on('order_updated', ({ oldOrder, newOrder }) =>
 {
@@ -11,7 +11,7 @@ listener.on('order_updated', ({ oldOrder, newOrder }) =>
     {
         const dispatchesToUpdate = LoadboardService.updateDispatchPrice(newOrder.jobs);
         const proms = await Promise.allSettled([OrderService.validateStopsBeforeUpdate(oldOrder, newOrder), newOrder.jobs.map(async (job) => await LoadboardService.updatePostings(job.guid).catch(err => console.log(err))), ...dispatchesToUpdate]);
-        
+
         logEventErrors(proms, 'order_updated');
     });
 });
@@ -32,7 +32,7 @@ listener.on('order_client_notes_updated', (orderGuid) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([getJobGuids(orderGuid).then(jobGuids => jobGuids.map(jobGuid => LoadboardService.updatePostings(jobGuid.guid)))]);
-        
+
         logEventErrors(proms, 'order_client_notes_updated');
     });
 });
