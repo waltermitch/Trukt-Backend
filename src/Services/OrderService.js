@@ -854,14 +854,12 @@ class OrderService
      * Method is to accepts load tenders. Validates, sends requests and updates the database in our system.
      * @param {string []} orderGuids
      * @param {string} currentUser
-     * @returns {{results: Promise<{guid: string, status: number, message: string} []>, exceptions: BulkResponses}} currentUser
+     * @returns {BulkResponse} BulkResponse object
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
         // valdiate orders for accepting or declineing
         const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
-
-        const resBody = {};
 
         // send request to logic
         const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('accept', successfulTenders, null);
@@ -877,11 +875,7 @@ class OrderService
                 .addResponse(order.orderGuid, order.errors)
                 .getResponse(order.orderGuid)
                 .setStatus(order.status);
-            resBody[order.orderGuid] = bulkResponse.toJSON(order.orderGuid);
         }
-
-        if (!goodOrders.length)
-            return { results: resBody, exceptions: bulkResponse };
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -903,32 +897,30 @@ class OrderService
             // loop through successfull jobs and emmit event to update acivity logs
             for (const job of data[1])
             {
-                resBody[job.orderGuid] = {
-                    jobGuid: job.guid,
-                    status: 200,
-                    errors: []
-                };
+                bulkResponse
+                    .addResponse(job.orderGuid)
+                    .getResponse(job.orderGuid)
+                    .setStatus(200)
+                    .setData({ jobGuid: job.guid });
 
                 emitter.emit('tender_accepted', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
                 emitter.emit('order_created', job.orderGuid);
             }
         }
 
-        return { results: resBody, exceptions: bulkResponse };
+        return bulkResponse;
     }
 
     /**
      * Method is to rejects load tenders. Validates, sends requests and updated the database in our system.
      * @param {string []} orderGuids
      * @param {string} reason
-     * @param {string} currentUser
+     * @param {BulkResponse} currentUser
      */
     static async rejectLoadTenders(orderGuids, reason, currentUser)
     {
         // valdiate orders for accepting or declineing
         const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
-
-        const resBody = {};
 
         // send request to logic
         const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('reject', successfulTenders, reason);
@@ -944,13 +936,7 @@ class OrderService
                 .addResponse(order.orderGuid, order.errors)
                 .getResponse(order.orderGuid)
                 .setStatus(order.status);
-            resBody[order.orderGuid] = {
-                ...bulkResponse.toJSON(order.orderGuid)
-            };
         }
-
-        if (!goodOrders.length)
-            return { results: resBody, exceptions: bulkResponse };
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -972,17 +958,17 @@ class OrderService
             // loop through successfull jobs and emmit event to update acivity logs
             for (const job of data[1])
             {
-                resBody[job.orderGuid] = {
-                    jobGuid: job.guid,
-                    status: 200,
-                    errors: []
-                };
+                bulkResponse
+                    .addResponse(job.orderGuid)
+                    .getResponse(job.orderGuid)
+                    .setStatus(200)
+                    .setData({ jobGuid: job.guid });
 
                 emitter.emit('tender_rejected', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
             }
         }
 
-        return { results: resBody, exceptions: bulkResponse };
+        return bulkResponse;
     }
 
     /**
@@ -2911,8 +2897,6 @@ class OrderService
 
     static async bulkUpdateUsers({ orders = [], dispatcher = undefined, salesperson = undefined })
     {
-        const results = {};
-
         const payload = {
             dispatcherGuid: dispatcher,
             salespersonGuid: salesperson
@@ -2951,10 +2935,10 @@ class OrderService
                     .setStatus(404);
             }
             else if (e.value.data)
-                results[e.value.guid] = { status: 200 };
+                bulkResponse.addResponse(e.value.guid).getResponse(e.value.guid).setStatus(200).setData(e.value.data);
         }
 
-        return { results: { ...results, ...bulkResponse.toJSON() }, exceptions: bulkResponse };
+        return bulkResponse;
     }
 
     static async getTransportJobsIds(orderGuid)

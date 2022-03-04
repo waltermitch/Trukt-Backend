@@ -32,8 +32,10 @@ class BulkResponse
             this.#responses[key] = error;
         else if (this.#responses[key] && error instanceof AppResponse)
             this.#responses[key].combineResponse(error);
-        else if (error)
+        else if (this.#responses[key] && error)
             this.#responses[key].addError(error);
+        else
+            this.#responses[key] = new AppResponse(error);
         
         return this;
     }
