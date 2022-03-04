@@ -103,28 +103,14 @@ class AppResponse
      */
     combineResponse(appResponse)
     {
-        const dataToCombine = appResponse.getResponseToCombine();
-        const uniqueErrors = [...new Set([...this.#errors, ...dataToCombine.errors])];
+        const uniqueErrors = [...new Set([...this.#errors, ...appResponse.#errors])];
  
         this.#errors = uniqueErrors;
 
-        if (!this.#data && dataToCombine.data)
-            this.#data = dataToCombine.data;
+        if (!this.#data && appResponse.#data)
+            this.#data = appResponse.#data;
 
         return this;
-    }
-
-    /**
-     * DO NOT USE THIS METHOD.
-     * it's only to be used by the combineResponse method.
-     * @returns {{errors: unknown[], data: unknown}}
-     */
-    getResponseToCombine()
-    {
-        return {
-            errors: this.#errors,
-            data: this.#data
-        };
     }
 
     /**
