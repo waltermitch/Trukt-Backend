@@ -868,20 +868,20 @@ class OrderService
 
         failedTenders.push(...failedOrders);
 
-        const bulkExceptions = new BulkResponse();
+        const bulkResponse = new BulkResponse();
 
         // add errored orders to body message
         for (const order of failedTenders)
         {
-            bulkExceptions
+            bulkResponse
                 .addResponse(order.orderGuid, order.errors)
                 .getResponse(order.orderGuid)
                 .setStatus(order.status);
-            resBody[order.orderGuid] = bulkExceptions.toJSON(order.orderGuid);
+            resBody[order.orderGuid] = bulkResponse.toJSON(order.orderGuid);
         }
 
         if (!goodOrders.length)
-            return { results: resBody, exceptions: bulkExceptions };
+            return { results: resBody, exceptions: bulkResponse };
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -914,7 +914,7 @@ class OrderService
             }
         }
 
-        return { results: resBody, exceptions: bulkExceptions };
+        return { results: resBody, exceptions: bulkResponse };
     }
 
     /**
@@ -935,22 +935,22 @@ class OrderService
 
         failedTenders.push(...failedOrders);
 
-        const bulkExceptions = new BulkResponse();
+        const bulkResponse = new BulkResponse();
 
         // add errored orders to body message
         for (const order of failedTenders)
         {
-            bulkExceptions
+            bulkResponse
                 .addResponse(order.orderGuid, order.errors)
                 .getResponse(order.orderGuid)
                 .setStatus(order.status);
             resBody[order.orderGuid] = {
-                ...bulkExceptions.toJSON(order.orderGuid)
+                ...bulkResponse.toJSON(order.orderGuid)
             };
         }
 
         if (!goodOrders.length)
-            return { results: resBody, exceptions: bulkExceptions };
+            return { results: resBody, exceptions: bulkResponse };
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -982,7 +982,7 @@ class OrderService
             }
         }
 
-        return { results: resBody, exceptions: bulkExceptions };
+        return { results: resBody, exceptions: bulkResponse };
     }
 
     /**
@@ -2933,19 +2933,19 @@ class OrderService
             return { guid: order, data: res };
         }));
 
-        const bulkExceptions = new BulkResponse();
+        const bulkResponse = new BulkResponse();
         for (const e of promises)
         {
             if (e.reason)
             {
-                bulkExceptions
+                bulkResponse
                     .addResponse(e.reason.guid, e.reason.data)
                     .getResponse(e.reason.guid)
                     .setStatus(400);
             }
             else if (e.value?.data === undefined)
             {
-                bulkExceptions
+                bulkResponse
                     .addResponse(e.value.guid, new NotFoundError('Order Not Found'))
                     .getResponse(e.value.guid)
                     .setStatus(404);
@@ -2954,7 +2954,7 @@ class OrderService
                 results[e.value.guid] = { status: 200 };
         }
 
-        return { results: { ...results, ...bulkExceptions.toJSON() }, exceptions: bulkExceptions };
+        return { results: { ...results, ...bulkResponse.toJSON() }, exceptions: bulkResponse };
     }
 
     static async getTransportJobsIds(orderGuid)

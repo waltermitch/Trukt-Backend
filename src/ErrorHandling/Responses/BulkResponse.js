@@ -39,21 +39,11 @@ class BulkResponse
     }
     
     /**
-     * @param {string} [guidKey] - if not provided, all errors will be returned
-     * @returns {Record<string, unknown}
+     * @returns {Record<string, AppResponse}
      */
-    toJSON(guidKey = undefined)
+    toJSON()
     {
-        if (guidKey)
-            return this.#responses[guidKey].toJSON();
-
-        const errors = Object.keys(this.#responses).reduce((errorsAcc, key) =>
-        {
-            errorsAcc[key] = this.#responses[key].toJSON();
-            return errorsAcc;
-        }, {});
-
-        return errors;
+        return this.#responses;
     }
 
     /**
