@@ -108,7 +108,7 @@ class AppResponse
  
         this.#errors = uniqueErrors;
 
-        if (!dataToCombine.data)
+        if (!this.#data && dataToCombine.data)
             this.#data = dataToCombine.data;
 
         return this;
