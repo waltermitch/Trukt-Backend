@@ -17,7 +17,8 @@ const R = require('ramda');
 const InvoiceLineLink = require('../Models/InvoiceLineLink');
 const Loadboards = require('../Loadboards/API');
 const { raw } = require('objection');
-const { MissingDataError, NotFoundError, DataConflictError, ValidationError, ApiError, ApplicationError, ExceptionCollection, BulkException } = require('../ErrorHandling/Exceptions');
+const { MissingDataError, NotFoundError, DataConflictError, ValidationError, ApiError, ApplicationError } = require('../ErrorHandling/Exceptions');
+const { AppResponse, BulkResponse } = require('../ErrorHandling/Responses');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -88,7 +89,7 @@ class OrderJobService
             return { guid: job, data: res };
         }));
 
-        const bulkExceptions = new BulkException();
+        const bulkExceptions = new BulkResponse();
         for (const e of promises)
         {
             if (e.reason)
@@ -220,7 +221,7 @@ class OrderJobService
         const JobUpdatePromises = jobs.map(jobGuid => OrderJobService.updateJobDates(jobGuid, newDates, userGuid));
         const jobsUpdated = await Promise.allSettled(JobUpdatePromises);
 
-        const bulkExceptions = new BulkException();
+        const bulkExceptions = new BulkResponse();
         const results = jobsUpdated.reduce((response, jobUpdated) =>
         {
             const jobGuid = jobUpdated.value?.jobGuid;
@@ -337,7 +338,7 @@ class OrderJobService
             const JobUpdatePromises = jobs.map(jobGuid => OrderJobService.updateJobStatus(jobGuid, status, userGuid, trx));
             const jobsUpdated = await Promise.allSettled(JobUpdatePromises);
 
-            const bulkExceptions = new BulkException();
+            const bulkExceptions = new BulkResponse();
             const response = jobsUpdated.reduce((response, jobUpdated) =>
             {
                 const jobGuid = jobUpdated.value?.jobGuid;
@@ -465,7 +466,7 @@ class OrderJobService
 
         const jobsUpdated = await Promise.allSettled(JobUpdatePricePromises);
 
-        const bulkExceptions = new BulkException();
+        const bulkExceptions = new BulkResponse();
         const results = jobsUpdated.reduce((response, jobUpdated) =>
         {
             const jobGuid = jobUpdated.value?.jobGuid;
@@ -649,7 +650,7 @@ class OrderJobService
      * be returning all data succesfull and unseccessfull. This method is designed to do bulk.
      * @param {[uuids]} jobGuids array of job guids
      * @param {uuid} currentUser uuid of user that is currently making this request
-     * @returns {{results: {jobGuid: uuid, status: number, error: string}[], exceptions: BulkException}}
+     * @returns {{results: {jobGuid: uuid, status: number, error: string}[], exceptions: BulkResponse}}
      */
     static async setJobsToReady(jobGuids, currentUser)
     {
@@ -659,7 +660,7 @@ class OrderJobService
         // for storing responses
         const resBody = {};
 
-        const bulkExceptions = new BulkException();
+        const bulkExceptions = new BulkResponse();
 
         /**
          * loop to failed jobs and compose error messages
@@ -939,7 +940,7 @@ class OrderJobService
     // TODO: DEPRICATE SOON
     static async getJobForReadyCheck(jobGuids)
     {
-        const jobsNotFoundExceptions = new ExceptionCollection();
+        const jobsNotFoundExceptions = new AppResponse();
 
         // getting all jobs guid and tranport field to help differentiate job types
         const jobsGuidsFound = await OrderJob.query().select('guid', 'isTransport').findByIds(jobGuids);
@@ -1375,7 +1376,7 @@ class OrderJobService
 
             if (queryRes.jobs.length < 1)
             {
-                throw queryRes.exceptions;
+                queryRes.exceptions.throwErrorsIfExist();
             }
             const job = queryRes.jobs[0];
             let res;

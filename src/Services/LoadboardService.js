@@ -20,7 +20,8 @@ const { SeverityLevel } = require('applicationinsights/out/Declarations/Contract
 const telemetry = require('../ErrorHandling/Insights');
 const PubSubService = require('./PubSubService');
 const LoadboardsApi = require('../Loadboards/LoadboardsApi');
-const { NotFoundError, DataConflictError, ValidationError, ExceptionCollection, NotAllowedError } = require('../ErrorHandling/Exceptions');
+const { NotFoundError, DataConflictError, ValidationError, NotAllowedError } = require('../ErrorHandling/Exceptions');
+const { AppResponse } = require('../ErrorHandling/Responses');
 
 const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
@@ -780,7 +781,7 @@ class LoadboardService
 
     static checkLoadboardsInput(posts, action)
     {
-        const errorsCollection = new ExceptionCollection();
+        const errorsCollection = new AppResponse();
 
         if (posts.length === 0)
             errorsCollection.addError(new ValidationError(`a loadboard is required, here are our supported loadboards: ${Object.keys(dbLoadboardNames)}`));

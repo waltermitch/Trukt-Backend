@@ -23,27 +23,11 @@ const telemetryClient = require('./Insights');
 const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 
 /**
- * Evaluates the error and returns the appropriate error message structure.
- * @param {Record<string, string | number | string[]} error - The error to return if is not collection.
- * @param {boolean} isCollection - Whether the error is evaluated inside a collection.
- * @param {Record<string, string | number} collectionErrorMessage - The error message structure to return if the error is evaluated inside a collection.
- * @returns {error | collectionErrorMessage} The error message structure to return.
- */
-function responseObjectToReturn(error, isCollection, collectionErrorMessage = {})
-{
-    if (isCollection)
-        return collectionErrorMessage;
-
-    return error;
-}
-
-/**
  * Evaluates the error and returns the appropriate error message structure, also the error is logged to Azure App Insights.
  * @param {unknown} error - The error to evaluate.
- * @param {boolean} isCollection - Whether the error is evaluated inside a collection.
  * @returns {{status: number, errors: {errorType: string, message: string, code?: number | string}[], data?: Record<string, unknown} | {message: string}}
  */
-function formatErrorMessageStructure(error, isCollection = false)
+function formatErrorMessageStructure(error)
 {
     if (error instanceof ObjectionValidationError)
     {
@@ -54,12 +38,11 @@ function formatErrorMessageStructure(error, isCollection = false)
             case 'UnallowedRelation':
             case 'InvalidGraph':
             default:
-                if (!isCollection)
-                    telemetryClient.trackException({
-                        exception: error,
-                        severity: SeverityLevel.Warning
-                    });
-                return responseObjectToReturn({
+                telemetryClient.trackException({
+                    exception: error,
+                    severity: SeverityLevel.Warning
+                });
+                return {
                     status: 400,
                     errors: [
                         {
@@ -68,19 +51,16 @@ function formatErrorMessageStructure(error, isCollection = false)
                         }
                     ],
                     data: error.data
-                }, isCollection, {
-                    message: error.message
-                });
+                };
         }
     }
     else if (error instanceof ObjectionNotFoundError)
     {
-        if (!isCollection)
-            telemetryClient.trackException({
-                exception: error,
-                severity: SeverityLevel.Warning
-            });
-        return responseObjectToReturn({
+        telemetryClient.trackException({
+            exception: error,
+            severity: SeverityLevel.Warning
+        });
+        return {
             status: 404,
             errors: [
                 {
@@ -89,11 +69,7 @@ function formatErrorMessageStructure(error, isCollection = false)
                 }
             ],
             data: error.data
-        },
-        isCollection,
-        {
-            message: error.message
-        });
+        };
     }
     else if (
         error instanceof ConstraintViolationError
@@ -104,12 +80,11 @@ function formatErrorMessageStructure(error, isCollection = false)
         || error instanceof DataError
     )
     {
-        if (!isCollection)
-            telemetryClient.trackException({
-                exception: error,
-                severity: SeverityLevel.Error
-            });
-        return responseObjectToReturn({
+        telemetryClient.trackException({
+            exception: error,
+            severity: SeverityLevel.Error
+        });
+        return {
             status: 500,
             errors: [
                 {
@@ -119,21 +94,15 @@ function formatErrorMessageStructure(error, isCollection = false)
                 }
             ],
             data: error.data
-        },
-        isCollection,
-        {
-            message: error.nativeError.detail,
-            code: error.nativeError.code
-        });
+        };
     }
     else if (error instanceof DBError)
     {
-        if (!isCollection)
-            telemetryClient.trackException({
-                exception: error,
-                severity: SeverityLevel.Critical
-            });
-        return responseObjectToReturn({
+        telemetryClient.trackException({
+            exception: error,
+            severity: SeverityLevel.Critical
+        });
+        return {
             status: 500,
             errors: [
                 {
@@ -142,11 +111,7 @@ function formatErrorMessageStructure(error, isCollection = false)
                 }
             ],
             data: error.data
-        },
-        isCollection,
-        {
-            message: error.message
-        });
+        };
     }
     else if (
         error instanceof ApiError
@@ -159,20 +124,15 @@ function formatErrorMessageStructure(error, isCollection = false)
     )
     {
         const { status, ...errorMessage } = error.toJSON();
-        if (!isCollection)
-            telemetryClient.trackException({
-                exception: error,
-                severity: SeverityLevel.Warning
-            });
+        telemetryClient.trackException({
+            exception: error,
+            severity: SeverityLevel.Warning
+        });
         
-        return responseObjectToReturn({
+        return {
             status,
             errors: [errorMessage]
-        },
-        isCollection,
-        {
-            message: errorMessage.message
-        });
+        };
     }
     else if (error.constructor?.name in OpenApiValidatorErrorTypes)
     {
@@ -180,7 +140,7 @@ function formatErrorMessageStructure(error, isCollection = false)
             exception: error,
             severity: SeverityLevel.Warning
         });
-        return responseObjectToReturn({
+        return {
             status: 400,
             errors: error.errors?.length > 0 ? error.errors : [
                 {
@@ -188,26 +148,21 @@ function formatErrorMessageStructure(error, isCollection = false)
                     message: error.message
                 }
             ]
-        }, false);
+        };
     }
     else if (error instanceof ApplicationError)
     {
         const { status, ...errorMessage } = error.toJSON();
         
-        if (!isCollection)
-            telemetryClient.trackException({
-                exception: error,
-                severity: SeverityLevel.Error
-            });
+        telemetryClient.trackException({
+            exception: error,
+            severity: SeverityLevel.Error
+        });
         
-        return responseObjectToReturn({
+        return {
             status,
             errors: [errorMessage]
-        },
-        isCollection,
-        {
-            message: errorMessage.message
-        });
+        };
     }
     else
     {
@@ -219,12 +174,11 @@ function formatErrorMessageStructure(error, isCollection = false)
         else
             errorMessage = JSON.stringify(error);
 
-        if (!isCollection)
-            telemetryClient.trackException({
-                exception: error,
-                severity: SeverityLevel.Error
-            });
-        return responseObjectToReturn({
+        telemetryClient.trackException({
+            exception: error,
+            severity: SeverityLevel.Error
+        });
+        return {
             status: 500,
             errors: [
                 {
@@ -233,11 +187,7 @@ function formatErrorMessageStructure(error, isCollection = false)
                     ...(['local', 'dev', 'development'].includes(process.env.NODE_ENV) ? { stack: error.stack } : {})
                 }
             ]
-        },
-        isCollection,
-        {
-            message: errorMessage
-        });
+        };
     }
 }
 
