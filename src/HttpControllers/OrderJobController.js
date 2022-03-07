@@ -223,6 +223,18 @@ class OrderJobController
             next(error);
         }
     }
+
+    static async dispatchServiceJob(req, res, next)
+    {
+        try
+        {
+            //
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = OrderJobController;
