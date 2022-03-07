@@ -90,7 +90,7 @@ class AppResponse
      */
     #getHighestErrorCode(errorCodes)
     {
-        const highestErrorCode = Math.max(errorCodes);
+        const highestErrorCode = Math.max(...errorCodes);
 
         if (isNaN(highestErrorCode))
             return 500;

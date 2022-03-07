@@ -89,26 +89,26 @@ class OrderJobService
             return { guid: job, data: res };
         }));
 
-        const bulkExceptions = new BulkResponse();
+        const bulkResponse = new BulkResponse();
         for (const e of promises)
         {
             if (e.reason)
             {
-                bulkExceptions
-                    .addError(e.reason.guid, e.reason.data)
-                    .setErrorCollectionStatus(e.reason.guid, 400);
+                bulkResponse
+                    .addResponse(e.reason.guid, e.reason.data)
+                    .getResponse(e.reason.guid).setStatus(400);
             }
             else if (e.value?.data == undefined || e.value.data == 0)
             {
-                bulkExceptions
-                    .addError(e.value.guid, new NotFoundError('Job Not Found'))
-                    .setErrorCollectionStatus(e.value.guid, 404);
+                bulkResponse
+                    .addResponse(e.value.guid, new NotFoundError('Job Not Found'))
+                    .getResponse(e.value.guid).setStatus(404);
             }
             else
-                results[e.value.guid] = { status: 200 };
+                bulkResponse.addResponse(e.value.guid).getResponse(e.value.guid).setStatus(200);
         }
 
-        return { results: { ...results, ...bulkExceptions.toJSON() }, exceptions: bulkExceptions };
+        return bulkResponse;
     }
 
     /**
@@ -221,23 +221,16 @@ class OrderJobService
         const JobUpdatePromises = jobs.map(jobGuid => OrderJobService.updateJobDates(jobGuid, newDates, userGuid));
         const jobsUpdated = await Promise.allSettled(JobUpdatePromises);
 
-        const bulkExceptions = new BulkResponse();
-        const results = jobsUpdated.reduce((response, jobUpdated) =>
+        const bulkResponse = new BulkResponse();
+        jobsUpdated.forEach((jobUpdated) =>
         {
             const jobGuid = jobUpdated.value?.jobGuid;
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
 
-            if (error)
-            {
-                bulkExceptions.addError(jobGuid, error).setErrorCollectionStatus(jobGuid, status);
-                response[jobGuid] = bulkExceptions.toJSON(jobGuid);
-                return response;
-            }
-            response[jobGuid] = { message: error, status };
-            return response;
-        }, {});
-        return { results, exceptions: bulkExceptions };
+            bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status);
+        });
+        return bulkResponse;
     }
 
     /**
@@ -338,26 +331,19 @@ class OrderJobService
             const JobUpdatePromises = jobs.map(jobGuid => OrderJobService.updateJobStatus(jobGuid, status, userGuid, trx));
             const jobsUpdated = await Promise.allSettled(JobUpdatePromises);
 
-            const bulkExceptions = new BulkResponse();
-            const response = jobsUpdated.reduce((response, jobUpdated) =>
+            const bulkResponse = new BulkResponse();
+            jobsUpdated.forEach((jobUpdated) =>
             {
                 const jobGuid = jobUpdated.value?.jobGuid;
                 const status = jobUpdated.value?.status;
                 const error = jobUpdated.value?.error;
                 const data = jobUpdated.value?.data;
 
-                if (error)
-                {
-                    bulkExceptions.addError(jobGuid, error).setErrorCollectionStatus(jobGuid, status);
-                    response[jobGuid] = bulkExceptions.toJSON(jobGuid);
-                    return response;
-                }
-                response[jobGuid] = { error, status, data };
-                return response;
-            }, {});
+                bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
+            });
 
             await trx.commit();
-            return { results: response, exceptions: bulkExceptions };
+            return bulkResponse;
         }
 
         // This catch should never be called given that we catch async errors on updateJobStatus
@@ -466,25 +452,18 @@ class OrderJobService
 
         const jobsUpdated = await Promise.allSettled(JobUpdatePricePromises);
 
-        const bulkExceptions = new BulkResponse();
-        const results = jobsUpdated.reduce((response, jobUpdated) =>
+        const bulkResponse = new BulkResponse();
+        jobsUpdated.forEach((jobUpdated) =>
         {
             const jobGuid = jobUpdated.value?.jobGuid;
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
             const data = jobUpdated.value?.data;
             
-            if (error)
-            {
-                bulkExceptions.addError(jobGuid, error).setErrorCollectionStatus(jobGuid, status);
-                response[jobGuid] = bulkExceptions.toJSON(jobGuid);
-                return response;
-            }
-            response[jobGuid] = { error, status, data };
-            return response;
-        }, {});
+            bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
+        });
         
-        return { results, exceptions: bulkExceptions };
+        return bulkResponse;
     }
 
     static async updateJobPrice(jobGuid, expense, revenue, type, operation, userGuid)
@@ -634,12 +613,12 @@ class OrderJobService
      */
     static async setJobToReady(jobGuid, currentUser)
     {
-        const { results, exceptions } = await OrderJobService.setJobsToReady([jobGuid], currentUser);
+        const bulkResponse = await OrderJobService.setJobsToReady([jobGuid], currentUser);
 
-        const response = Object.values(results)[0];
+        const response = bulkResponse.getResponse(jobGuid);
 
-        if (exceptions.doErrorsExist())
-            exceptions.getCollectionInstance(jobGuid).throwErrorsIfExist();
+        if (response.doErrorsExist())
+            response.throwErrorsIfExist();
 
         return response;
     }
@@ -650,7 +629,7 @@ class OrderJobService
      * be returning all data succesfull and unseccessfull. This method is designed to do bulk.
      * @param {[uuids]} jobGuids array of job guids
      * @param {uuid} currentUser uuid of user that is currently making this request
-     * @returns {{results: {jobGuid: uuid, status: number, error: string}[], exceptions: BulkResponse}}
+     * @returns {BulkResponse}
      */
     static async setJobsToReady(jobGuids, currentUser)
     {
@@ -658,9 +637,7 @@ class OrderJobService
         const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState(jobGuids);
 
         // for storing responses
-        const resBody = {};
-
-        const bulkExceptions = new BulkResponse();
+        const bulkResponse = new BulkResponse();
 
         /**
          * loop to failed jobs and compose error messages
@@ -671,17 +648,17 @@ class OrderJobService
             // for jobs does not exist
             if (failedJob.status === 404)
             {
-                resBody[failedJob.guid] = bulkExceptions
-                    .addError(failedJob.guid, failedJob.errors)
-                    .setErrorCollectionStatus(failedJob.guid, 404)
-                    .toJSON(failedJob.guid);
+                bulkResponse
+                    .addResponse(failedJob.guid, failedJob.errors)
+                    .getResponse(failedJob.guid)
+                    .setStatus(404);
             }
             else
             {
-                resBody[failedJob.guid] = bulkExceptions
-                    .addError(failedJob.guid, failedJob.errors)
-                    .setErrorCollectionStatus(failedJob.guid, 409)
-                    .toJSON(failedJob.guid);
+                bulkResponse
+                    .addResponse(failedJob.guid, failedJob.errors)
+                    .getResponse(failedJob.guid)
+                    .setStatus(409);
             }
         }
 
@@ -699,17 +676,14 @@ class OrderJobService
             // loop good guids and send event
             for (const job of data)
             {
-                resBody[job.guid] = {
-                    status: 200,
-                    errors: []
-                };
+                bulkResponse.addResponse(job.guid).getResponse(job.guid).setStatus(200);
                 emitter.emit('orderjob_status_updated', { jobGuid: job.guid, currentUser, state: { status: OrderJob.STATUS.READY } });
                 emitter.emit('orderjob_ready', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
             }
         }
 
         // returning body payload
-        return { results: resBody, exceptions: bulkExceptions };
+        return bulkResponse;
     }
 
     /**
