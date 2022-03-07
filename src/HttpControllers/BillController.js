@@ -65,8 +65,9 @@ class BillController
         try
         {
             const result = await BillService.deleteBillLines(billGuid, lineGuids);
-            res.status(200);
-            res.json(result);
+            const response = result?.toJSON() || {};
+            res.status(response?.status ?? 200);
+            res.json(response);
         }
         catch (error)
         {

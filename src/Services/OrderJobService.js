@@ -17,7 +17,8 @@ const R = require('ramda');
 const InvoiceLineLink = require('../Models/InvoiceLineLink');
 const Loadboards = require('../Loadboards/API');
 const { raw } = require('objection');
-const { MissingDataError, NotFoundError, DataConflictError, ValidationError, ApiError, ApplicationError, ExceptionCollection, BulkException } = require('../ErrorHandling/Exceptions');
+const { MissingDataError, NotFoundError, DataConflictError, ValidationError, ApiError, ApplicationError } = require('../ErrorHandling/Exceptions');
+const { AppResponse, BulkResponse } = require('../ErrorHandling/Responses');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -88,26 +89,26 @@ class OrderJobService
             return { guid: job, data: res };
         }));
 
-        const bulkExceptions = new BulkException();
+        const bulkResponse = new BulkResponse();
         for (const e of promises)
         {
             if (e.reason)
             {
-                bulkExceptions
-                    .addError(e.reason.guid, e.reason.data)
-                    .setErrorCollectionStatus(e.reason.guid, 400);
+                bulkResponse
+                    .addResponse(e.reason.guid, e.reason.data)
+                    .getResponse(e.reason.guid).setStatus(400);
             }
             else if (e.value?.data == undefined || e.value.data == 0)
             {
-                bulkExceptions
-                    .addError(e.value.guid, new NotFoundError('Job Not Found'))
-                    .setErrorCollectionStatus(e.value.guid, 404);
+                bulkResponse
+                    .addResponse(e.value.guid, new NotFoundError('Job Not Found'))
+                    .getResponse(e.value.guid).setStatus(404);
             }
             else
-                results[e.value.guid] = { status: 200 };
+                bulkResponse.addResponse(e.value.guid).getResponse(e.value.guid).setStatus(200);
         }
 
-        return { results: { ...results, ...bulkExceptions.toJSON() }, exceptions: bulkExceptions };
+        return bulkResponse;
     }
 
     /**
@@ -220,23 +221,16 @@ class OrderJobService
         const JobUpdatePromises = jobs.map(jobGuid => OrderJobService.updateJobDates(jobGuid, newDates, userGuid));
         const jobsUpdated = await Promise.allSettled(JobUpdatePromises);
 
-        const bulkExceptions = new BulkException();
-        const results = jobsUpdated.reduce((response, jobUpdated) =>
+        const bulkResponse = new BulkResponse();
+        jobsUpdated.forEach((jobUpdated) =>
         {
             const jobGuid = jobUpdated.value?.jobGuid;
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
 
-            if (error)
-            {
-                bulkExceptions.addError(jobGuid, error).setErrorCollectionStatus(jobGuid, status);
-                response[jobGuid] = bulkExceptions.toJSON(jobGuid);
-                return response;
-            }
-            response[jobGuid] = { message: error, status };
-            return response;
-        }, {});
-        return { results, exceptions: bulkExceptions };
+            bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status);
+        });
+        return bulkResponse;
     }
 
     /**
@@ -337,26 +331,19 @@ class OrderJobService
             const JobUpdatePromises = jobs.map(jobGuid => OrderJobService.updateJobStatus(jobGuid, status, userGuid, trx));
             const jobsUpdated = await Promise.allSettled(JobUpdatePromises);
 
-            const bulkExceptions = new BulkException();
-            const response = jobsUpdated.reduce((response, jobUpdated) =>
+            const bulkResponse = new BulkResponse();
+            jobsUpdated.forEach((jobUpdated) =>
             {
                 const jobGuid = jobUpdated.value?.jobGuid;
                 const status = jobUpdated.value?.status;
                 const error = jobUpdated.value?.error;
                 const data = jobUpdated.value?.data;
 
-                if (error)
-                {
-                    bulkExceptions.addError(jobGuid, error).setErrorCollectionStatus(jobGuid, status);
-                    response[jobGuid] = bulkExceptions.toJSON(jobGuid);
-                    return response;
-                }
-                response[jobGuid] = { error, status, data };
-                return response;
-            }, {});
+                bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
+            });
 
             await trx.commit();
-            return { results: response, exceptions: bulkExceptions };
+            return bulkResponse;
         }
 
         // This catch should never be called given that we catch async errors on updateJobStatus
@@ -465,25 +452,18 @@ class OrderJobService
 
         const jobsUpdated = await Promise.allSettled(JobUpdatePricePromises);
 
-        const bulkExceptions = new BulkException();
-        const results = jobsUpdated.reduce((response, jobUpdated) =>
+        const bulkResponse = new BulkResponse();
+        jobsUpdated.forEach((jobUpdated) =>
         {
             const jobGuid = jobUpdated.value?.jobGuid;
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
             const data = jobUpdated.value?.data;
             
-            if (error)
-            {
-                bulkExceptions.addError(jobGuid, error).setErrorCollectionStatus(jobGuid, status);
-                response[jobGuid] = bulkExceptions.toJSON(jobGuid);
-                return response;
-            }
-            response[jobGuid] = { error, status, data };
-            return response;
-        }, {});
+            bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
+        });
         
-        return { results, exceptions: bulkExceptions };
+        return bulkResponse;
     }
 
     static async updateJobPrice(jobGuid, expense, revenue, type, operation, userGuid)
@@ -633,10 +613,12 @@ class OrderJobService
      */
     static async setJobToReady(jobGuid, currentUser)
     {
-        const resp = await OrderJobService.setJobsToReady([jobGuid], currentUser);
+        const bulkResponse = await OrderJobService.setJobsToReady([jobGuid], currentUser);
 
-        const response = Object.values(resp)[0];
-        response.errors = response.errors.map(str => { return { message: str, errorType: 'DataConflictError' }; });
+        const response = bulkResponse.getResponse(jobGuid);
+
+        if (response.doErrorsExist())
+            response.throwErrorsIfExist();
 
         return response;
     }
@@ -647,17 +629,15 @@ class OrderJobService
      * be returning all data succesfull and unseccessfull. This method is designed to do bulk.
      * @param {[uuids]} jobGuids array of job guids
      * @param {uuid} currentUser uuid of user that is currently making this request
-     * @returns {{results: {jobGuid: uuid, status: number, error: string}[], exceptions: BulkException}}
+     * @returns {BulkResponse}
      */
     static async setJobsToReady(jobGuids, currentUser)
     {
-        // Validate jobs adn get failed exceptions
+        // Validate jobs and get failed exceptions
         const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState(jobGuids);
 
         // for storing responses
-        const resBody = {};
-
-        const bulkExceptions = new BulkException();
+        const bulkResponse = new BulkResponse();
 
         /**
          * loop to failed jobs and compose error messages
@@ -668,17 +648,17 @@ class OrderJobService
             // for jobs does not exist
             if (failedJob.status === 404)
             {
-                resBody[failedJob.guid] = bulkExceptions
-                    .addError(failedJob.guid, failedJob.errors)
-                    .setErrorCollectionStatus(failedJob.guid, 404)
-                    .toJSON(failedJob.guid);
+                bulkResponse
+                    .addResponse(failedJob.guid, failedJob.errors)
+                    .getResponse(failedJob.guid)
+                    .setStatus(404);
             }
             else
             {
-                resBody[failedJob.guid] = bulkExceptions
-                    .addError(failedJob.guid, failedJob.errors)
-                    .setErrorCollectionStatus(failedJob.guid, 409)
-                    .toJSON(failedJob.guid);
+                bulkResponse
+                    .addResponse(failedJob.guid, failedJob.errors)
+                    .getResponse(failedJob.guid)
+                    .setStatus(409);
             }
         }
 
@@ -696,17 +676,14 @@ class OrderJobService
             // loop good guids and send event
             for (const job of data)
             {
-                resBody[job.guid] = {
-                    status: 200,
-                    errors: []
-                };
+                bulkResponse.addResponse(job.guid).getResponse(job.guid).setStatus(200);
                 emitter.emit('orderjob_status_updated', { jobGuid: job.guid, currentUser, state: { status: OrderJob.STATUS.READY } });
                 emitter.emit('orderjob_ready', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
             }
         }
 
         // returning body payload
-        return { results: resBody, exceptions: bulkExceptions };
+        return bulkResponse;
     }
 
     /**
@@ -760,6 +737,11 @@ class OrderJobService
                 	oj.status,
                 	oj."number",
                     oj.is_transport,
+                    oj.type_id,
+                    oj.verified_by_guid,
+                    oj.date_started,
+                    oj.date_completed,
+                    oj.date_verified,
                 	(SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
                 		LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbr.is_accepted AND lbp2.job_guid = oj.guid) AS has_accepted_requests,
                 	stop.pickup_requested_date,
@@ -809,6 +791,11 @@ class OrderJobService
                         oj.status,
                         oj."number",
                         oj.is_transport,
+                        oj.type_id,
+                        oj.verified_by_guid,
+                        oj.date_started,
+                        oj.date_completed,
+                        oj.date_verified,
                         (SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
                             LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbr.is_accepted AND lbp2.job_guid = oj.guid) AS has_accepted_requests,
 	                    stop."commodityGuid",
@@ -859,65 +846,53 @@ class OrderJobService
         for (const job of allJobsData)
         {
             const errors = [];
+
+            // common validations for all job types
             if (!job.dispatcher_guid)
-            {
-                errors.push('Please assign a dispatcher.');
-            }
-            if (job.vendor_guid && job.is_transport === true)
-            {
-                errors.push('Please un-dispatch the Carrier first.');
-            }
-            if (job.vendor_guid && job.is_transport === false)
-            {
-                errors.push('Please un-assign the Vendor first.');
-            }
-            if (job.has_accepted_requests)
-            {
-                errors.push('Please cancel Carrier request.');
-            }
-            if (job.is_ready)
-            {
-                errors.push('Order has been verified already.');
-            }
-            if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
-            {
-                errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
-            }
-            if (job.not_resolved_address && job.is_transport === false)
-            {
-                errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
-            }
+                errors.push('Please assign a dispatcher first.');
             if (job.is_on_hold)
-            {
-                errors.push('Order is On Hold');
-            }
+                errors.push('Cannot set to "Ready" because the job is On Hold');
             if (job.is_canceled)
-            {
-                errors.push('Order is Canceled');
-            }
+                errors.push('Cannot set to "Ready" because the job is Canceled');
             if (job.is_deleted)
-            {
-                errors.push('Order is Deleted');
-            }
+                errors.push('Cannot set to "Ready" because the job is Deleted');
             if (job.is_complete)
+                errors.push('Cannot set to "Ready" because the job is Compelete');
+            if (job.is_ready || job.verified_by_guid || job.date_verified)
+                errors.push('Order has been verified already.');
+            if (job.vendor_guid && job.is_transport === false)
+                errors.push('Please un-assign the Vendor first.');
+ 
+            // validations for transport job type
+            if (job.type_id === 1)
             {
-                errors.push('Order is Compelete');
+                if (job.vendor_guid && job.is_transport === true)
+                    errors.push('Please un-dispatch the Carrier first.');
+                if (job.has_accepted_requests)
+                    errors.push('Please cancel Carrier request.');
+                if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
+                    errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
+                if (job.not_resolved_address && job.is_transport === false)
+                    errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
+                if (!job.pickup_requested_date || !job.delivery_requested_date)
+                    errors.push('Client requested pickup and delivery dates must be set.');
+                if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === true)
+                    errors.push('There must be at least one commodity to pick up and deliver.');
+                if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === false)
+                    errors.push('There must be at least one commodity to service.');
+                if (job.is_transport === false && job.stop_type != null)
+                    errors.push('There must be one service stop.');
             }
-            if (!job.pickup_requested_date || !job.delivery_requested_date)
+
+            // any other service type
+            else
             {
-                errors.push('Client requested pickup and delivery dates must be set.');
-            }
-            if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === true)
-            {
-                errors.push('There must be at least one commodity to pick up and deliver.');
-            }
-            if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === false)
-            {
-                errors.push('There must be at least one commodity to service.');
-            }
-            if (job.is_transport === false && job.stop_type != null)
-            {
-                errors.push('There must be one service stop.');
+                if (job.is_transport)
+                    errors.push('Service job must not be a transport job.');
+                if (job.date_started)
+                    errors.push('Job must not be started.');
+                if (job.date_complete)
+                    errors.push('Job must not be completed.');
             }
 
             // distinguishing jobs, for the special ones xD
@@ -939,7 +914,7 @@ class OrderJobService
     // TODO: DEPRICATE SOON
     static async getJobForReadyCheck(jobGuids)
     {
-        const jobsNotFoundExceptions = new ExceptionCollection();
+        const jobsNotFoundExceptions = new AppResponse();
 
         // getting all jobs guid and tranport field to help differentiate job types
         const jobsGuidsFound = await OrderJob.query().select('guid', 'isTransport').findByIds(jobGuids);
@@ -1375,7 +1350,7 @@ class OrderJobService
 
             if (queryRes.jobs.length < 1)
             {
-                throw queryRes.exceptions;
+                queryRes.exceptions.throwErrorsIfExist();
             }
             const job = queryRes.jobs[0];
             let res;

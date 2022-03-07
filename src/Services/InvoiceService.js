@@ -7,7 +7,8 @@ const Invoice = require('../Models/Invoice');
 const Order = require('../Models/Order');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
-const { NotFoundError, DataConflictError, ExceptionCollection } = require('../ErrorHandling/Exceptions');
+const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
+const { AppResponse } = require('../ErrorHandling/Responses');
 
 class InvoiceService
 {
@@ -143,7 +144,8 @@ class InvoiceService
             // if billGuid exists create line and link
             if (billGuid)
             {
-                const billLine = InvoiceLine.fromJson(line);
+                // By default the linked bill line should be created as a line not paid
+                const billLine = InvoiceLine.fromJson({ ...line, isPaid: false });
                 billLine.linkBill(bill);
                 linksArray.push(billLine);
             }
@@ -243,7 +245,7 @@ class InvoiceService
             if (deletedLines != lineGuids.length)
             {
                 // error array for unique messages
-                const errorCollection = new ExceptionCollection();
+                const appResponse = new AppResponse();
 
                 // query all guids, and throw error for which return because they still exist.
                 const failedLines = await InvoiceLine.query(trx).findByIds([lineGuids]);
@@ -253,14 +255,15 @@ class InvoiceService
                 {
                     if (l.itemId == 1 && l.commodityGuid != null)
                     {
-                        errorCollection.addError(new DataConflictError(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid}`));
+                        appResponse.addError(new DataConflictError(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid}`));
                     }
                     if (l.invoiceGuid != invoiceGuid)
                     {
-                        errorCollection.addError(new DataConflictError(`Deleting a line the doesn't belong to the invoice is forbidden. Line guid: ${l.guid}`));
+                        appResponse.addError(new DataConflictError(`Deleting a line the doesn't belong to the invoice is forbidden. Line guid: ${l.guid}`));
                     }
                 }
-                errorCollection.throwErrorsIfExist();
+                if (appResponse.doErrorsExist())
+                    return appResponse.toJSON();
             }
 
             // if succeed then, returns nothing
@@ -353,7 +356,7 @@ class InvoiceService
             // if order has invoices
             if (order.invoices.length)
             {
-                results[order.guid] = { data: [], errors: new ExceptionCollection(), status: null };
+                results[order.guid] = { data: [], errors: new AppResponse(), status: null };
 
                 for (const invoice of order.invoices)
                 {
@@ -448,7 +451,7 @@ class InvoiceService
                 const invoiceObj = invoiceMap.get(error.guid);
 
                 results[invoiceObj.orderGuid].status = status;
-                results[invoiceObj.orderGuid].errors = new ExceptionCollection();
+                results[invoiceObj.orderGuid].errors = new AppResponse();
                 results[invoiceObj.orderGuid].errors.setStatus(status);
                 results[invoiceObj.orderGuid].errors.addError(
                     new DataConflictError(error,
@@ -461,7 +464,7 @@ class InvoiceService
             {
                 const invoiceObj = invoiceMap.get(data.guid);
 
-                results[invoiceObj.orderGuid].errors = new ExceptionCollection();
+                results[invoiceObj.orderGuid].errors = new AppResponse();
 
                 // if no errors we will update the bill
                 const trx = await InvoiceBill.startTransaction();

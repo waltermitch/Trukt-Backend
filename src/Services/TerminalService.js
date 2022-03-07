@@ -1,12 +1,14 @@
+const { MissingDataError, DataConflictError, ValidationError } = require('../ErrorHandling/Exceptions');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
+const GeneralFuncs = require('../Azure/GeneralFunc');
+const emitter = require('../EventListeners/index');
 const OrderStops = require('../Models/OrderStop');
 const Terminal = require('../Models/Terminal');
 const Queue = require('../Azure/ServiceBus');
 const { mergeDeepRight } = require('ramda');
 const ArcGIS = require('../ArcGIS/API');
-const { MissingDataError, DataConflictError } = require('../ErrorHandling/Exceptions');
 
 const { SYSTEM_USER } = process.env;
 const keywordFields =
@@ -240,6 +242,7 @@ class TerminalService
                             await Terminal.query(trx)
                                 .where('guid', terminal.guid)
                                 .update({ isResolved: false, resolvedTimes: 1, updatedByGuid: SYSTEM_USER });
+
                         }
                     });
                 }
@@ -303,6 +306,9 @@ class TerminalService
         await Terminal.query(trx)
             .where('guid', terminal.guid)
             .patch(payload);
+
+        // emit event
+        emitter.emit('terminal_resolved', { terminalGuid: terminal.guid });
     }
 
     // this method will merge one terminal into another including all related records
@@ -330,6 +336,9 @@ class TerminalService
             {
                 // now that there is nothing attached to this terminal, we can delete it
                 await Terminal.query(trx).deleteById(alternativeTerminal.guid);
+
+                // emit event
+                emitter.emit('terminal_resolved', { terminalGuid: primaryTerminal.guid });
             });
     }
 
@@ -455,6 +464,30 @@ class TerminalService
             .patchAndFetchById(terminalGuid, term);
 
         return newTerminal;
+    }
+
+    // method to calculate the distance between a set of coords
+    static async calculateTotalDistance(stops)
+    {
+        // go through every order stop
+        stops.sort(OrderStops.sortBySequence);
+
+        // converting terminals into address strings
+        const coords = [];
+        for (const stop of stops)
+        {
+            const { terminal } = stop;
+
+            // we ignore unresolved terminals
+            if (terminal.latitude && terminal.longitude)
+                coords.push({ lat: terminal.latitude, long: terminal.longitude });
+        }
+
+        // we check if we have at least 2 points; otherwise we throw an error
+        if (coords.length < 2)
+            throw new ValidationError('At least 2 points are required to calculate the distance');
+        else
+            return await GeneralFuncs.calculateDistance(coords);
     }
 }
 

@@ -24,7 +24,6 @@ requestBody:
         properties:          
           $ref: ../../components/schemas/Finances.yaml#/InvoiceBillBody           
         required:
-          - dateCharged
           - transactionNumber
           - itemId
           - amount

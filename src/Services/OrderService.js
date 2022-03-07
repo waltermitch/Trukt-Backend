@@ -1,7 +1,9 @@
+const { MissingDataError, DataConflictError, NotFoundError, ValidationError } = require('../ErrorHandling/Exceptions');
+const { BulkResponse } = require('../ErrorHandling/Responses');
+const ActivityManagerService = require('./ActivityManagerService');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
-const GeneralFuncApi = require('../Azure/GeneralFuncApi');
 const OrderStopLink = require('../Models/OrderStopLink');
 const CommodityType = require('../Models/CommodityType');
 const OrderJobType = require('../Models/OrderJobType');
@@ -32,8 +34,6 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
-const ActivityManagerService = require('./ActivityManagerService');
-const { MissingDataError, DataConflictError, NotFoundError, ValidationError, BulkException } = require('../ErrorHandling/Exceptions');
 
 // this is the apora that will hold the falling down requirments above.
 
@@ -698,24 +698,9 @@ class OrderService
         }
     }
 
-    static async calculateTotalDistance(stops)
+    static async calculatedDistances(orderGuid)
     {
-        // go through every order stop
-        stops.sort(OrderStop.sortBySequence);
-
-        // converting terminals into address strings
-        const terminalStrings = stops.map((stop) =>
-        {
-            return JSON.parse(stop.terminal.toApiString());
-        });
-
-        // send all terminals to the General Function app and recieve only the distance value
-        return await GeneralFuncApi.calculateDistances(terminalStrings);
-    }
-
-    static async calculatedDistances(OrderGuid)
-    {
-        // relations obejct for none repetitive code
+        // relations object for none repetitive code
         const stopRelationObj = {
             $modify: ['distinctAllData'],
             terminal: true
@@ -727,16 +712,18 @@ class OrderService
         await Order.transaction(async (trx) =>
         {
             // get OrderStops and JobStops from database Fancy smancy queries
-            const order = await Order.query(trx).withGraphJoined({
-                jobs: { stops: stopRelationObj },
-                stops: stopRelationObj
-            }).findById(OrderGuid);
+            const order = await Order.query(trx)
+                .withGraphJoined({
+                    jobs: { stops: stopRelationObj },
+                    stops: stopRelationObj
+                })
+                .findById(orderGuid);
 
             // array for transaction promises
             const patchPromises = [];
 
             let orderCounted = false;
-            for (const orderjob of [order, ...order.jobs])
+            for (const object of [order, ...order.jobs])
             {
                 // logic to handle order vs jobs model
                 let model;
@@ -752,9 +739,9 @@ class OrderService
 
                 // pushing distance call and update into array
                 patchPromises.push(
-                    OrderService.calculateTotalDistance(orderjob.stops).then(async (distance) =>
+                    TerminalService.calculateTotalDistance(object.stops).then(async (distance) =>
                     {
-                        await model.query(trx).patch({ distance }).findById(orderjob.guid);
+                        await model.query(trx).patch({ distance }).findById(object.guid);
                     })
                 );
             }
@@ -762,6 +749,7 @@ class OrderService
             // execute all promises
             await Promise.all(patchPromises);
         });
+
         return;
     }
 
@@ -777,7 +765,7 @@ class OrderService
         if (oldOrder.stops.length != updatedOrder.stops.length)
         {
             // calculate distance and push update distance into an array
-            patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+            patchArray.push(TerminalService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
             {
                 await Order.query().patch({ distance }).findById(updatedOrder.guid);
             }));
@@ -799,7 +787,7 @@ class OrderService
                 if (!R.equals(newTerminal, oldTerminal))
                 {
                     // calculate distance of all stops and push update distance into an array
-                    patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+                    patchArray.push(TerminalService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
                     {
                         await Order.query().patch({ distance }).findById(updatedOrder.guid);
                     }));
@@ -821,7 +809,7 @@ class OrderService
             if (currentJob.stops.length != oldOrder.jobs[i].stops.length)
             {
                 // calculate distance of all stops and push update distance into an array
-                patchArray.push(OrderService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
+                patchArray.push(TerminalService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
                 {
                     await OrderJob.query().patch({ distance }).findById(currentJob.guid);
                 }));
@@ -843,7 +831,7 @@ class OrderService
                     if (!R.equals(newTerminal, oldTerminal))
                     {
                         // calculate distance of all stops and push update distance into an array
-                        patchArray.push(OrderService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
+                        patchArray.push(TerminalService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
                         {
                             await OrderJob.query().patch({ distance }).findById(currentJob.guid);
                         }));
@@ -866,33 +854,28 @@ class OrderService
      * Method is to accepts load tenders. Validates, sends requests and updates the database in our system.
      * @param {string []} orderGuids
      * @param {string} currentUser
-     * @returns {{results: Promise<{guid: string, status: number, message: string} []>, exceptions: BulkException}} currentUser
+     * @returns {BulkResponse} BulkResponse object
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
         // valdiate orders for accepting or declineing
         const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
 
-        const resBody = {};
-
         // send request to logic
         const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('accept', successfulTenders, null);
 
         failedTenders.push(...failedOrders);
 
-        const bulkExceptions = new BulkException();
+        const bulkResponse = new BulkResponse();
 
         // add errored orders to body message
         for (const order of failedTenders)
         {
-            bulkExceptions
-                .addError(order.orderGuid, order.errors)
-                .setErrorCollectionStatus(order.orderGuid, order.status);
-            resBody[order.orderGuid] = bulkExceptions.toJSON(order.orderGuid);
+            bulkResponse
+                .addResponse(order.orderGuid, order.errors)
+                .getResponse(order.orderGuid)
+                .setStatus(order.status);
         }
-
-        if (!goodOrders.length)
-            return { results: resBody, exceptions: bulkExceptions };
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -914,53 +897,46 @@ class OrderService
             // loop through successfull jobs and emmit event to update acivity logs
             for (const job of data[1])
             {
-                resBody[job.orderGuid] = {
-                    jobGuid: job.guid,
-                    status: 200,
-                    errors: []
-                };
+                bulkResponse
+                    .addResponse(job.orderGuid)
+                    .getResponse(job.orderGuid)
+                    .setStatus(200)
+                    .setData({ jobGuid: job.guid });
 
                 emitter.emit('tender_accepted', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
                 emitter.emit('order_created', job.orderGuid);
             }
         }
 
-        return { results: resBody, exceptions: bulkExceptions };
+        return bulkResponse;
     }
 
     /**
      * Method is to rejects load tenders. Validates, sends requests and updated the database in our system.
      * @param {string []} orderGuids
      * @param {string} reason
-     * @param {string} currentUser
+     * @param {BulkResponse} currentUser
      */
     static async rejectLoadTenders(orderGuids, reason, currentUser)
     {
         // valdiate orders for accepting or declineing
         const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
 
-        const resBody = {};
-
         // send request to logic
         const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('reject', successfulTenders, reason);
 
         failedTenders.push(...failedOrders);
 
-        const bulkExceptions = new BulkException();
+        const bulkResponse = new BulkResponse();
 
         // add errored orders to body message
         for (const order of failedTenders)
         {
-            bulkExceptions
-                .addError(order.orderGuid, order.errors)
-                .setErrorCollectionStatus(order.orderGuid, order.status);
-            resBody[order.orderGuid] = {
-                ...bulkExceptions.toJSON(order.orderGuid)
-            };
+            bulkResponse
+                .addResponse(order.orderGuid, order.errors)
+                .getResponse(order.orderGuid)
+                .setStatus(order.status);
         }
-
-        if (!goodOrders.length)
-            return { results: resBody, exceptions: bulkExceptions };
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -982,17 +958,17 @@ class OrderService
             // loop through successfull jobs and emmit event to update acivity logs
             for (const job of data[1])
             {
-                resBody[job.orderGuid] = {
-                    jobGuid: job.guid,
-                    status: 200,
-                    errors: []
-                };
+                bulkResponse
+                    .addResponse(job.orderGuid)
+                    .getResponse(job.orderGuid)
+                    .setStatus(200)
+                    .setData({ jobGuid: job.guid });
 
                 emitter.emit('tender_rejected', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
             }
         }
 
-        return { results: resBody, exceptions: bulkExceptions };
+        return bulkResponse;
     }
 
     /**
@@ -2921,8 +2897,6 @@ class OrderService
 
     static async bulkUpdateUsers({ orders = [], dispatcher = undefined, salesperson = undefined })
     {
-        const results = {};
-
         const payload = {
             dispatcherGuid: dispatcher,
             salespersonGuid: salesperson
@@ -2943,26 +2917,28 @@ class OrderService
             return { guid: order, data: res };
         }));
 
-        const bulkExceptions = new BulkException();
+        const bulkResponse = new BulkResponse();
         for (const e of promises)
         {
             if (e.reason)
             {
-                bulkExceptions
-                    .addError(e.reason.guid, e.reason.data)
-                    .setErrorCollectionStatus(e.reason.guid, 400);
+                bulkResponse
+                    .addResponse(e.reason.guid, e.reason.data)
+                    .getResponse(e.reason.guid)
+                    .setStatus(400);
             }
             else if (e.value?.data === undefined)
             {
-                bulkExceptions
-                    .addError(e.value.guid, new NotFoundError('Order Not Found'))
-                    .setErrorCollectionStatus(e.value.guid, 404);
+                bulkResponse
+                    .addResponse(e.value.guid, new NotFoundError('Order Not Found'))
+                    .getResponse(e.value.guid)
+                    .setStatus(404);
             }
             else if (e.value.data)
-                results[e.value.guid] = { status: 200 };
+                bulkResponse.addResponse(e.value.guid).getResponse(e.value.guid).setStatus(200).setData(e.value.data);
         }
 
-        return { results: { ...results, ...bulkExceptions.toJSON() }, exceptions: bulkExceptions };
+        return bulkResponse;
     }
 
     static async getTransportJobsIds(orderGuid)
@@ -3542,7 +3518,19 @@ class OrderService
         {
             throw new DataConflictError('Order Cannot be set to ready.');
         }
+    }
 
+    static async recalcDistancesAfterTerminalResolution(terminalGuid)
+    {
+        // get orders that have stops that use this terminal
+        const orders = await Order.query()
+            .select('orders.guid')
+            .whereNull('distance')
+            .withGraphJoined('stops')
+            .where('stops.terminalGuid', terminalGuid);
+
+        for (const order of orders)
+            await OrderService.calculatedDistances(order.guid);
     }
 }
 
