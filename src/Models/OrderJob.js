@@ -2,7 +2,7 @@ const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const { ref, raw } = require('objection');
 const BaseModel = require('./BaseModel');
 const { snakeCaseString } = require('../Utils');
-const { DataConflictError, MissingDataError } = require('../ErrorHandling/Exceptions');
+const { DataConflictError, MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
 
 const jobTypeFields = ['category', 'type'];
 const EDI_DEFAULT_INSPECTION_TYPE = 'standard';
@@ -10,9 +10,11 @@ const EDI_DEFAULT_EQUIPMENT_TYPE_ID = 3;
 
 class OrderJob extends BaseModel
 {
+    // in_progress is for service jobs only
     static STATUS = {
         NEW: 'new',
         READY: 'ready',
+        IN_PROGRESS: 'in_progress',
         ON_HOLD: 'on hold',
         POSTED: 'posted',
         PENDING: 'pending',
@@ -883,6 +885,58 @@ class OrderJob extends BaseModel
 
         if (isTender && !this.equipmentTypeId)
             this.equipmentTypeId = EDI_DEFAULT_EQUIPMENT_TYPE_ID;
+    }
+
+    /**
+     * @param {OrderJob} job
+     */
+    static validateReadyServiceJobToInProgress(job)
+    {
+        const { STATUS } = OrderJob;
+        const invalidStatuses = [
+            STATUS.CANCELED,
+            STATUS.COMPLETED,
+            STATUS.DECLINED,
+            STATUS.DELETED,
+            STATUS.DELIVERED,
+            STATUS.DISPATCHED,
+            STATUS.NEW,
+            STATUS.ON_HOLD,
+            STATUS.PENDING,
+            STATUS.PICKED_UP,
+            STATUS.POSTED,
+            STATUS.IN_PROGRESS
+        ];
+        const errors = [];
+
+        if (!job)
+            errors.push(new NotFoundError('Service job not found.'));
+        if (!job.dispatcherGuid)
+        errors.push(new MissingDataError('Please assign a dispatcher to this job first.'));
+        if (job.typeId === 1)
+            errors.push(new DataConflictError('Cannot assign a vendor to this job because it is a transport job.'));
+        if (job.isTransport)
+            errors.push(new DataConflictError('This job is been marked as a transport job. Please remove the transport flag before assigning a vendor.'));
+        if (!job.verifiedByGuid || !job.dateVerified)
+            errors.push(new DataConflictError('This job has not been verified. Please verify this job before assigning a vendor.'));
+        if (job.vendorGuid)
+            errors.push(new DataConflictError('This service job already has a vendor assigned to it. Please remove the vendor before assigning a new one.'));
+        if (invalidStatuses.includes(job.status))
+            errors.push(new DataConflictError(`Cannot assign a vendor to this job because it is ${job.status}.`));
+        if (job.deletedDate || job.isDeleted)
+            errors.push(new DataConflictError('This job has been deleted. Please remove the deleted flag before assigning a vendor.'));
+        if (!job.isReady)
+            errors.push(new DataConflictError('This job is not ready to be assigned a vendor.'));
+        if (job.isOnHold)
+            errors.push(new DataConflictError('This job is on hold. Please remove the on hold flag before assigning a vendor.'));
+        if (job.isComplete || job.dateCompleted)
+            errors.push(new DataConflictError('This job is complete. Please remove the complete flag before assigning a vendor.'));
+        if (job.isCanceled)
+            errors.push(new DataConflictError('This job is canceled. Please remove the canceled flag before assigning a vendor.'));
+        if (job.dateStarted)
+            errors.push(new DataConflictError('This job has already been started. Please remove the started flag before assigning a vendor.'));
+
+        return errors;
     }
 }
 
