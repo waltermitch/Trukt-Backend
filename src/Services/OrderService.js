@@ -274,9 +274,6 @@ class OrderService
                 createdByGuid: currentUser
             });
 
-            // Add stops default notes to terminals
-            const terminalWithDefaultNotes = OrderService.getTerminalWithDefaultStopNotes(orderObj.terminals, orderObj.stops);
-
             // DO NOT change the ordering of these promises, it will mess up _dataCheck and other destructured code
             let orderInfoPromises = [];
             orderInfoPromises.push(SFAccount.query(trx).modify('client', orderObj.client.guid));
@@ -284,7 +281,9 @@ class OrderService
             orderInfoPromises.push(dataCheck.dispatcher = isUseful(orderObj.dispatcher) ? User.query(trx).findById(orderObj.dispatcher.guid) : null);
             orderInfoPromises.push(dataCheck.referrer = isUseful(orderObj.referrer) ? SFAccount.query(trx).findById(orderObj.referrer.guid) : null);
             orderInfoPromises.push(dataCheck.salesperson = isUseful(orderObj.salesperson) ? SFAccount.query(trx).findById(orderObj.salesperson.guid) : null);
-            orderInfoPromises.push(Promise.all(terminalWithDefaultNotes.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender }))));
+            orderInfoPromises.push(OrderService.getTerminalWithDefaultStopNotes(orderObj.terminals, orderObj.stops).then(async terminalsWithNotes =>
+                await Promise.all(terminalsWithNotes.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender })))
+            ));
 
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
             orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
@@ -669,15 +668,41 @@ class OrderService
         return referrerInvoice;
     }
 
-    // Adds the stop notes to the terminal notes if the terminal does not have any notes
-    static getTerminalWithDefaultStopNotes(terminals, stops)
+    /**
+     * Adds the stop notes to the terminal notes if the terminal does not have any notes
+     * 1) Get terminals that have guid to search for them in DB
+     * 2) Search for the terminals in DB that have a guid and get the notes
+     * 3) For every terminal sended in the payload:
+     * -> If new terminal (No guid) -> add default notes from stop link to it
+     * -> If not new -> Search for its notes, if it does not have, select the ones from the stop link to it
+     */
+    static async getTerminalWithDefaultStopNotes(terminals, stops, trx)
     {
+        // 1)
+        const terminalsGuids = terminals?.reduce((terminalsGuids, terminal) =>
+        {
+            if (terminal?.guid)
+                terminalsGuids.push(terminal.guid);
+
+            return terminalsGuids;
+        }, []);
+
+        // 2)
+        const terminalsNotesFromDb = await Terminal.query(trx).select('guid', 'notes').whereIn('guid', terminalsGuids);
+
+        // 3)
         return terminals.map(terminal =>
         {
-            const stopLinkToTerminal = stops.find(stop => stop?.terminal === terminal?.index);
 
-            if (stopLinkToTerminal?.notes && !terminal.notes)
-                terminal.notes = stopLinkToTerminal.notes;
+            if (terminal?.guid)
+            {
+                const terminalNotes = terminalsNotesFromDb.find(terminalNotes => terminalNotes.guid === terminal.guid);
+                terminal.notes = terminalNotes?.notes || stops.find(stop => stop?.terminal === terminal?.index)?.notes || '';
+            }
+
+            // New terminal
+            else
+                terminal.notes = stops.find(stop => stop?.terminal === terminal?.index)?.notes || '';
 
             return terminal;
         });
@@ -1579,9 +1604,6 @@ class OrderService
         {
             const jobsWithDeletedItems = await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
 
-            // Add stops default notes to terminals
-            const terminalWithDefaultNotes = OrderService.getTerminalWithDefaultStopNotes(terminals, stops);
-
             // create new order
             const [
                 {
@@ -1606,7 +1628,8 @@ class OrderService
                     clientContact,
                     guid,
                     stops,
-                    terminalWithDefaultNotes
+                    terminals,
+                    trx
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
                 Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
@@ -1912,9 +1935,13 @@ class OrderService
         orderContact,
         orderGuid,
         stops,
-        terminals
+        terminals,
+        trx
     )
     {
+        // Add stops default notes to terminals
+        const terminalWithDefaultNotes = await OrderService.getTerminalWithDefaultStopNotes(terminals, stops, trx);
+
         const orderContacToCheck = orderContact
             ? OrderService.checkContactReference(orderContact, orderGuid)
             : undefined;
@@ -1926,7 +1953,7 @@ class OrderService
 
         // Return new terminals with info checked if needs to be updated or created
         const terminalsToChecked = [];
-        for (const terminal of terminals)
+        for (const terminal of terminalWithDefaultNotes)
             terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal));
 
         const [orderChecked, terminalsChecked, stopsChecked] =
