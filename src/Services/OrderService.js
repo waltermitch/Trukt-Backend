@@ -1614,7 +1614,8 @@ class OrderService
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
                 Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
-                OrderService.getOrderReferrerInvoice(guid, trx)
+                referrer?.guid && await OrderService.getOrderReferrerRebateInvoice(guid, trx),
+                !referrer && referrerRebate ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null
             ]);
 
             // terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
@@ -1846,41 +1847,44 @@ class OrderService
             .modifyGraph('job', (builder) => builder.select('guid'));
     }
 
-    // Excludes invoices that are use for referrer rebate, this is so we don't add lines ment for commodities in rebate invoices later on
     static async getOrderInvoices(orderGuid, trx)
     {
         const allInvoices = await InvoiceBill.query(trx).select('*')
             .whereIn(
                 'guid',
                 Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
-            )
-
-            // Not use invoices that have lines use for referrer rebate -> itemId 7
-            .whereNotIn(
-                'guid',
-                InvoiceLine.query(trx).select('invoiceGuid')
-                    .where('itemId', '7')
-                    .whereIn('invoiceGuid',
-                        Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
-                    )
             );
 
         return InvoiceBill.fetchGraph(allInvoices, '[lines.link]', { transaction: trx });
     }
 
-    static async getOrderReferrerInvoice(orderGuid, trx)
+    /**
+     * Search for oldest order invoice that has a invoice.consignee = order.referrer and that invoice has a line use for rebate.
+     * We filter by invoice.Consignee = to order.Referrer to get only those use for rebate. If order does not has referrer -> cretae new rebate invoice.
+     *
+     * In case the order.referrer is the same as the order.consignee, we may have multiple invoices were the invoice.consignee = order.referrer,
+     * for those cases we also need to check for invoices that have "rebate" lines. If non invoice is return -> cretae new rebate invoice
+     */
+    static async getOrderReferrerRebateInvoice(orderGuid, trx)
     {
-        const referrerInvoice = await InvoiceBill.query(trx).select('*')
-            .whereIn(
-                'guid',
-                InvoiceLine.query(trx).select('invoiceGuid')
-                    .where('itemId', '7')
-                    .whereIn('invoiceGuid',
-                        Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
-                    )
-            );
 
-        const [invoice] = await InvoiceBill.fetchGraph(referrerInvoice, '[lines.link]', { transaction: trx });
+        const referrerInvoice = await InvoiceBill.query(trx).alias('IB').select('IB.guid')
+            .innerJoin('rcgTms. invoiceBillLines as IBL', 'IB.guid', 'IBL.invoiceGuid')
+            .whereIn(
+                'IB.guid',
+                Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
+            )
+            .andWhere('IB.consigneeGuid',
+                Order.query(trx).select('referrerGuid').where('guid', orderGuid)
+            )
+            .andWhere('IBL.itemId', 7)
+            .orderBy('IB.dateCreated')
+            .limit(1);
+
+        if (!referrerInvoice)
+            return {};
+
+        const [invoice] = await InvoiceBill.fetchGraph(referrerInvoice, '[lines]', { transaction: trx });
         return invoice;
     }
 
@@ -2900,7 +2904,7 @@ class OrderService
         });
 
         if (orderInvoiceFromDB.length > 0)
-            orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
+            orderInvoiceFromDB[0].lines.push(...orderInvoiceListToCreate);
 
         if (consignee?.guid && orderInvoiceFromDB?.length)
         {
@@ -2915,9 +2919,8 @@ class OrderService
 
     /**
      * Rules:
-     * 1) If referrer is new -> create invoice and line, if non referrerRebate was provided use default 0.00
-     * 2) If referrer or referrerRebate change -> update invoice consigne for new referrer and update line value
-     * 3) If referrer not provided but referrerRebate is -> throw error
+     * 1) If referrer and referrerInvoice is empty -> create invoice and line, if non referrerRebate was provided use default 0.00
+     * 2) If referrer and referrerInvoice -> Update invoice with new values for invoice.consignee and amoun
      * @param {*} referrer referrer Guid provided in request payload
      * @param {*} referrerRebate amount provided in request payload, this is the invoiceLine amount
      * @param {*} referrerInvoice invoice (If exists) with referrer rebate line
@@ -2953,10 +2956,6 @@ class OrderService
 
             referrerInvoiceToReturn.push(referrerInvoice);
         }
-
-        // Rule 3
-        else if (!referrer && !referrerInvoice && referrerRebateAmount)
-            throw new MissingDataError('referrerRebate price can not be set without referrer');
 
         return referrerInvoiceToReturn;
     }
