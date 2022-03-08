@@ -1542,7 +1542,7 @@ class OrderJobService
     static async checkJobToCancel(jobGuid, trx)
     {
         const jobStatus = [
-            OrderJob.query(trx).alias('OJ').select('OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
+            OrderJob.query(trx).alias('OJ').select('OJ.orderGuid', 'OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
                 .modify('isServiceJob').modify('vendorName'),
             OrderJob.query(trx).alias('job')
                 .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
