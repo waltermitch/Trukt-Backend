@@ -1265,90 +1265,112 @@ class LoadboardService
     {
         const trx = await LoadboardRequest.startTransaction();
 
-        const promiseArray = [];
-
         // finding request to update and attach orderGUID and jobGUID
-        const queryRequest = await LoadboardRequest
-            .query(trx)
-            .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
-            .leftJoinRelated('posting.job')
-            .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
-
-        const jobGuid = queryRequest.jobGuid;
-        const orderGuid = queryRequest.orderGuid;
-        const internalPostGuid = queryRequest.loadboardPostGuid;
-
-        // remove fields that do not exist to update table correctly
-        delete queryRequest.jobGuid;
-        delete queryRequest.orderGuid;
-
-        // updating object for loadboard logic
-        queryRequest.setAccepted();
-        queryRequest.setUpdatedBy(currentUser);
-
-        let offerPayload;
+        let queryRequest;
         try
         {
-            offerPayload = await LoadboardsApi.sendRequest(queryRequest);
+            queryRequest = await LoadboardRequest
+                .query(trx)
+                .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
+                .leftJoinRelated('posting.job')
+                .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
+
+            const promiseArray = [];
+            const jobGuid = queryRequest.jobGuid;
+            const orderGuid = queryRequest.orderGuid;
+            const internalPostGuid = queryRequest.loadboardPostGuid;
+
+            // remove fields that do not exist to update table correctly
+            delete queryRequest.jobGuid;
+            delete queryRequest.orderGuid;
+
+            // updating object for loadboard logic
+            queryRequest.setAccepted();
+            queryRequest.setUpdatedBy(currentUser);
+
+            let offerPayload;
+            try
+            {
+                offerPayload = await LoadboardsApi.sendRequest(queryRequest);
+            }
+            catch (error)
+            {
+                await trx.rollback();
+                telemetry.trackException({
+                    exception: error,
+                    properties:
+                    {
+                        jobGuid: jobGuid,
+                        postGuid: internalPostGuid,
+                        extraAnnotations: {
+                            loadboard: offerPayload.loadboard,
+                            carrier: {
+                                guid: offerPayload.carrier.guid,
+                                name: offerPayload.carrier.name
+                            }
+                        }
+                    }
+                });
+                error.message = 'Failed to accept request';
+                throw error;
+            }
+
+            // create offer in our sysytem
+            const createdOffer = await LoadboardService.createInternalOffer(trx, jobGuid, internalPostGuid, offerPayload.data, currentUser);
+
+            // get all active requests for the current job
+            const activeRequests = await LoadboardRequest.query(trx).leftJoinRelated('posting').where('posting.guid', internalPostGuid).andWhereNot('loadboardRequests.guid', queryRequest.guid).modify('validActive');
+
+            // 'Load is no longer available.'
+            for (const request of activeRequests)
+            {
+                request.setDeclined('Load is no longer available.');
+                request.setUpdatedBy(currentUser);
+                promiseArray.push(request.$query(trx).patchAndFetch());
+            }
+
+            promiseArray.push(queryRequest.$query(trx).update());
+
+            await Promise.all(promiseArray);
+            console.log(createdOffer);
+            await ActivityManagerService.createActivityLog({
+                orderGuid: orderGuid,
+                userGuid: currentUser,
+                jobGuid: jobGuid,
+                activityId: 6,
+                extraAnnotations: {
+                    loadboard: queryRequest.loadboard,
+                    vendorGuid: createdOffer.vendor.guid,
+                    vendorName: createdOffer.vendor.name,
+                    dotNumber: createdOffer.vendor.dotNumber
+                }
+            });
+
+            await trx.commit();
+
+            emitter.emit('load_request_accepted', { jobGuid });
+
+            return createdOffer;
         }
         catch (error)
         {
-            await trx.rollback();
             telemetry.trackException({
                 exception: error,
                 properties:
                 {
-                    jobGuid: jobGuid,
-                    postGuid: internalPostGuid,
+                    jobGuid: queryRequest.jobGuid,
+                    postGuid: queryRequest.loadboardPostGuid,
                     extraAnnotations: {
-                        loadboard: offerPayload.loadboard,
+                        loadboard: queryRequest.loadboard,
                         carrier: {
-                            guid: offerPayload.carrier.guid,
-                            name: offerPayload.carrier.name
+                            guid: queryRequest.extraExternalData.carrierInfo.guid,
+                            name: queryRequest.extraExternalData.carrierInfo.name
                         }
                     }
                 }
             });
-            error.message = 'Failed to accept request';
-            throw error;
+            await trx.rollback();
         }
-
-        // create offer in our sysytem
-        const createdOffer = await LoadboardService.createInternalOffer(trx, jobGuid, internalPostGuid, offerPayload.data, currentUser);
-
-        // get all active requests for the current job
-        const activeRequests = await LoadboardRequest.query(trx).leftJoinRelated('posting').where('posting.guid', internalPostGuid).andWhereNot('loadboardRequests.guid', queryRequest.guid).modify('validActive');
-
-        // 'Load is no longer available.'
-        for (const request of activeRequests)
-        {
-            request.setDeclined('Load is no longer available.');
-            request.setUpdatedBy(currentUser);
-            promiseArray.push(request.$query(trx).patchAndFetch());
-        }
-
-        promiseArray.push(queryRequest.$query(trx).update());
-
-        await Promise.all(promiseArray).catch((error) => { throw error; });
-
-        await ActivityManagerService.createActivityLog({
-            orderGuid: orderGuid,
-            userGuid: currentUser,
-            jobGuid: jobGuid,
-            activityId: 6,
-            extraAnnotations: {
-                loadboard: queryRequest.loadboard,
-                vendorGuid: createdOffer.vendor.guid,
-                vendorName: createdOffer.vendor.name,
-                dotNumber: createdOffer.vendor.dotNumber
-            }
-        });
-
-        await trx.commit();
-
-        emitter.emit('load_request_accepted', { jobGuid });
-
-        return createdOffer;
     }
 
     /**
@@ -1364,18 +1386,16 @@ class LoadboardService
     {
         const promiseArray = [];
 
-        try
+        if (offerPayload.pickup.pickUpEnd < offerPayload.delivery.deliveryStart || offerPayload.delivery.deliveryEnd < offerPayload.pickup.pickUpStart)
         {
-            if (offerPayload.pickup.pickUpEnd < offerPayload.delivery.deliveryStart || offerPayload.delivery.deliveryEnd < offerPayload.pickup.pickUpStart)
-            {
-                throw new Error('Pickup dates should be before delivery date');
-            }
+            throw new Error('Pickup dates should be before delivery date');
+        }
 
-            // get Job with all data
-            const job = await OrderJob
-                .query(trx)
-                .findById(jobGuid)
-                .withGraphFetched(`[
+        // get Job with all data
+        const job = await OrderJob
+            .query(trx)
+            .findById(jobGuid)
+            .withGraphFetched(`[
                 stops(distinct).[primaryContact, terminal], 
                 loadboardPosts(getPosted).requests(validActive),
                 commodities(distinct, isNotDeleted).[vehicle, commType], 
@@ -1385,172 +1405,151 @@ class LoadboardService
                 order.[client, clientContact, dispatcher, invoices.lines(isNotDeleted, transportOnly).item]
             ]`);
 
-            if (!job)
-            {
-                throw new NotFoundError('Job Not Found');
-            }
+        if (!job)
+        {
+            throw new NotFoundError('Job Not Found');
+        }
 
-            // validate job not be be in
-            job.validateJobForDispatch();
+        // validate job not be be in
+        job.validateJobForDispatch();
 
-            // get only first and last stop only
-            job.stops = OrderStop.firstAndLast(job.stops);
-            const bill = job?.bills[0];
-            const firstStop = job.stops[0];
-            const lastStop = job.stops[1];
-            const removePosts = job.loadboardPosts.filter(item => item?.guid !== internalPostGuid);
-            const unPosts = job.loadboardPosts.filter(item => item?.guid === internalPostGuid);
-            const upPostInternalPosting = unPosts[0];
+        // get only first and last stop only
+        job.stops = OrderStop.firstAndLast(job.stops);
+        const bill = job?.bills[0];
+        const firstStop = job.stops[0];
+        const lastStop = job.stops[1];
+        const removePosts = job.loadboardPosts.filter(item => item?.guid !== internalPostGuid);
+        const unPosts = job.loadboardPosts.filter(item => item?.guid === internalPostGuid);
+        const upPostInternalPosting = unPosts[0];
 
-            upPostInternalPosting.setToUnposted();
-            upPostInternalPosting.setUpdatedBy(currentUser);
-            promiseArray.push(upPostInternalPosting.$query(trx).patch());
+        upPostInternalPosting.setToUnposted();
+        upPostInternalPosting.setUpdatedBy(currentUser);
+        promiseArray.push(upPostInternalPosting.$query(trx).patch());
 
-            const carrier = await SFAccount.query(trx).modify('externalIdandDot', offerPayload.carrier.guid, offerPayload.carrier.usdot);
+        const carrier = await SFAccount.query(trx).modify('externalIdandDot', offerPayload.carrier.guid, offerPayload.carrier.usdot);
 
-            // validate carriers
-            if (!carrier)
-            {
-                throw new NotFoundError(`Carrier does not exist in our system. USDOT:${offerPayload.carrier.usdot}; Name:${offerPayload.carrier.name}`);
-            }
-            else if (carrier.blacklist == true || carrier.active == false)
-            {
-                throw new NotAllowedError('Carrier is inactive or blacklisted.');
-            }
+        // validate carriers
+        if (!carrier)
+        {
+            throw new NotFoundError(`Carrier does not exist in our system. USDOT:${offerPayload.carrier.usdot}; Name:${offerPayload.carrier.name}`);
+        }
+        else if (carrier.blacklist == true || carrier.active == false)
+        {
+            throw new NotAllowedError('Carrier is inactive or blacklisted.');
+        }
 
-            let carrierContact;
+        let carrierContact;
 
-            // if driver being assigned through internal
-            if (offerPayload.driver.guid)
-            {
-                carrierContact = await SFContact.query(trx).modify('byId', offerPayload.driver.guid).first();
-            }
-            else
-            {
-                // creating carrier driver
-                carrierContact = SFContact.fromJson({
-                    name: offerPayload.driver.name,
-                    email: offerPayload.driver.email,
-                    phoneNumber: offerPayload.driver.phoneNumber,
-                    accountId: carrier.sfId
-                });
-                carrierContact = await carrierContact.$query(trx).insertAndFetch();
-            }
-
-            // split cost amongst commoditites
-            const lines = BillService.splitCarrierPay(bill, job.commodities, offerPayload.price, currentUser);
-            for (const line of lines)
-                line.transacting(trx);
-
-            promiseArray.push(...lines);
-
-            bill.paymentTermId = offerPayload.paymentTerm;
-            bill.setUpdatedBy(currentUser);
-            promiseArray.push(bill.$query(trx).patch());
-
-            firstStop.setScheduledDates(offerPayload.pickup.type, offerPayload.pickup.pickUpStart, offerPayload.pickup.pickUpEnd);
-            firstStop.setUpdatedBy(currentUser);
-            promiseArray.push(firstStop.$query(trx).patch());
-
-            lastStop.setScheduledDates(offerPayload.delivery.type, offerPayload.delivery.deliveryStart, offerPayload.delivery.deliveryEnd);
-            lastStop.setUpdatedBy(currentUser);
-            promiseArray.push(lastStop.$query(trx).patch());
-
-            // update job status
-            job.setUpdatedBy(currentUser);
-            promiseArray.push(job.$query(trx).patch({
-                status: OrderJob.STATUS.PENDING
-            }));
-
-            // create Offer in our system
-            const dispatch = OrderJobDispatch.fromJson({
-                job: { '#dbRef': jobGuid },
-                loadboardPost: { '#dbRef': internalPostGuid },
-                vendor: { '#dbRef': carrier.guid },
-                vendorAgent: { '#dbRef': carrierContact.guid },
-                externalGuid: offerPayload.externalPostGuid,
-                paymentTermId: offerPayload.paymentTerm,
-                price: offerPayload.price
+        // if driver being assigned through internal
+        if (offerPayload.driver.guid)
+        {
+            carrierContact = await SFContact.query(trx).modify('byId', offerPayload.driver.guid).first();
+        }
+        else
+        {
+            // creating carrier driver
+            carrierContact = SFContact.fromJson({
+                name: offerPayload.driver.name,
+                email: offerPayload.driver.email,
+                phoneNumber: offerPayload.driver.phoneNumber,
+                accountId: carrier.sfId
             });
-            dispatch.setCreatedBy(currentUser);
-            const myDispatch = await OrderJobDispatch.query(trx).insertGraphAndFetch(dispatch, { relate: true });
+            carrierContact = await carrierContact.$query(trx).insertAndFetch();
+        }
 
-            const postArray = [];
+        // split cost amongst commoditites
+        const lines = BillService.splitCarrierPay(bill, job.commodities, offerPayload.price, currentUser);
+        for (const line of lines)
+            line.transacting(trx);
 
-            // unpost all active posts in and update related request
-            for (const post of removePosts)
+        promiseArray.push(...lines);
+
+        bill.paymentTermId = offerPayload.paymentTerm;
+        bill.setUpdatedBy(currentUser);
+        promiseArray.push(bill.$query(trx).patch());
+
+        firstStop.setScheduledDates(offerPayload.pickup.type, offerPayload.pickup.pickUpStart, offerPayload.pickup.pickUpEnd);
+        firstStop.setUpdatedBy(currentUser);
+        promiseArray.push(firstStop.$query(trx).patch());
+
+        lastStop.setScheduledDates(offerPayload.delivery.type, offerPayload.delivery.deliveryStart, offerPayload.delivery.deliveryEnd);
+        lastStop.setUpdatedBy(currentUser);
+        promiseArray.push(lastStop.$query(trx).patch());
+
+        // update job status
+        job.setUpdatedBy(currentUser);
+        promiseArray.push(job.$query(trx).patch({
+            status: OrderJob.STATUS.PENDING
+        }));
+
+        // create Offer in our system
+        const dispatch = OrderJobDispatch.fromJson({
+            job: { '#dbRef': jobGuid },
+            loadboardPost: { '#dbRef': internalPostGuid },
+            vendor: { '#dbRef': carrier.guid },
+            vendorAgent: { '#dbRef': carrierContact.guid },
+            externalGuid: offerPayload.externalPostGuid,
+            paymentTermId: offerPayload.paymentTerm,
+            price: offerPayload.price
+        });
+        dispatch.setCreatedBy(currentUser);
+        const myDispatch = await OrderJobDispatch.query(trx).insertGraphAndFetch(dispatch, { relate: true });
+
+        const postArray = [];
+
+        // unpost all active posts in and update related request
+        for (const post of removePosts)
+        {
+            postArray.push(LoadboardsApi.sendUnPost(post));
+            post.setToUnposted();
+            post.setUpdatedBy(currentUser);
+            promiseArray.push(post.$query(trx).patch());
+            const lbRequest = new LoadboardRequest();
+            lbRequest.setDeclined(LoadboardRequest.DECLINE_REASON.UNPOSTED);
+            promiseArray.push(post.$relatedQuery('requests', trx).for(post).patch(lbRequest));
+        }
+
+        const res = await Promise.allSettled(postArray);
+        for (const r of res)
+        {
+            if (r.status == 'rejected')
             {
-                postArray.push(LoadboardsApi.sendRequest(post));
-                post.setToUnposted();
-                post.setUpdatedBy(currentUser);
-                promiseArray.push(post.$query(trx).patch());
-                const lbRequest = new LoadboardRequest();
-                lbRequest.setDeclined(LoadboardRequest.DECLINE_REASON.UNPOSTED);
-                promiseArray.push(post.$relatedQuery('requests', trx).for(post).patch(lbRequest));
-            }
-
-            const res = await Promise.allSettled(postArray);
-            for (const r of res)
-            {
-                if (r.status == 'rejected')
-                {
-                    telemetry.trackException({
-                        exception: r.reason,
-                        properties:
-                        {
-                            jobGuid: jobGuid,
-                            postGuid: internalPostGuid,
-                            extraAnnotations: {
-                                loadboard: offerPayload.loadboard,
-                                carrier: {
-                                    guid: offerPayload.carrier.guid,
-                                    name: offerPayload.carrier.name
-                                }
+                telemetry.trackException({
+                    exception: r.reason,
+                    properties:
+                    {
+                        jobGuid: jobGuid,
+                        postGuid: internalPostGuid,
+                        extraAnnotations: {
+                            loadboard: offerPayload.loadboard,
+                            carrier: {
+                                guid: offerPayload.carrier.guid,
+                                name: offerPayload.carrier.name
                             }
                         }
-                    });
-                }
-                else if (r.value)
-                {
-                    const post = r.value.data.data;
-                    await ActivityManagerService.createActivityLog({
-                        orderGuid: job.orderGuid,
-                        userGuid: currentUser,
-                        activityId: 3,
-                        jobGuid: jobGuid,
-                        extraAnnotations: {
-                            loadboard: post.loadboard
-                        }
-                    });
-                }
-            }
-
-            // add for every success to say unposted push notification
-            await Promise.all(promiseArray);
-
-            return myDispatch;
-        }
-        catch (error)
-        {
-            telemetry.trackException({
-                exception: error,
-                properties:
-                {
-                    jobGuid: jobGuid,
-                    postGuid: internalPostGuid,
-                    extraAnnotations: {
-                        loadboard: offerPayload.loadboard,
-                        carrier: {
-                            guid: offerPayload.carrier.guid,
-                            name: offerPayload.carrier.name
-                        }
                     }
-                }
-            });
-            await trx.rollback();
+                });
+            }
+            else if (r.value)
+            {
+                const post = r.value.data.data;
+                await ActivityManagerService.createActivityLog({
+                    orderGuid: job.orderGuid,
+                    userGuid: currentUser,
+                    activityId: 3,
+                    jobGuid: jobGuid,
+                    extraAnnotations: {
+                        loadboard: post.loadboard
+                    }
+                });
+            }
         }
-    }
 
+        // add for every success to say unposted push notification
+        await Promise.all(promiseArray);
+
+        return myDispatch;
+    }
 }
 
 module.exports = LoadboardService;
