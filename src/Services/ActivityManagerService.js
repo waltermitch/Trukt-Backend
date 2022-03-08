@@ -161,6 +161,29 @@ class ActivityManagerService
         // if all good return clean payload
         return { status: 200, errors: [], data: {} };
     }
+
+    static async registerDeletedCommodities(orderGuid, jobGuid, commodities, currentUser)
+    {
+        const comPromies = [];
+        for(const com of commodities)
+        {
+            comPromies.push(ActivityManagerService.createActivityLog({
+                orderGuid,
+                userGuid: currentUser,
+                jobGuid,
+                activityId: 33,
+                extraAnnotations: {
+                    guid: com.guid,
+                    vin: com.identifier,
+                    lotNumber: com.lotNumber,
+                    name: com.description || com.vehicle.name
+                }
+            }));
+        }
+
+        const res = await Promise.all(comPromies);
+        console.log(res);
+    }
 }
 
 module.exports = ActivityManagerService;
