@@ -1550,7 +1550,7 @@ class OrderService
 
         try
         {
-            await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
+            const jobsWithDeletedItems = await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
 
             // create new order
             const [
@@ -1687,6 +1687,10 @@ class OrderService
             }
 
             emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: orderUpdated });
+            for(const job of jobsWithDeletedItems)
+            {
+                emitter.emit('commodity_deleted', { orderGuid: guid, jobGuid: job.jobGuid, commodities: job.commodities, currentUser });
+            }
 
             return orderUpdated;
         }
@@ -1741,29 +1745,25 @@ class OrderService
                                     emitter.emit('orderstop_status_update', { stops: modified.stops, currentUser });
                                 }
 
-                                // if any commodities are to be deleted, retrieve them from the database before they get deleted.
-                                // for now this data will be used to write activity logs for each deleted commodity
-                                if(deleted.commodities)
-                                {
-                                    const commodityPromises = Commodity.query().select(
-                                        [
-                                            'guid',
-                                            'description',
-                                            'identifier',
-                                            'lotNumber'
-                                        ]
-                                    ).findByIds(deleted.commodities)
-                                    .withGraphFetched('[vehicle]')
-                                    .modifyGraph('vehicle', builder => builder.select('name'));
-
-                                    jobsWithDeletedItems.push({
-                                        jobGuid: job.guid,
-                                        commodityPromises
-                                    });
-                                }
-
                             });
                             delProms.push(deleteComsProm);
+
+                            const commoditiesForLogs = await Commodity.query().select(
+                                [
+                                    'guid',
+                                    'description',
+                                    'identifier',
+                                    'lotNumber'
+                                ]
+                            ).findByIds(toDelete.commodities)
+                            .withGraphFetched('[vehicle]')
+                            .modifyGraph('vehicle', builder => builder.select('name'));
+                        
+                            jobsWithDeletedItems.push({
+                                jobGuid: job.guid,
+                                commodities: commoditiesForLogs
+                            });
+
                             break;
                         default:
 
@@ -1775,14 +1775,7 @@ class OrderService
 
         delProms && await Promise.all(delProms);
 
-        // we want to make sure the commodities are definitely deleted before we start writing logs saying they
-        // were deleted, so that is why the events for each job are emitted after the transactions have been
-        // successfully committed.
-        for(const job of jobsWithDeletedItems)
-        {
-            const commodities = await job.commodityPromises;
-            emitter.emit('commodity_deleted', { orderGuid, jobGuid: job.jobGuid, commodities, currentUser });
-        }
+        return jobsWithDeletedItems;
     }
 
     static _removeByGuid(someGuid, somelistGuids)
