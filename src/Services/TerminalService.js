@@ -33,7 +33,7 @@ class TerminalService
         return terminal;
     }
 
-    static async search(query = {})
+    static async search({ rc, pg, ...query })
     {
         // remove unwanted keys that null or empty strings
         for (const key in query)
@@ -43,10 +43,10 @@ class TerminalService
         // query will be an object with key being the query word
         // min 1 page, with default page 1 (1st page)
         // objection is 0 index, so is postgress, user input will be starting page index at 1
-        const pg = Math.max(0, query.pg || 0);
+        pg = Math.max(0, pg || 0);
 
         // clamp between 1 and 100 with default value of 10
-        const rc = Math.min(100, Math.max(1, query.rc || 10));
+        rc = Math.min(100, Math.max(1, rc || 10));
 
         const qb = Terminal.query();
         let orderbypriority = [];
@@ -71,7 +71,7 @@ class TerminalService
 
             qb.whereRaw('vector_name @@ to_tsquery(\'english\', ? )', [searchVal]);
         }
-        else
+        else if (Object.keys(query).length == 0)
             orderbypriority.push('name');
 
         // TODO add comments here cause nobody knows what this is
