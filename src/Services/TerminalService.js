@@ -26,12 +26,14 @@ class TerminalService
 {
     static async getById(terminalId)
     {
-        const terminal = await Terminal.query().where('rcgTms.terminals.guid', '=', `${terminalId}`).withGraphJoined('[contacts, primaryContact, alternativeContact]');
+        const terminal = await Terminal.query()
+            .where('rcgTms.terminals.guid', '=', `${terminalId}`)
+            .withGraphJoined('[contacts, primaryContact, alternativeContact]');
 
         return terminal;
     }
 
-    static async search(query)
+    static async search(query = {})
     {
         // remove unwanted keys that null or empty strings
         for (const key in query)
@@ -69,6 +71,8 @@ class TerminalService
 
             qb.whereRaw('vector_name @@ to_tsquery(\'english\', ? )', [searchVal]);
         }
+        else
+            orderbypriority.push('name');
 
         // TODO add comments here cause nobody knows what this is
         for (const keyword in keywordFields)
