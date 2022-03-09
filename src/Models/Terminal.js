@@ -161,19 +161,19 @@ class Terminal extends BaseModel
     {
         const { street1, city, state, zipCode, country } = terminal;
 
-        let address = '';
+        const address = [];
         if (street1)
-            address += `${street1}, `;
+            address.push(street1);
         if (city)
-            address += `${city}, `;
+            address.push(city);
         if (state)
-            address += `${state} `;
+            address.push(state);
         if (zipCode)
-            address += `${zipCode.match(zipCodeNoDashRegex)}`;
+            address.push(zipCode.match(zipCodeNoDashRegex));
         if (country)
-            address += ` ${country}`;
+            address.push(country);
 
-        return address;
+        return address.join(', ');
     }
 
     /**

@@ -14,7 +14,7 @@ class OrderJob extends BaseModel
     static STATUS = {
         NEW: 'new',
         READY: 'ready',
-        IN_PROGRESS: 'in_progress',
+        IN_PROGRESS: 'in progress',
         ON_HOLD: 'on hold',
         POSTED: 'posted',
         PENDING: 'pending',
@@ -937,7 +937,7 @@ class OrderJob extends BaseModel
                 throw new DataConflictError('Please un-dispatch the Order before canceling');
         }
     }
-    
+
 	/**
      * @param {OrderJob} job
      */

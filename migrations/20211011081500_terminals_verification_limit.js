@@ -2,10 +2,6 @@ const SCHEMA_NAME = 'rcg_tms';
 const TABLE_NAME = 'terminals';
 const COLLUMN_NAME = 'resolved_times';
 
-/**
- * To avoid checking addresses that do not exist or may not be verify, we add a limit
- * on how many times we should keep verifying them with arcgis
- */
 exports.up = function (knex)
 {
     return knex.schema.withSchema('rcg_tms')
