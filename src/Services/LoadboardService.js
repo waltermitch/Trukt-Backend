@@ -999,7 +999,7 @@ class LoadboardService
      */
     static async getRequestsbyJobID(jobGuid)
     {
-        const requests = await LoadboardRequest.query().leftJoinRelated('posting').where('posting.jobGuid', jobGuid);
+        const requests = await LoadboardRequest.query().leftJoinRelated('posting').where('posting.jobGuid', jobGuid).orderBy('dateOfferSent', 'desc');
 
         return requests;
     }
@@ -1332,7 +1332,7 @@ class LoadboardService
             promiseArray.push(queryRequest.$query(trx).update());
 
             await Promise.all(promiseArray);
-            console.log(createdOffer);
+
             await ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 userGuid: currentUser,

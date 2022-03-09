@@ -184,6 +184,13 @@ async function queryInvoiceAndBills(orderGuid, jobsGuid)
     const [orderInvoices, jobsBills] = await Promise.all([orderInvoicesGraphPromise, jobsBillsGraphPromise]);
 
     const jobsOrdered = jobsBills.sort(customSort(['job', 'bol']));
+
+    // Order base on the amount of lines. this is to take in acount the referrerRebate invoice
+    orderInvoices.sort((invoice1, invoice2) =>
+    {
+        return invoice1.lines.length > invoice2.lines.length ? -1 : 1;
+    });
+
     for (const invoice of orderInvoices)
         invoice.lines = invoice.lines.sort(customSort(['amount']));
 
@@ -224,7 +231,7 @@ describe('Order creation', () =>
         ] = await Promise.all([
             SFAccount.query().modify('byType', 'client').findOne(builder => builder.whereNotNull('guid')),
             SFAccount.query().modify('byType', 'carrier').findOne(builder => builder.whereNotNull('guid')),
-            User.query().findOne('name', 'ilike', '%'),
+            User.query().findOne('name', 'ilike', '%').where('isDeleted', false),
             SFContact.query().findOne('name', 'ilike', '%')
         ]);
         DB_INFORMATION = {

@@ -1,7 +1,7 @@
 const { MissingDataError, DataConflictError, NotFoundError, ValidationError } = require('../ErrorHandling/Exceptions');
-const { BulkResponse } = require('../ErrorHandling/Responses');
 const ActivityManagerService = require('./ActivityManagerService');
 const OrderJobService = require('../Services/OrderJobService');
+const { BulkResponse } = require('../ErrorHandling/Responses');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
 const OrderStopLink = require('../Models/OrderStopLink');
@@ -18,7 +18,6 @@ const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
 const Commodity = require('../Models/Commodity');
-const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
 const Terminal = require('../Models/Terminal');
@@ -153,6 +152,7 @@ class OrderService
     {
         // TODO split this up so that query is faster and also doesnt give 500 error.
         let order = await Order.query().skipUndefined().findById(orderGuid);
+
         if (order)
         {
             const trx = await Order.startTransaction();
@@ -245,7 +245,8 @@ class OrderService
         {
             // client is required and always should be checked.
             // vehicles are not checked and are created or found
-            const dataCheck = { client: true, vehicles: false, terminals: false };
+            // referrerRebate should be check in case it is pass but no referrer is send
+            const dataCheck = { client: true, vehicles: false, terminals: false, referrerRebate: true };
 
             // order object will be used to link OrderStopLink from the job
             const order = Order.fromJson({
@@ -284,6 +285,7 @@ class OrderService
 
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
             orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
+            orderInfoPromises.push(dataCheck.referrerRebate = orderObj?.referrerRebate && !orderObj?.referrer?.guid ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null);
 
             for (const job of orderObj.jobs)
             {
@@ -629,8 +631,10 @@ class OrderService
                 orderJobs.push(jobData);
             }
 
+            const referrerInvoice = OrderService.createReferrerRebateInvoice(orderObj?.referrerRebate, referrer, currentUser);
+
             order.jobs = orderJobs;
-            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
+            order.invoices = [OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee), ...referrerInvoice];
 
             const orderCreated = await Order.query(trx)
                 .skipUndefined()
@@ -644,6 +648,22 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser)
+    {
+        const referrerInvoice = [];
+        if (referrer)
+        {
+            const referrerRebateInvoiceAmount = referrerRebateAmount || '0.00';
+
+            // This id is static, it is always 7 for "rebate" invoices
+            const referrerRebateItemId = 7;
+            const referrerRebateLine = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, referrerRebateItemId, currentUser, null);
+
+            referrerInvoice.push(OrderService.createInvoiceBillGraph([referrerRebateLine], true, currentUser, referrer));
+        }
+        return referrerInvoice;
     }
 
     static createInvoiceLineGraph(amount, itemId, currentUser, commodity)
@@ -1534,12 +1554,13 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
+            referrerRebate,
             ...orderData
         } = orderInput;
 
         try
         {
-            await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
+            const jobsWithDeletedItems = await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
 
             // create new order
             const [
@@ -1553,7 +1574,8 @@ class OrderService
                 orderInvoices,
                 referencesChecked,
                 oldStopData,
-                oldOrder
+                oldOrder,
+                referrerInvoice
             ] = await Promise.all([
                 OrderService.buildCache(),
 
@@ -1567,7 +1589,9 @@ class OrderService
                     terminals
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
-                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload)
+                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
+                referrer?.guid && await OrderService.getOrderReferrerRebateInvoice(guid, trx),
+                !referrer && referrerRebate ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null
             ]);
 
             // terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
@@ -1632,6 +1656,7 @@ class OrderService
                 consignee,
                 currentUser
             );
+            const referrerInvoiceToUpdate = OrderService.updateReferrerRebateInvoiceGraph(referrer, referrerRebate, referrerInvoice, currentUser);
 
             const contacts = OrderService.getContactReferences({
                 referrer: { guid: referrer?.guid || referrer },
@@ -1644,7 +1669,7 @@ class OrderService
                 guid,
                 instructions,
                 stops: stopsGraphsToUpdate,
-                invoices: orderInvoicesToUpdate,
+                invoices: [...orderInvoicesToUpdate, ...referrerInvoiceToUpdate],
                 jobs: jobsToUpdateWithExpenses,
                 ...orderData,
                 ...contacts
@@ -1676,6 +1701,10 @@ class OrderService
             }
 
             emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: orderUpdated });
+            for(const job of jobsWithDeletedItems)
+            {
+                emitter.emit('commodity_deleted', { orderGuid: guid, jobGuid: job.jobGuid, commodities: job.commodities, currentUser });
+            }
 
             return orderUpdated;
         }
@@ -1689,6 +1718,7 @@ class OrderService
     static async handleDeletes(orderGuid, jobs, commodities, stops, trx, currentUser)
     {
         const delProms = [];
+        const jobsWithDeletedItems = [];
         for (const job of jobs || [])
         {
             const toDelete = job.delete;
@@ -1731,6 +1761,23 @@ class OrderService
 
                             });
                             delProms.push(deleteComsProm);
+
+                            const commoditiesForLogs = await Commodity.query().select(
+                                [
+                                    'guid',
+                                    'description',
+                                    'identifier',
+                                    'lotNumber'
+                                ]
+                            ).findByIds(toDelete.commodities)
+                            .withGraphFetched('[vehicle]')
+                            .modifyGraph('vehicle', builder => builder.select('name'));
+                        
+                            jobsWithDeletedItems.push({
+                                jobGuid: job.guid,
+                                commodities: commoditiesForLogs
+                            });
+
                             break;
                         default:
 
@@ -1741,6 +1788,8 @@ class OrderService
         }
 
         delProms && await Promise.all(delProms);
+
+        return jobsWithDeletedItems;
     }
 
     static _removeByGuid(someGuid, somelistGuids)
@@ -1809,6 +1858,36 @@ class OrderService
         return InvoiceBill.fetchGraph(allInvoices, '[lines.link]', { transaction: trx });
     }
 
+    /**
+     * Search for oldest order invoice that has a invoice.consignee = order.referrer and that invoice has a line use for rebate.
+     * We filter by invoice.Consignee = to order.Referrer to get only those use for rebate. If order does not has referrer -> cretae new rebate invoice.
+     *
+     * In case the order.referrer is the same as the order.consignee, we may have multiple invoices were the invoice.consignee = order.referrer,
+     * for those cases we also need to check for invoices that have "rebate" lines. If non invoice is return -> cretae new rebate invoice
+     */
+    static async getOrderReferrerRebateInvoice(orderGuid, trx)
+    {
+
+        const referrerInvoice = await InvoiceBill.query(trx).alias('IB').select('IB.guid')
+            .innerJoin('rcgTms. invoiceBillLines as IBL', 'IB.guid', 'IBL.invoiceGuid')
+            .whereIn(
+                'IB.guid',
+                Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
+            )
+            .andWhere('IB.consigneeGuid',
+                Order.query(trx).select('referrerGuid').where('guid', orderGuid)
+            )
+            .andWhere('IBL.itemId', 7)
+            .orderBy('IB.dateCreated')
+            .limit(1);
+
+        if (!referrerInvoice)
+            return {};
+
+        const [invoice] = await InvoiceBill.fetchGraph(referrerInvoice, '[lines]', { transaction: trx });
+        return invoice;
+    }
+
     static async validateReferencesBeforeUpdate(
         orderContact,
         orderGuid,
@@ -1874,10 +1953,10 @@ class OrderService
      * Checks the action to performed for a terminal.
      * Rules:
      * 0) If terminal GUID is provided, we check if the information is the same as the DB, this is to avoid
-     *    calling Arcgis if the terminal has the same information.
+     *    calling maps api if the terminal has the same information.
      * 1) updateExtraFields: The B.I. is the same and only the E.I. changed, so we only update those fields
      *    of that existing Terminal
-     * 2) findOrCreate: The B.I. changed, so we have to call Arcgis and then check in the DB if that record
+     * 2) findOrCreate: The B.I. changed, so we have to call maps api and then check in the DB if that record
      *    exists or we create a new one.
      * 3) nothingToDo: The terminal is the same and there is no need to do anything
      * @param {*} terminalInput
@@ -2086,9 +2165,9 @@ class OrderService
     /**
      * Base information (B.I.): Fields use to create the address; Street1, city, state, zipCode and Country
      * Extra information (E.I.): Fields that are not use to create the address; Street2 and Name
-     * findOrCreate: We call Arcgis to get Lat and Long -> We look in DB for that key, if it exists
+     * findOrCreate: We call maps api to get Lat and Long -> We look in DB for that key, if it exists
      *      we pull that record and update the E.I., if not, we create a new record.
-     *      In case Arcgis does not return a Lat and Long, we save the terminal without Lat and Long as
+     *      In case maps api does not return a Lat and Long, we save the terminal without Lat and Long as
      *      an Unresolved Terminal.
      * @param {*} terminalInput
      * @param {*} currentUser
@@ -2111,14 +2190,14 @@ class OrderService
                 return { terminal: terminalUpdated, index };
             case 'findOrCreate':
                 let terminalCreated = {};
-                const addressStr = Terminal.createStringAddress(terminalData);
 
-                const arcgisTerminal = ArcgisClient.isSetuped() &&
-                    (await ArcgisClient.findGeocode(addressStr));
+                const stringAddress = Terminal.createStringAddress(terminalData);
 
-                if (arcgisTerminal && ArcgisClient.isAddressFound(arcgisTerminal))
+                const candidate = await TerminalService.geocodeAddress(stringAddress);
+
+                if (candidate && candidate.geo?.length > 0)
                 {
-                    const { latitude, longitude } = ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
+                    const [longitude, latitude] = candidate.geo;
                     const terminalToUpdate = await Terminal.query(trx).findOne({
                         latitude,
                         longitude
@@ -2825,7 +2904,7 @@ class OrderService
         });
 
         if (orderInvoiceFromDB.length > 0)
-            orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
+            orderInvoiceFromDB[0].lines.push(...orderInvoiceListToCreate);
 
         if (consignee?.guid && orderInvoiceFromDB?.length)
         {
@@ -2836,6 +2915,49 @@ class OrderService
         }
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
+    }
+
+    /**
+     * Rules:
+     * 1) If referrer and referrerInvoice is empty -> create invoice and line, if non referrerRebate was provided use default 0.00
+     * 2) If referrer and referrerInvoice -> Update invoice with new values for invoice.consignee and amoun
+     * @param {*} referrer referrer Guid provided in request payload
+     * @param {*} referrerRebate amount provided in request payload, this is the invoiceLine amount
+     * @param {*} referrerInvoice invoice (If exists) with referrer rebate line
+     * @returns {
+     *  referrerInvoice: Invoice with the referrer line. If no rule apply, return an empty array so nothing is updated
+     * }
+     */
+    static updateReferrerRebateInvoiceGraph(referrer, referrerRebateAmount, referrerInvoice, currentUser)
+    {
+        const referrerInvoiceToReturn = [];
+
+        // Rule 1
+        if (referrer?.guid && !referrerInvoice)
+        {
+            const [referrerInvoiceToCreate] = OrderService.createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser);
+            referrerInvoiceToReturn.push(referrerInvoiceToCreate);
+        }
+
+        // Rule 2
+        else if (referrerInvoice && (referrer?.guid || referrerRebateAmount))
+        {
+            if (referrer?.guid)
+            {
+                referrerInvoice.consigneeGuid = referrer.guid;
+                referrerInvoice.setUpdatedBy(currentUser);
+            }
+
+            if (referrerRebateAmount)
+            {
+                referrerInvoice.lines[0].amount = referrerRebateAmount;
+                referrerInvoice.lines[0].setUpdatedBy(currentUser);
+            }
+
+            referrerInvoiceToReturn.push(referrerInvoice);
+        }
+
+        return referrerInvoiceToReturn;
     }
 
     /**
