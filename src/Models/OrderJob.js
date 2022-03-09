@@ -689,6 +689,15 @@ class OrderJob extends BaseModel
             queryBuilder.select('V.name as vendorName')
                 .leftJoin('salesforce.accounts as V', 'OJ.vendorGuid', 'V.guid');
 
+        },
+        canServiceJobMarkAsDeleted: (queryBuilder) =>
+        {
+            queryBuilder.select(raw(`bool_and(
+                vendor_guid is null
+                and (is_deleted = false and is_canceled = false and is_complete = false)
+                and date_completed is null
+            ) as canbemarkasdeleted
+            `));
         }
     };
 
@@ -933,6 +942,30 @@ class OrderJob extends BaseModel
                 throw new DataConflictError('This Order is deleted and can not be canceled.');
             if (this.jobIsDispatched)
                 throw new DataConflictError('Please un-dispatch the Order before canceling');
+        }
+    }
+
+    /**
+     * Use OrderJob modifier "isServiceJob" to get the property "isservicejob".
+     * Use OrderJob modifier "canServiceJobMarkAsDeleted" to get the property "canServiceJobMarkAsDeleted"
+     * Use OrderJob modifier "vendorName" to get the property "vendorName"
+     */
+    validateJobForDeletion()
+    {
+        // Validation for service jobs
+        if (this.isservicejob)
+        {
+            if (this.vendorGuid)
+                throw new DataConflictError(`Please un-dispatch the vendor '${this.vendorName}' before deleting the job`);
+            if (!this.canServiceJobMarkAsDeleted)
+                throw new DataConflictError(`Cannot delete job because it is '${this.status}'`);
+        }
+
+        // Validation for transport jobs
+        else
+        {
+            if (this.jobIsDispatched)
+                throw new DataConflictError('Please un-dispatch the Order before deleting');
         }
     }
 }
