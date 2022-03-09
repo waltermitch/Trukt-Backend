@@ -72,6 +72,14 @@ class Commodity extends BaseModel
                     from: 'rcgTms.commodities.vehicleId',
                     to: 'rcgTms.vehicles.id'
                 }
+            },
+            invoiceLines: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./InvoiceLine'),
+                join: {
+                    from: 'rcgTms.commodities.guid',
+                    to: 'rcgTms.invoiceBillLines.commodityGuid'
+                }
             }
         };
 

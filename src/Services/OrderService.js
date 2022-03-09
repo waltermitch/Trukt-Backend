@@ -1560,7 +1560,7 @@ class OrderService
 
         try
         {
-            await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
+            const jobsWithDeletedItems = await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
 
             // create new order
             const [
@@ -1701,6 +1701,10 @@ class OrderService
             }
 
             emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: orderUpdated });
+            for(const job of jobsWithDeletedItems)
+            {
+                emitter.emit('commodity_deleted', { orderGuid: guid, jobGuid: job.jobGuid, commodities: job.commodities, currentUser });
+            }
 
             return orderUpdated;
         }
@@ -1714,6 +1718,7 @@ class OrderService
     static async handleDeletes(orderGuid, jobs, commodities, stops, trx, currentUser)
     {
         const delProms = [];
+        const jobsWithDeletedItems = [];
         for (const job of jobs || [])
         {
             const toDelete = job.delete;
@@ -1756,6 +1761,23 @@ class OrderService
 
                             });
                             delProms.push(deleteComsProm);
+
+                            const commoditiesForLogs = await Commodity.query().select(
+                                [
+                                    'guid',
+                                    'description',
+                                    'identifier',
+                                    'lotNumber'
+                                ]
+                            ).findByIds(toDelete.commodities)
+                            .withGraphFetched('[vehicle]')
+                            .modifyGraph('vehicle', builder => builder.select('name'));
+                        
+                            jobsWithDeletedItems.push({
+                                jobGuid: job.guid,
+                                commodities: commoditiesForLogs
+                            });
+
                             break;
                         default:
 
@@ -1766,6 +1788,8 @@ class OrderService
         }
 
         delProms && await Promise.all(delProms);
+
+        return jobsWithDeletedItems;
     }
 
     static _removeByGuid(someGuid, somelistGuids)
