@@ -281,7 +281,9 @@ class OrderService
             orderInfoPromises.push(dataCheck.dispatcher = isUseful(orderObj.dispatcher) ? User.query(trx).findById(orderObj.dispatcher.guid) : null);
             orderInfoPromises.push(dataCheck.referrer = isUseful(orderObj.referrer) ? SFAccount.query(trx).findById(orderObj.referrer.guid) : null);
             orderInfoPromises.push(dataCheck.salesperson = isUseful(orderObj.salesperson) ? SFAccount.query(trx).findById(orderObj.salesperson.guid) : null);
-            orderInfoPromises.push(Promise.all(orderObj.terminals.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender }))));
+            orderInfoPromises.push(OrderService.getTerminalWithDefaultStopNotes(orderObj.terminals, orderObj.stops).then(async terminalsWithNotes =>
+                await Promise.all(terminalsWithNotes.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender })))
+            ));
 
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
             orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
@@ -664,6 +666,46 @@ class OrderService
             referrerInvoice.push(OrderService.createInvoiceBillGraph([referrerRebateLine], true, currentUser, referrer));
         }
         return referrerInvoice;
+    }
+
+    /**
+     * Adds the stop notes to the terminal notes if the terminal does not have any notes
+     * 1) Get terminals that have guid to search for them in DB
+     * 2) Search for the terminals in DB that have a guid and get the notes
+     * 3) For every terminal sended in the payload:
+     * -> If new terminal (No guid) -> add default notes from stop link to it
+     * -> If not new -> Search for its notes, if it does not have, select the ones from the stop link to it
+     */
+    static async getTerminalWithDefaultStopNotes(terminals, stops, trx)
+    {
+        // 1)
+        const terminalsGuids = terminals?.reduce((terminalsGuids, terminal) =>
+        {
+            if (terminal?.guid)
+                terminalsGuids.push(terminal.guid);
+
+            return terminalsGuids;
+        }, []);
+
+        // 2)
+        const terminalsNotesFromDb = await Terminal.query(trx).select('guid', 'notes').whereIn('guid', terminalsGuids);
+
+        // 3)
+        return terminals.map(terminal =>
+        {
+
+            if (terminal?.guid)
+            {
+                const terminalNotes = terminalsNotesFromDb.find(terminalNotes => terminalNotes.guid === terminal.guid);
+                terminal.notes = terminalNotes?.notes || stops.find(stop => stop?.terminal === terminal?.index)?.notes || '';
+            }
+
+            // New terminal
+            else
+                terminal.notes = stops.find(stop => stop?.terminal === terminal?.index)?.notes || '';
+
+            return terminal;
+        });
     }
 
     static createInvoiceLineGraph(amount, itemId, currentUser, commodity)
@@ -1586,7 +1628,8 @@ class OrderService
                     clientContact,
                     guid,
                     stops,
-                    terminals
+                    terminals,
+                    trx
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
                 Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
@@ -1701,7 +1744,7 @@ class OrderService
             }
 
             emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: orderUpdated });
-            for(const job of jobsWithDeletedItems)
+            for (const job of jobsWithDeletedItems)
             {
                 emitter.emit('commodity_deleted', { orderGuid: guid, jobGuid: job.jobGuid, commodities: job.commodities, currentUser });
             }
@@ -1770,9 +1813,9 @@ class OrderService
                                     'lotNumber'
                                 ]
                             ).findByIds(toDelete.commodities)
-                            .withGraphFetched('[vehicle]')
-                            .modifyGraph('vehicle', builder => builder.select('name'));
-                        
+                                .withGraphFetched('[vehicle]')
+                                .modifyGraph('vehicle', builder => builder.select('name'));
+
                             jobsWithDeletedItems.push({
                                 jobGuid: job.guid,
                                 commodities: commoditiesForLogs
@@ -1892,9 +1935,13 @@ class OrderService
         orderContact,
         orderGuid,
         stops,
-        terminals
+        terminals,
+        trx
     )
     {
+        // Add stops default notes to terminals
+        const terminalWithDefaultNotes = await OrderService.getTerminalWithDefaultStopNotes(terminals, stops, trx);
+
         const orderContacToCheck = orderContact
             ? OrderService.checkContactReference(orderContact, orderGuid)
             : undefined;
@@ -1906,7 +1953,7 @@ class OrderService
 
         // Return new terminals with info checked if needs to be updated or created
         const terminalsToChecked = [];
-        for (const terminal of terminals)
+        for (const terminal of terminalWithDefaultNotes)
             terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal));
 
         const [orderChecked, terminalsChecked, stopsChecked] =

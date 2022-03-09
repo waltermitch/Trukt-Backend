@@ -141,7 +141,12 @@ class Terminal extends BaseModel
 
     static hasTerminalsSameExtraInformation(terminal1, terminal2)
     {
-        const exytraInfoKeys = ['name', 'street2', 'locationType'];
+        const exytraInfoKeys = [
+            'name',
+            'street2',
+            'locationType',
+            'notes'
+        ];
 
         return exytraInfoKeys.every(key =>
         {
