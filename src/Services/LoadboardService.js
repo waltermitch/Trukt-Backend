@@ -999,7 +999,7 @@ class LoadboardService
      */
     static async getRequestsbyJobID(jobGuid)
     {
-        const requests = await LoadboardRequest.query().leftJoinRelated('posting').where('posting.jobGuid', jobGuid);
+        const requests = await LoadboardRequest.query().leftJoinRelated('posting').where('posting.jobGuid', jobGuid).orderBy('dateOfferSent', 'desc');
 
         return requests;
     }
