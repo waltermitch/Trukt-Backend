@@ -1360,6 +1360,7 @@ class LoadboardService
                 {
                     jobGuid: queryRequest.jobGuid,
                     postGuid: queryRequest.loadboardPostGuid,
+                    requestGuid: requestGuid,
                     extraAnnotations: {
                         loadboard: queryRequest.loadboard,
                         carrier: {
