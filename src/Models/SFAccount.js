@@ -1,5 +1,6 @@
 const BaseModel = require('./BaseModel');
 const { raw } = require('objection');
+const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
 
 class SFAccount extends BaseModel
 {
@@ -195,6 +196,19 @@ class SFAccount extends BaseModel
         return this.ediClient === true;
     }
 
+    static validateAccountForServiceJob(account)
+    {
+        const errors = [];
+
+        if (!account)
+            errors.push(new NotFoundError('Vendor does not exist'));
+        if (account.blackList)
+            errors.push(new DataConflictError('Vendor is blacklisted.'));
+        if (account?.rectype?.name?.toLowerCase() !== 'vendor')
+            errors.push(new DataConflictError('Provided vendor is not a valid vendor. Please contact support'));
+
+        return errors;
+    }
 }
 
 module.exports = SFAccount;

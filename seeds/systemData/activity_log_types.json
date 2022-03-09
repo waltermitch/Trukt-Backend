@@ -194,6 +194,12 @@
             "category": "job",
             "name": "Job Rolled Back To Pick Up",
             "order_filter_label": "Job Rolled Back To Pick Up On"
+        },
+        {
+            "id": 33,
+            "category": "serviceJob",
+            "name": "Set To In Progress",
+            "order_filter_label": "Set To In Progress"
         }
     ]
 }

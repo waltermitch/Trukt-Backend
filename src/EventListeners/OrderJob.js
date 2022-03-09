@@ -426,4 +426,30 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
     });
 });
 
+listener.on('orderjob_service_dispatched', ({ jobGuid, dispatchGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        try
+        {
+            const currentJob = await OrderJobService.getJobData(jobGuid);
+            const proms = await Promise.allSettled([
+                PubSubService.jobUpdated(jobGuid, currentJob),
+                ActivityManagerService.createActivityLog({
+                    orderGuid: currentJob.orderGuid,
+                    jobGuid,
+                    userGuid: currentUser,
+                    activityId: 33
+                })
+            ]);
+
+            logEventErrors(proms, 'orderjob_service_dispatched');
+        }
+        catch (error)
+        {
+            logEventErrors(error, 'orderjob_service_dispatched');
+        }
+    });
+});
+
 module.exports = listener;

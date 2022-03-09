@@ -3,6 +3,10 @@ const BaseModel = require('./BaseModel');
 
 class SFContact extends BaseModel
 {
+    static TYPES = {
+        ACCOUNT_CONTACT: 'Account Contact'
+    };
+
     static get tableName()
     {
         return 'salesforce.contacts';

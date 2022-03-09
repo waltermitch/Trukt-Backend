@@ -912,7 +912,7 @@ class OrderJob extends BaseModel
         if (!job)
             errors.push(new NotFoundError('Service job not found.'));
         if (!job.dispatcherGuid)
-        errors.push(new MissingDataError('Please assign a dispatcher to this job first.'));
+            errors.push(new MissingDataError('Please assign a dispatcher to this job first.'));
         if (job.typeId === 1)
             errors.push(new DataConflictError('Cannot assign a vendor to this job because it is a transport job.'));
         if (job.isTransport)
