@@ -1317,7 +1317,11 @@ class LoadboardService
         const createdOffer = await LoadboardService.createInternalOffer(trx, jobGuid, internalPostGuid, offerPayload.data, currentUser);
 
         // get all active requests for the current job
-        const activeRequests = await LoadboardRequest.query(trx).leftJoinRelated('posting').where('posting.guid', internalPostGuid).andWhereNot('loadboardRequests.guid', queryRequest.guid).modify('validActive');
+        const activeRequests = await LoadboardRequest.query(trx)
+            .leftJoinRelated('posting')
+            .where('posting.guid', internalPostGuid)
+            .andWhereNot('loadboardRequests.guid', queryRequest.guid)
+            .modify('validActive');
 
         // 'Load is no longer available.'
         for (const request of activeRequests)
@@ -1472,7 +1476,9 @@ class LoadboardService
                 paymentTermId: offerPayload.paymentTerm,
                 price: offerPayload.price
             });
+
             dispatch.setCreatedBy(currentUser);
+
             const myDispatch = await OrderJobDispatch.query(trx).insertGraphAndFetch(dispatch, { relate: true });
 
             const postArray = [];

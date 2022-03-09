@@ -1,7 +1,7 @@
 const { MissingDataError, DataConflictError, NotFoundError, ValidationError } = require('../ErrorHandling/Exceptions');
-const { BulkResponse } = require('../ErrorHandling/Responses');
 const ActivityManagerService = require('./ActivityManagerService');
 const OrderJobService = require('../Services/OrderJobService');
+const { BulkResponse } = require('../ErrorHandling/Responses');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
 const OrderStopLink = require('../Models/OrderStopLink');
@@ -18,7 +18,6 @@ const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
 const Commodity = require('../Models/Commodity');
-const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
 const Terminal = require('../Models/Terminal');
@@ -153,6 +152,7 @@ class OrderService
     {
         // TODO split this up so that query is faster and also doesnt give 500 error.
         let order = await Order.query().skipUndefined().findById(orderGuid);
+
         if (order)
         {
             const trx = await Order.startTransaction();
@@ -1953,10 +1953,10 @@ class OrderService
      * Checks the action to performed for a terminal.
      * Rules:
      * 0) If terminal GUID is provided, we check if the information is the same as the DB, this is to avoid
-     *    calling Arcgis if the terminal has the same information.
+     *    calling maps api if the terminal has the same information.
      * 1) updateExtraFields: The B.I. is the same and only the E.I. changed, so we only update those fields
      *    of that existing Terminal
-     * 2) findOrCreate: The B.I. changed, so we have to call Arcgis and then check in the DB if that record
+     * 2) findOrCreate: The B.I. changed, so we have to call maps api and then check in the DB if that record
      *    exists or we create a new one.
      * 3) nothingToDo: The terminal is the same and there is no need to do anything
      * @param {*} terminalInput
@@ -2165,9 +2165,9 @@ class OrderService
     /**
      * Base information (B.I.): Fields use to create the address; Street1, city, state, zipCode and Country
      * Extra information (E.I.): Fields that are not use to create the address; Street2 and Name
-     * findOrCreate: We call Arcgis to get Lat and Long -> We look in DB for that key, if it exists
+     * findOrCreate: We call maps api to get Lat and Long -> We look in DB for that key, if it exists
      *      we pull that record and update the E.I., if not, we create a new record.
-     *      In case Arcgis does not return a Lat and Long, we save the terminal without Lat and Long as
+     *      In case maps api does not return a Lat and Long, we save the terminal without Lat and Long as
      *      an Unresolved Terminal.
      * @param {*} terminalInput
      * @param {*} currentUser
@@ -2190,14 +2190,14 @@ class OrderService
                 return { terminal: terminalUpdated, index };
             case 'findOrCreate':
                 let terminalCreated = {};
-                const addressStr = Terminal.createStringAddress(terminalData);
 
-                const arcgisTerminal = ArcgisClient.isSetuped() &&
-                    (await ArcgisClient.findGeocode(addressStr));
+                const stringAddress = Terminal.createStringAddress(terminalData);
 
-                if (arcgisTerminal && ArcgisClient.isAddressFound(arcgisTerminal))
+                const candidate = await TerminalService.geocodeAddress(stringAddress);
+
+                if (candidate && candidate.geo?.length > 0)
                 {
-                    const { latitude, longitude } = ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
+                    const [longitude, latitude] = candidate.geo;
                     const terminalToUpdate = await Terminal.query(trx).findOne({
                         latitude,
                         longitude
