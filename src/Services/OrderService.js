@@ -30,25 +30,15 @@ const User = require('../Models/User');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const { v4: uuid } = require('uuid');
-const axios = require('axios');
-const https = require('https');
 const R = require('ramda');
 const EDI990Payload = require('../EDI/Payload/EDI990Payload');
 const EDIApi = require('../EDI/EDIApi');
-
-// this is the apora that will hold the falling down requirments above.
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
 const SYSTEM_USER = process.env.SYSTEM_USER;
 
 let dateFilterComparisonTypes;
-
-const logicAppInstance = axios.create({
-    baseURL: process.env.AZURE_LOGICAPP_BASEURL,
-    httpsAgent: new https.Agent({ keepAlive: true }),
-    headers: { 'Content-Type': 'application/json' }
-});
 
 class OrderService
 {
