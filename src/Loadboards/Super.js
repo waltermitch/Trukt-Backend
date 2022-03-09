@@ -555,12 +555,9 @@ class Super extends Loadboard
         const allPromises = [];
         try
         {
-            const job = OrderJob.fromJson({
-                dateStarted: null,
-                status: OrderJob.STATUS.READY
-            });
-            job.removeVendor();
-            job.setUpdatedBy(process.env.SYSTEM_USER);
+            const job = OrderJob.fromJson();
+            job.setToUndispatched();
+            job.setUpdatedBy(SYSTEM_USER);
             allPromises.push(OrderJob.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
@@ -662,19 +659,16 @@ class Super extends Loadboard
                 objectionDispatch.setUpdatedBy(SYSTEM_USER);
 
                 queries.push(OrderStop.query(trx)
-                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: process.env.SYSTEM_USER })
+                    .patch({ dateScheduledStart: null, dateScheduledEnd: null, dateScheduledType: null, updatedByGuid: SYSTEM_USER })
                     .whereIn('guid',
                         OrderStopLink.query().select('stopGuid')
                             .where({ 'jobGuid': objectionDispatch.jobGuid })
                             .distinctOn('stopGuid')
                     ));
 
-                const job = OrderJob.fromJson({
-                    dateStarted: null,
-                    status: OrderJob.STATUS.DECLINED
-                });
-                job.removeVendor();
-                job.setUpdatedBy(process.env.SYSTEM_USER);
+                const job = OrderJob.fromJson();
+                job.setToDeclined();
+                job.setUpdatedBy(SYSTEM_USER);
 
                 queries.push(OrderJob.query(trx).patch(job).findById(objectionDispatch.jobGuid));
 

@@ -314,7 +314,7 @@ class ShipCars extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                const job = await OrderJob.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
                 for (const comPromise of commodityPromises)
                 {
@@ -322,7 +322,7 @@ class ShipCars extends Loadboard
                 }
                 allPromises.push(...commodityPromises);
             }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+            objectionPost.setUpdatedBy(SYSTEM_USER);
 
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
             await Promise.all(allPromises);
@@ -419,13 +419,8 @@ class ShipCars extends Loadboard
         const allPromises = [];
         try
         {
-            const job = OrderJob.fromJson({
-                vendorGuid: null,
-                vendorContactGuid: null,
-                vendorAgentGuid: null,
-                dateStarted: null,
-                status: 'ready'
-            });
+            const job = OrderJob.fromJson();
+            job.setToUndispatched();
             job.setUpdatedBy(SYSTEM_USER);
 
             allPromises.push(OrderJob.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
@@ -543,12 +538,9 @@ class ShipCars extends Loadboard
                 allPromises.push(OrderJobDispatch.query(trx).patch(objectionDispatch).findById(dispatch.guid));
 
                 // 2. Remove vendor fields from the job
-                const job = OrderJob.fromJson({
-                    dateStarted: null,
-                    status: OrderJob.STATUS.DECLINED
-                });
-                job.removeVendor();
-                job.setUpdatedBy(process.env.SYSTEM_USER);
+                const job = OrderJob.fromJson();
+                job.setToDeclined();
+                job.setUpdatedBy(SYSTEM_USER);
 
                 allPromises.push(OrderJob.query(trx).patch(job).findById(objectionDispatch.jobGuid));
 
@@ -556,7 +548,7 @@ class ShipCars extends Loadboard
                 // load that has been created
                 const objectionPost = LoadboardPost.fromJson();
                 objectionPost.setToCreated(response.id);
-                objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+                objectionPost.setUpdatedBy(SYSTEM_USER);
                 allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionDispatch.loadboardPostGuid));
 
                 // 4. update the vehicle ship car ids
