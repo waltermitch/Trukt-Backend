@@ -1415,21 +1415,7 @@ class OrderJobService
 
         try
         {
-            // getting job and verify if job is dispatched
-            const jobStatus = [
-                OrderJob.query(trx)
-                    .select('orderGuid').findOne('guid', jobGuid),
-                OrderJob.query(trx).alias('job')
-                    .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
-            ];
-
-            const [job, jobIsDispatched] = await Promise.all(jobStatus);
-
-            if (!job)
-                throw new NotFoundError('Job does not exist');
-
-            if (job && jobIsDispatched)
-                throw new DataConflictError('Please un-dispatch the Order before deleting');
+            const job = await OrderJobService.checkJobToDelete(jobGuid, trx);
 
             // updating postings to be deleted
             await LoadboardService.deletePostings(jobGuid, currentUser);
@@ -1931,6 +1917,28 @@ class OrderJobService
         `))
             .with('deliveriesGroupByStop', deliveriesGroupByStop)
             .innerJoin('deliveriesGroupByStop', 'deliveriesGroupByStop.guid', 'OS2.guid');
+    }
+
+    static async checkJobToDelete(jobGuid, trx)
+    {
+        const jobStatus = [
+            OrderJob.query(trx).alias('OJ').select('OJ.orderGuid', 'OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
+                .modify('isServiceJob').modify('vendorName'),
+            OrderJob.query(trx).alias('job')
+                .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
+            OrderJob.query(trx).findOne('guid', jobGuid).modify('canServiceJobMarkAsDeleted')
+        ];
+
+        const [job, jobIsDispatched, canServiceJobMarkAsDeleted] = await Promise.all(jobStatus);
+
+        if (!job)
+            throw new NotFoundError('Job does not exist');
+
+        job.jobIsDispatched = jobIsDispatched;
+        job.canServiceJobMarkAsDeleted = canServiceJobMarkAsDeleted?.canbemarkasdeleted;
+        job.validateJobForDeletion();
+
+        return job;
     }
 }
 
