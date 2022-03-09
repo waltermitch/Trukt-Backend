@@ -426,7 +426,7 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
     });
 });
 
-listener.on('orderjob_service_dispatched', ({ jobGuid, dispatchGuid, currentUser }) =>
+listener.on('orderjob_service_dispatched', ({ jobGuid, currentUser }) =>
 {
     setImmediate(async () =>
     {

@@ -1779,24 +1779,16 @@ class OrderJobService
             // to collect and throw serviceJob and vendor errors
             const appResponse = new AppResponse();
 
-            const serviceJob = await OrderJob.query().withGraphFetched('bills').findById(jobGuid);
-            const serviceJobValidationErrors = OrderJob.validateReadyServiceJobToInProgress(serviceJob);
-            appResponse.addError(...serviceJobValidationErrors);
+            const [serviceJob, vendor] = await Promise.all([OrderJob.query().withGraphFetched('bills').findById(jobGuid), SFAccount.query().withGraphFetched('rectype').findById(vendorGuid)]);
+
+            appResponse.addError(...OrderJob.validateReadyServiceJobToInProgress(serviceJob));
+            appResponse.addError(...SFAccount.validateAccountForServiceJob(vendor));
             appResponse.throwErrorsIfExist();
-            
-            const vendor = await SFAccount.query().withGraphFetched('rectype').findById(vendorGuid);
-            const vendorValidationErrors = SFAccount.validateAccountForServiceJob(vendor);
-            appResponse.addError(...vendorValidationErrors);
-            appResponse.throwErrorsIfExist();
+
+            // get agent and contact info and validate
+            const [agent, contact] = await Promise.all([OrderJobService.manageContactAccount(trx, vendor, agentGuid, agentInfo, 'Agent'), OrderJobService.manageContactAccount(trx, vendor, contactGuid, contactInfo, 'Contact')]);
 
             const promises = [];
- 
-            // get agent info and validate
-            const agent = await OrderJobService.manageContactAccount(trx, vendor, agentGuid, agentInfo, 'Agent');
-
-            // get contact info and validate
-            const contact = await OrderJobService.manageContactAccount(trx, vendor, contactGuid, contactInfo, 'Contact');
-
             const dateStarted = new Date();
 
             // unshift is used to ensure dispatch response is allways first in Promise.all array
