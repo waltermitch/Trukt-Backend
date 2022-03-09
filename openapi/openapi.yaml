@@ -53,15 +53,9 @@ paths:
   /order/{orderGuid}/tender/accept:
     put:
       $ref: paths/order/putTenderAccept.yaml
-  /order/tender/accept:
-    put:
-      $ref: paths/order/putTendersAccept.yaml
   /order/{orderGuid}/tender/reject:
     put:
       $ref: paths/order/putTenderReject.yaml
-  /order/tender/reject:
-    put:
-      $ref: paths/order/putTendersReject.yaml
   /order/{orderGuid}/notes:
     get:
       $ref: paths/order/getNotes.yaml
