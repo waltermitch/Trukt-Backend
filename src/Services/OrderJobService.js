@@ -1777,9 +1777,9 @@ class OrderJobService
             const [agent, contact] = await Promise.all([OrderJobService.manageContactAccount(trx, vendor, agentGuid, agentInfo, 'Agent'), OrderJobService.manageContactAccount(trx, vendor, contactGuid, contactInfo, 'Contact')]);
 
             const promises = [];
-            const dateStarted = new Date();
+            const dateStarted = DateTime.now().toISO();
 
-            // unshift is used to ensure dispatch response is allways first in Promise.all array
+            // unshift is used to ensure dispatch response is always first in Promise.all array
             promises.unshift(OrderJobDispatch.query(trx).insertAndFetch({
                 jobGuid: serviceJob.guid,
                 vendorGuid: vendor.guid,
@@ -1805,9 +1805,14 @@ class OrderJobService
                 updatedByGuid: currentUser
             }));
 
-            promises.push(InvoiceBill.query(trx).findById(serviceJob.bills[0].guid).patch({
-                consigneeGuid: vendor.guid
-            }));
+            promises.push(
+                InvoiceBill.query(trx)
+                    .findByIds(serviceJob.bills.map(bill => bill.guid))
+                    .whereNull('consigneeGuid')
+                    .patch({
+                        consigneeGuid: vendor.guid
+                    })
+            );
 
             const [dispatch] = await Promise.all(promises);
 
