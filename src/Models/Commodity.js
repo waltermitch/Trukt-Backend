@@ -1,6 +1,7 @@
 const { RecordAuthorMixin, AuthorRelationMappings, isNotDeleted } = require('./Mixins/RecordAuthors');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const BaseModel = require('./BaseModel');
+const { ValidationError } = require('../ErrorHandling/Exceptions');
 
 // used for flattening the commodity in/out api
 const vehicleFields = [
@@ -71,6 +72,14 @@ class Commodity extends BaseModel
                     from: 'rcgTms.commodities.vehicleId',
                     to: 'rcgTms.vehicles.id'
                 }
+            },
+            invoiceLines: {
+                relation: BaseModel.HasManyRelation,
+                modelClass: require('./InvoiceLine'),
+                join: {
+                    from: 'rcgTms.commodities.guid',
+                    to: 'rcgTms.invoiceBillLines.commodityGuid'
+                }
             }
         };
 
@@ -106,7 +115,7 @@ class Commodity extends BaseModel
     {
         if (!commType)
         {
-            throw new Error('invalid commodity type provided');
+            throw new ValidationError('invalid commodity type provided');
         }
         this.commType = commType;
         this.typeId = commType.id;
@@ -116,7 +125,7 @@ class Commodity extends BaseModel
     {
         if (!vehicle)
         {
-            throw new Error('invalid commodity vehicle provided');
+            throw new ValidationError('invalid commodity vehicle provided');
         }
         this.vehicle = vehicle;
         this.vehicleId = vehicle.id;

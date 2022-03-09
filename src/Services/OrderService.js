@@ -1,12 +1,14 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
+const { MissingDataError, DataConflictError, NotFoundError, ValidationError } = require('../ErrorHandling/Exceptions');
+const ActivityManagerService = require('./ActivityManagerService');
 const OrderJobService = require('../Services/OrderJobService');
+const { BulkResponse } = require('../ErrorHandling/Responses');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
 const ComparisonType = require('../Models/ComparisonType');
-const GeneralFuncApi = require('../Azure/GeneralFuncApi');
 const OrderStopLink = require('../Models/OrderStopLink');
 const CommodityType = require('../Models/CommodityType');
 const OrderJobType = require('../Models/OrderJobType');
 const SFRecordType = require('../Models/SFRecordType');
+const ActivityLog = require('../Models/ActivityLogs');
 const Contact = require('../Models/TerminalContact');
 const InvoiceBill = require('../Models/InvoiceBill');
 const InvoiceLine = require('../Models/InvoiceLine');
@@ -16,8 +18,6 @@ const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
 const Commodity = require('../Models/Commodity');
-const ActivityLog = require('../Models/ActivityLogs');
-const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
 const Terminal = require('../Models/Terminal');
@@ -33,7 +33,6 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
-const ActivityManagerService = require('./ActivityManagerService');
 
 // this is the apora that will hold the falling down requirments above.
 
@@ -43,7 +42,7 @@ const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
 let dateFilterComparisonTypes;
 
 const logicAppInstance = axios.create({
-    baseURL: process.env['azure.logicApp.BaseUrl'],
+    baseURL: process.env.AZURE_LOGICAPP_BASEURL,
     httpsAgent: new https.Agent({ keepAlive: true }),
     headers: { 'Content-Type': 'application/json' }
 });
@@ -153,6 +152,7 @@ class OrderService
     {
         // TODO split this up so that query is faster and also doesnt give 500 error.
         let order = await Order.query().skipUndefined().findById(orderGuid);
+
         if (order)
         {
             const trx = await Order.startTransaction();
@@ -245,7 +245,8 @@ class OrderService
         {
             // client is required and always should be checked.
             // vehicles are not checked and are created or found
-            const dataCheck = { client: true, vehicles: false, terminals: false };
+            // referrerRebate should be check in case it is pass but no referrer is send
+            const dataCheck = { client: true, vehicles: false, terminals: false, referrerRebate: true };
 
             // order object will be used to link OrderStopLink from the job
             const order = Order.fromJson({
@@ -280,12 +281,14 @@ class OrderService
             orderInfoPromises.push(dataCheck.dispatcher = isUseful(orderObj.dispatcher) ? User.query(trx).findById(orderObj.dispatcher.guid) : null);
             orderInfoPromises.push(dataCheck.referrer = isUseful(orderObj.referrer) ? SFAccount.query(trx).findById(orderObj.referrer.guid) : null);
             orderInfoPromises.push(dataCheck.salesperson = isUseful(orderObj.salesperson) ? SFAccount.query(trx).findById(orderObj.salesperson.guid) : null);
-            orderInfoPromises.push(Promise.all(orderObj.terminals.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender }))));
+            orderInfoPromises.push(OrderService.getTerminalWithDefaultStopNotes(orderObj.terminals, orderObj.stops).then(async terminalsWithNotes =>
+                await Promise.all(terminalsWithNotes.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender })))
+            ));
 
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
             orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
+            orderInfoPromises.push(dataCheck.referrerRebate = orderObj?.referrerRebate && !orderObj?.referrer?.guid ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null);
 
-            const jobInfoPromises = [];
             for (const job of orderObj.jobs)
             {
                 const jobPromises = [];
@@ -298,8 +301,7 @@ class OrderService
                 {
                     contactRecordType,
                     commTypes,
-                    jobTypes,
-                    invoiceLineItems
+                    jobTypes
                 },
                 orderInformation
 
@@ -389,7 +391,7 @@ class OrderService
                 if (!commType)
                 {
                     const commTypeStr = commodity.typeId ? commodity.typeId : `${commodity.commType?.category} ${commodity.commType?.type}`;
-                    throw new Error(`Unknown commodity type: ${commTypeStr}`);
+                    throw new ValidationError(`Unknown commodity type: ${commTypeStr}`);
                 }
 
                 commodity.graphLink('commType', commType);
@@ -474,7 +476,7 @@ class OrderService
                 if (isUseful(job.vendor))
                 {
                     if (!jobVendor)
-                        throw new Error('Vendor doesnt exist');
+                        throw new NotFoundError('Vendor doesnt exist');
 
                     job.graphLink('vendor', jobVendor);
                 }
@@ -482,7 +484,7 @@ class OrderService
                 if (isUseful(job.vendorContact))
                 {
                     if (!jobVendorContact)
-                        throw new Error('Vendor contact doesnt exist');
+                        throw new NotFoundError('Vendor contact doesnt exist');
 
                     job.graphLink('vendorContact', jobVendorContact);
                 }
@@ -491,7 +493,7 @@ class OrderService
                 if (isUseful(job.vendorAgent))
                 {
                     if (!jobVendorAgent)
-                        throw new Error('Vendor agent doesnt exist');
+                        throw new NotFoundError('Vendor agent doesnt exist');
 
                     job.graphLink('vendorAgent', jobVendorAgent);
                 }
@@ -499,7 +501,7 @@ class OrderService
                 if (isUseful(job.dispatcher))
                 {
                     if (!jobDispatcher)
-                        throw new Error(`Dispatcher ${job.dispatcher.guid} doesnt exist`);
+                        throw new NotFoundError(`Dispatcher ${job.dispatcher.guid} doesnt exist`);
 
                     job.graphLink('dispatcher', jobDispatcher);
                 }
@@ -509,7 +511,7 @@ class OrderService
                 );
                 if (!jobType)
                 {
-                    throw new Error(
+                    throw new ValidationError(
                         `unknown job type ${job.typeId ||
                         job.jobType.category + job.jobType.type
                         }`
@@ -631,8 +633,10 @@ class OrderService
                 orderJobs.push(jobData);
             }
 
+            const referrerInvoice = OrderService.createReferrerRebateInvoice(orderObj?.referrerRebate, referrer, currentUser);
+
             order.jobs = orderJobs;
-            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
+            order.invoices = [OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee), ...referrerInvoice];
 
             const orderCreated = await Order.query(trx)
                 .skipUndefined()
@@ -646,6 +650,62 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser)
+    {
+        const referrerInvoice = [];
+        if (referrer)
+        {
+            const referrerRebateInvoiceAmount = referrerRebateAmount || '0.00';
+
+            // This id is static, it is always 7 for "rebate" invoices
+            const referrerRebateItemId = 7;
+            const referrerRebateLine = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, referrerRebateItemId, currentUser, null);
+
+            referrerInvoice.push(OrderService.createInvoiceBillGraph([referrerRebateLine], true, currentUser, referrer));
+        }
+        return referrerInvoice;
+    }
+
+    /**
+     * Adds the stop notes to the terminal notes if the terminal does not have any notes
+     * 1) Get terminals that have guid to search for them in DB
+     * 2) Search for the terminals in DB that have a guid and get the notes
+     * 3) For every terminal sended in the payload:
+     * -> If new terminal (No guid) -> add default notes from stop link to it
+     * -> If not new -> Search for its notes, if it does not have, select the ones from the stop link to it
+     */
+    static async getTerminalWithDefaultStopNotes(terminals, stops, trx)
+    {
+        // 1)
+        const terminalsGuids = terminals?.reduce((terminalsGuids, terminal) =>
+        {
+            if (terminal?.guid)
+                terminalsGuids.push(terminal.guid);
+
+            return terminalsGuids;
+        }, []);
+
+        // 2)
+        const terminalsNotesFromDb = await Terminal.query(trx).select('guid', 'notes').whereIn('guid', terminalsGuids);
+
+        // 3)
+        return terminals.map(terminal =>
+        {
+
+            if (terminal?.guid)
+            {
+                const terminalNotes = terminalsNotesFromDb.find(terminalNotes => terminalNotes.guid === terminal.guid);
+                terminal.notes = terminalNotes?.notes || stops.find(stop => stop?.terminal === terminal?.index)?.notes || '';
+            }
+
+            // New terminal
+            else
+                terminal.notes = stops.find(stop => stop?.terminal === terminal?.index)?.notes || '';
+
+            return terminal;
+        });
     }
 
     static createInvoiceLineGraph(amount, itemId, currentUser, commodity)
@@ -688,36 +748,21 @@ class OrderService
         keys.sort();
         if (keys.length != dataRecs.length)
         {
-            throw new Error('_dataCheck dataCheck keys length do not match the dataRecs length');
+            throw new ValidationError('_dataCheck dataCheck keys length do not match the dataRecs length');
         }
 
         for (const [i, key] of keys.entries())
         {
             if (dataCheck[key] && !dataRecs[i])
             {
-                throw new Error(`${key} record doesn't exist.`);
+                throw new NotFoundError(`${key} record doesn't exist.`);
             }
         }
     }
 
-    static async calculateTotalDistance(stops)
+    static async calculatedDistances(orderGuid)
     {
-        // go through every order stop
-        stops.sort(OrderStop.sortBySequence);
-
-        // converting terminals into address strings
-        const terminalStrings = stops.map((stop) =>
-        {
-            return JSON.parse(stop.terminal.toApiString());
-        });
-
-        // send all terminals to the General Function app and recieve only the distance value
-        return await GeneralFuncApi.calculateDistances(terminalStrings);
-    }
-
-    static async calculatedDistances(OrderGuid)
-    {
-        // relations obejct for none repetitive code
+        // relations object for none repetitive code
         const stopRelationObj = {
             $modify: ['distinctAllData'],
             terminal: true
@@ -729,16 +774,18 @@ class OrderService
         await Order.transaction(async (trx) =>
         {
             // get OrderStops and JobStops from database Fancy smancy queries
-            const order = await Order.query(trx).withGraphJoined({
-                jobs: { stops: stopRelationObj },
-                stops: stopRelationObj
-            }).findById(OrderGuid);
+            const order = await Order.query(trx)
+                .withGraphJoined({
+                    jobs: { stops: stopRelationObj },
+                    stops: stopRelationObj
+                })
+                .findById(orderGuid);
 
             // array for transaction promises
             const patchPromises = [];
 
             let orderCounted = false;
-            for (const orderjob of [order, ...order.jobs])
+            for (const object of [order, ...order.jobs])
             {
                 // logic to handle order vs jobs model
                 let model;
@@ -754,9 +801,9 @@ class OrderService
 
                 // pushing distance call and update into array
                 patchPromises.push(
-                    OrderService.calculateTotalDistance(orderjob.stops).then(async (distance) =>
+                    TerminalService.calculateTotalDistance(object.stops).then(async (distance) =>
                     {
-                        await model.query(trx).patch({ distance }).findById(orderjob.guid);
+                        await model.query(trx).patch({ distance }).findById(object.guid);
                     })
                 );
             }
@@ -764,6 +811,7 @@ class OrderService
             // execute all promises
             await Promise.all(patchPromises);
         });
+
         return;
     }
 
@@ -779,7 +827,7 @@ class OrderService
         if (oldOrder.stops.length != updatedOrder.stops.length)
         {
             // calculate distance and push update distance into an array
-            patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+            patchArray.push(TerminalService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
             {
                 await Order.query().patch({ distance }).findById(updatedOrder.guid);
             }));
@@ -801,7 +849,7 @@ class OrderService
                 if (!R.equals(newTerminal, oldTerminal))
                 {
                     // calculate distance of all stops and push update distance into an array
-                    patchArray.push(OrderService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
+                    patchArray.push(TerminalService.calculateTotalDistance(updatedOrder.stops).then(async (distance) =>
                     {
                         await Order.query().patch({ distance }).findById(updatedOrder.guid);
                     }));
@@ -823,7 +871,7 @@ class OrderService
             if (currentJob.stops.length != oldOrder.jobs[i].stops.length)
             {
                 // calculate distance of all stops and push update distance into an array
-                patchArray.push(OrderService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
+                patchArray.push(TerminalService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
                 {
                     await OrderJob.query().patch({ distance }).findById(currentJob.guid);
                 }));
@@ -845,7 +893,7 @@ class OrderService
                     if (!R.equals(newTerminal, oldTerminal))
                     {
                         // calculate distance of all stops and push update distance into an array
-                        patchArray.push(OrderService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
+                        patchArray.push(TerminalService.calculateTotalDistance(currentJob.stops).then(async (distance) =>
                         {
                             await OrderJob.query().patch({ distance }).findById(currentJob.guid);
                         }));
@@ -868,32 +916,28 @@ class OrderService
      * Method is to accepts load tenders. Validates, sends requests and updates the database in our system.
      * @param {string []} orderGuids
      * @param {string} currentUser
-     * @returns {Promise<{guid: string, status: number, message: string} []>} currentUser
+     * @returns {BulkResponse} BulkResponse object
      */
     static async acceptLoadTenders(orderGuids, currentUser)
     {
         // valdiate orders for accepting or declineing
         const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
 
-        const resBody = {};
-
         // send request to logic
         const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('accept', successfulTenders, null);
 
         failedTenders.push(...failedOrders);
 
+        const bulkResponse = new BulkResponse();
+
         // add errored orders to body message
         for (const order of failedTenders)
         {
-            resBody[order.orderGuid] = {
-                jobGuid: order.jobGuid,
-                status: order.status,
-                errors: order.errors
-            };
+            bulkResponse
+                .addResponse(order.orderGuid, order.errors)
+                .getResponse(order.orderGuid)
+                .setStatus(order.status);
         }
-
-        if (!goodOrders.length)
-            return resBody;
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -915,50 +959,46 @@ class OrderService
             // loop through successfull jobs and emmit event to update acivity logs
             for (const job of data[1])
             {
-                resBody[job.orderGuid] = {
-                    jobGuid: job.guid,
-                    status: 200,
-                    errors: []
-                };
+                bulkResponse
+                    .addResponse(job.orderGuid)
+                    .getResponse(job.orderGuid)
+                    .setStatus(200)
+                    .setData({ jobGuid: job.guid });
 
                 emitter.emit('tender_accepted', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
                 emitter.emit('order_created', job.orderGuid);
             }
         }
 
-        return resBody;
+        return bulkResponse;
     }
 
     /**
      * Method is to rejects load tenders. Validates, sends requests and updated the database in our system.
      * @param {string []} orderGuids
      * @param {string} reason
-     * @param {string} currentUser
+     * @param {BulkResponse} currentUser
      */
     static async rejectLoadTenders(orderGuids, reason, currentUser)
     {
         // valdiate orders for accepting or declineing
         const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
 
-        const resBody = {};
-
         // send request to logic
         const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('reject', successfulTenders, reason);
 
         failedTenders.push(...failedOrders);
 
+        const bulkResponse = new BulkResponse();
+
         // add errored orders to body message
         for (const order of failedTenders)
         {
-            resBody[order.orderGuid] = {
-                jobGuid: order.jobGuid,
-                status: order.status,
-                errors: order.errors
-            };
+            bulkResponse
+                .addResponse(order.orderGuid, order.errors)
+                .getResponse(order.orderGuid)
+                .setStatus(order.status);
         }
-
-        if (!goodOrders.length)
-            return resBody;
 
         // update the tenders into order
         if (goodOrders.length > 0)
@@ -980,17 +1020,17 @@ class OrderService
             // loop through successfull jobs and emmit event to update acivity logs
             for (const job of data[1])
             {
-                resBody[job.orderGuid] = {
-                    jobGuid: job.guid,
-                    status: 200,
-                    errors: []
-                };
+                bulkResponse
+                    .addResponse(job.orderGuid)
+                    .getResponse(job.orderGuid)
+                    .setStatus(200)
+                    .setData({ jobGuid: job.guid });
 
                 emitter.emit('tender_rejected', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
             }
         }
 
-        return resBody;
+        return bulkResponse;
     }
 
     /**
@@ -1018,7 +1058,7 @@ class OrderService
         }));
 
         // sending multiple requests to logic app
-        const apiResponses = await Promise.allSettled(logicAppPayloads.map((item) => logicAppInstance.post(process.env['azure.logicApp.params'], item)));
+        const apiResponses = await Promise.allSettled(logicAppPayloads.map((item) => logicAppInstance.post(process.env.AZURE_LOGICAPP_PARAMS, item)));
 
         const failed = [];
         const goodGuids = [];
@@ -1124,7 +1164,7 @@ class OrderService
         const numOfUpdatedOrders = await Order.query().patch(order).findById(orderGuid);
         if (numOfUpdatedOrders == 0)
         {
-            throw new Error('No order found');
+            throw new NotFoundError('No order found');
         }
 
         return order;
@@ -1524,7 +1564,7 @@ class OrderService
     {
         for (const orderJob of order.jobs)
         {
-            ActivityManagerService.createAvtivityLog({
+            ActivityManagerService.createActivityLog({
                 orderGuid: order.guid,
                 userGuid: currentUser,
                 jobGuid: orderJob.guid,
@@ -1556,12 +1596,13 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
+            referrerRebate,
             ...orderData
         } = orderInput;
 
         try
         {
-            await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
+            const jobsWithDeletedItems = await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
 
             // create new order
             const [
@@ -1575,7 +1616,8 @@ class OrderService
                 orderInvoices,
                 referencesChecked,
                 oldStopData,
-                oldOrder
+                oldOrder,
+                referrerInvoice
             ] = await Promise.all([
                 OrderService.buildCache(),
 
@@ -1586,10 +1628,13 @@ class OrderService
                     clientContact,
                     guid,
                     stops,
-                    terminals
+                    terminals,
+                    trx
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
-                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload)
+                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
+                referrer?.guid && await OrderService.getOrderReferrerRebateInvoice(guid, trx),
+                !referrer && referrerRebate ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null
             ]);
 
             // terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
@@ -1654,23 +1699,23 @@ class OrderService
                 consignee,
                 currentUser
             );
+            const referrerInvoiceToUpdate = OrderService.updateReferrerRebateInvoiceGraph(referrer, referrerRebate, referrerInvoice, currentUser);
 
-            /**
-             * orderContactCreated comes as a guid (If exists or was created) or null (if the user wants to remove it)
-             * referrer, salesperson and client need to use getObjectContactReference
-             */
+            const contacts = OrderService.getContactReferences({
+                referrer: { guid: referrer?.guid || referrer },
+                salesperson: { guid: salesperson?.guid || salesperson },
+                client: { guid: client?.guid || client },
+                clientContact: { guid: orderContactCreated },
+                dispatcher: { guid: dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid }
+            });
             const orderGraph = Order.fromJson({
                 guid,
-                dispatcher: { '#dbRef': dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid },
-                referrer: { '#dbRef': OrderService.getObjectContactReference(referrer) },
-                salesperson: { '#dbRef': OrderService.getObjectContactReference(salesperson) },
-                client: { '#dbRef': OrderService.getObjectContactReference(client) },
                 instructions,
-                clientContact: { '#dbRef': orderContactCreated },
                 stops: stopsGraphsToUpdate,
-                invoices: orderInvoicesToUpdate,
+                invoices: [...orderInvoicesToUpdate, ...referrerInvoiceToUpdate],
                 jobs: jobsToUpdateWithExpenses,
-                ...orderData
+                ...orderData,
+                ...contacts
             });
             orderGraph.setUpdatedBy(currentUser);
 
@@ -1699,20 +1744,24 @@ class OrderService
             }
 
             emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: orderUpdated });
+            for (const job of jobsWithDeletedItems)
+            {
+                emitter.emit('commodity_deleted', { orderGuid: guid, jobGuid: job.jobGuid, commodities: job.commodities, currentUser });
+            }
 
             return orderUpdated;
         }
         catch (error)
         {
-            console.log(error);
             await trx.rollback();
-            throw new HttpError(500, error.message || error);
+            throw error;
         }
     }
 
     static async handleDeletes(orderGuid, jobs, commodities, stops, trx, currentUser)
     {
         const delProms = [];
+        const jobsWithDeletedItems = [];
         for (const job of jobs || [])
         {
             const toDelete = job.delete;
@@ -1755,6 +1804,23 @@ class OrderService
 
                             });
                             delProms.push(deleteComsProm);
+
+                            const commoditiesForLogs = await Commodity.query().select(
+                                [
+                                    'guid',
+                                    'description',
+                                    'identifier',
+                                    'lotNumber'
+                                ]
+                            ).findByIds(toDelete.commodities)
+                                .withGraphFetched('[vehicle]')
+                                .modifyGraph('vehicle', builder => builder.select('name'));
+
+                            jobsWithDeletedItems.push({
+                                jobGuid: job.guid,
+                                commodities: commoditiesForLogs
+                            });
+
                             break;
                         default:
 
@@ -1765,6 +1831,8 @@ class OrderService
         }
 
         delProms && await Promise.all(delProms);
+
+        return jobsWithDeletedItems;
     }
 
     static _removeByGuid(someGuid, somelistGuids)
@@ -1779,10 +1847,34 @@ class OrderService
         }
     }
 
-    // If contactObject is null -> reference should be removed
-    static getObjectContactReference(contactObject)
+    /**
+         
+         */
+    /**
+     * If contactName.guid is null -> reference should be removed
+     * If contactName.guid exists -> reference should be updated
+     * If contactName.guid is undefined -> do nothing
+     * @param {*} contacts object with the order referrer, salesperson, client, dispacther and clientContact
+     * @returns object only with the contacts that should be updated or removed.
+     */
+    static getContactReferences(contacts)
     {
-        return contactObject?.guid || null;
+        const contactNames = [
+            'referrer',
+            'salesperson',
+            'client',
+            'clientContact',
+            'dispatcher'
+        ];
+        return contactNames.reduce((contactsToReturn, contactName) =>
+        {
+            if (contacts[contactName]?.guid)
+                contactsToReturn[contactName] = { '#dbRef': contacts[contactName].guid };
+            else if (contacts[contactName]?.guid === null)
+                contactsToReturn[contactName] = { '#dbRef': null };
+
+            return contactsToReturn;
+        }, {});
     }
 
     static async getJobBills(jobs, trx)
@@ -1809,13 +1901,47 @@ class OrderService
         return InvoiceBill.fetchGraph(allInvoices, '[lines.link]', { transaction: trx });
     }
 
+    /**
+     * Search for oldest order invoice that has a invoice.consignee = order.referrer and that invoice has a line use for rebate.
+     * We filter by invoice.Consignee = to order.Referrer to get only those use for rebate. If order does not has referrer -> cretae new rebate invoice.
+     *
+     * In case the order.referrer is the same as the order.consignee, we may have multiple invoices were the invoice.consignee = order.referrer,
+     * for those cases we also need to check for invoices that have "rebate" lines. If non invoice is return -> cretae new rebate invoice
+     */
+    static async getOrderReferrerRebateInvoice(orderGuid, trx)
+    {
+
+        const referrerInvoice = await InvoiceBill.query(trx).alias('IB').select('IB.guid')
+            .innerJoin('rcgTms. invoiceBillLines as IBL', 'IB.guid', 'IBL.invoiceGuid')
+            .whereIn(
+                'IB.guid',
+                Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
+            )
+            .andWhere('IB.consigneeGuid',
+                Order.query(trx).select('referrerGuid').where('guid', orderGuid)
+            )
+            .andWhere('IBL.itemId', 7)
+            .orderBy('IB.dateCreated')
+            .limit(1);
+
+        if (!referrerInvoice)
+            return {};
+
+        const [invoice] = await InvoiceBill.fetchGraph(referrerInvoice, '[lines]', { transaction: trx });
+        return invoice;
+    }
+
     static async validateReferencesBeforeUpdate(
         orderContact,
         orderGuid,
         stops,
-        terminals
+        terminals,
+        trx
     )
     {
+        // Add stops default notes to terminals
+        const terminalWithDefaultNotes = await OrderService.getTerminalWithDefaultStopNotes(terminals, stops, trx);
+
         const orderContacToCheck = orderContact
             ? OrderService.checkContactReference(orderContact, orderGuid)
             : undefined;
@@ -1827,7 +1953,7 @@ class OrderService
 
         // Return new terminals with info checked if needs to be updated or created
         const terminalsToChecked = [];
-        for (const terminal of terminals)
+        for (const terminal of terminalWithDefaultNotes)
             terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal));
 
         const [orderChecked, terminalsChecked, stopsChecked] =
@@ -1874,10 +2000,10 @@ class OrderService
      * Checks the action to performed for a terminal.
      * Rules:
      * 0) If terminal GUID is provided, we check if the information is the same as the DB, this is to avoid
-     *    calling Arcgis if the terminal has the same information.
+     *    calling maps api if the terminal has the same information.
      * 1) updateExtraFields: The B.I. is the same and only the E.I. changed, so we only update those fields
      *    of that existing Terminal
-     * 2) findOrCreate: The B.I. changed, so we have to call Arcgis and then check in the DB if that record
+     * 2) findOrCreate: The B.I. changed, so we have to call maps api and then check in the DB if that record
      *    exists or we create a new one.
      * 3) nothingToDo: The terminal is the same and there is no need to do anything
      * @param {*} terminalInput
@@ -2065,7 +2191,7 @@ class OrderService
                 CommodityType.compare(commodity, commodityType)
             );
             if (!commType)
-                throw new Error(
+                throw new ValidationError(
                     `Unknown commodity ${commodity.commType?.category} ${commodity.commType?.type}`
                 );
 
@@ -2086,9 +2212,9 @@ class OrderService
     /**
      * Base information (B.I.): Fields use to create the address; Street1, city, state, zipCode and Country
      * Extra information (E.I.): Fields that are not use to create the address; Street2 and Name
-     * findOrCreate: We call Arcgis to get Lat and Long -> We look in DB for that key, if it exists
+     * findOrCreate: We call maps api to get Lat and Long -> We look in DB for that key, if it exists
      *      we pull that record and update the E.I., if not, we create a new record.
-     *      In case Arcgis does not return a Lat and Long, we save the terminal without Lat and Long as
+     *      In case maps api does not return a Lat and Long, we save the terminal without Lat and Long as
      *      an Unresolved Terminal.
      * @param {*} terminalInput
      * @param {*} currentUser
@@ -2111,14 +2237,14 @@ class OrderService
                 return { terminal: terminalUpdated, index };
             case 'findOrCreate':
                 let terminalCreated = {};
-                const addressStr = Terminal.createStringAddress(terminalData);
 
-                const arcgisTerminal = ArcgisClient.isSetuped() &&
-                    (await ArcgisClient.findGeocode(addressStr));
+                const stringAddress = Terminal.createStringAddress(terminalData);
 
-                if (arcgisTerminal && ArcgisClient.isAddressFound(arcgisTerminal))
+                const candidate = await TerminalService.geocodeAddress(stringAddress);
+
+                if (candidate && candidate.geo?.length > 0)
                 {
-                    const { latitude, longitude } = ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
+                    const [longitude, latitude] = candidate.geo;
                     const terminalToUpdate = await Terminal.query(trx).findOne({
                         latitude,
                         longitude
@@ -2508,7 +2634,7 @@ class OrderService
             );
             if (!jobType)
             {
-                throw new Error(
+                throw new ValidationError(
                     `unknown job type ${jobModel.typeId ||
                     jobModel.jobType.category + jobModel.jobType.type
                     }`
@@ -2804,7 +2930,7 @@ class OrderService
                     const bill = invoiceBills.find(bill => bill.job?.guid === job.guid);
 
                     if (!bill)
-                        throw new HttpError(500, 'Job Is Missing Bill');
+                        throw new MissingDataError('Job Is Missing Bill');
 
                     bill.lines.push(jobInvoiceLineToCreate);
                     if (!jobBillsWithLinesToUpdate.has(bill.guid))
@@ -2825,17 +2951,60 @@ class OrderService
         });
 
         if (orderInvoiceFromDB.length > 0)
-            orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
+            orderInvoiceFromDB[0].lines.push(...orderInvoiceListToCreate);
 
         if (consignee?.guid && orderInvoiceFromDB?.length)
         {
             if (!orderInvoiceFromDB.isPaid)
                 orderInvoiceFromDB[0].consigneeGuid = consignee?.guid;
             else
-                throw new HttpError(400, 'Cannot update consignee on paid invoice');
+                throw new DataConflictError('Cannot update consignee on paid invoice');
         }
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
+    }
+
+    /**
+     * Rules:
+     * 1) If referrer and referrerInvoice is empty -> create invoice and line, if non referrerRebate was provided use default 0.00
+     * 2) If referrer and referrerInvoice -> Update invoice with new values for invoice.consignee and amoun
+     * @param {*} referrer referrer Guid provided in request payload
+     * @param {*} referrerRebate amount provided in request payload, this is the invoiceLine amount
+     * @param {*} referrerInvoice invoice (If exists) with referrer rebate line
+     * @returns {
+     *  referrerInvoice: Invoice with the referrer line. If no rule apply, return an empty array so nothing is updated
+     * }
+     */
+    static updateReferrerRebateInvoiceGraph(referrer, referrerRebateAmount, referrerInvoice, currentUser)
+    {
+        const referrerInvoiceToReturn = [];
+
+        // Rule 1
+        if (referrer?.guid && !referrerInvoice)
+        {
+            const [referrerInvoiceToCreate] = OrderService.createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser);
+            referrerInvoiceToReturn.push(referrerInvoiceToCreate);
+        }
+
+        // Rule 2
+        else if (referrerInvoice && (referrer?.guid || referrerRebateAmount))
+        {
+            if (referrer?.guid)
+            {
+                referrerInvoice.consigneeGuid = referrer.guid;
+                referrerInvoice.setUpdatedBy(currentUser);
+            }
+
+            if (referrerRebateAmount)
+            {
+                referrerInvoice.lines[0].amount = referrerRebateAmount;
+                referrerInvoice.lines[0].setUpdatedBy(currentUser);
+            }
+
+            referrerInvoiceToReturn.push(referrerInvoice);
+        }
+
+        return referrerInvoiceToReturn;
     }
 
     /**
@@ -2897,8 +3066,6 @@ class OrderService
 
     static async bulkUpdateUsers({ orders = [], dispatcher = undefined, salesperson = undefined })
     {
-        const results = {};
-
         const payload = {
             dispatcherGuid: dispatcher,
             salespersonGuid: salesperson
@@ -2908,28 +3075,39 @@ class OrderService
         const cleaned = R.pickBy((it) => it !== undefined, payload);
 
         if (Object.keys(cleaned).length === 0)
-            throw new HttpError(400, 'Missing Update Values');
+            throw new MissingDataError('Missing Update Values');
 
         const promises = await Promise.allSettled(orders.map(async (order) =>
         {
             // need to catch and throw in order to be able to return the guid for mapping of errors
             const res = await Order.query().findById(order).patch(payload).returning('guid')
-                .catch((err) => { throw { 'guid': order, 'data': err }; });
+                .catch((err) => { throw { guid: order, data: err }; });
 
-            return { 'guid': order, 'data': res };
+            return { guid: order, data: res };
         }));
 
+        const bulkResponse = new BulkResponse();
         for (const e of promises)
         {
             if (e.reason)
-                results[e.reason.guid] = { 'error': e.reason.data, 'status': 400 };
+            {
+                bulkResponse
+                    .addResponse(e.reason.guid, e.reason.data)
+                    .getResponse(e.reason.guid)
+                    .setStatus(400);
+            }
             else if (e.value?.data === undefined)
-                results[e.value.guid] = { 'error': 'Order Not Found', 'status': 404 };
+            {
+                bulkResponse
+                    .addResponse(e.value.guid, new NotFoundError('Order Not Found'))
+                    .getResponse(e.value.guid)
+                    .setStatus(404);
+            }
             else if (e.value.data)
-                results[e.value.guid] = { 'status': 200 };
+                bulkResponse.addResponse(e.value.guid).getResponse(e.value.guid).setStatus(200).setData(e.value.data);
         }
 
-        return results;
+        return bulkResponse;
     }
 
     static async getTransportJobsIds(orderGuid)
@@ -2952,18 +3130,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (order.isOnHold)
             return 200;
 
         // check that there are no vendors on any of the jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw new HttpError(400, `Related Job ${job.number} shouldn't have a vendor`);
+                throw new DataConflictError(`Related Job ${job.number} shouldn't have a vendor`);
 
         // if we got here mark all jobs on hold and the order on hold
         try
@@ -3007,18 +3185,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (!order.isOnHold)
             return 200;
 
         // check that there are no vendors on any of the jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw new HttpError(400, `Related Job ${job.number} shouldn't have a vendor`);
+                throw new DataConflictError(`Related Job ${job.number} shouldn't have a vendor`);
 
         // if we got here mark all jobs on hold and the order on hold
         try
@@ -3060,26 +3238,26 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (order.isOnHold)
-            throw new HttpError(400, 'Order is On Hold');
+            throw new DataConflictError('Order is On Hold');
         else if (!order.isReady)
-            throw new HttpError(400, 'Order is Not Ready');
+            throw new DataConflictError('Order is Not Ready');
         else if (order.isComplete)
             return 200;
 
         // check that each transport job has a vendor and all commodities are delivered
         for (const job of order.jobs)
             if (!job.vendorGuid)
-                throw new HttpError(400, `Related Job ${job.number} doesn't have a Vendor`);
+                throw new MissingDataError(`Related Job ${job.number} doesn't have a Vendor`);
 
         for (const commodity of order.commodities)
             if (commodity.deliveryStatus !== 'delivered')
-                throw new HttpError(400, `Commodity ${commodity.vehicle.number} is not Delivered`);
+                throw new DataConflictError(`Commodity ${commodity.vehicle.number} is not Delivered`);
 
         // if we got here mark all jobs complete and the order complete
         await Promise.all(
@@ -3111,11 +3289,11 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (!order.isComplete)
             return 200;
 
@@ -3149,15 +3327,15 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (!order.isReady)
-            throw new HttpError(400, 'Order is Not Ready');
+            throw new DataConflictError('Order is Not Ready');
         else if (order.isOnHold)
-            throw new HttpError(400, 'Order is On Hold');
+            throw new DataConflictError('Order is On Hold');
         else if (order.status === 'scheduled')
             return 200;
 
@@ -3168,7 +3346,7 @@ class OrderService
                 hasVendor = true;
 
         if (!hasVendor)
-            throw new HttpError(400, 'Order\'s Jobs Have No Vendors Assigned');
+            throw new MissingDataError('Order\'s Jobs Have No Vendors Assigned');
 
         // if we got here mark the order scheduled
         await Order.query().patch({
@@ -3191,18 +3369,18 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (order.status === 'ready')
             return 200;
 
         // make sure there are no jobs with vendors assigned
         for (const job of order.jobs)
             if (job.isTransport && job.vendorGuid)
-                throw new HttpError(400, 'Order\'s Jobs Should Not Have Vendors Assigned');
+                throw new DataConflictError('Order\'s Jobs Should Not Have Vendors Assigned');
 
         await Order.query().patch({
             'updatedByGuid': currentUser,
@@ -3225,14 +3403,14 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
             return 200;
 
         // make sure no vendor is assigned to any jobs
         for (const job of order.jobs)
             if (job.vendorGuid)
-                throw new HttpError(400, 'Order\'s Jobs Should Not Have Vendors Assigned');
+                throw new DataConflictError('Order\'s Jobs Should Not Have Vendors Assigned');
 
         // if we got here mark all jobs deleted and the order deleted
         try
@@ -3276,7 +3454,7 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (!order.isDeleted)
             return 200;
 
@@ -3322,27 +3500,27 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            throw new HttpError(400, 'Order is Canceled');
+            throw new DataConflictError('Order is Canceled');
         else if (order.status === 'delivered')
             return 200;
         else if (order.status !== 'picked up')
-            throw new HttpError(400, 'Order Must First Be Picked Up');
+            throw new DataConflictError('Order Must First Be Picked Up');
 
         // make sure vendor is assigned to all transport jobs and all jobs are delivered
         for (const job of order.jobs)
             if ((job.isTransport && !job.vendorGuid))
-                throw new HttpError(400, `Order's Job ${job.number} Has No Vendor Assigned`);
+                throw new MissingDataError(`Order's Job ${job.number} Has No Vendor Assigned`);
             else if (job.status !== 'delivered')
-                throw new HttpError(400, `Order's Job ${job.number} Is Not Delivered`);
+                throw new DataConflictError(`Order's Job ${job.number} Is Not Delivered`);
 
         // make sure all commodities are marked as delivered
         for (const commodity of order.commodities)
             if (commodity.deliveryStatus !== 'delivered')
-                throw new HttpError(400, `Order's Commodity ${commodity.vehicle.name} Has Not Been Delivered`);
+                throw new DataConflictError(`Order's Commodity ${commodity.vehicle.name} Has Not Been Delivered`);
 
         // if we got here mark order as delivered
         await Order.query().patch({
@@ -3363,19 +3541,19 @@ class OrderService
             .first();
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
-            new HttpError(400, 'Order is Canceled');
+            new DataConflictError('Order is Canceled');
         else if (order.status === 'picked up')
             return 200;
         else if (order.status !== 'delivered')
-            throw new HttpError(400, 'Order Must First Be Delivered');
+            throw new DataConflictError('Order Must First Be Delivered');
 
         for (const job of order.jobs)
             if (job.status !== 'pick up')
-                throw new HttpError(400, `Job ${job.guid} Is Not Pick Up`);
+                throw new DataConflictError(`Job ${job.guid} Is Not Pick Up`);
 
         // if we got here mark the order undelivered
         await Order.query().patch({
@@ -3399,11 +3577,11 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (['completed', 'delivered'].includes(order.status))
-            throw new HttpError(400, 'Can Not Cancel Completed or Delivered Order');
+            throw new DataConflictError('Can Not Cancel Completed or Delivered Order');
         else if (order.isCanceled)
             return 200;
 
@@ -3450,9 +3628,9 @@ class OrderService
         ]);
 
         if (!order)
-            throw new HttpError(404, 'Order Not Found');
+            throw new NotFoundError('Order Not Found');
         else if (order.isDeleted)
-            throw new HttpError(400, 'Order is Deleted');
+            throw new DataConflictError('Order is Deleted');
         else if (order.isCanceled)
             return 200;
 
@@ -3507,9 +3685,21 @@ class OrderService
         }
         catch (error)
         {
-            throw new HttpError(400, 'Order Cannot be set to ready.');
+            throw new DataConflictError('Order Cannot be set to ready.');
         }
+    }
 
+    static async recalcDistancesAfterTerminalResolution(terminalGuid)
+    {
+        // get orders that have stops that use this terminal
+        const orders = await Order.query()
+            .select('orders.guid')
+            .whereNull('distance')
+            .withGraphJoined('stops')
+            .where('stops.terminalGuid', terminalGuid);
+
+        for (const order of orders)
+            await OrderService.calculatedDistances(order.guid);
     }
 }
 

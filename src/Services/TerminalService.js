@@ -1,13 +1,16 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
+const { MissingDataError, DataConflictError, ValidationError } = require('../ErrorHandling/Exceptions');
+const { SingleSearch, RoutingApi } = require('trimble-maps-node-sdk');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
+const GeneralFuncs = require('../Azure/GeneralFunc');
+const emitter = require('../EventListeners/index');
 const OrderStops = require('../Models/OrderStop');
 const Terminal = require('../Models/Terminal');
 const Queue = require('../Azure/ServiceBus');
 const { mergeDeepRight } = require('ramda');
-const ArcGIS = require('../ArcGIS/API');
 
+const key = process.env.TRIMBLE_API_KEY;
 const { SYSTEM_USER } = process.env;
 const keywordFields =
 {
@@ -18,18 +21,30 @@ const keywordFields =
     'address': ['street1', 'street2']
 };
 
+SingleSearch.setKey(key);
+RoutingApi.setKey(key);
+
 const terminalsQueue = new Queue({ queue: 'unresolved_terminals' });
 
 class TerminalService
 {
+    static async geocodeAddress(address)
+    {
+        const [res] = await SingleSearch.geocodeAddress(address);
+
+        return res;
+    }
+
     static async getById(terminalId)
     {
-        const terminal = await Terminal.query().where('rcgTms.terminals.guid', '=', `${terminalId}`).withGraphJoined('[contacts, primaryContact, alternativeContact]');
+        const terminal = await Terminal.query()
+            .where('rcgTms.terminals.guid', '=', `${terminalId}`)
+            .withGraphJoined('[contacts, primaryContact, alternativeContact]');
 
         return terminal;
     }
 
-    static async search(query)
+    static async search({ rc, pg, ...query })
     {
         // remove unwanted keys that null or empty strings
         for (const key in query)
@@ -39,10 +54,10 @@ class TerminalService
         // query will be an object with key being the query word
         // min 1 page, with default page 1 (1st page)
         // objection is 0 index, so is postgress, user input will be starting page index at 1
-        const pg = Math.max(0, query.pg || 0);
+        pg = Math.max(0, pg || 0);
 
         // clamp between 1 and 100 with default value of 10
-        const rc = Math.min(100, Math.max(1, query.rc || 10));
+        rc = Math.min(100, Math.max(1, rc || 10));
 
         const qb = Terminal.query();
         let orderbypriority = [];
@@ -67,6 +82,8 @@ class TerminalService
 
             qb.whereRaw('vector_name @@ to_tsquery(\'english\', ? )', [searchVal]);
         }
+        else if (Object.keys(query).length == 0)
+            orderbypriority.push('name');
 
         // TODO add comments here cause nobody knows what this is
         for (const keyword in keywordFields)
@@ -181,12 +198,12 @@ class TerminalService
                 const terminalAddress = Terminal.createStringAddress(terminal);
 
                 // lookup candidates
-                const [candidate] = await ArcGIS.findMatches(terminalAddress);
+                const [candidate] = await SingleSearch.geocodeAddress(terminalAddress);
 
                 // check score of first candidate
-                if (candidate?.score >= 95)
+                if (candidate?.score <= 2)
                 {
-                    const coords = ArcGIS.parseGeoCoords(candidate);
+                    const [long, lat] = candidate.geo;
 
                     // at this point we have a match, but we don't know if there is a terminal with this lat/long in the db already
                     // if there is an existing terminal we need to update all the objects related to this terminal to use that one
@@ -195,8 +212,8 @@ class TerminalService
                     {
                         const existingTerminal = await Terminal.query()
                             .select('guid')
-                            .where('latitude', coords.lat)
-                            .andWhere('longitude', coords.long)
+                            .where('latitude', lat)
+                            .andWhere('longitude', long)
                             .andWhereNot('guid', terminal.guid)
                             .first();
 
@@ -240,6 +257,7 @@ class TerminalService
                             await Terminal.query(trx)
                                 .where('guid', terminal.guid)
                                 .update({ isResolved: false, resolvedTimes: 1, updatedByGuid: SYSTEM_USER });
+
                         }
                     });
                 }
@@ -273,22 +291,22 @@ class TerminalService
         }
     }
 
-    // this method will update a terminal with the new information from arcgis
+    // this method will update a terminal with the new information from maps api
     // in the processing normalizing the address formatting, etc and mark it as resolved
-    static async normalizeTerminal(terminal, arcGISmatch, trx)
+    static async normalizeTerminal(terminal, match, trx)
     {
-        const coords = ArcGIS.parseGeoCoords(arcGISmatch);
+        const [long, lat] = match.geo;
 
         const payload =
         {
-            latitude: coords.lat,
-            longitude: coords.long,
+            latitude: lat,
+            longitude: long,
             updatedByGuid: SYSTEM_USER,
             isResolved: true
         };
 
         // add these fields if they exist
-        const { attributes: atr } = arcGISmatch;
+        const { attributes: atr } = match;
 
         if (atr.StAddr)
             payload.street1 = atr.StAddr;
@@ -303,6 +321,9 @@ class TerminalService
         await Terminal.query(trx)
             .where('guid', terminal.guid)
             .patch(payload);
+
+        // emit event
+        emitter.emit('terminal_resolved', { terminalGuid: terminal.guid });
     }
 
     // this method will merge one terminal into another including all related records
@@ -310,7 +331,7 @@ class TerminalService
     {
         // if the two terminals are the same, we don't want to do anything
         if (primaryTerminal.guid === alternativeTerminal.guid)
-            throw new Error('Cannot merge a terminal into itself');
+            throw new DataConflictError('Cannot merge a terminal into itself');
 
         // update all orderStops and terminalContacts from current terminal to existing terminal
         await Promise.all(
@@ -330,6 +351,9 @@ class TerminalService
             {
                 // now that there is nothing attached to this terminal, we can delete it
                 await Terminal.query(trx).deleteById(alternativeTerminal.guid);
+
+                // emit event
+                emitter.emit('terminal_resolved', { terminalGuid: primaryTerminal.guid });
             });
     }
 
@@ -438,7 +462,7 @@ class TerminalService
     {
         // if there is no guid, throw an error
         if (!terminalGuid)
-            throw new HttpError(400, 'Terminal Must Have A guid');
+            throw new MissingDataError('Terminal Must Have A guid');
 
         const term = Terminal.fromJson(terminal);
 
@@ -449,12 +473,36 @@ class TerminalService
 
         // we can't let terminals be resolved without lat/long
         if (term.isResolved && (!term.latitude || !term.longitude))
-            throw new HttpError(400, 'Terminal Must Have Latitude And Longitude To Be Resolved');
+            throw new MissingDataError('Terminal Must Have Latitude And Longitude To Be Resolved');
 
         const newTerminal = await Terminal.query(trx)
             .patchAndFetchById(terminalGuid, term);
 
         return newTerminal;
+    }
+
+    // method to calculate the distance between a set of coords
+    static async calculateTotalDistance(stops)
+    {
+        // go through every order stop
+        stops.sort(OrderStops.sortBySequence);
+
+        // converting terminals into address strings
+        const coords = [];
+        for (const stop of stops)
+        {
+            const { terminal } = stop;
+
+            // we ignore unresolved terminals
+            if (terminal.latitude && terminal.longitude)
+                coords.push({ lat: terminal.latitude, long: terminal.longitude });
+        }
+
+        // we check if we have at least 2 points; otherwise we throw an error
+        if (coords.length < 2)
+            throw new ValidationError('At least 2 points are required to calculate the distance');
+        else
+            return await GeneralFuncs.calculateDistance(coords);
     }
 }
 

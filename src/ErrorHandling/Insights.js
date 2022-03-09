@@ -5,33 +5,38 @@ const appInsights = require('applicationinsights');
 // our local instances with azure.
 const fakeTelemetryClient = require('./FakeTelemetryClient');
 
+/**
+ * @type {appInsights.TelemetryClient}
+ */
 let client = {};
 
-if (process.env.local || process.env.LOCAL)
-    client = fakeTelemetryClient;
+// check if we are running in local mode
+const inTheCloud = [
+    'dev',
+    'development',
+    'staging',
+    'prod',
+    'production'
+].includes(process.env.NODE_ENV) && !process.env.LOCAL?.localeCompare('false');
+
+if (inTheCloud)
+{
+    appInsights.setup(process.env.APPINSIGHTS_INSTRUMENTATIONKEY)
+        .setAutoDependencyCorrelation(true)
+        .setAutoCollectRequests(true)
+        .setAutoCollectPerformance(true, true)
+        .setAutoCollectExceptions(true)
+        .setAutoCollectDependencies(true)
+        .setAutoCollectConsole(true)
+        .setUseDiskRetryCaching(true)
+        .setSendLiveMetrics(true);
+    client = appInsights.defaultClient;
+    client.context.tags[appInsights.defaultClient.context.keys.cloudRole] = process.env.NODE_ENV;
+    appInsights.start();
+}
 else
-    switch (process.env.ENV)
-    {
-        case 'dev':
-        case 'development':
-        case 'staging':
-        case 'prod':
-        case 'production':
-            appInsights.setup(process.env.APPINSIGHTS_INSTRUMENTATIONKEY)
-                .setAutoDependencyCorrelation(true)
-                .setAutoCollectRequests(true)
-                .setAutoCollectPerformance(true, true)
-                .setAutoCollectExceptions(true)
-                .setAutoCollectDependencies(true)
-                .setAutoCollectConsole(true)
-                .setUseDiskRetryCaching(true)
-                .setSendLiveMetrics(true);
-            client = appInsights.defaultClient;
-            client.context.tags[appInsights.defaultClient.context.keys.cloudRole] = process.env.ENV;
-            appInsights.start();
-            break;
-        default:
-            client = fakeTelemetryClient;
-    }
+{
+    client = fakeTelemetryClient;
+}
 
 module.exports = client;

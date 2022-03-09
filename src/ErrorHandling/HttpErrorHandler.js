@@ -1,39 +1,45 @@
-const validatorErrors = require('express-openapi-validator').error;
-const HttpError = require('./Exceptions/HttpError');
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
+const BulkResponse = require('./Responses/BulkResponse');
+const AppResponse = require('./Responses/AppResponse');
+const formatErrorMessageStructure = require('./FormatErrorMessageStructure');
 const telemetryClient = require('./Insights');
 
-/* eslint-disable */
 module.exports = (errors, request, response, next) =>
 {
-    if (!Array.isArray(errors))
+    if (
+        errors instanceof BulkResponse
+        || (errors?.onlySendErrorsToTelemetry && errors?.instance instanceof BulkResponse)
+    )
     {
-        errors = [errors];
+        const exception = errors?.onlySendErrorsToTelemetry ? errors.instance : errors;
+
+        telemetryClient.trackException({
+            exception: exception,
+            severity: SeverityLevel.Error
+        });
+        
+        if (errors?.onlySendErrorsToTelemetry) return;
+
+        response.status(200).json(errors.toJSON());
     }
-    let status = 500;
-    let data = {
-        errors: []
-    };
-    for (const e of errors)
+    else if (errors instanceof AppResponse || Array.isArray(errors))
     {
-        // handle openapi validator errors
-        if (e?.constructor?.name in validatorErrors)
-        {
-            response.status(e.status);
-            response.json({
-                errors: e.errors
-            });
-            return;
-        } else if (e.constructor.name == 'HttpError')
-        {
-            status = e.status || 400;
-            data.errors.push(e.toJson());
-        } else 
-        {
-            status = e.status || status;
-            data.errors.push({ message: e.data?.message || e.message });
-        }
+        const errorsException = Array.isArray(errors)
+            ? new AppResponse(errors)
+            : errors;
+        const formattedErrors = errorsException.toJSON();
+
+        telemetryClient.trackException({
+            exception: errorsException,
+            severity: SeverityLevel.Error
+        });
+        
+        response.status(formattedErrors.status).send(formattedErrors);
     }
-    console.log(...errors);
-    response.status(status);
-    response.send(data);
+    else
+    {
+        const errorMessage = formatErrorMessageStructure(errors);
+
+        response.status(errorMessage.status).send(errorMessage);
+    }
 };

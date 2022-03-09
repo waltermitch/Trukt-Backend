@@ -1,9 +1,10 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LoadboardService = require('../Services/LoadboardService');
+const LoadboardRequest = require('../Models/LoadboardRequest');
 
 // this is imported here because the file needs to be imported somewhere
 // in order for it to be able to listen to incoming events from service bus
 const LoadboardHandler = require('../Loadboards/LoadboardHandler');
+const { MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class LoadboardController
 {
@@ -20,10 +21,7 @@ class LoadboardController
         }
         catch (e)
         {
-            next({
-                status: 500,
-                data: { message: e.toString() || 'Internal server error' }
-            });
+            next(e);
         }
     }
 
@@ -40,15 +38,7 @@ class LoadboardController
         }
         catch (e)
         {
-            let status = 400;
-            if (e.toString() == 'Error: Job not found')
-            {
-                status = 404;
-            }
-            next({
-                status,
-                data: { message: e.message || 'Internal server error' }
-            });
+            next(e);
         }
 
     }
@@ -66,15 +56,7 @@ class LoadboardController
         }
         catch (e)
         {
-            let status = 400;
-            if (e.toString() == 'Error: Job not found')
-            {
-                status = 404;
-            }
-            next({
-                status,
-                data: { message: e.toString() || 'Internal server error' }
-            });
+            next(e);
         }
     }
 
@@ -143,11 +125,11 @@ class LoadboardController
 
             // do some validation
             if (!req.body.externalPostingGuid)
-                throw new HttpError(400, 'Missing external posting guid');
+                throw new MissingDataError('Missing external posting guid');
             else if (!req.body.loadboard)
-                throw new HttpError(400, 'Missing loadboard name');
+                throw new MissingDataError('Missing loadboard name');
             else if (!carrierGuid)
-                throw new HttpError(400, 'Carrier External Id or SF Id is missing');
+                throw new MissingDataError('Carrier External Id or SF Id is missing');
 
             await LoadboardService.postingBooked(req.body.externalPostingGuid, carrierGuid, req.body.loadboard);
 
@@ -156,6 +138,103 @@ class LoadboardController
         catch (err)
         {
             next(err);
+        }
+    }
+
+    static async getRequestsByJobGuid(req, res)
+    {
+        const result = await LoadboardService.getRequestsbyJobID(req?.params?.jobGuid);
+
+        if (result)
+        {
+            res.status(200);
+            res.json(result);
+        }
+        else
+            throw new NotFoundError('Requests not Found');
+    }
+
+    static async createRequestFromIncomingWebHook(req, res, next)
+    {
+        try
+        {
+            const externalPost = { guid: req.body.extraExternalData.externalOrderID };
+            const carrier = {
+                guid: req.body.extraExternalData.carrierInfo.guid,
+                usDot: req.body.carrierIdentifier,
+                name: req.body.extraExternalData.carrierInfo.name
+            };
+            const requestModel = LoadboardRequest.fromJson(req.body);
+            const result = await LoadboardService.createRequestfromWebhook(requestModel, externalPost, carrier, req.session.userGuid);
+
+            res.status(200);
+            res.json(result);
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async cancelRequestFromIncomingWebHook(req, res, next)
+    {
+        try
+        {
+            const externalPost = { guid: req.body?.extraExternalData?.externalOrderID };
+            const carrier = {
+                guid: req.body.extraExternalData.carrierInfo.guid,
+                usDot: req.body.carrierIdentifier,
+                name: req.body.extraExternalData.carrierInfo.name
+            };
+            const requestModel = LoadboardRequest.fromJson(req.body);
+            const result = await LoadboardService.cancelRequestfromWebhook(requestModel, externalPost, carrier, req.session.userGuid);
+
+            res.status(200);
+            res.json(result);
+        }
+        catch (err)
+        {
+            next(err);
+        }
+    }
+
+    static async declineLoadRequest(req, res, next)
+    {
+        try
+        {
+            const reason = req?.body.reason;
+            const requestGuid = req.params?.requestGuid;
+            if (!reason)
+            {
+                throw new MissingDataError('Unable to decline Request, missing reason');
+            }
+            const result = await LoadboardService.declineRequestByGuid(requestGuid, reason, req.session.userGuid);
+            res.status(200).send(result);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async acceptLoadRequest(req, res, next)
+    {
+        try
+        {
+            const requestGuid = req.params?.requestGuid;
+            if (requestGuid)
+            {
+                const result = await LoadboardService.acceptRequestbyGuid(requestGuid, req.session.userGuid);
+
+                res.status(200);
+                res.json(result);
+            }
+            else
+                throw NotFoundError('No Request Guid provided');
+        }
+        catch (error)
+        {
+            next(error);
         }
     }
 }

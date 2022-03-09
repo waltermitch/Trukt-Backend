@@ -1,3 +1,4 @@
+const { MissingDataError } = require('../ErrorHandling/Exceptions');
 const ExpenseService = require('../Services/ExpenseService');
 
 class ExpenseController
@@ -40,7 +41,7 @@ class ExpenseController
         const guid = req?.body?.guid || req?.params?.expenseId;
 
         if (!guid)
-            throw { 'status': 400, 'data': 'Missing Guid' };
+            throw new MissingDataError('Missing Guid');
 
         const result = await ExpenseService.update(guid, req.body, req.session.userGuid);
 
@@ -54,7 +55,7 @@ class ExpenseController
         const guid = req?.body?.guid || req?.params?.expenseId;
 
         if (!guid)
-            throw { 'status': 400, 'data': 'Missing Guid' };
+            throw new MissingDataError('Missing Guid');
 
         await ExpenseService.delete(guid, req.session.userGuid);
 

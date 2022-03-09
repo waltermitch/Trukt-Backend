@@ -4,11 +4,11 @@ const router = require('express').Router();
 const prefix = '/bulk';
 
 router
-    .put(`${prefix}/order/users`, (req, res) => http(req, res, controller.updateOrderUsers))
-    .put(`${prefix}/job/users`, (req, res) => http(req, res, controller.updateJobUsers))
-    .put(`${prefix}/job/dates`, (req, res) => http(req, res, controller.updateJobDates))
-    .put(`${prefix}/job/status`, (req, res) => http(req, res, controller.updateJobStatus))
-    .put(`${prefix}/job/prices`, (req, res) => http(req, res, controller.updateJobPrices))
+    .put(`${prefix}/order/users`, controller.updateOrderUsers)
+    .put(`${prefix}/job/users`, controller.updateJobUsers)
+    .put(`${prefix}/job/dates`, controller.updateJobDates)
+    .put(`${prefix}/job/status`, controller.updateJobStatus)
+    .put(`${prefix}/job/prices`, controller.updateJobPrices)
     .put(`${prefix}/tender/:action(accept|reject)`, controller.handleTendersBulk)
     .put(`${prefix}/job/status/ready`, controller.setJobsReadyBulk)
     .put(`${prefix}/order/bill/export`, controller.exportBills)

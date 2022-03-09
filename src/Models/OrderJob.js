@@ -1,8 +1,8 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const { ref, raw } = require('objection');
 const BaseModel = require('./BaseModel');
 const { snakeCaseString } = require('../Utils');
+const { DataConflictError, MissingDataError } = require('../ErrorHandling/Exceptions');
 
 const jobTypeFields = ['category', 'type'];
 const EDI_DEFAULT_INSPECTION_TYPE = 'standard';
@@ -291,13 +291,13 @@ class OrderJob extends BaseModel
 
     static customSort(sortField = 'number')
     {
-        const SFAccount = require('./SFAccount');
-        const Order = require('./Order');
-        const Terminal = require('./Terminal');
-        const OrderStop = require('./OrderStop');
         const OrderStopLink = require('./OrderStopLink');
-        const User = require('./User');
+        const SFAccount = require('./SFAccount');
+        const OrderStop = require('./OrderStop');
         const SFContact = require('./SFContact');
+        const Terminal = require('./Terminal');
+        const Order = require('./Order');
+        const User = require('./User');
 
         switch (sortField)
         {
@@ -665,7 +665,40 @@ class OrderJob extends BaseModel
         filterByDispatcher: this.filterByDispatcher,
         filterByCustomer: this.filterByCustomer,
         filterBySalesperson: this.filterBySalesperson,
-        filterByCarrier: this.filterByCarrier
+        filterByCarrier: this.filterByCarrier,
+        canServiceJobMarkAsCanceled: (queryBuilder) =>
+        {
+            queryBuilder.select(raw(`bool_and(
+                vendor_guid is null 
+                and (is_deleted = false and is_canceled = false and is_complete = false)
+                and date_completed is null
+            ) as canBeMarkAsCanceled
+            `));
+        },
+
+        // Uses OrderJob alias as OJ
+        isServiceJob: (queryBuilder) =>
+        {
+            queryBuilder.select(raw('(case when o_j_t.category=\'service\' then true else false END) as isServiceJob'))
+                .innerJoin('rcgTms.orderJobTypes as OJT', 'OJ.typeId', 'OJT.id');
+        },
+
+        // Uses OrderJob alias as OJ
+        vendorName: (queryBuilder) =>
+        {
+            queryBuilder.select('V.name as vendorName')
+                .leftJoin('salesforce.accounts as V', 'OJ.vendorGuid', 'V.guid');
+
+        },
+        canServiceJobMarkAsDeleted: (queryBuilder) =>
+        {
+            queryBuilder.select(raw(`bool_and(
+                vendor_guid is null
+                and (is_deleted = false and is_canceled = false and is_complete = false)
+                and date_completed is null
+            ) as canbemarkasdeleted
+            `));
+        }
     };
 
     static filterByCarrier(queryBuilder, carrierList = [])
@@ -711,44 +744,44 @@ class OrderJob extends BaseModel
     validateJobForDispatch()
     {
         if (this.isDummy)
-            throw new HttpError(400, 'Cannot dispatch dummy job');
+            throw new DataConflictError('Cannot dispatch dummy job');
 
         if (this.type.category != 'transport' && this.type.type != 'transport' && this.isTransport)
-            throw new HttpError(400, 'Cannot dispatch non transport job');
+            throw new DataConflictError('Cannot dispatch non transport job');
 
         if (this.isOnHold)
-            throw new HttpError(400, 'Cannot dispatch job that is on hold');
+            throw new DataConflictError('Cannot dispatch job that is on hold');
 
         if (!this.dispatcherGuid)
-            throw new HttpError(400, 'Cannot dispatch job that has no dispatcher');
+            throw new MissingDataError('Cannot dispatch job that has no dispatcher');
 
         if (!this.isReady)
-            throw new HttpError(400, 'Cannot dispatch job that is not ready');
+            throw new DataConflictError('Cannot dispatch job that is not ready');
 
         if (this.isDeleted)
-            throw new HttpError(400, 'Cannot dispatch deleted job');
+            throw new DataConflictError('Cannot dispatch deleted job');
 
         if (this.isCanceled)
-            throw new HttpError(400, 'Cannot dispatch canceled job');
+            throw new DataConflictError('Cannot dispatch canceled job');
 
         if (this.order.isTender)
-            throw new HttpError(400, 'Cannot dispatch job for tender order');
+            throw new DataConflictError('Cannot dispatch job for tender order');
 
         if (this.dispatches?.length > 0)
-            throw new HttpError(400, 'Cannot dispatch job with already active load offer');
+            throw new DataConflictError('Cannot dispatch job with already active load offer');
 
         if (this.bills.length === 0)
-            throw new HttpError(400, 'Job bill missing. Bill is required in order to set payment method and payment terms');
+            throw new MissingDataError('Job bill missing. Bill is required in order to set payment method and payment terms');
     }
 
     validateJobForAccepting()
     {
         if (!this.isReady)
-            throw new HttpError(400, 'Job is not ready');
+            throw new DataConflictError('Job is not ready');
         if (Number(this.validDispatchesCount) > 1)
-            throw new HttpError(400, 'Job has more than one valid pending dispatch');
+            throw new DataConflictError('Job has more than one valid pending dispatch');
         if (Number(this.validDispatchesCount) === 0)
-            throw new HttpError(400, 'Job has no valid pending dispatch');
+            throw new DataConflictError('Job has no valid pending dispatch');
     }
 
     static get fetch()
@@ -890,6 +923,57 @@ class OrderJob extends BaseModel
         this.vendorGuid = null;
         this.vendorContactGuid = null;
         this.vendorAgentGuid = null;
+    }
+    
+    /**
+     * Use OrderJob modifier "isServiceJob" to get the property "isservicejob".
+     * Use OrderJob modifier "canServiceJobMarkAsCanceled" to get the property "canServiceJobMarkAsCanceled"
+     * Use OrderJob modifier "vendorName" to get the property "vendorName"
+     */
+    validateJobForCanceling()
+    {
+        // Validation for service jobs
+        if (this.isservicejob)
+        {
+            if (this.vendorGuid)
+                throw new DataConflictError(`Please un-dispatch the vendor '${this.vendorName}' before canceling the job`);
+            if (!this.canServiceJobMarkAsCanceled)
+                throw new DataConflictError(`Cannot cancel job because it is '${this.status}'`);
+
+        }
+
+        // Validation for transport jobs
+        else
+        {
+            if (this.isDeleted)
+                throw new DataConflictError('This Order is deleted and can not be canceled.');
+            if (this.jobIsDispatched)
+                throw new DataConflictError('Please un-dispatch the Order before canceling');
+        }
+    }
+
+    /**
+     * Use OrderJob modifier "isServiceJob" to get the property "isservicejob".
+     * Use OrderJob modifier "canServiceJobMarkAsDeleted" to get the property "canServiceJobMarkAsDeleted"
+     * Use OrderJob modifier "vendorName" to get the property "vendorName"
+     */
+    validateJobForDeletion()
+    {
+        // Validation for service jobs
+        if (this.isservicejob)
+        {
+            if (this.vendorGuid)
+                throw new DataConflictError(`Please un-dispatch the vendor '${this.vendorName}' before deleting the job`);
+            if (!this.canServiceJobMarkAsDeleted)
+                throw new DataConflictError(`Cannot delete job because it is '${this.status}'`);
+        }
+
+        // Validation for transport jobs
+        else
+        {
+            if (this.jobIsDispatched)
+                throw new DataConflictError('Please un-dispatch the Order before deleting');
+        }
     }
 }
 

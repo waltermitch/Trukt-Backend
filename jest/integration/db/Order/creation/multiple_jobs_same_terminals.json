@@ -713,6 +713,21 @@
                         "isAccessorial": false
                     }
                 ]
+            },
+            {
+                "isPaid": false,
+                "lines": [
+                    {
+                        "notes": null,
+                        "amount": "0.00",
+                        "itemId": 7,
+                        "dateCharged": null,
+                        "transactionNumber": null,
+                        "link": [],
+                        "name": "rebate",
+                        "isAccessorial": false
+                    }
+                ]
             }
         ],
         "jobsBills": [

@@ -175,6 +175,27 @@ class LoadboardPost extends BaseModel
         }
     }
 
+    setToRemoved()
+    {
+        this.status = 'removed';
+        this.isCreated = false;
+        this.isSynced = true;
+        this.isPosted = false;
+        this.isDeleted = true;
+        this.hasError = false;
+        this.apiError = null;
+
+        // This is the "posting" in the external system
+        this.externalPostGuid = null;
+        if (this.loadboard != 'SUPERDISPATCH' &&
+            this.loadboard != 'SHIPCARS' &&
+            this.loadboard != 'CARDELIVERYNETWORK')
+        {
+            // This is the "load" or "order" in the external system
+            this.externalGuid = null;
+        }
+    }
+
     setAPIError(error)
     {
         this.isSynced = true;

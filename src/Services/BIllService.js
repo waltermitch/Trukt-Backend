@@ -1,6 +1,5 @@
-const enabledModules = process.env['accounting.modules'].split(';');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
-const QuickBooksService = require('./QuickBooksService');
+const AccountingFunc = require('../Azure/AccountingFunc');
 const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceBill = require('../Models/InvoiceBill');
 const InvoiceService = require('./InvoiceService');
@@ -9,6 +8,8 @@ const Order = require('../Models/Order');
 const currency = require('currency.js');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
+const { AppResponse } = require('../ErrorHandling/Responses');
 
 let transportItem;
 
@@ -35,15 +36,11 @@ class BillService
 
             // if bill doesn't exist in table throw error
             if (!bill)
-            {
-                throw new Error('Bill does not exist.');
-            }
+                throw new NotFoundError('Bill does not exist.');
 
             // if wrong invoice has been provided
             if (invoiceGuid && !invoice)
-            {
-                throw new Error('Invoice does not exist.');
-            }
+                throw new NotFoundError('Invoice does not exist.');
 
             // for bulk insert
             const linksArray = [];
@@ -55,7 +52,8 @@ class BillService
             // if invoiceGuid exists create line and link
             if (invoiceGuid)
             {
-                const invoiceLine = InvoiceLine.fromJson(line);
+                // By default the linked invoice line should be created as a line not paid
+                const invoiceLine = InvoiceLine.fromJson({ ...line, isPaid: false });
                 invoiceLine.linkInvoice(invoice);
                 linksArray.push(invoiceLine);
             }
@@ -72,6 +70,7 @@ class BillService
             // return only the bill item
             return newLine1;
         });
+
         return result;
     }
 
@@ -82,9 +81,7 @@ class BillService
 
         // if no bill throw error
         if (!bill)
-        {
-            throw new Error('Bill does not exist.');
-        }
+            throw new NotFoundError('Bill does not exist.');
 
         // linking and updateing
         line.linkBill(bill);
@@ -94,9 +91,7 @@ class BillService
 
         // if line doesn't exist
         if (!newLine)
-        {
-            throw new Error('Line does not exist.');
-        }
+            throw new NotFoundError('Line does not exist.');
 
         return newLine;
     }
@@ -108,27 +103,21 @@ class BillService
 
         // if no bill throw error
         if (!bill)
-        {
-            throw new Error('Bill does not exist.');
-        }
+            throw new NotFoundError('Bill does not exist.');
 
         // to double check and see if commodity is attached
         const checkLine = await InvoiceLine.query().findById(lineGuid);
 
         // if attached throw error
         if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
-        {
-            throw new Error('Deleting a transport line attached to a commodity is forbidden.');
-        }
+            throw new DataConflictError('Deleting a transport line attached to a commodity is forbidden.');
 
         // returning updated bill
         const newLine = await InvoiceLine.query().deleteById(lineGuid).returning('*');
 
         // if line doesn't exist
         if (!newLine)
-        {
-            throw new Error('Line does not exist.');
-        }
+            throw new NotFoundError('Line does not exist.');
 
         return;
     }
@@ -142,9 +131,7 @@ class BillService
 
             // if no bill throw error
             if (!bill)
-            {
-                throw new Error('Bill does not exist.');
-            }
+                throw new NotFoundError('Bill does not exist.');
 
             // deleteing lines in bulk :: users are forbidden from deleting transport lines with commodity attached to it.
             const deletedLines = await InvoiceLine.query(trx).delete().whereIn('guid', lineGuids).where('invoiceGuid', billGuid).modify('isNotTransport');
@@ -153,7 +140,7 @@ class BillService
             if (deletedLines != lineGuids.length)
             {
                 // error array for uniquee messages
-                const errorArray = [];
+                const appResponse = new AppResponse();
 
                 // query all guids, and throw error for which return because they still exist.
                 const failedLines = await InvoiceLine.query(trx).findByIds([lineGuids]);
@@ -163,14 +150,15 @@ class BillService
                 {
                     if (l.itemId == 1 && l.commodityGuid != null)
                     {
-                        errorArray.push(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid} `);
+                        appResponse.addError(new DataConflictError(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid}`));
                     }
                     if (l.invoiceGuid != billGuid)
                     {
-                        errorArray.push(`Deleting a line the doesn't belong to the bill is forbidden. Guid: ${l.guid} `);
+                        appResponse.addError(new DataConflictError(`Deleting a line the doesn't belong to the bill is forbidden. Guid: ${l.guid}`));
                     }
                 }
-                throw new Error(errorArray);
+                if (appResponse.doErrorsExist())
+                    return appResponse;
             }
 
             // if succeed then, returns nothing
@@ -183,106 +171,186 @@ class BillService
 
     static async exportBills(arr)
     {
-        // array for results
-        const results = [];
+        // remove duplicates in arr
+        const unique = [...new Set(arr)];
 
         // query to get all the orders with related objects
-        const qb = Order.query().whereIn('guid', arr);
-
-        qb.withGraphFetched('[jobs.[bills.[lines.[commodity.[stops.[terminal], vehicle, commType], item.qbAccount]], vendor]]');
-
-        // get all the orders
-        const orders = await qb;
+        const orders = await Order.query()
+            .whereIn('guid', unique)
+            .withGraphFetched('[jobs.[type, bills.[lines(isNonZero, isNotPaid).[commodity.[stops.[terminal], vehicle, commType], item]], vendor]]');
 
         if (!orders.length)
-            return null;
+            throw new NotFoundError('No Matching Orders Found');
 
-        // which system to send bills to
         const qbBills = [];
         const billMap = new Map();
 
+        // we will need to build a map based on order guid in order to handle batching
+        // the key is the order guid and the value is an object of [status, error, data]
+        // where status is result of operation, either error or data is present (should not be both)
+        const results = {};
+
         // loop through all the orders
         for (const order of orders)
+        {
+            // initialize in map
+            results[order.guid] = { data: [], errors: new AppResponse(), status: null };
+
             for (const job of order.jobs)
+            {
                 for (const bill of job.bills)
                 {
-                    if (bill.isPaid && Object.keys(bill?.externalSourceData).length > 0)
-                    {
-                        results.push({
-                            guid: bill.guid,
-                            error: 'Bill Already Maked As Paid',
-                            externalSourceData: bill.externalSourceData
-                        });
-                        continue;
-                    }
-
-                    // add existing bill to map
-                    billMap.set(bill.guid, bill.externalSourceData || {});
-
-                    // map parent fields to child object
+                    // we will use these fields to identify the bill in errors and api calls
+                    bill.orderGuid = order.guid;
+                    bill.jobGuid = job.guid;
+                    bill.orderNumber = order.number;
                     bill.jobNumber = job.number;
-                    bill.vendor = job.vendor;
+                    bill.jobType = job.type.category;
 
-                    if (enabledModules.includes('quickbooks'))
+                    bill.vendor =
                     {
+                        guid: job.vendor.guid,
+                        name: job.vendor.name,
+                        qbId: job.vendor.qbId,
+                        sdGuid: job.vendor.sdGuid
+                    };
+
+                    if (bill.isPaid && Object.keys(bill.externalSourceData || {}).length > 0)
+                    {
+                        results[order.guid].status = 400;
+                        results[order.guid].errors.setStatus(400);
+                        results[order.guid].errors.addError(
+                            new DataConflictError('Bill Already Maked As Paid', {
+                                guid: bill.guid,
+                                data: bill
+                            })
+                        );
+                    }
+                    else if (bill.lines.length == 0)
+                    {
+                        results[order.guid].status = 400;
+                        results[order.guid].errors.setStatus(400);
+                        results[order.guid].errors.addError(
+                            new DataConflictError('Bill Has No Non Zero Lines', {
+                                guid: bill.guid,
+                                data: bill
+                            })
+                        );
+                    }
+                    else if (!bill.vendor.qbId)
+                    {
+                        results[order.guid].status = 400;
+                        results[order.guid].errors.setStatus(400);
+                        results[order.guid].errors.addError(
+                            new DataConflictError(`Bill ${bill.guid} has no vendor or vendor doesn't have a QBO Id`, {
+                                guid: bill.guid,
+                                data: bill
+                            })
+                        );
+                    }
+                    else
+                    {
+                        // add bill to map (we will need to access externalSourceData later)
+                        billMap.set(bill.guid, bill);
+
+                        // also process the bill lines
+                        for (const line of bill.lines)
+                        {
+                            if (line.commodity?.commType?.category === 'freight')
+                                line.itemName = 'freight';
+                            else
+                                line.itemName = line.item.name;
+
+                            // compose description
+                            line.description = AccountingFunc.composeDescription(line);
+                        }
+
+                        // add bill to qbBills
                         qbBills.push(bill);
                     }
                 }
+            }
+        }
 
-        const promises = await Promise.allSettled([QuickBooksService.createBills(qbBills)]);
-
-        // for each successful bill save to db
-        for (const promise of promises)
-            if (promise.reason)
-                console.log(promise.reason);
-            else
-                for (const e of promise.value)
-                    if (e.Bill)
-                    {
-                        // merge existing externalSourceData with new data
-                        const mergedData = Object.assign({}, billMap.get(e.bId), { 'quickbooks': { 'bill': { 'Id': e.Bill.Id } } });
-
-                        // update in map
-                        billMap.set(e.bId, mergedData);
-                    }
-                    else if (e.error || e.Fault)
-                    {
-                        const mergedData = Object.assign({}, billMap.get(e.guid), { 'error': e.Fault ? { 'error': e } : e });
-
-                        billMap.set(e.guid, mergedData);
-                    }
+        // this returns an array of failed and successful bills
+        const res = await AccountingFunc.exportBills(qbBills);
 
         // set current timestamp
         const now = DateTime.utc().toString();
 
-        // save all bills to db
-        await Promise.allSettled(Array.from(billMap.entries()).map(async ([guid, data]) =>
+        await Promise.allSettled(res.map(async ({ system, data, error, status }) =>
         {
-            if (!data.error)
+            if (status != 200)
             {
-                const trx = await InvoiceBill.transaction();
+                // if we errored out we don't need to update the bill
+                // just push error to results
+                const billObj = billMap.get(error?.guid);
 
-                // update all the bills and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateCharged: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.bill?.Id }).where('invoiceGuid', guid)]);
-
-                if (proms[0].status == 'fulfilled')
-                {
-                    await trx.commit();
-                    results.push(proms[0].value);
-                }
-                else
-                {
-                    await trx.rollback();
-                    results.push(proms[0].reason);
-                }
+                results[billObj.orderGuid].status = status;
+                results[billObj.orderGuid].errors = new AppResponse();
+                results[billObj.orderGuid].errors.setStatus(status);
+                results[billObj.orderGuid].errors.addError(
+                    new DataConflictError(error, {
+                        guid: error.guid
+                    })
+                );
             }
             else
-                results.push(data.error);
-        }));
+            {
+                // if all is good try to update the bill in the database
+                const billObj = billMap.get(data?.guid);
 
-        // check length of results
-        if (results.length == 0)
-            return [{ success: true, message: 'All Bills Already Paid For This Job' }];
+                // keep errors tracked in the bill
+                results[billObj.orderGuid].errors = new AppResponse();
+
+                // if no errors we will update the bill
+                const trx = await InvoiceBill.startTransaction();
+
+                // merge externalSourceData with current bill externalSourceData
+                const curExternal = billObj.externalSourceData || {};
+
+                if (system == 'quickbooks')
+                    Object.assign(curExternal, { 'quickbooks': { 'Id': data.qbId } });
+
+                try
+                {
+                    const [patchedBill] = await Promise.all([
+                        InvoiceBill.query(trx)
+                            .patchAndFetchById(data.guid, { externalSourceData: curExternal, isPaid: true, datePaid: now }),
+
+                        InvoiceLine.query(trx)
+                            .patch({ isPaid: true, transactionNumber: data.qbId, dateCharged: now })
+                            .where('invoiceGuid', data.guid)
+                    ]);
+
+                    // only set 200 if all bills are successful
+                    // any single error will set the status to 400
+                    if (!results[billObj.orderGuid].errors.doErrorsExist())
+                        results[billObj.orderGuid].status = 200;
+
+                    // rename guid as billGuid
+                    patchedBill.billGuid = data.guid;
+                    patchedBill.orderNumber = billObj.orderNumber;
+
+                    results[billObj.orderGuid].data.push(patchedBill);
+
+                    await trx.commit();
+                }
+                catch (err)
+                {
+                    await trx.rollback();
+
+                    results[billObj.orderGuid].status = 500;
+                    results[billObj.orderGuid].errors.setStatus(500);
+                    results[billObj.orderGuid].errors.addError(
+                        new DataConflictError(err, {
+                            guid: data.guid
+                        })
+                    );
+
+                }
+            }
+        }));
 
         return results;
     }
@@ -299,6 +367,7 @@ class BillService
     {
         const lines = [];
         const distribution = currency(carrierPay).distribute(commodities.length);
+
         for (let i = 0; i < commodities.length; i++)
         {
             const amount = distribution[i].value;

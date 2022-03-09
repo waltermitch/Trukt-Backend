@@ -106,15 +106,6 @@ class Terminal extends BaseModel
         return json;
     }
 
-    toApiString()
-    {
-        if (this.latitude && this.longitude)
-        {
-            return `{ "geometry" :{"x": ${this.longitude}, "y": ${this.latitude}}}`;
-        }
-        return `${this.street1}, ${this.city}, ${this.state} ${this.zipCode}`;
-    }
-
     isDifferent(terminal)
     {
         if (this.street1 !== terminal.street1)
@@ -150,7 +141,12 @@ class Terminal extends BaseModel
 
     static hasTerminalsSameExtraInformation(terminal1, terminal2)
     {
-        const exytraInfoKeys = ['name', 'street2', 'locationType'];
+        const exytraInfoKeys = [
+            'name',
+            'street2',
+            'locationType',
+            'notes'
+        ];
 
         return exytraInfoKeys.every(key =>
         {
@@ -170,19 +166,19 @@ class Terminal extends BaseModel
     {
         const { street1, city, state, zipCode, country } = terminal;
 
-        let address = '';
+        const address = [];
         if (street1)
-            address += `${street1}, `;
+            address.push(street1);
         if (city)
-            address += `${city}, `;
+            address.push(city);
         if (state)
-            address += `${state} `;
+            address.push(state);
         if (zipCode)
-            address += `${zipCode.match(zipCodeNoDashRegex)}`;
+            address.push(zipCode.match(zipCodeNoDashRegex));
         if (country)
-            address += ` ${country}`;
+            address.push(country);
 
-        return address;
+        return address.join(', ');
     }
 
     /**

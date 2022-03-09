@@ -1,14 +1,14 @@
-const enabledModules = process.env['accounting.modules'].split(';');
-const QuickBooksService = require('./QuickBooksService');
+const AccountingFunc = require('../Azure/AccountingFunc');
 const LineLinks = require('../Models/InvoiceLineLink');
 const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceBill = require('../Models/InvoiceBill');
-const CoupaService = require('./CoupaService');
 const Line = require('../Models/InvoiceLine');
 const Invoice = require('../Models/Invoice');
 const Order = require('../Models/Order');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
+const { AppResponse } = require('../ErrorHandling/Responses');
 
 class InvoiceService
 {
@@ -33,7 +33,8 @@ class InvoiceService
             });
 
         // order was not found, return undefined
-        if (res == undefined) return undefined;
+        if (res == undefined)
+            return undefined;
 
         // assigning orderId and Number to all order invoices
         for (const invoice of res.invoices)
@@ -80,9 +81,7 @@ class InvoiceService
 
         // order was not found, return undefined
         if (res == undefined)
-        {
             return undefined;
-        }
 
         // using type to make it more concrete
         if (type == 'job')
@@ -102,6 +101,7 @@ class InvoiceService
                 return bills;
             }, []);
         }
+
         if (type == 'order')
         {
             // assigning orderId and Number to order invoice
@@ -125,13 +125,13 @@ class InvoiceService
             // if invoice doesn't exist in table throw error
             if (!invoice)
             {
-                throw new Error('Invoice does not exist.');
+                throw new NotFoundError('Invoice does not exist.');
             }
 
             // if wrong billGuid
             if (billGuid && !bill)
             {
-                throw new Error('Bill does not exist.');
+                throw new NotFoundError('Bill does not exist.');
             }
 
             // for bulk insert
@@ -144,7 +144,8 @@ class InvoiceService
             // if billGuid exists create line and link
             if (billGuid)
             {
-                const billLine = InvoiceLine.fromJson(line);
+                // By default the linked bill line should be created as a line not paid
+                const billLine = InvoiceLine.fromJson({ ...line, isPaid: false });
                 billLine.linkBill(bill);
                 linksArray.push(billLine);
             }
@@ -161,6 +162,7 @@ class InvoiceService
             // return only the invoice item
             return newLine1;
         });
+
         return result;
     }
 
@@ -172,7 +174,7 @@ class InvoiceService
         // if no bill throw error
         if (!invoice)
         {
-            throw new Error('Invoice does not exist.');
+            throw new NotFoundError('Invoice does not exist.');
         }
 
         // linking and updateing
@@ -184,7 +186,7 @@ class InvoiceService
         // if line doesn't exist
         if (!newLine)
         {
-            throw new Error('Line does not exist.');
+            throw new NotFoundError('Line does not exist.');
         }
 
         return newLine;
@@ -198,7 +200,7 @@ class InvoiceService
         // if no bill throw error
         if (!invoice)
         {
-            throw new Error('Invoice does not exist.');
+            throw new NotFoundError('Invoice does not exist.');
         }
 
         // to double check and see if commodity is attached
@@ -207,7 +209,7 @@ class InvoiceService
         // if attached throw error
         if (checkLine.itemId == 1 && checkLine.commodityGuid != null)
         {
-            throw new Error('Deleting a transport line attached to a commodity is forbidden.');
+            throw new DataConflictError('Deleting a transport line attached to a commodity is forbidden.');
         }
 
         // returning updated bill
@@ -216,7 +218,7 @@ class InvoiceService
         // if line doesn't exist
         if (!newLine)
         {
-            throw new Error('Line does not exist.');
+            throw new NotFoundError('Line does not exist.');
         }
 
         return;
@@ -233,7 +235,7 @@ class InvoiceService
             // incorrect invoice
             if (!invoice)
             {
-                throw new Error('Invoice does not exist.');
+                throw new NotFoundError('Invoice does not exist.');
             }
 
             // deleteing lines in bulk :: users are forbidden from deleting transport lines with commodity attached to it.
@@ -243,7 +245,7 @@ class InvoiceService
             if (deletedLines != lineGuids.length)
             {
                 // error array for unique messages
-                const errorArray = [];
+                const appResponse = new AppResponse();
 
                 // query all guids, and throw error for which return because they still exist.
                 const failedLines = await InvoiceLine.query(trx).findByIds([lineGuids]);
@@ -253,19 +255,21 @@ class InvoiceService
                 {
                     if (l.itemId == 1 && l.commodityGuid != null)
                     {
-                        errorArray.push(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid} `);
+                        appResponse.addError(new DataConflictError(`Deleting a transport line attached to a commodity is forbidden. Line guid: ${l.guid}`));
                     }
                     if (l.invoiceGuid != invoiceGuid)
                     {
-                        errorArray.push(`Deleting a line the doesn't belong to the invoice is forbidden. Line guid: ${l.guid} `);
+                        appResponse.addError(new DataConflictError(`Deleting a line the doesn't belong to the invoice is forbidden. Line guid: ${l.guid}`));
                     }
                 }
-                throw new Error(errorArray);
+                if (appResponse.doErrorsExist())
+                    return appResponse.toJSON();
             }
 
             // if succeed then, returns nothing
             return;
         });
+
         return result;
     }
 
@@ -273,10 +277,13 @@ class InvoiceService
     {
         const Lines = await Line.query(trx).findByIds([line1Guid, line2Guid]).withGraphFetched('[invoice, bill, invoiceBill.[job]]');
 
+        if (Lines.length === 0)
+            throw new NotFoundError('Line does not exist.');
+
         // not allowed to link transport items
         if (Lines[0]?.itemId == 1 && Lines[1]?.itemId == 1)
         {
-            throw new Error('Cannot link transport items!');
+            throw new DataConflictError('Cannot link transport items!');
         }
 
         if (!((Lines[1].bill?.billGuid && Lines[0].bill?.billGuid) || (Lines[0].invoice?.invoiceGuid && Lines[1].invoice?.invoiceGuid)))
@@ -298,10 +305,13 @@ class InvoiceService
     {
         const Lines = await Line.query().findByIds([line1Guid, line2Guid]).withGraphFetched('[invoice, bill, invoiceBill.[job]]');
 
+        if (Lines.length === 0)
+            throw new NotFoundError('Line does not exist.');
+
         // not allowed to unlink transport items
         if (Lines[0]?.itemId == 1 && Lines[1]?.itemId == 1)
         {
-            throw new Error('Cannot unlink transport items!');
+            throw new DataConflictError('Cannot unlink transport items!');
         }
 
         // checking to see if order to order or job to job
@@ -316,125 +326,202 @@ class InvoiceService
             {
                 // deleted the linked items from table, considers both options
                 await LineLinks.query().delete().where({ line1Guid: line1Guid, line2Guid: line2Guid }).orWhere({ line1Guid: line2Guid, line2Guid: line1Guid });
+
                 return;
             }
         }
     }
 
-    // This method will need to be redone, post Alpha launch
-    // very janky and inefficient, no time to fix
-    // TODO: refactor this method
     static async exportInvoices(arr)
     {
+        // remove duplicates in arr
+        const unique = [...new Set(arr)];
+
+        // query to get all the orders with related objects
+        const orders = await Order.query()
+            .whereIn('guid', unique)
+            .withGraphFetched('[invoices.[consignee, lines(isNotPaid, isNonZero).[commodity.[stops.[terminal], vehicle, commType], item]], client]');
+
+        if (!orders.length)
+            throw new NotFoundError('No Matching Orders Found');
+
+        const invoicesToExport = [];
+        const invoiceMap = new Map();
+
         // array for results
         const results = [];
 
-        // query to get all the orders with related objects
-        const qb = Order.query().whereIn('guid', arr);
-
-        qb.withGraphFetched('[invoices.[consignee, lines(isNotPaid).[commodity.[stops.[terminal], vehicle, commType], item.qbAccount]], client]');
-
-        // get all the orders
-        const orders = await qb;
-
-        // decide which system they will be invoiced in
-        const QBInvoices = [];
-        const CoupaInvoices = [];
-
-        // map used to get external data later on
-        const invoiceMap = new Map();
-
         for (const order of orders)
-            for (const invoice of order.invoices)
-            {
-                if (invoice.dateInvoiced)
-                    continue;
-
-                // add existing invoice externalSourceData to map
-                invoiceMap.set(invoice.guid, invoice.externalSourceData || {});
-
-                // map some order fields to invoice
-                invoice.client = order.client;
-                invoice.orderNumber = order.number;
-
-                if (enabledModules.includes('coupa') && ['LKQ Corporation', 'LKQ Self Service']?.includes(order?.client?.name))
-                    CoupaInvoices.push(invoice);
-                else if (enabledModules.includes('quickbooks'))
-                    QBInvoices.push(invoice);
-            }
-
-        const promises = await Promise.allSettled([QuickBooksService.createInvoices(QBInvoices), CoupaService.createInvoices(CoupaInvoices)]);
-
-        // for each successful invoice, update the invoice in the database
-        for (const promise of promises)
         {
-            if (promise.reason)
+            // if order has invoices
+            if (order.invoices.length)
             {
-                console.log(promise.reason);
-            }
-            else
-            {
-                for (const e of promise.value)
+                results[order.guid] = { data: [], errors: new AppResponse(), status: null };
+
+                for (const invoice of order.invoices)
                 {
-                    if (e?.Invoice)
-                    {
-                        // merge existing externalSourceData with new data
-                        const mergedData = Object.assign({}, invoiceMap.get(e.bId), { 'quickbooks': { 'invoice': { 'Id': e.Invoice.Id, 'DocNumber': e.Invoice.DocNumber } } });
+                    if (invoice.dateInvoiced)
+                        continue;
 
-                        // update in map
-                        invoiceMap.set(e.bId, mergedData);
+                    // assign fields for future use
+                    invoice.orderGuid = order.guid;
+                    invoice.orderNumber = order.number;
+
+                    const client = invoice.consignee || order.client;
+
+                    invoice.client =
+                    {
+                        guid: client.guid,
+                        name: client.name,
+                        qbId: client.qbId,
+                        sdGuid: client.sdGuid
+                    };
+
+                    delete invoice.consignee;
+
+                    // perform validation
+                    if (invoice.isPaid || Object.keys(invoice.externalSourceData || {}).length > 0)
+                    {
+                        results[order.guid].status = 400;
+                        results[order.guid].errors.setStatus(400);
+                        results[order.guid].errors.addError(
+                            new DataConflictError('Invoice already marked as paid'),
+                            {
+                                guid: invoice.guid,
+                                data: invoice
+                            }
+                        );
                     }
-                    else if (e.CoupaInvoice)
+                    else if (invoice.lines.length == 0)
                     {
-                        // merge existing externalSourceData with new data
-                        const mergedData = Object.assign({}, invoiceMap.get(e.guid), { 'coupa': { 'invoice': e.CoupaInvoice } });
-
-                        // update in map
-                        invoiceMap.set(e.guid, mergedData);
+                        results[order.guid].status = 400;
+                        results[order.guid].errors.setStatus(400);
+                        results[order.guid].errors.addError(
+                            new DataConflictError('Invoice Has No Non Zero Lines'),
+                            {
+                                guid: invoice.guid,
+                                data: invoice
+                            }
+                        );
                     }
-                    else if (e.error || e.Fault)
+                    else if (!invoice.client.qbId)
                     {
-                        const mergedData = Object.assign({}, invoiceMap.get(e.guid), { 'error': e });
+                        results[order.guid].status = 400;
+                        results[order.guid].errors.setStatus(400);
+                        results[order.guid].errors.addError(
+                            new DataConflictError(`Invoice ${invoice.guid} has no client/consignee or client/consignee doesn't have a QBO Id`,
+                            {
+                                guid: invoice.guid,
+                                data: invoice
+                            })
+                        );
+                    }
+                    else
+                    {
+                        // add existing invoice externalSourceData to map
+                        invoiceMap.set(invoice.guid, invoice);
 
-                        // update in map
-                        invoiceMap.set(e.guid, mergedData);
+                        for (const line of invoice.lines)
+                        {
+                            if (line.commodity?.commType?.category === 'freight')
+                                line.itemName = 'freight';
+                            else
+                                line.itemName = line.item.name;
+
+                            line.description = AccountingFunc.composeDescription(line);
+                        }
+
+                        // add invoice to array
+                        invoicesToExport.push(invoice);
                     }
                 }
             }
         }
 
+        const res = await AccountingFunc.exportInvoices(invoicesToExport);
+
         // set current timestamp
         const now = DateTime.utc().toString();
 
-        // update all invoices in db
-        await Promise.allSettled(Array.from(invoiceMap.entries()).map(async ([guid, data]) =>
+        // loop through results and update successfuls ones in db
+        await Promise.allSettled(res.map(async ({ system, data, error, status }) =>
         {
-            if (!data.error)
+            if (status != 200)
             {
-                // start trx
-                const trx = await InvoiceBill.transaction();
+                const invoiceObj = invoiceMap.get(error.guid);
 
-                // update all invoices and their lines
-                const proms = await Promise.allSettled([InvoiceBill.query(trx).patchAndFetchById(guid, { externalSourceData: data, isPaid: true, dateCharged: now }), InvoiceLine.query(trx).patch({ isPaid: true, transactionNumber: data?.quickbooks?.invoice?.Id }).where('invoiceGuid', guid)]);
-
-                if (proms[0].status == 'fulfilled')
-                {
-                    await trx.commit();
-                    results.push(proms[0].value);
-                }
-                else
-                {
-                    await trx.rollback();
-                    results.push(proms[0].reason);
-                }
+                results[invoiceObj.orderGuid].status = status;
+                results[invoiceObj.orderGuid].errors = new AppResponse();
+                results[invoiceObj.orderGuid].errors.setStatus(status);
+                results[invoiceObj.orderGuid].errors.addError(
+                    new DataConflictError(error,
+                    {
+                        guid: error.guid
+                    })
+                );
             }
             else
-                results.push(data.error);
-        }));
+            {
+                const invoiceObj = invoiceMap.get(data.guid);
 
-        // check length of results
-        if (results.length == 0)
-            return [{ success: true, message: 'All Invoices Already Paid For This Order' }];
+                results[invoiceObj.orderGuid].errors = new AppResponse();
+
+                // if no errors we will update the bill
+                const trx = await InvoiceBill.startTransaction();
+
+                // merge externalSourceData with current bill externalSourceData
+                const curExternal = invoiceObj.externalSourceData || {};
+
+                if (system == 'quickbooks')
+                    Object.assign(curExternal, { 'quickbooks': { 'Id': data.qbId } });
+                else if (system == 'coupa')
+                {
+                    if (data.invoicedInCoupa)
+                        Object.assign(curExternal, { 'coupa': { 'invoiced': true, 'invoicedDate': now } });
+                    else
+                        Object.assign(curExternal, { 'coupa': { 'invoiced': false } });
+                }
+
+                try
+                {
+                    const [patchedInvoice] = await Promise.all([
+                        InvoiceBill.query(trx)
+                            .patchAndFetchById(data.guid, { externalSourceData: curExternal, isPaid: true, dateInvoiced: now }),
+
+                        InvoiceLine.query(trx)
+                            .patch({ isPaid: true, transactionNumber: data.qbId, dateCharged: now })
+                            .where('invoiceGuid', data.guid)
+                    ]);
+
+                    // only set 200 if all bills are successful
+                    // any single error will set the status to 400
+                    if (!results[invoiceObj.orderGuid].errors.doErrorsExist())
+                        results[invoiceObj.orderGuid].status = 200;
+
+                    // rename guid as billGuid
+                    patchedInvoice.invoiceGuid = data.guid;
+                    patchedInvoice.orderNumber = invoiceObj.orderNumber;
+
+                    results[invoiceObj.orderGuid].data.push(patchedInvoice);
+
+                    await trx.commit();
+                }
+                catch (err)
+                {
+                    await trx.rollback();
+
+                    results[invoiceObj.orderGuid].status = 500;
+                    results[invoiceObj.orderGuid].errors.setStatus(500);
+                    results[invoiceObj.orderGuid].errors.addError(
+                        new DataConflictError(err.message,
+                        {
+                            guid: data.guid
+                        })
+                    );
+                }
+
+            }
+        }));
 
         return results;
     }

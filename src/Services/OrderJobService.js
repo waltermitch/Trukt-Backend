@@ -1,4 +1,3 @@
-const HttpError = require('../ErrorHandling/Exceptions/HttpError');
 const LoadboardService = require('../Services/LoadboardService');
 const LoadboardRequest = require('../Models/LoadboardRequest');
 const LoadboardPost = require('../Models/LoadboardPost');
@@ -17,6 +16,9 @@ const { DateTime } = require('luxon');
 const R = require('ramda');
 const InvoiceLineLink = require('../Models/InvoiceLineLink');
 const Loadboards = require('../Loadboards/API');
+const { raw } = require('objection');
+const { MissingDataError, NotFoundError, DataConflictError, ValidationError, ApiError, ApplicationError } = require('../ErrorHandling/Exceptions');
+const { AppResponse, BulkResponse } = require('../ErrorHandling/Responses');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -76,28 +78,37 @@ class OrderJobService
         const cleaned = R.pickBy((it) => it !== undefined, payload);
 
         if (Object.keys(cleaned).length === 0)
-            throw new HttpError(400, 'Missing Update Values');
+            throw new MissingDataError('Missing Update Values');
 
         const promises = await Promise.allSettled(jobs.map(async (job) =>
         {
             // need to throw and catch in order to be able to return the guid for mapping of errors
             const res = await OrderJob.query().findById(job).patch(payload).returning('guid')
-                .catch((err) => { throw { 'guid': job, 'data': err }; });
+                .catch((err) => { throw { guid: job, data: err }; });
 
-            return { 'guid': job, 'data': res };
+            return { guid: job, data: res };
         }));
 
+        const bulkResponse = new BulkResponse();
         for (const e of promises)
         {
             if (e.reason)
-                results[e.reason.guid] = { 'error': e.reason.data, 'status': 400 };
+            {
+                bulkResponse
+                    .addResponse(e.reason.guid, e.reason.data)
+                    .getResponse(e.reason.guid).setStatus(400);
+            }
             else if (e.value?.data == undefined || e.value.data == 0)
-                results[e.value.guid] = { 'error': 'Job Not Found', 'status': 404 };
+            {
+                bulkResponse
+                    .addResponse(e.value.guid, new NotFoundError('Job Not Found'))
+                    .getResponse(e.value.guid).setStatus(404);
+            }
             else
-                results[e.value.guid] = { 'status': 200 };
+                bulkResponse.addResponse(e.value.guid).getResponse(e.value.guid).setStatus(200);
         }
 
-        return results;
+        return bulkResponse;
     }
 
     /**
@@ -210,14 +221,16 @@ class OrderJobService
         const JobUpdatePromises = jobs.map(jobGuid => OrderJobService.updateJobDates(jobGuid, newDates, userGuid));
         const jobsUpdated = await Promise.allSettled(JobUpdatePromises);
 
-        return jobsUpdated.reduce((response, jobUpdated) =>
+        const bulkResponse = new BulkResponse();
+        jobsUpdated.forEach((jobUpdated) =>
         {
             const jobGuid = jobUpdated.value?.jobGuid;
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
-            response[jobGuid] = { error, status };
-            return response;
-        }, {});
+
+            bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status);
+        });
+        return bulkResponse;
     }
 
     /**
@@ -318,18 +331,19 @@ class OrderJobService
             const JobUpdatePromises = jobs.map(jobGuid => OrderJobService.updateJobStatus(jobGuid, status, userGuid, trx));
             const jobsUpdated = await Promise.allSettled(JobUpdatePromises);
 
-            const response = jobsUpdated.reduce((response, jobUpdated) =>
+            const bulkResponse = new BulkResponse();
+            jobsUpdated.forEach((jobUpdated) =>
             {
                 const jobGuid = jobUpdated.value?.jobGuid;
                 const status = jobUpdated.value?.status;
                 const error = jobUpdated.value?.error;
                 const data = jobUpdated.value?.data;
-                response[jobGuid] = { error, status, data };
-                return response;
-            }, {});
+
+                bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
+            });
 
             await trx.commit();
-            return response;
+            return bulkResponse;
         }
 
         // This catch should never be called given that we catch async errors on updateJobStatus
@@ -438,15 +452,18 @@ class OrderJobService
 
         const jobsUpdated = await Promise.allSettled(JobUpdatePricePromises);
 
-        return jobsUpdated.reduce((response, jobUpdated) =>
+        const bulkResponse = new BulkResponse();
+        jobsUpdated.forEach((jobUpdated) =>
         {
             const jobGuid = jobUpdated.value?.jobGuid;
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
             const data = jobUpdated.value?.data;
-            response[jobGuid] = { error, status, data };
-            return response;
-        }, {});
+
+            bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
+        });
+
+        return bulkResponse;
     }
 
     static async updateJobPrice(jobGuid, expense, revenue, type, operation, userGuid)
@@ -504,7 +521,7 @@ class OrderJobService
         const lines = await query;
 
         if (!lines.length)
-            throw { message: 'No transport lines found for job', status: 404 };
+            throw new NotFoundError('No transport lines found for job');
 
         const linesToUpdate = OrderJobService.createLinesToUpdateArray(lines, expense, type, operation, userGuid);
 
@@ -558,13 +575,7 @@ class OrderJobService
         const jobFound = await OrderJob.query().findById(jobGuid);
 
         if (!jobFound)
-            return {
-                status: 404,
-                data: {
-                    status: 404,
-                    error: 'Job not found'
-                }
-            };
+            throw new NotFoundError('Job Not Found');
 
         const carrierInfo = await OrderJob.fetchGraph(jobFound)
             .withGraphFetched({ vendor: true, vendorAgent: true, dispatcher: true, dispatches: { vendor: true, vendorAgent: true } })
@@ -602,10 +613,12 @@ class OrderJobService
      */
     static async setJobToReady(jobGuid, currentUser)
     {
-        const resp = await OrderJobService.setJobsToReady([jobGuid], currentUser);
+        const bulkResponse = await OrderJobService.setJobsToReady([jobGuid], currentUser);
 
-        const response = Object.values(resp)[0];
-        response.errors = response.errors.map(str => { return { message: str, errorType: 'DataConflictError' }; });
+        const response = bulkResponse.getResponse(jobGuid);
+
+        if (response.doErrorsExist())
+            response.throwErrorsIfExist();
 
         return response;
     }
@@ -616,15 +629,15 @@ class OrderJobService
      * be returning all data succesfull and unseccessfull. This method is designed to do bulk.
      * @param {[uuids]} jobGuids array of job guids
      * @param {uuid} currentUser uuid of user that is currently making this request
-     * @returns {object}
+     * @returns {BulkResponse}
      */
     static async setJobsToReady(jobGuids, currentUser)
     {
-        // Validate jobs adn get failed exceptions
+        // Validate jobs and get failed exceptions
         const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState(jobGuids);
 
         // for storing responses
-        const resBody = {};
+        const bulkResponse = new BulkResponse();
 
         /**
          * loop to failed jobs and compose error messages
@@ -635,18 +648,17 @@ class OrderJobService
             // for jobs does not exist
             if (failedJob.status === 404)
             {
-                resBody[failedJob.guid] = {
-                    status: 404,
-                    errors: failedJob.errors
-                };
+                bulkResponse
+                    .addResponse(failedJob.guid, failedJob.errors)
+                    .getResponse(failedJob.guid)
+                    .setStatus(404);
             }
             else
             {
-                // other issues on the job
-                resBody[failedJob.guid] = {
-                    status: 409,
-                    errors: failedJob.errors
-                };
+                bulkResponse
+                    .addResponse(failedJob.guid, failedJob.errors)
+                    .getResponse(failedJob.guid)
+                    .setStatus(409);
             }
         }
 
@@ -664,17 +676,14 @@ class OrderJobService
             // loop good guids and send event
             for (const job of data)
             {
-                resBody[job.guid] = {
-                    status: 200,
-                    errors: []
-                };
+                bulkResponse.addResponse(job.guid).getResponse(job.guid).setStatus(200);
                 emitter.emit('orderjob_status_updated', { jobGuid: job.guid, currentUser, state: { status: OrderJob.STATUS.READY } });
                 emitter.emit('orderjob_ready', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
             }
         }
 
         // returning body payload
-        return resBody;
+        return bulkResponse;
     }
 
     /**
@@ -728,6 +737,11 @@ class OrderJobService
                 	oj.status,
                 	oj."number",
                     oj.is_transport,
+                    oj.type_id,
+                    oj.verified_by_guid,
+                    oj.date_started,
+                    oj.date_completed,
+                    oj.date_verified,
                 	(SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
                 		LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbr.is_accepted AND lbp2.job_guid = oj.guid) AS has_accepted_requests,
                 	stop.pickup_requested_date,
@@ -777,6 +791,11 @@ class OrderJobService
                         oj.status,
                         oj."number",
                         oj.is_transport,
+                        oj.type_id,
+                        oj.verified_by_guid,
+                        oj.date_started,
+                        oj.date_completed,
+                        oj.date_verified,
                         (SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
                             LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbr.is_accepted AND lbp2.job_guid = oj.guid) AS has_accepted_requests,
 	                    stop."commodityGuid",
@@ -827,65 +846,53 @@ class OrderJobService
         for (const job of allJobsData)
         {
             const errors = [];
+
+            // common validations for all job types
             if (!job.dispatcher_guid)
-            {
-                errors.push('Please assign a dispatcher.');
-            }
-            if (job.vendor_guid && job.is_transport === true)
-            {
-                errors.push('Please un-dispatch the Carrier first.');
-            }
-            if (job.vendor_guid && job.is_transport === false)
-            {
-                errors.push('Please un-assign the Vendor first.');
-            }
-            if (job.has_accepted_requests)
-            {
-                errors.push('Please cancel Carrier request.');
-            }
-            if (job.is_ready)
-            {
-                errors.push('Order has been verified already.');
-            }
-            if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
-            {
-                errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
-            }
-            if (job.not_resolved_address && job.is_transport === false)
-            {
-                errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
-            }
+                errors.push('Please assign a dispatcher first.');
             if (job.is_on_hold)
-            {
-                errors.push('Order is On Hold');
-            }
+                errors.push('Cannot set to "Ready" because the job is On Hold');
             if (job.is_canceled)
-            {
-                errors.push('Order is Canceled');
-            }
+                errors.push('Cannot set to "Ready" because the job is Canceled');
             if (job.is_deleted)
-            {
-                errors.push('Order is Deleted');
-            }
+                errors.push('Cannot set to "Ready" because the job is Deleted');
             if (job.is_complete)
+                errors.push('Cannot set to "Ready" because the job is Compelete');
+            if (job.is_ready || job.verified_by_guid || job.date_verified)
+                errors.push('Order has been verified already.');
+            if (job.vendor_guid && job.is_transport === false)
+                errors.push('Please un-assign the Vendor first.');
+
+            // validations for transport job type
+            if (job.type_id === 1)
             {
-                errors.push('Order is Compelete');
+                if (job.vendor_guid && job.is_transport === true)
+                    errors.push('Please un-dispatch the Carrier first.');
+                if (job.has_accepted_requests)
+                    errors.push('Please cancel Carrier request.');
+                if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
+                    errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
+                if (job.not_resolved_address && job.is_transport === false)
+                    errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
+                if (!job.pickup_requested_date || !job.delivery_requested_date)
+                    errors.push('Client requested pickup and delivery dates must be set.');
+                if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === true)
+                    errors.push('There must be at least one commodity to pick up and deliver.');
+                if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === false)
+                    errors.push('There must be at least one commodity to service.');
+                if (job.is_transport === false && job.stop_type != null)
+                    errors.push('There must be one service stop.');
             }
-            if (!job.pickup_requested_date || !job.delivery_requested_date)
+
+            // any other service type
+            else
             {
-                errors.push('Client requested pickup and delivery dates must be set.');
-            }
-            if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === true)
-            {
-                errors.push('There must be at least one commodity to pick up and deliver.');
-            }
-            if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === false)
-            {
-                errors.push('There must be at least one commodity to service.');
-            }
-            if (job.is_transport === false && job.stop_type != null)
-            {
-                errors.push('There must be one service stop.');
+                if (job.is_transport)
+                    errors.push('Service job must not be a transport job.');
+                if (job.date_started)
+                    errors.push('Job must not be started.');
+                if (job.date_complete)
+                    errors.push('Job must not be completed.');
             }
 
             // distinguishing jobs, for the special ones xD
@@ -907,7 +914,7 @@ class OrderJobService
     // TODO: DEPRICATE SOON
     static async getJobForReadyCheck(jobGuids)
     {
-        const jobsNotFoundExceptions = [];
+        const jobsNotFoundExceptions = new AppResponse();
 
         // getting all jobs guid and tranport field to help differentiate job types
         const jobsGuidsFound = await OrderJob.query().select('guid', 'isTransport').findByIds(jobGuids);
@@ -930,7 +937,7 @@ class OrderJobService
             for (let i = 0; i < jobGuids.length; i++)
             {
                 if (jobsFound.indexOf(jobGuids[i]) == -1)
-                    jobsNotFoundExceptions.push(new HttpError(404, `Job with guid ${jobGuids[i]} cannot be found`));
+                    jobsNotFoundExceptions.addError(new NotFoundError(`Job with guid ${jobGuids[i]} cannot be found`));
             }
         }
 
@@ -953,7 +960,7 @@ class OrderJobService
 
             return allJobs;
         }, { jobsExceptions: [], goodJobs: [] });
-        const allJobsExceptions = [...jobsExceptions, ...jobsNotFoundExceptions];
+        const allJobsExceptions = [...jobsExceptions, ...jobsNotFoundExceptions.toJSON().errors];
 
         const jobs = await OrderJob
             .query()
@@ -1070,7 +1077,7 @@ class OrderJobService
             const index = transportJobsFoundGUIDs.indexOf(missingDate.jobGuid);
             if (index > -1)
             {
-                exceptions.push(new HttpError(409, `${R.toUpper(missingDate.stop_type)} for job ${missingDate.number} is missing requested dates`));
+                exceptions.push(new MissingDataError(`${R.toUpper(missingDate.stop_type)} for job ${missingDate.number} is missing requested dates`));
                 transportJobsFoundGUIDs.splice(index, 1);
             }
         }
@@ -1085,7 +1092,7 @@ class OrderJobService
             for (const guid of transportJobsFoundGUIDs)
             {
                 if (!goodJobsGuids.has(guid))
-                    exceptions.push(new HttpError(409, `${guid} has incorrect stop sequences, please ensure each commodity has a pickup and delivery.`));
+                    exceptions.push(new DataConflictError(`${guid} has incorrect stop sequences, please ensure each commodity has a pickup and delivery.`));
             }
         }
 
@@ -1109,13 +1116,13 @@ class OrderJobService
             // If jobfound is not in jobsChecked array, it is because it does not have at leaast 1 stop with 1 commodity with date requested start
             if (!jobHasCorrectStops)
             {
-                allJobs.exceptions.push(new HttpError(409, `Job ${jobGuid} has incorrect stop, please ensure it has at least stop with one commodity and requested date start`));
+                allJobs.exceptions.push(new DataConflictError(`Job ${jobGuid} has incorrect stop, please ensure it has at least stop with one commodity and requested date start`));
                 return allJobs;
             }
 
             // If jobFound is in jobsChecked array, but does not have a dispatcher, add esception, other wise it fullfills service job checks
             if (!jobHasCorrectStops?.dispatcherGuid)
-                allJobs.exceptions.push(new HttpError(409, `Job ${jobGuid} does not have a dispatcher`));
+                allJobs.exceptions.push(new MissingDataError(`Job ${jobGuid} does not have a dispatcher`));
             else
                 allJobs.goodJobsGuids.push(jobGuid);
 
@@ -1138,35 +1145,35 @@ class OrderJobService
 
         // A job must belong to a real order(not a tender) before moving to ready
         if (job.isTender)
-            res = new HttpError(400, `Job ${job.number} belongs to tender, you must accept tender before moving to ready.`);
+            res = new DataConflictError(`Job ${job.number} belongs to tender, you must accept tender before moving to ready.`);
 
         // Job cannot be verified again
         if (job.isReady)
-            res = new HttpError(409, `Job ${job.number} has already been verified.`);
+            res = new DataConflictError(`Job ${job.number} has already been verified.`);
 
         // depending on the job type, we throw a specific message if there is a vendor assigned
         if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
         {
             if (job.typeCategory == 'transport' && job.jobType == 'transport')
-                res = new HttpError(409, `Carrier ${job.vendorName}  must be undispatched from job ${job.number} before it can transition to ready.`);
+                res = new DataConflictError(`Carrier ${job.vendorName}  must be undispatched from job ${job.number} before it can transition to ready.`);
             else if (job.typeCategory == 'service')
-                res = new HttpError(409, `Vendor ${job.vendorName} must be unassigned from job ${job.number} before it can transition to ready.`);
+                res = new DataConflictError(`Vendor ${job.vendorName} must be unassigned from job ${job.number} before it can transition to ready.`);
         }
 
         // The job cannot have any active loadboard requests
         if (job.requests.length != 0)
-            res = new HttpError(409, `Please cancel the loadboard request for ${job.number} for it to go to ready.`);
+            res = new DataConflictError(`Please cancel the loadboard request for ${job.number} for it to go to ready.`);
 
         // A dispatcher must be assigned
         if (!job.dispatcherGuid)
-            res = new HttpError(409, `Please assign a dispatcher to job ${job.number} first.`);
+            res = new MissingDataError(`Please assign a dispatcher to job ${job.number} first.`);
 
         for (const bool of booleanFields)
         {
             const field = bool.substring(4, bool.length);
             if (job[field])
             {
-                res = new HttpError(400, `${field} must be false before ${job.number} can be changed to ready.`);
+                res = new DataConflictError(`${field} must be false before ${job.number} can be changed to ready.`);
             }
         }
 
@@ -1175,7 +1182,7 @@ class OrderJobService
         // telling the client which terminal is unresolved.
         if (job.stops.length != 0)
             for (const stop of job.stops)
-                res = new HttpError(400, `Address for ${stop.terminalName} for job ${job.number} cannot be mapped to a real location, please verify the address before verifying this job.`);
+                res = new ValidationError(`Address for ${stop.terminalName} for job ${job.number} cannot be mapped to a real location, please verify the address before verifying this job.`);
 
         return res;
     }
@@ -1190,28 +1197,28 @@ class OrderJobService
             .withGraphJoined('stopLinks').first();
 
         if (!job)
-            throw new HttpError(400, 'Job Doesn\'t Match Criteria To Move To Complete State');
+            throw new DataConflictError('Job Doesn\'t Match Criteria To Move To Complete State');
         else if (!job.isReady)
-            throw new HttpError(400, 'Job Is Not Ready');
+            throw new DataConflictError('Job Is Not Ready');
         else if (job.isOnHold)
-            throw new HttpError(400, 'Job Is On Hold');
+            throw new DataConflictError('Job Is On Hold');
         else if (job.isDeleted)
-            throw new HttpError(400, 'Job Is Deleted');
+            throw new DataConflictError('Job Is Deleted');
         else if (job.isCanceled)
-            throw new HttpError(400, 'Job Is Canceled');
+            throw new DataConflictError('Job Is Canceled');
         else if (!job.vendorGuid)
-            throw new HttpError(400, 'Job Has No Vendor');
+            throw new MissingDataError('Job Has No Vendor');
         else if (!job.dispatcherGuid)
-            throw new HttpError(400, 'Job Has No Dispatcher');
+            throw new MissingDataError('Job Has No Dispatcher');
         else if (job.order.isTender)
-            throw new HttpError(400, 'Job Is Part Of Tender Order');
+            throw new DataConflictError('Job Is Part Of Tender Order');
         else if (job.isComplete)
             return 200;
 
         const allCompleted = job.stopLinks.every(stop => stop.isStarted && stop.isCompleted);
 
         if (!allCompleted)
-            throw new HttpError(400, 'All stops must be completed before job can be marked as complete.');
+            throw new DataConflictError('All stops must be completed before job can be marked as complete.');
 
         await OrderJob.query().patch({ 'isComplete': true, 'updatedByGuid': currentUser, 'status': OrderJob.STATUS.COMPLETED }).where('guid', jobGuid);
 
@@ -1257,11 +1264,11 @@ class OrderJobService
                 .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
 
             if (!job)
-                throw new HttpError(404, 'Job not found');
+                throw new NotFoundError('Job not found');
 
             // job cannot be dispatched before being put on hold
             if (job.dispatches.length >= 1)
-                throw new HttpError(400, 'Job must be undispatched before it can be moved to On Hold');
+                throw new DataConflictError('Job must be undispatched before it can be moved to On Hold');
 
             // extract all the loadboard post guids so that we can cancel the
             // requests for any loadboard posts that exist
@@ -1303,7 +1310,7 @@ class OrderJobService
                 }
                 else
                 {
-                    throw new HttpError(400, 'Job could not be set On Hold in Superdispatch');
+                    throw new ApiError('Job could not be set On Hold in Superdispatch');
                 }
             }
 
@@ -1343,7 +1350,7 @@ class OrderJobService
 
             if (queryRes.jobs.length < 1)
             {
-                throw queryRes.exceptions;
+                queryRes.exceptions.throwErrorsIfExist();
             }
             const job = queryRes.jobs[0];
             let res;
@@ -1370,17 +1377,17 @@ class OrderJobService
                     const { status } = await Loadboards.rollbackManualSDStatusChange(post.externalGuid);
                     if (status !== 200)
                     {
-                        throw new HttpError(status, 'Could not remove hold from order on Superdispatch');
+                        throw new ApiError('Could not remove hold from order on Superdispatch', { status });
                     }
                 }
-                else if (readyResult instanceof HttpError)
+                else if (readyResult instanceof ApplicationError)
                 {
                     throw readyResult;
                 }
             }
             else
             {
-                throw new HttpError(400, 'This Job does not have any holds.');
+                throw new NotFoundError('This Job does not have any holds.');
             }
 
             await trx.commit();
@@ -1404,21 +1411,7 @@ class OrderJobService
 
         try
         {
-            // getting job and verify if job is dispatched
-            const jobStatus = [
-                OrderJob.query(trx)
-                    .select('orderGuid').findOne('guid', jobGuid),
-                OrderJob.query(trx).alias('job')
-                    .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
-            ];
-
-            const [job, jobIsDispatched] = await Promise.all(jobStatus);
-
-            if (!job)
-                throw new HttpError(404, 'Job does not exist');
-
-            if (job && jobIsDispatched)
-                throw new HttpError(400, 'Please un-dispatch the Order before deleting');
+            const job = await OrderJobService.checkJobToDelete(jobGuid, trx);
 
             // updating postings to be deleted
             await LoadboardService.deletePostings(jobGuid, currentUser);
@@ -1447,7 +1440,7 @@ class OrderJobService
         catch (error)
         {
             await trx.rollback();
-            throw new HttpError(500, error);
+            throw error;
         }
     }
 
@@ -1466,7 +1459,7 @@ class OrderJobService
             const job = await OrderJob.query(trx).select('orderGuid', 'isDeleted').findOne('guid', jobGuid);
 
             if (!job)
-                throw new HttpError(404, 'Job does not exist');
+                throw new NotFoundError('Job does not exist');
 
             if (!job?.isDeleted)
                 return { status: 200 };
@@ -1488,7 +1481,7 @@ class OrderJobService
         catch (error)
         {
             await trx.rollback();
-            throw new HttpError(500, error);
+            throw error;
         }
     }
 
@@ -1528,77 +1521,72 @@ class OrderJobService
         catch (error)
         {
             await trx.rollback();
-            throw new HttpError(500, error);
+            throw error;
         }
     }
 
     static async checkJobToCancel(jobGuid, trx)
     {
         const jobStatus = [
-            OrderJob.query(trx)
-                .select('orderGuid', 'isDeleted').findOne('guid', jobGuid),
+            OrderJob.query(trx).alias('OJ').select('OJ.orderGuid', 'OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
+                .modify('isServiceJob').modify('vendorName'),
             OrderJob.query(trx).alias('job')
-                .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
+                .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
+            OrderJob.query(trx).findOne('guid', jobGuid).modify('canServiceJobMarkAsCanceled')
         ];
 
-        const [job, jobIsDispatched] = await Promise.all(jobStatus);
+        const [job, jobIsDispatched, canServiceJobMarkAsCanceled] = await Promise.all(jobStatus);
 
         if (!job)
-            throw new HttpError(404, 'Job does not exist');
-        if (job.isDeleted)
-            throw new HttpError(400, 'This Order is deleted and can not be canceled.');
-        if (job && jobIsDispatched)
-            throw new HttpError(400, 'Please un-dispatch the Order before deleting');
+            throw new NotFoundError('Job does not exist');
+
+        job.jobIsDispatched = jobIsDispatched;
+        job.canServiceJobMarkAsCanceled = canServiceJobMarkAsCanceled?.canbemarkascanceled;
+        job.validateJobForCanceling();
+
         return job;
     }
 
     static async uncancelJob(jobGuid, currentUser)
     {
-        try
+        const job = await OrderJob.query().select('orderGuid', 'isCanceled', 'status').findOne('guid', jobGuid);
+        if (!job)
+            throw new NotFoundError('Job does not exist');
+        if (!job.isCanceled)
+            return { status: 200, message: { data: { status: job.status } } };
+
+        // setting job to 'new' status so it can pass the conditions to
+        // transition to ready
+        const payload = OrderJobService.createStatusPayload('new', currentUser);
+        const jobUpdated = await OrderJob.query().patchAndFetchById(jobGuid, payload);
+
+        const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([jobUpdated.guid]);
+        let data;
+        if (goodJobs.length === 1)
         {
-            const job = await OrderJob.query().select('orderGuid', 'isCanceled', 'status').findOne('guid', jobGuid);
-            if (!job)
-                throw new HttpError(400, 'Job does not exist');
-            if (!job.isCanceled)
-                return { status: 200, message: { data: { status: job.status } } };
-
-            // setting job to 'new' status so it can pass the conditions to
-            // transition to ready
-            const payload = OrderJobService.createStatusPayload('new', currentUser);
-            const jobUpdated = await OrderJob.query().patchAndFetchById(jobGuid, payload);
-
-            const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([jobUpdated.guid]);
-            let data;
-            if (goodJobs.length === 1)
-            {
-                data = await OrderJob.query().patch({
-                    isReady: true,
-                    dateVerified: DateTime.utc().toString(),
-                    verifiedByGuid: currentUser,
-                    updatedByGuid: currentUser
-                }).findById(goodJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
-            }
-            else
-            {
-                throw new HttpError(400, jobsExceptions[0].errors[0]);
-            }
-
-            // the status manager will handle actually changing the jobs status field
-            // and sending the updated job to the client
-            emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
-
-            return { status: 200, message: { data: { status: data.status } } };
+            data = await OrderJob.query().patch({
+                isReady: true,
+                dateVerified: DateTime.utc().toString(),
+                verifiedByGuid: currentUser,
+                updatedByGuid: currentUser
+            }).findById(goodJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
         }
-        catch (error)
+        else
         {
-            throw new HttpError(500, error);
+            throw new DataConflictError(jobsExceptions[0].errors[0]);
         }
+
+        // the status manager will handle actually changing the jobs status field
+        // and sending the updated job to the client
+        emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
+
+        return { status: 200, message: { data: { status: data.status } } };
     }
 
     static recalcJobStatus(jobGuid)
     {
         if (!regex.test(jobGuid))
-            throw new HttpError(400, 'Not a Job UUID');
+            throw new ValidationError('Not a Job UUID');
 
         return knex.raw(`
             SELECT
@@ -1632,7 +1620,7 @@ class OrderJobService
             const statusArray = response.rows[0];
 
             if (!statusArray)
-                throw new HttpError(400, 'Job does not exist');
+                throw new NotFoundError('Job does not exist');
 
             const p = { currentStatus: statusArray.current_status };
 
@@ -1731,20 +1719,20 @@ class OrderJobService
 
         // verify state of data
         if (!job)
-            throw new HttpError(404, 'Job Does Not Exist');
+            throw new NotFoundError('Job Does Not Exist');
         if (job.isDeleted)
-            throw new HttpError(400, 'Job Is Deleted And Can Not Be Marked As Delivered.');
+            throw new DataConflictError('Job Is Deleted And Can Not Be Marked As Delivered.');
         if (job.isCanceled)
-            throw new HttpError(400, 'Job Is Canceled And Can Not Be Marked As Delivered.');
+            throw new DataConflictError(400, 'Job Is Canceled And Can Not Be Marked As Delivered.');
         if (!job.vendorGuid)
-            throw new HttpError(400, 'Job Has No Vendor Assigned');
+            throw new MissingDataError(400, 'Job Has No Vendor Assigned');
 
         for (const commodity of job.commodities)
             if (commodity.deliveryStatus !== OrderJob.STATUS.DELIVERED)
             {
                 const { make, model, year } = commodity.vehicle;
                 const commodityId = make && model && year ? `${make}-${model}-${year}` : commodity.vehicleId;
-                throw new HttpError(400, `Job's Commodity ${commodityId} Has Not Been Delivered`);
+                throw new DataConflictError(`Job's Commodity ${commodityId} Has Not Been Delivered`);
             }
 
         // attempt to update status
@@ -1758,7 +1746,7 @@ class OrderJobService
         }
 
         // if we are here, we failed to update status
-        throw new HttpError(400, 'Job Could Not Be Mark as Delivered, Please Check All Stops Are Delivered');
+        throw new DataConflictError('Job Could Not Be Mark as Delivered, Please Check All Stops Are Delivered');
     }
 
     // Sets job as pick up
@@ -1771,13 +1759,13 @@ class OrderJobService
 
         // verify state of data
         if (!job)
-            throw new HttpError(404, 'Job does not exist');
+            throw new NotFoundError('Job does not exist');
         if (job.isDeleted)
-            throw new HttpError(400, 'Job Is Deleted And Can Not Be Marked As Delivered.');
+            throw new DataConflictError('Job Is Deleted And Can Not Be Marked As Delivered.');
         if (job.isCanceled)
-            throw new HttpError(400, 'Job Is Canceled And Can Not Be Marked As Delivered.');
+            throw new DataConflictError('Job Is Canceled And Can Not Be Marked As Delivered.');
         if (job.status !== OrderJob.STATUS.DELIVERED && job.status !== OrderJob.STATUS.PICKED_UP)
-            throw new HttpError(400, 'Job Must First Be Delivered');
+            throw new DataConflictError('Job Must First Be Delivered');
 
         // attempt to update status
         const jobStatus = await OrderJobService.updateStatusField(jobGuid, currentUser);
@@ -1790,7 +1778,67 @@ class OrderJobService
         }
 
         // if we are here, we failed to update status
-        throw new HttpError(400, 'Job Could Not Be Marked as Picked Up, Please Check All Stops Are Picked Up');
+        throw new DataConflictError('Job Could Not Be Marked as Picked Up, Please Check All Stops Are Picked Up');
+    }
+
+    /**
+     * Returns the number of 'pick up' stops that are completed, we group by guid when there are multiple commodities per stop
+     * that way we can treat them as 1 stop.
+     */
+    static async getNumberOfPickupsInProgress(jobGuid)
+    {
+        const pickupsGroupByStop = OrderStop.query().alias('OS').select('guid', 'OS.isCompleted')
+            .innerJoin('rcgTms.orderStopLinks', 'guid', 'stopGuid')
+            .where('jobGuid', jobGuid)
+            .andWhere('OS.stopType', 'pickup')
+            .groupBy('OS.guid', 'OS.isCompleted');
+
+        return OrderStop.query().alias('OS2').select(raw('count(CASE WHEN o_s2.is_completed THEN 1 END) as pickups_in_progress'))
+            .with('pickupsGroupByStop', pickupsGroupByStop)
+            .innerJoin('pickupsGroupByStop', 'pickupsGroupByStop.guid', 'OS2.guid');
+    }
+
+    /**
+     * Returns true if the job only has one 'delivery' stop not completed, we group by guid when there are multiple commodities per stop
+     * that way we can treat them as 1 stop.
+     */
+    static async isJobStatusForLastDelivery(jobGuid)
+    {
+
+        const deliveriesGroupByStop = OrderStop.query().alias('OS').select('guid', 'OS.isCompleted')
+            .innerJoin('rcgTms.orderStopLinks', 'guid', 'stopGuid')
+            .where('jobGuid', jobGuid)
+            .andWhere('OS.stopType', 'delivery')
+            .groupBy('OS.guid', 'OS.isCompleted');
+
+        return OrderStop.query().alias('OS2').select(raw(`
+            case when (count(CASE WHEN deliveries_group_by_stop.is_completed THEN 1 END)) = count(deliveries_group_by_stop.guid) - 1 
+            then true else false end as is_status_for_last_delivery
+        `))
+            .with('deliveriesGroupByStop', deliveriesGroupByStop)
+            .innerJoin('deliveriesGroupByStop', 'deliveriesGroupByStop.guid', 'OS2.guid');
+    }
+
+    static async checkJobToDelete(jobGuid, trx)
+    {
+        const jobStatus = [
+            OrderJob.query(trx).alias('OJ').select('OJ.orderGuid', 'OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
+                .modify('isServiceJob').modify('vendorName'),
+            OrderJob.query(trx).alias('job')
+                .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
+            OrderJob.query(trx).findOne('guid', jobGuid).modify('canServiceJobMarkAsDeleted')
+        ];
+
+        const [job, jobIsDispatched, canServiceJobMarkAsDeleted] = await Promise.all(jobStatus);
+
+        if (!job)
+            throw new NotFoundError('Job does not exist');
+
+        job.jobIsDispatched = jobIsDispatched;
+        job.canServiceJobMarkAsDeleted = canServiceJobMarkAsDeleted?.canbemarkasdeleted;
+        job.validateJobForDeletion();
+
+        return job;
     }
 }
 

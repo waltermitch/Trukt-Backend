@@ -1,19 +1,22 @@
 /* eslint-disable no-console */
 
+// load environment variables
+require('./envs/index').load();
+
 // Important: applicationinsights must be setup and started before you import anything else.
 // There may be resulting telemetry loss if other libraries are imported first.
-const openApiValidator = require('express-openapi-validator');
+require('./src/ErrorHandling/Insights');
 
-require('./local.settings');
-const telemetryClient = require('./src/ErrorHandling/Insights');
-require('./src/HttpControllers/HttpRouteController');
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
 const HttpErrorHandler = require('./src/ErrorHandling/HttpErrorHandler');
+const openApiValidator = require('express-openapi-validator');
 const PGListener = require('./src/EventManager/PGListener');
 const Auth = require('./src/Authorization/Auth');
 const Mongo = require('./src/Mongo');
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs');
+
+require('./src/HttpControllers/HttpRouteController');
 require('./src/EventManager/StatusCacheManager').startCache();
 require('./src/CronJobs/Manager');
 
@@ -71,13 +74,15 @@ for (const filepath of filepaths)
     }
 }
 
-app.all('*', (req, res) => { res.status(404).send('this endpoint does not exist.'); });
+app.all('*', (req, res) => { res.status(404).send('This Endpoint Does Not Exist.'); });
 app.use(HttpErrorHandler);
 
-app.listen(process.env.PORT, async (err) =>
+const port = process.env.PORT || 8000;
+
+app.listen(port, async (err) =>
 {
-    if (err) console.log('there is an error lol');
-    console.log('listening on port ', process.env.PORT);
+    if (err) console.log('there is an error lol 🍆');
+    console.log('Server Listening On Port ', port);
 });
 
 /**
@@ -107,13 +112,13 @@ function corsMiddleware()
     {
         const whitelistedOrigins = process.env.CORS_ORIGINS.split(',').map((origin) =>
         {
-            if (/^\/.*\/$/.test(origin))
+            const matches = origin.match(/^\/(.*)\/$/);
+            if (matches && matches[1])
             {
-                return new RegExp(origin);
+                return new RegExp(matches[1]);
             }
             return origin;
         });
-
         return cors({
             origin: whitelistedOrigins
         });

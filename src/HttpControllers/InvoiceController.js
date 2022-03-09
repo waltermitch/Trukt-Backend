@@ -1,26 +1,28 @@
 const InvoiceService = require('../Services/InvoiceService');
 const InvoiceLine = require('../Models/InvoiceLine');
 const OrderJob = require('../Models/OrderJob');
+const { NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class InvoiceController
 {
-    static async getInvoice(req, res)
+    static async getInvoice(req, res, next)
     {
         const result = await InvoiceService.getInvoice(req.params.invoiceGuid);
 
-        if (!result)
+        try
         {
-            res.status(404);
-            res.json({ 'error': 'Invoice Not Found' });
+            if (!result)
+                throw new NotFoundError('Invoice Not Found');
+            else
+                res.status(200).json(result);
         }
-        else
+        catch (error)
         {
-            res.status(200);
-            res.json(result);
+            next(error);
         }
     }
 
-    static async createInvoiceLine(req, res)
+    static async createInvoiceLine(req, res, next)
     {
         const invoiceGuid = req.params.invoiceGuid;
         const billGuid = (req.body.billGuid || null);
@@ -37,20 +39,11 @@ class InvoiceController
         }
         catch (error)
         {
-            if (error.message == 'Cannot link transport items!')
-            {
-                res.status(406);
-                res.json(error.message);
-            }
-            else
-            {
-                res.status(404);
-                res.json(error.message);
-            }
+            next(error);
         }
     }
 
-    static async updateInvoiceLine(req, res)
+    static async updateInvoiceLine(req, res, next)
     {
         const invoiceGuid = req.params.invoiceGuid;
         const lineGuid = req.params.lineGuid;
@@ -65,12 +58,11 @@ class InvoiceController
         }
         catch (error)
         {
-            res.status(404);
-            res.json(error.message);
+            next(error);
         }
     }
 
-    static async deleteInvoiceLine(req, res)
+    static async deleteInvoiceLine(req, res, next)
     {
         const invoiceGuid = req.params.invoiceGuid;
         const lineGuid = req.params.lineGuid;
@@ -84,30 +76,28 @@ class InvoiceController
         }
         catch (error)
         {
-            res.status(404);
-            res.json(error.message);
+            next(error);
         }
     }
 
-    static async deleteInvoiceLines(req, res)
+    static async deleteInvoiceLines(req, res, next)
     {
         const invoiceGuid = req.params.invoiceGuid;
         const lineGuids = req.body;
 
         try
         {
-            await InvoiceService.deleteInvoiceLines(invoiceGuid, lineGuids);
+            const response = await InvoiceService.deleteInvoiceLines(invoiceGuid, lineGuids);
 
-            res.status(200).send();
+            res.status(response?.status ?? 200).send(response);
         }
         catch (error)
         {
-            res.status(404);
-            res.json(error.message);
+            next(error);
         }
     }
 
-    static async LinkInvoiceLines(req, res)
+    static async LinkInvoiceLines(req, res, next)
     {
         try
         {
@@ -117,12 +107,11 @@ class InvoiceController
         }
         catch (error)
         {
-            res.status(406);
-            res.json(`Cannot run due to Contraint: ${error.message}`);
+            next(error);
         }
     }
 
-    static async UnLinkInvoiceLines(req, res)
+    static async UnLinkInvoiceLines(req, res, next)
     {
         try
         {
@@ -132,8 +121,7 @@ class InvoiceController
         }
         catch (error)
         {
-            res.status(406);
-            res.json(`Cannot run due to Contraint: ${error.message}`);
+            next(error);
         }
     }
 
@@ -150,11 +138,7 @@ class InvoiceController
                 const result = await OrderJob.query().findById(req.params.jobGuid);
 
                 if (!result)
-                {
-                    res.status(404).send(`Job with Guid ${req.params.jobGuid} not found.`);
-
-                    return;
-                }
+                    throw new NotFoundError(`Job with Guid ${req.params.jobGuid} not found.`);
 
                 orderGuid = result.orderGuid;
             }
@@ -162,10 +146,7 @@ class InvoiceController
             const result = await InvoiceService.getOrderInvoicesandBills(orderGuid);
 
             if (!result)
-            {
-                res.status(404);
-                res.send(`Order with Guid ${orderGuid} not found.`);
-            }
+                throw new NotFoundError(`Order with Guid ${orderGuid} not found.`);
             else
             {
                 res.status(200);
@@ -191,11 +172,7 @@ class InvoiceController
                 const result = await OrderJob.query().findById(req.params.jobGuid);
 
                 if (!result)
-                {
-                    res.status(404).send(`Job with Guid ${req.params.jobGuid} not found.`);
-
-                    return;
-                }
+                    throw new NotFoundError(`Job with Guid ${req.params.jobGuid} not found.`);
 
                 orderGuid = result.orderGuid;
             }
@@ -203,10 +180,7 @@ class InvoiceController
             const result = await InvoiceService.getJobOrderFinances(orderGuid, type);
 
             if (!result)
-            {
-                res.status(404);
-                res.send(`Order with Guid ${orderGuid} not found.`);
-            }
+                throw new NotFoundError(`Order with Guid ${orderGuid} not found.`);
             else
             {
                 res.status(200);
@@ -219,48 +193,26 @@ class InvoiceController
         }
     }
 
-    static async exportInvoice(req, res)
+    static async exportInvoice(req, res, next)
     {
-        const result = (await InvoiceService.exportInvoices([req.params.orderGuid]))?.[0];
+        const { orderGuid } = req.params;
 
-        if (result)
+        try
         {
-            if (result.error)
-                res.status(400);
-            else
-                res.status(200);
+            const result = await InvoiceService.exportInvoices([orderGuid]);
 
-            res.json(result);
+            const invoice = result[orderGuid];
+
+            // transform single element array to object
+            invoice.data = invoice.data[0] || {};
+
+            invoice.errors.throwErrorsIfExist();
+
+            res.status(200).json(invoice);
         }
-        else
+        catch (err)
         {
-            res.status(404);
-        }
-    }
-
-    static async exportInvoices(req, res)
-    {
-        const orders = req.body?.orders;
-
-        if (!orders || orders.length == 0)
-        {
-            res.status(400);
-            res.json({ 'error': 'Missing Or Empty Array' });
-        }
-        else
-        {
-            const result = await InvoiceService.exportInvoices(orders);
-
-            if (result)
-            {
-                res.status(200);
-                res.json(result);
-            }
-            else
-            {
-                res.status(404);
-                res.json({ 'error': 'Order Not Found' });
-            }
+            next(err);
         }
     }
 

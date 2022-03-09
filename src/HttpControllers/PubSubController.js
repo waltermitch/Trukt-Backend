@@ -2,14 +2,21 @@ const PubSub = require('../Azure/PubSub');
 
 class PubSubController
 {
-    static async get(req, res)
+    static async get(req, res, next)
     {
-        const result = await PubSub.getSubToken(req.session.user.oid);
-
-        if (result)
+        try
         {
-            res.status(200);
-            res.json(result);
+            const result = await PubSub.getSubToken(req.session.userGuid);
+    
+            if (result)
+            {
+                res.status(200);
+                res.json(result);
+            }
+        }
+        catch (error)
+        {
+            next(error);
         }
     }
 }

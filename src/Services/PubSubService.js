@@ -1,4 +1,5 @@
 const PubSub = require('../Azure/PubSub');
+const { MissingDataError } = require('../ErrorHandling/Exceptions');
 
 class PubSubService
 {
@@ -8,9 +9,9 @@ class PubSubService
     static async jobUpdated(jobGuid, payload)
     {
         if (!jobGuid)
-            throw new Error('jobGuid is required to publish to job updates to pubsub');
+            throw new MissingDataError('jobGuid is required to publish to job updates to pubsub');
         else if (Object.keys(payload).length === 0)
-            throw new Error('non-empty payload is required to publish to job updates to pubsub, received: ' + JSON.stringify(payload));
+            throw new MissingDataError('non-empty payload is required to publish to job updates to pubsub', { payload });
 
         const data =
         {
@@ -24,9 +25,9 @@ class PubSubService
     static async jobActivityUpdate(jobGuid, payload)
     {
         if (!jobGuid)
-            throw new Error('jobGuid is required to publish to job updates to pubsub');
+            throw new MissingDataError('jobGuid is required to publish to job updates to pubsub');
         else if (Object.keys(payload).length === 0)
-            throw new Error('non-empty payload is required to publish to job updates to pubsub, received: ' + JSON.stringify(payload));
+            throw new MissingDataError('non-empty payload is required to publish to job updates to pubsub', { payload });
 
         const data =
         {
@@ -40,13 +41,29 @@ class PubSubService
     static async publishJobPostings(jobGuid, payload)
     {
         if (!jobGuid)
-            throw new Error('jobGuid is required to publish to job updates to pubsub');
+            throw new MissingDataError('jobGuid is required to publish to job updates to pubsub');
         else if (Object.keys(payload).length === 0)
-            throw new Error('non-empty payload is required to publish to job updates to pubsub, received: ' + JSON.stringify(payload));
+            throw new MissingDataError('non-empty payload is required to publish to job updates to pubsub ', { payload });
 
         const data =
         {
             'object': 'posting',
+            'data': payload
+        };
+
+        await PubSub.publishToGroup(jobGuid, data);
+    }
+
+    static async publishJobRequests(jobGuid, payload)
+    {
+        if (!jobGuid)
+            throw new MissingDataError('jobGuid is required to publish to job updates to pubsub');
+        else if (Object.keys(payload).length === 0)
+            throw new MissingDataError('non-empty payload is required to publish to job updates to pubsub, received: ' + JSON.stringify(payload));
+
+        const data =
+        {
+            'object': 'requests',
             'data': payload
         };
 

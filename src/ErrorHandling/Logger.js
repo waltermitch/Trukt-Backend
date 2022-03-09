@@ -1,6 +1,7 @@
 const { createLogger, format, transports } = require('winston');
 
-const { combine, timestamp, label, printf, colorize, errors, json, prettyPrint } = format;
+const { combine, timestamp, label, errors, json, prettyPrint } = format;
+const environment = process.env.NODE_ENV;
 
 const logger = createLogger({
     level: 'warn',
@@ -11,14 +12,14 @@ const logger = createLogger({
         label({ label: 'Winston Log', message: true }),
         json(),
         prettyPrint()
-      ),
-    defaultMeta: { environment: process.env.ENV },
+    ),
+    defaultMeta: { environment },
     meta: true,
     transports: [new transports.Console()]
-  });
+});
 
-  logger.exceptions.handle(
+logger.exceptions.handle(
     new transports.Console()
-  );
+);
 
 module.exports = logger;

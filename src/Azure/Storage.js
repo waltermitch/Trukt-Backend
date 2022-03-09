@@ -1,8 +1,8 @@
 const { BlobServiceClient, ContainerSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential } = require('@azure/storage-blob');
 const { DateTime } = require('luxon');
 
-const connectionString = process.env['azure.storage.connectionString'];
-const containerName = process.env['azure.storage.container'];
+const connectionString = process.env.AZURE_STORAGE_CONNECTIONSTRING;
+const containerName = process.env.AZURE_STORAGE_CONTAINER;
 
 // init blob client
 const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
