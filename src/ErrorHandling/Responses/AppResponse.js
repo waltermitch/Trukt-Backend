@@ -33,9 +33,9 @@ class AppResponse
      * @param {unknown} error - The error to add to the collection.
      * @returns {AppResponse}
      */
-    addError(error)
+    addError(...error)
     {
-        this.#errors.push(error);
+        this.#errors.push(...error);
 
         return this;
     }

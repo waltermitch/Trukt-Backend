@@ -1,6 +1,6 @@
 type: object
 required:
-  - guid
+  - name
 properties:
   guid:
     $ref: './Common.yaml#/guid'
