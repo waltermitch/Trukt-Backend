@@ -439,7 +439,7 @@ listener.on('orderjob_service_dispatched', ({ jobGuid, currentUser }) =>
                     orderGuid: currentJob.orderGuid,
                     jobGuid,
                     userGuid: currentUser,
-                    activityId: 33
+                    activityId: 34
                 })
             ]);
 

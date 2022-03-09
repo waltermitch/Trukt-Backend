@@ -44,6 +44,13 @@
             "type": "revenue",
             "is_accessorial": false,
             "is_deprecated": false
+        },
+        {
+            "id": 7,
+            "name": "rebate",
+            "type": "expense",
+            "is_accessorial": false,
+            "is_deprecated": false
         }
     ]
 }
