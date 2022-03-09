@@ -1,4 +1,5 @@
 const { MissingDataError, DataConflictError, ValidationError } = require('../ErrorHandling/Exceptions');
+const { SingleSearch, RoutingApi } = require('trimble-maps-node-sdk');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
@@ -8,8 +9,8 @@ const OrderStops = require('../Models/OrderStop');
 const Terminal = require('../Models/Terminal');
 const Queue = require('../Azure/ServiceBus');
 const { mergeDeepRight } = require('ramda');
-const ArcGIS = require('../ArcGIS/API');
 
+const key = process.env.TRIMBLE_API_KEY;
 const { SYSTEM_USER } = process.env;
 const keywordFields =
 {
@@ -20,18 +21,30 @@ const keywordFields =
     'address': ['street1', 'street2']
 };
 
+SingleSearch.setKey(key);
+RoutingApi.setKey(key);
+
 const terminalsQueue = new Queue({ queue: 'unresolved_terminals' });
 
 class TerminalService
 {
+    static async geocodeAddress(address)
+    {
+        const [res] = await SingleSearch.geocodeAddress(address);
+
+        return res;
+    }
+
     static async getById(terminalId)
     {
-        const terminal = await Terminal.query().where('rcgTms.terminals.guid', '=', `${terminalId}`).withGraphJoined('[contacts, primaryContact, alternativeContact]');
+        const terminal = await Terminal.query()
+            .where('rcgTms.terminals.guid', '=', `${terminalId}`)
+            .withGraphJoined('[contacts, primaryContact, alternativeContact]');
 
         return terminal;
     }
 
-    static async search(query)
+    static async search({ rc, pg, ...query })
     {
         // remove unwanted keys that null or empty strings
         for (const key in query)
@@ -41,10 +54,10 @@ class TerminalService
         // query will be an object with key being the query word
         // min 1 page, with default page 1 (1st page)
         // objection is 0 index, so is postgress, user input will be starting page index at 1
-        const pg = Math.max(0, query.pg || 0);
+        pg = Math.max(0, pg || 0);
 
         // clamp between 1 and 100 with default value of 10
-        const rc = Math.min(100, Math.max(1, query.rc || 10));
+        rc = Math.min(100, Math.max(1, rc || 10));
 
         const qb = Terminal.query();
         let orderbypriority = [];
@@ -69,6 +82,8 @@ class TerminalService
 
             qb.whereRaw('vector_name @@ to_tsquery(\'english\', ? )', [searchVal]);
         }
+        else if (Object.keys(query).length == 0)
+            orderbypriority.push('name');
 
         // TODO add comments here cause nobody knows what this is
         for (const keyword in keywordFields)
@@ -183,12 +198,12 @@ class TerminalService
                 const terminalAddress = Terminal.createStringAddress(terminal);
 
                 // lookup candidates
-                const [candidate] = await ArcGIS.findMatches(terminalAddress);
+                const [candidate] = await SingleSearch.geocodeAddress(terminalAddress);
 
                 // check score of first candidate
-                if (candidate?.score >= 95)
+                if (candidate?.score <= 2)
                 {
-                    const coords = ArcGIS.parseGeoCoords(candidate);
+                    const [long, lat] = candidate.geo;
 
                     // at this point we have a match, but we don't know if there is a terminal with this lat/long in the db already
                     // if there is an existing terminal we need to update all the objects related to this terminal to use that one
@@ -197,8 +212,8 @@ class TerminalService
                     {
                         const existingTerminal = await Terminal.query()
                             .select('guid')
-                            .where('latitude', coords.lat)
-                            .andWhere('longitude', coords.long)
+                            .where('latitude', lat)
+                            .andWhere('longitude', long)
                             .andWhereNot('guid', terminal.guid)
                             .first();
 
@@ -276,22 +291,22 @@ class TerminalService
         }
     }
 
-    // this method will update a terminal with the new information from arcgis
+    // this method will update a terminal with the new information from maps api
     // in the processing normalizing the address formatting, etc and mark it as resolved
-    static async normalizeTerminal(terminal, arcGISmatch, trx)
+    static async normalizeTerminal(terminal, match, trx)
     {
-        const coords = ArcGIS.parseGeoCoords(arcGISmatch);
+        const [long, lat] = match.geo;
 
         const payload =
         {
-            latitude: coords.lat,
-            longitude: coords.long,
+            latitude: lat,
+            longitude: long,
             updatedByGuid: SYSTEM_USER,
             isResolved: true
         };
 
         // add these fields if they exist
-        const { attributes: atr } = arcGISmatch;
+        const { attributes: atr } = match;
 
         if (atr.StAddr)
             payload.street1 = atr.StAddr;

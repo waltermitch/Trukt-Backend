@@ -665,7 +665,40 @@ class OrderJob extends BaseModel
         filterByDispatcher: this.filterByDispatcher,
         filterByCustomer: this.filterByCustomer,
         filterBySalesperson: this.filterBySalesperson,
-        filterByCarrier: this.filterByCarrier
+        filterByCarrier: this.filterByCarrier,
+        canServiceJobMarkAsCanceled: (queryBuilder) =>
+        {
+            queryBuilder.select(raw(`bool_and(
+                vendor_guid is null 
+                and (is_deleted = false and is_canceled = false and is_complete = false)
+                and date_completed is null
+            ) as canBeMarkAsCanceled
+            `));
+        },
+
+        // Uses OrderJob alias as OJ
+        isServiceJob: (queryBuilder) =>
+        {
+            queryBuilder.select(raw('(case when o_j_t.category=\'service\' then true else false END) as isServiceJob'))
+                .innerJoin('rcgTms.orderJobTypes as OJT', 'OJ.typeId', 'OJT.id');
+        },
+
+        // Uses OrderJob alias as OJ
+        vendorName: (queryBuilder) =>
+        {
+            queryBuilder.select('V.name as vendorName')
+                .leftJoin('salesforce.accounts as V', 'OJ.vendorGuid', 'V.guid');
+
+        },
+        canServiceJobMarkAsDeleted: (queryBuilder) =>
+        {
+            queryBuilder.select(raw(`bool_and(
+                vendor_guid is null
+                and (is_deleted = false and is_canceled = false and is_complete = false)
+                and date_completed is null
+            ) as canbemarkasdeleted
+            `));
+        }
     };
 
     static filterByCarrier(queryBuilder, carrierList = [])
@@ -883,6 +916,57 @@ class OrderJob extends BaseModel
 
         if (isTender && !this.equipmentTypeId)
             this.equipmentTypeId = EDI_DEFAULT_EQUIPMENT_TYPE_ID;
+    }
+
+    /**
+     * Use OrderJob modifier "isServiceJob" to get the property "isservicejob".
+     * Use OrderJob modifier "canServiceJobMarkAsCanceled" to get the property "canServiceJobMarkAsCanceled"
+     * Use OrderJob modifier "vendorName" to get the property "vendorName"
+     */
+    validateJobForCanceling()
+    {
+        // Validation for service jobs
+        if (this.isservicejob)
+        {
+            if (this.vendorGuid)
+                throw new DataConflictError(`Please un-dispatch the vendor '${this.vendorName}' before canceling the job`);
+            if (!this.canServiceJobMarkAsCanceled)
+                throw new DataConflictError(`Cannot cancel job because it is '${this.status}'`);
+
+        }
+
+        // Validation for transport jobs
+        else
+        {
+            if (this.isDeleted)
+                throw new DataConflictError('This Order is deleted and can not be canceled.');
+            if (this.jobIsDispatched)
+                throw new DataConflictError('Please un-dispatch the Order before canceling');
+        }
+    }
+
+    /**
+     * Use OrderJob modifier "isServiceJob" to get the property "isservicejob".
+     * Use OrderJob modifier "canServiceJobMarkAsDeleted" to get the property "canServiceJobMarkAsDeleted"
+     * Use OrderJob modifier "vendorName" to get the property "vendorName"
+     */
+    validateJobForDeletion()
+    {
+        // Validation for service jobs
+        if (this.isservicejob)
+        {
+            if (this.vendorGuid)
+                throw new DataConflictError(`Please un-dispatch the vendor '${this.vendorName}' before deleting the job`);
+            if (!this.canServiceJobMarkAsDeleted)
+                throw new DataConflictError(`Cannot delete job because it is '${this.status}'`);
+        }
+
+        // Validation for transport jobs
+        else
+        {
+            if (this.jobIsDispatched)
+                throw new DataConflictError('Please un-dispatch the Order before deleting');
+        }
     }
 }
 
