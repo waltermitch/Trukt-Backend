@@ -1,5 +1,5 @@
-const { MissingDataError, DataConflictError, NotFoundError, ValidationError } = require('../ErrorHandling/Exceptions');
-const { BulkResponse } = require('../ErrorHandling/Responses');
+const { MissingDataError, DataConflictError, NotFoundError, ValidationError, ApiError } = require('../ErrorHandling/Exceptions');
+const { BulkResponse, AppResponse } = require('../ErrorHandling/Responses');
 const ActivityManagerService = require('./ActivityManagerService');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -34,11 +34,14 @@ const { v4: uuid } = require('uuid');
 const axios = require('axios');
 const https = require('https');
 const R = require('ramda');
+const EDI990Payload = require('../EDI/Payload/EDI990Payload');
+const EDIApi = require('../EDI/EDIApi');
 
 // this is the apora that will hold the falling down requirments above.
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
+const SYSTEM_USER = process.env.SYSTEM_USER;
 
 let dateFilterComparisonTypes;
 
@@ -851,246 +854,260 @@ class OrderService
     }
 
     /**
-     * Method is to accepts load tenders. Validates, sends requests and updates the database in our system.
-     * @param {string []} orderGuids
-     * @param {string} currentUser
-     * @returns {BulkResponse} BulkResponse object
+     * Accept load tenders in our system. Use where needed.
+     * @param {String[]} orderGuids
+     * @param {String | User} currentUser
+     * @returns {Promise}
      */
-    static async acceptLoadTenders(orderGuids, currentUser)
+    static handleTendersAccept(orderGuids, currentUser)
     {
-        // valdiate orders for accepting or declineing
-        const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
+        const actionObj = {
+            action: 'accept',
+            eventName: 'tender_accepted',
+            query: OrderService.acceptTenders
+        };
 
-        // send request to logic
-        const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('accept', successfulTenders, null);
+        return OrderService.handleTenders(actionObj, orderGuids, currentUser)
+            .then((bulkResponse) =>
+            {
+                for (const guid of orderGuids)
+                {
+                    const response = bulkResponse.getResponse(guid);
+                    if (!(response.doErrorsExist()))
+                    {
+                        emitter.emit('order_created', guid);
+                    }
+                }
+                return bulkResponse;
+            });
+    }
 
-        failedTenders.push(...failedOrders);
+    /**
+     * Reject load tenders in our system
+     * @param {String[]} orderGuids
+     * @param {String | User} currentUser
+     * @returns {Promise}
+     */
+    static handleTenderReject(orderGuids, currentUser, reason)
+    {
+        const actionObj = {
+            action: 'reject',
+            eventName: 'tender_rejected',
+            query: OrderService.rejectTenders
+        };
 
+        return OrderService.handleTenders(actionObj, orderGuids, currentUser, { reason });
+    }
+
+    /**
+     * Accept or Reject a load tender in our system.
+     * @param {Object} actionObj required action, eventName, query
+     * @param {String[]} orderGuids
+     * @param {String | User} currentUser
+     * @param {*} options
+     * @returns BulkResponse
+     */
+    static async handleTenders({ action, eventName, query }, orderGuids, currentUser = SYSTEM_USER, options = {})
+    {
         const bulkResponse = new BulkResponse();
 
-        // add errored orders to body message
-        for (const order of failedTenders)
+        // For checking if orders exist
+        const missingOrders = {};
+        const validOrders = [];
+        const respOkOrders = [];
+        const respFailOrders = [];
+        for (const orderGuid of orderGuids)
         {
-            bulkResponse
-                .addResponse(order.orderGuid, order.errors)
-                .getResponse(order.orderGuid)
-                .setStatus(order.status);
+            bulkResponse.addResponse(orderGuid);
         }
 
-        // update the tenders into order
-        if (goodOrders.length > 0)
+        const trx = await Order.startTransaction();
+
+        try
         {
-            const data = await Promise.all([
-                Order.query().skipUndefined().findByIds(goodOrders).patch({
-                    isTender: false,
-                    isDeleted: false,
-                    status: 'new',
-                    updatedByGuid: currentUser
-                }),
-                OrderJob.query().skipUndefined().patch({
-                    isDeleted: false,
-                    status: 'new',
-                    updatedByGuid: currentUser
-                }).whereIn('orderGuid', goodOrders).returning('guid', 'orderGuid')
-            ]);
+            const orders = await Order.query(trx).findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
 
-            // loop through successfull jobs and emmit event to update acivity logs
-            for (const job of data[1])
+            // Using Javascript to calculate the missing GUIDS because it is quicker to write than SQL
+            // Also more straight forward.
+            for (const guid of orderGuids)
             {
-                bulkResponse
-                    .addResponse(job.orderGuid)
-                    .getResponse(job.orderGuid)
-                    .setStatus(200)
-                    .setData({ jobGuid: job.guid });
-
-                emitter.emit('tender_accepted', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
-                emitter.emit('order_created', job.orderGuid);
+                missingOrders[guid] = true;
             }
+
+            for (const order of orders)
+            {
+
+                const validationErrors = OrderService.validateLoadTenderOrder(order);
+                bulkResponse.addResponse(order.guid, validationErrors);
+
+                if (!bulkResponse.getResponse(order.guid).doErrorsExist())
+                {
+                    validOrders.push(order);
+                }
+                delete missingOrders[order.guid];
+            }
+
+            for (const guid of Object.keys(missingOrders))
+            {
+                bulkResponse.addResponse(guid, new NotFoundError('This order does not exist.', { orderGuid: guid }));
+            }
+
+            const requests = [];
+            for (const order of validOrders)
+            {
+                const payload = new EDI990Payload();
+                payload.addOrder(order)
+                    .addPartner(order.client)
+                    .addSCAC('RCGQ')
+                    .addDatetime()
+                    .addAction(action)
+                    .addEDIData(order.ediData)
+                    .addReason(options.reason);
+
+                const req = EDIApi.send990(payload);
+                requests.push(req);
+            }
+
+            const responses = await Promise.allSettled(requests);
+
+            // responses coincide with validOrders array
+            for (let i = 0; i < responses.length; i++)
+            {
+                const order = validOrders[i];
+                const resp = responses[i];
+                if (resp.status === 'rejected')
+                {
+                    respFailOrders.push(order);
+                    bulkResponse.addResponse(order.guid, new ApiError(`EDI 990 failed to ${action}`, { apiError: resp.reason.message }));
+                }
+                else
+                {
+                    respOkOrders.push(order);
+                }
+            }
+
+            let queryBuilders = query(respOkOrders, currentUser);
+            if (!Array.isArray(queryBuilders))
+            {
+                queryBuilders = [queryBuilders];
+            }
+
+            for (const query of queryBuilders)
+            {
+                query.transacting(trx);
+            }
+
+            await Promise.all(queryBuilders);
+
+            for (const order of respOkOrders)
+            {
+                for (const job of order.jobs)
+                {
+                    const eventData = {
+                        jobGuid: job.guid,
+                        orderGuid: order.guid,
+                        currentUser
+                    };
+                    emitter.emit(eventName, eventData);
+                }
+            }
+
+            await trx.commit();
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
         }
 
         return bulkResponse;
     }
 
     /**
-     * Method is to rejects load tenders. Validates, sends requests and updated the database in our system.
-     * @param {string []} orderGuids
-     * @param {string} reason
-     * @param {BulkResponse} currentUser
+     * Creates a QueryBuilder which will mark the Orders in the database as accepted
+     * @param {Order[]} orders
+     * @param {String | User} currentUser
+     * @returns { QueryBuilder}
      */
-    static async rejectLoadTenders(orderGuids, reason, currentUser)
+    static acceptTenders(orders, currentUser)
     {
-        // valdiate orders for accepting or declineing
-        const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
+        const orderGuids = orders.map(order => order.guid);
+        return Order.query()
+            .findByIds(orderGuids)
+            .patch({
+                isTender: false,
+                status: 'new',
+                updatedByGuid: currentUser
+            });
+    }
 
-        // send request to logic
-        const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('reject', successfulTenders, reason);
-
-        failedTenders.push(...failedOrders);
-
-        const bulkResponse = new BulkResponse();
-
-        // add errored orders to body message
-        for (const order of failedTenders)
+    /**
+     * Creates QueryBuilders which will mark the Orders in the database as rejected, as well as the OrderJobs
+     * @param {Order[]} orders Must have nested Jobs array
+     * @param {String | User} currentUser
+     * @returns {QueryBuilder[]}
+     */
+    static rejectTenders(orders, currentUser)
+    {
+        const orderGuids = orders.map(order => order.guid);
+        const jobGuids = orders.reduce((jobGuids, order) =>
         {
-            bulkResponse
-                .addResponse(order.orderGuid, order.errors)
-                .getResponse(order.orderGuid)
-                .setStatus(order.status);
-        }
+            jobGuids.push(...order.jobs.map(job => job.guid));
+            return jobGuids;
+        }, []);
 
-        // update the tenders into order
-        if (goodOrders.length > 0)
-        {
-            const data = await Promise.all([
-                Order.query().skipUndefined().findByIds(goodOrders).patch({
-                    isTender: false,
+        return [
+            Order.query()
+                .findByIds(orderGuids)
+                .patch({
                     isDeleted: true,
                     status: 'deleted',
                     deletedByGuid: currentUser
                 }),
-                OrderJob.query().skipUndefined().patch({
+            OrderJob.query()
+                .findByIds(jobGuids)
+                .patch({
                     isDeleted: true,
                     status: 'deleted',
                     deletedByGuid: currentUser
-                }).whereIn('orderGuid', goodOrders).returning('guid', 'orderGuid')
-            ]);
-
-            // loop through successfull jobs and emmit event to update acivity logs
-            for (const job of data[1])
-            {
-                bulkResponse
-                    .addResponse(job.orderGuid)
-                    .getResponse(job.orderGuid)
-                    .setStatus(200)
-                    .setData({ jobGuid: job.guid });
-
-                emitter.emit('tender_rejected', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
-            }
-        }
-
-        return bulkResponse;
+                })
+        ];
     }
 
     /**
-     * This method will be taking in acction, array of order objects, and a reason.
-     * @param {('accept' | 'reject')} action
-     * @param {object []} orderObjectsArray
-     * @param {string} reason
-     * @returns {{orderGuid: string, jobGuid: string, status: number, message: string | null}} reason
+     *  Validates the state of the Order to make sure it is okay to accept as a Tender
+     * @param {Order} order
+     * @returns {AppResponse}
      */
-    static async handleLoadTendersAPICall(action, orderObjectsArray, reason)
+    static validateLoadTenderOrder(order)
     {
-        // composing payload for edi endpoint
-        const logicAppPayloads = orderObjectsArray.map((item) => ({
-            order: {
-                guid: item.guid,
-                number: item.number
-            },
-            partner: item.client.sfId,
-            reference: item.referenceNumber,
-            action: action,
-            date: DateTime.utc().toString(),
-            scac: 'RCGQ',
-            edi: item.ediData?.[0].data,
-            reason
-        }));
+        const response = new AppResponse();
+        const isTender = order.ediData && order.isTender;
 
-        // sending multiple requests to logic app
-        const apiResponses = await Promise.allSettled(logicAppPayloads.map((item) => logicAppInstance.post(process.env.AZURE_LOGICAPP_PARAMS, item)));
-
-        const failed = [];
-        const goodGuids = [];
-
-        // looping through responses to separate failed ones
-        for (let i = 0; i < apiResponses.length; i++)
+        // EDI Tender is defined by having an ediData record related to it that is a 204
+        if (!isTender)
         {
-            if (apiResponses[i].status === 'fulfilled')
-            {
-                goodGuids.push(orderObjectsArray[i].guid);
-            }
-            else if (apiResponses[i].status === 'rejected')
-            {
-                failed.push({
-                    orderGuid: orderObjectsArray[i].guid,
-                    jobGuid: orderObjectsArray[i].jobs[0].guid,
-                    status: 400,
-                    errors: [apiResponses[i]?.reason?.message]
-                });
-            }
+            response.addError(new DataConflictError('This order is not a load tender.'));
         }
 
-        return { goodOrders: goodGuids, failedOrders: failed };
-    }
-
-    /**
-     * Method take in order guid for validation. Creates errors of orders that failed, and return an object
-     * with successfull payload and failed ones.
-     * @param {uuid []} orderGuids
-     * @returns
-     */
-    static async validateLoadTendersState(orderGuids)
-    {
-        // query all of the data
-        const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
-
-        // for array of data
-        const orderExceptions = [];
-        const existingOrders = [];
-
-        // creating object with orderGuid as keys for map validation
-        const hashedOrders = orders.reduce((map, obj) =>
+        if (order.isDeleted)
         {
-            map[obj.guid] = obj;
-            return map;
-        }, {});
-
-        // loop through all guids validate the data
-        for (const guid of orderGuids)
-        {
-            const errors = [];
-            if (hashedOrders[guid] === undefined)
+            if (isTender)
             {
-                orderExceptions.push({
-                    orderGuid: guid,
-                    jobGuid: null,
-                    status: 404,
-                    errors: ['Order not found.']
-                });
+                response.addError(new DataConflictError('This load tender is already declined'));
             }
             else
             {
-                if (hashedOrders[guid].jobs[0].isTransport === false)
-                {
-                    errors.push('Order does not have a transport job.');
-                }
-
-                if (hashedOrders[guid].isTender === false)
-                {
-                    errors.push('Order is not a tender.');
-                }
-
-                if (hashedOrders[guid].isDeleted === true)
-                {
-                    errors.push('Order is deleted.');
-                }
-
-                if (errors.length > 0)
-                {
-                    orderExceptions.push({
-                        orderGuid: guid,
-                        jobGuid: hashedOrders[guid].jobs[0].guid,
-                        status: 400,
-                        errors: errors
-                    });
-                }
-
-                if (hashedOrders[guid].isTender && !hashedOrders[guid].isDeleted)
-                {
-                    existingOrders.push(hashedOrders[guid]);
-                }
+                response.addError(new DataConflictError('This order is deleted.'));
             }
         }
-        return { successfulTenders: existingOrders, failedTenders: orderExceptions };
+
+        if (!(order.jobs.some(job => job.isTransport)))
+        {
+            response.addError(new DataConflictError('This order doesn\'t have any transport jobs'));
+        }
+
+        return response;
     }
 
     static async updateClientNote(orderGuid, body, currentUser)

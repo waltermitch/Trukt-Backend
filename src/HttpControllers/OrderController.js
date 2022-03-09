@@ -72,55 +72,32 @@ class OrderController
 
     }
 
-    // TODO: FOR SINGLE ACCEPT NOT USED YET
     static async handleTender(req, res, next)
     {
-        const orderGuid = req.params.orderGuid;
-        try
-        {
-            let result;
-            if (req.params.action == 'accept')
-            {
-                result = await OrderService.acceptLoadTenders([orderGuid], req.session.userGuid);
-            }
-            else if (req.params.action == 'reject')
-            {
-                result = await OrderService.rejectLoadTenders([orderGuid], req.body.reason, req.session.userGuid);
-            }
-            if (result[`${orderGuid}`].status === 404 || result[`${orderGuid}`].status === 400)
-            {
-                res.status(result[`${orderGuid}`].status);
-                res.json(result);
-            }
-            else
-            {
-                res.status(200);
-                res.json(result);
-            }
-        }
-        catch (error)
-        {
-            next(error);
-        }
-    }
+        const action = req.params.action;
+        const currentUser = req.session.userGuid;
+        const orderGuids = [req.params.orderGuid];
+        const reason = req.body.reason;
 
-    // FIXME: CURRENTLY USED for both BULK and Single
-    static async handleTenders(req, res, next)
-    {
-        const orderGuids = req.body.orderGuids;
         try
         {
-            let result;
-            if (req.params.action == 'accept')
+            let process;
+            switch (action)
             {
-                result = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
+                case 'accept':
+                    process = OrderService.handleTendersAccept(orderGuids, currentUser);
+                    break;
+                case 'reject':
+                    process = OrderService.handleTenderReject(orderGuids, currentUser, reason);
+                    break;
             }
-            else if (req.params.action == 'reject')
-            {
-                result = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
-            }
-            res.status(200);
-            res.json(result);
+
+            const bulkResponse = await process;
+            const response = bulkResponse.getResponse(orderGuids[0]);
+            const jsonResponse = response.toJSON();
+
+            res.status(jsonResponse.status);
+            res.json(jsonResponse);
         }
         catch (error)
         {
@@ -219,7 +196,7 @@ class OrderController
         try
         {
             const result = await OrderService.markOrderOnHold(req.params.orderGuid, req.session.userGuid);
-    
+
             if (result)
                 res.status(200).json(result);
             else
