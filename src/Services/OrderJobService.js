@@ -459,10 +459,10 @@ class OrderJobService
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
             const data = jobUpdated.value?.data;
-            
+
             bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
         });
-        
+
         return bulkResponse;
     }
 
@@ -862,7 +862,7 @@ class OrderJobService
                 errors.push('Order has been verified already.');
             if (job.vendor_guid && job.is_transport === false)
                 errors.push('Please un-assign the Vendor first.');
- 
+
             // validations for transport job type
             if (job.type_id === 1)
             {
@@ -1542,20 +1542,22 @@ class OrderJobService
     static async checkJobToCancel(jobGuid, trx)
     {
         const jobStatus = [
-            OrderJob.query(trx)
-                .select('orderGuid', 'isDeleted').findOne('guid', jobGuid),
+            OrderJob.query(trx).alias('OJ').select('OJ.orderGuid', 'OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
+                .modify('isServiceJob').modify('vendorName'),
             OrderJob.query(trx).alias('job')
-                .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
+                .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
+            OrderJob.query(trx).findOne('guid', jobGuid).modify('canServiceJobMarkAsCanceled')
         ];
 
-        const [job, jobIsDispatched] = await Promise.all(jobStatus);
+        const [job, jobIsDispatched, canServiceJobMarkAsCanceled] = await Promise.all(jobStatus);
 
         if (!job)
             throw new NotFoundError('Job does not exist');
-        if (job.isDeleted)
-            throw new DataConflictError('This Order is deleted and can not be canceled.');
-        if (job && jobIsDispatched)
-            throw new DataConflictError('Please un-dispatch the Order before canceling');
+
+        job.jobIsDispatched = jobIsDispatched;
+        job.canServiceJobMarkAsCanceled = canServiceJobMarkAsCanceled?.canbemarkascanceled;
+        job.validateJobForCanceling();
+
         return job;
     }
 
