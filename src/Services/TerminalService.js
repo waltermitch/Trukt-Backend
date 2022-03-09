@@ -1,5 +1,5 @@
 const { MissingDataError, DataConflictError, ValidationError } = require('../ErrorHandling/Exceptions');
-const { SingleSearch, RoutingApi } = require('@rcg_logistics/trimble-maps-node-sdk');
+const { SingleSearch, RoutingApi } = require('trimble-maps-node-sdk');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
