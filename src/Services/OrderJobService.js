@@ -19,6 +19,10 @@ const Loadboards = require('../Loadboards/API');
 const { raw } = require('objection');
 const { MissingDataError, NotFoundError, DataConflictError, ValidationError, ApiError, ApplicationError } = require('../ErrorHandling/Exceptions');
 const { AppResponse, BulkResponse } = require('../ErrorHandling/Responses');
+const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const SFAccount = require('../Models/SFAccount');
+const SFContact = require('../Models/SFContact');
+const InvoiceBill = require('../Models/InvoiceBill');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -1747,6 +1751,107 @@ class OrderJobService
 
         // if we are here, we failed to update status
         throw new DataConflictError('Job Could Not Be Mark as Delivered, Please Check All Stops Are Delivered');
+    }
+
+    static async dispatchServiceJob(jobGuid, body, currentUser)
+    {
+        const trx = await OrderJobDispatch.startTransaction();
+        const {
+            vendor: { guid: vendorGuid } = {},
+            agent: { guid: agentGuid, ...agentInfo } = {},
+            contact: { guid: contactGuid, ...contactInfo } = {}
+        } = body ?? {};
+
+        try
+        {
+            // to collect and throw serviceJob and vendor errors
+            const appResponse = new AppResponse();
+
+            const [serviceJob, vendor] = await Promise.all([OrderJob.query().withGraphFetched('bills').findById(jobGuid), SFAccount.query().withGraphFetched('rectype').findById(vendorGuid)]);
+
+            appResponse.addError(...OrderJob.validateReadyServiceJobToInProgress(serviceJob));
+            appResponse.addError(...SFAccount.validateAccountForServiceJob(vendor));
+            appResponse.throwErrorsIfExist();
+
+            // get agent and contact info and validate
+            const [agent, contact] = await Promise.all([OrderJobService.manageContactAccount(trx, vendor, agentGuid, agentInfo, 'Agent'), OrderJobService.manageContactAccount(trx, vendor, contactGuid, contactInfo, 'Contact')]);
+
+            const promises = [];
+            const dateStarted = DateTime.now().toISO();
+
+            // unshift is used to ensure dispatch response is always first in Promise.all array
+            promises.unshift(OrderJobDispatch.query(trx).insertAndFetch({
+                jobGuid: serviceJob.guid,
+                vendorGuid: vendor.guid,
+                vendorContactGuid: contact?.guid ?? null,
+                vendorAgentGuid: agent?.guid ?? null,
+                createdByGuid: currentUser,
+                updatedByGuid: currentUser,
+                isAccepted: true,
+                isValid: true,
+                isPending: false,
+                isDeclined: false,
+                isDeleted: false,
+                isCanceled: false,
+                dateAccepted: dateStarted
+            }));
+            
+            promises.push(serviceJob.$query(trx).patch({
+                vendorGuid: vendor.guid,
+                vendorContactGuid: contact?.guid ?? null,
+                vendorAgentGuid: agent?.guid ?? null,
+                dateStarted,
+                status: OrderJob.STATUS.IN_PROGRESS,
+                updatedByGuid: currentUser
+            }));
+
+            promises.push(
+                InvoiceBill.query(trx)
+                    .findByIds(serviceJob.bills.map(bill => bill.guid))
+                    .whereNull('consigneeGuid')
+                    .patch({
+                        consigneeGuid: vendor.guid
+                    })
+            );
+
+            const [dispatch] = await Promise.all(promises);
+
+            await trx.commit();
+
+            emitter.emit('orderjob_service_dispatched', { jobGuid: serviceJob.guid, dispatchGuid: dispatch.guid, currentUser });
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
+    static async manageContactAccount(trx, vendor, contactAccountGuid, contactAccountInfo, type)
+    {
+        let contactAccount = null;
+
+        // validate info coming from body
+        if (contactAccountGuid || Object.keys(contactAccountInfo).length)
+        {
+            if (contactAccountGuid)
+            {
+                contactAccount = await SFContact.query(trx).modify('byId', contactAccountGuid).first();
+                if (!contactAccount)
+                    throw new NotFoundError(`${type} not found. Please select a valid ${type.toLowerCase()}.`);
+                if (contactAccount.accountId !== vendor.sfId)
+                    throw new DataConflictError(`${type} is not associated with this vendor.`);
+            }
+            else
+                contactAccount = await SFContact.query(trx).insertAndFetch(SFContact.fromJson(contactAccountInfo));
+
+            // associate contact account with vendor
+            await contactAccount.$query(trx).patch({
+                accountId: vendor.sfId
+            });
+        }
+ 
+        return contactAccount;
     }
 
     // Sets job as pick up

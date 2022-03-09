@@ -200,6 +200,12 @@
             "category": "commodity",
             "name": "Commodity Deleted",
             "order_filter_label": "Commodity Deleted On"
+        },
+		{
+            "id": 34,
+            "category": "serviceJob",
+            "name": "Set To In Progress",
+            "order_filter_label": "Set To In Progress"
         }
     ]
 }

@@ -319,3 +319,6 @@ paths:
   /bulk/order/invoice/export:
     put:
       $ref: paths/bulk/exportOrderInvoice.yaml
+  /job/{jobGuid}/dispatch:
+    post:
+      $ref: paths/job/dispatch.yaml

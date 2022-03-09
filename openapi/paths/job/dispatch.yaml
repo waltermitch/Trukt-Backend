@@ -1,0 +1,44 @@
+summary: Dispatch a service job
+operationId: dispatchServiceJob
+description: Marks a Service Job as In Progress
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        required:
+         - vendor
+        properties:
+          vendor:
+            $ref: '../../components/schemas/Common.yaml#/guidObject'
+          agent:
+            $ref: '../../components/schemas/ContactWithoutMobile.yaml'
+          contact:
+            $ref: '../../components/schemas/ContactWithoutMobile.yaml'
+responses:
+  204:
+    description: Job Marked Succesfully
+    content:
+      application/json: {}
+  404:
+    description: Job does not exist
+    content:
+      application/json:
+        schema:
+          allOf:
+            - $ref: '../../components/schemas/SingleErrorResponse.yaml'
+  400: 
+    description: Job Can Not Be Mark as In Progress
+    content:
+      application/json:
+        schema:
+          allOf:
+            - $ref: '../../components/schemas/SingleErrorResponse.yaml'
