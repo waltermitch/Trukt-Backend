@@ -700,6 +700,14 @@ class OrderJob extends BaseModel
                 and date_completed is null
             ) as canbemarkasdeleted
             `));
+        },
+        canServiceJobMarkAsOnHold: (queryBuilder) =>
+        {
+            queryBuilder.select(raw(`bool_and(
+                (is_deleted = false and is_canceled = false and is_complete = false)
+                and date_completed is null
+            ) as canbemarkasonhold
+            `));
         }
     };
 
@@ -944,7 +952,7 @@ class OrderJob extends BaseModel
         this.dateStarted = null;
         this.status = OrderJob.STATUS.DECLINED;
     }
-    
+
     /**
      * Use OrderJob modifier "isServiceJob" to get the property "isservicejob".
      * Use OrderJob modifier "canServiceJobMarkAsCanceled" to get the property "canServiceJobMarkAsCanceled"
@@ -995,8 +1003,8 @@ class OrderJob extends BaseModel
                 throw new DataConflictError('Please un-dispatch the Order before deleting');
         }
     }
- 
-	/**
+
+    /**
      * @param {OrderJob} job
      */
     static validateReadyServiceJobToInProgress(job)
@@ -1068,7 +1076,7 @@ class OrderJob extends BaseModel
             errors.push(new DataConflictError('Job has already been completed.'));
         if (!job.dispatcherGuid)
             errors.push(new MissingDataError('Job has no dispatcher. Please assign a dispatcher'));
-        
+
         if (job.typeId === 1)
         {
             if (job.order.isTender)
@@ -1085,8 +1093,28 @@ class OrderJob extends BaseModel
             if (!job.dateVerified)
                 errors.push(new DataConflictError('Job has not been verified. Please verify this job before completing this job.'));
         }
-        
+
         return errors;
+    }
+
+    // Use OrderJob modifier "canServiceJobMarkAsOnHold" to get the property "canbemarkasonhold"
+    validateJobToAddHold()
+    {
+        // Validation for service jobs
+        if (this.isservicejob)
+        {
+            if (!this.canbemarkasonhold)
+                throw new DataConflictError(`Cannot place on hold because the job is '${this.status}'`);
+        }
+
+        // Validation for transport jobs
+        else
+        {
+            // job cannot be dispatched before being put on hold
+            if (this?.dispatches?.length >= 1)
+                throw new DataConflictError('Job must be undispatched before it can be moved to On Hold');
+
+        }
     }
 }
 
