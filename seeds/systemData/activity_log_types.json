@@ -206,6 +206,12 @@
             "category": "serviceJob",
             "name": "Set To In Progress",
             "order_filter_label": "Set To In Progress"
+        },
+        {
+            "id": 35,
+            "category": "job",
+            "name": "Job Completed",
+            "order_filter_label": "Job Completed On"
         }
     ]
 }
