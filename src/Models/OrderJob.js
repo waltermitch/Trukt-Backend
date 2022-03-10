@@ -920,6 +920,31 @@ class OrderJob extends BaseModel
             this.equipmentTypeId = EDI_DEFAULT_EQUIPMENT_TYPE_ID;
     }
 
+    removeVendor()
+    {
+        this.vendorGuid = null;
+        this.vendorContactGuid = null;
+        this.vendorAgentGuid = null;
+    }
+
+    // meant to be used when an rcg dispatcher
+    // cancels a dispatch offer
+    setToUndispatched()
+    {
+        this.removeVendor();
+        this.dateStarted = null;
+        this.status = OrderJob.STATUS.READY;
+    }
+
+    // meant to be used when a carrier declines
+    // a dispatch offer
+    setToDeclined()
+    {
+        this.removeVendor();
+        this.dateStarted = null;
+        this.status = OrderJob.STATUS.DECLINED;
+    }
+    
     /**
      * Use OrderJob modifier "isServiceJob" to get the property "isservicejob".
      * Use OrderJob modifier "canServiceJobMarkAsCanceled" to get the property "canServiceJobMarkAsCanceled"
