@@ -148,6 +148,9 @@ stringNullable:
 numberNullable:
   type: number
   nullable: true
+notes:
+  type: string
+  description: Use to add extra annotations.
 Enums:
   accountType:
     type: string

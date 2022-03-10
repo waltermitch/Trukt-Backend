@@ -230,7 +230,7 @@ class LoadboardController
                 res.json(result);
             }
             else
-                throw NotFoundError('Not Request guid provided');
+                throw NotFoundError('No Request Guid provided');
         }
         catch (error)
         {

@@ -61,7 +61,7 @@ class BulkController
 
             if (bulkResponse.doErrorsExist())
                 next({ instance: bulkResponse, onlySendErrorsToTelemetry: true });
-                
+
             res.status(202).json(bulkResponse);
         }
         catch (error)
@@ -103,29 +103,27 @@ class BulkController
         }
     }
 
-    // TODO: Added for bulk oporations
-    static async handleTendersBulk(req, res, next)
+    static async handleTenderBulk(req, res, next)
     {
+        const action = req.params.action;
+        const currentUser = req.session.userGuid;
         const orderGuids = req.body.orderGuids;
+        const reason = req.body.reason;
 
         try
         {
-            /**
-             * @type {BulkResponse}
-             */
-            let bulkResponse = undefined;
-            if (req.params.action == 'accept')
+            let process;
+            switch (action)
             {
-                bulkResponse = await OrderService.acceptLoadTenders(orderGuids, req.session.userGuid);
-            }
-            else if (req.params.action == 'reject')
-            {
-                bulkResponse = await OrderService.rejectLoadTenders(orderGuids, req.body.reason, req.session.userGuid);
+                case 'accept':
+                    process = OrderService.handleTendersAccept(orderGuids, currentUser);
+                    break;
+                case 'reject':
+                    process = OrderService.handleTenderReject(orderGuids, currentUser, reason);
+                    break;
             }
 
-            if (bulkResponse.doErrorsExist())
-                next({ instance: bulkResponse, onlySendErrorsToTelemetry: true });
-
+            const bulkResponse = await process;
             res.status(200);
             res.json(bulkResponse);
         }

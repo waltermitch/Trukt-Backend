@@ -1,6 +1,7 @@
 {
-    "testName": "Should create 1 job with 2 stops and 2 commodities",
+    "testName": "Should create 1 job with 2 stops and 2 commodities and referrerRebate",
     "input": {
+        "referrerRebate": "123.45",
         "jobs": [
             {
                 "index": "job_1",
@@ -502,6 +503,21 @@
                         "transactionNumber": null,
                         "link": [],
                         "name": "transport",
+                        "isAccessorial": false
+                    }
+                ]
+            },
+            {
+                "isPaid": false,
+                "lines": [
+                    {
+                        "notes": null,
+                        "amount": "123.45",
+                        "itemId": 7,
+                        "dateCharged": null,
+                        "transactionNumber": null,
+                        "link": [],
+                        "name": "rebate",
                         "isAccessorial": false
                     }
                 ]

@@ -3,7 +3,6 @@ operationId: acceptOrderbyGuid
 description: Accept Load Tender.
 tags:
   - Order
-
 parameters:
   - in: path
     name: orderGuid
@@ -13,15 +12,19 @@ parameters:
 
 responses:
   200:
-    description: Tender
+    description: OK
     content:
       application/json:
         schema:
-          $ref: ../../components/schemas/EDI.yaml#/LoadTenderResponses
-        
+          type: object
+          properties:
+            status:
+              type: string
+              default: 200
+            errors: 
+              type: array
+              maxItems: 0
   404:
-    description: Tender
-    content:
-      application/json:
-        schema:
-          $ref: ../../components/schemas/EDI.yaml#/LoadTenderResponses
+    $ref: ../../components/responses/404NotFound.yaml
+  400:
+    $ref: ../../components/responses/400BadRequest.yaml

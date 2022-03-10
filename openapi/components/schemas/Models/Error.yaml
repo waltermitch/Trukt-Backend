@@ -1,0 +1,12 @@
+type: object
+properties:
+  errorType:
+    description: This error may be different depending on the error.
+    type: string
+  message:
+    description: Human readable message of what caused the error.
+    type: string
+    example: Something broke, why did you let this happen?!
+additionalProperties:
+  description: Specific properties dependent on the errorType
+  type: string

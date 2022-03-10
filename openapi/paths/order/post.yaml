@@ -39,6 +39,8 @@ requestBody:
             $ref: '../../components/schemas/Order.yaml#/Order/properties/dispatcher'
           referrer:
             $ref: '../../components/schemas/Order.yaml#/Order/properties/referrer'
+          referrerRebate:
+            $ref: '../../components/schemas/Order.yaml#/Order/properties/referrerRebate'
           salesperson:
             $ref: '../../components/schemas/Order.yaml#/Order/properties/salesperson'
           jobs:

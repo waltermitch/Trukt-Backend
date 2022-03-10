@@ -19,6 +19,10 @@ const Loadboards = require('../Loadboards/API');
 const { raw } = require('objection');
 const { MissingDataError, NotFoundError, DataConflictError, ValidationError, ApiError, ApplicationError } = require('../ErrorHandling/Exceptions');
 const { AppResponse, BulkResponse } = require('../ErrorHandling/Responses');
+const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const SFAccount = require('../Models/SFAccount');
+const SFContact = require('../Models/SFContact');
+const InvoiceBill = require('../Models/InvoiceBill');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -459,10 +463,10 @@ class OrderJobService
             const status = jobUpdated.value?.status;
             const error = jobUpdated.value?.error;
             const data = jobUpdated.value?.data;
-            
+
             bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
         });
-        
+
         return bulkResponse;
     }
 
@@ -862,7 +866,7 @@ class OrderJobService
                 errors.push('Order has been verified already.');
             if (job.vendor_guid && job.is_transport === false)
                 errors.push('Please un-assign the Vendor first.');
- 
+
             // validations for transport job type
             if (job.type_id === 1)
             {
@@ -1411,21 +1415,7 @@ class OrderJobService
 
         try
         {
-            // getting job and verify if job is dispatched
-            const jobStatus = [
-                OrderJob.query(trx)
-                    .select('orderGuid').findOne('guid', jobGuid),
-                OrderJob.query(trx).alias('job')
-                    .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
-            ];
-
-            const [job, jobIsDispatched] = await Promise.all(jobStatus);
-
-            if (!job)
-                throw new NotFoundError('Job does not exist');
-
-            if (job && jobIsDispatched)
-                throw new DataConflictError('Please un-dispatch the Order before deleting');
+            const job = await OrderJobService.checkJobToDelete(jobGuid, trx);
 
             // updating postings to be deleted
             await LoadboardService.deletePostings(jobGuid, currentUser);
@@ -1542,20 +1532,22 @@ class OrderJobService
     static async checkJobToCancel(jobGuid, trx)
     {
         const jobStatus = [
-            OrderJob.query(trx)
-                .select('orderGuid', 'isDeleted').findOne('guid', jobGuid),
+            OrderJob.query(trx).alias('OJ').select('OJ.orderGuid', 'OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
+                .modify('isServiceJob').modify('vendorName'),
             OrderJob.query(trx).alias('job')
-                .select('guid').findOne('guid', jobGuid).modify('statusDispatched')
+                .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
+            OrderJob.query(trx).findOne('guid', jobGuid).modify('canServiceJobMarkAsCanceled')
         ];
 
-        const [job, jobIsDispatched] = await Promise.all(jobStatus);
+        const [job, jobIsDispatched, canServiceJobMarkAsCanceled] = await Promise.all(jobStatus);
 
         if (!job)
             throw new NotFoundError('Job does not exist');
-        if (job.isDeleted)
-            throw new DataConflictError('This Order is deleted and can not be canceled.');
-        if (job && jobIsDispatched)
-            throw new DataConflictError('Please un-dispatch the Order before canceling');
+
+        job.jobIsDispatched = jobIsDispatched;
+        job.canServiceJobMarkAsCanceled = canServiceJobMarkAsCanceled?.canbemarkascanceled;
+        job.validateJobForCanceling();
+
         return job;
     }
 
@@ -1761,6 +1753,107 @@ class OrderJobService
         throw new DataConflictError('Job Could Not Be Mark as Delivered, Please Check All Stops Are Delivered');
     }
 
+    static async dispatchServiceJob(jobGuid, body, currentUser)
+    {
+        const trx = await OrderJobDispatch.startTransaction();
+        const {
+            vendor: { guid: vendorGuid } = {},
+            agent: { guid: agentGuid, ...agentInfo } = {},
+            contact: { guid: contactGuid, ...contactInfo } = {}
+        } = body ?? {};
+
+        try
+        {
+            // to collect and throw serviceJob and vendor errors
+            const appResponse = new AppResponse();
+
+            const [serviceJob, vendor] = await Promise.all([OrderJob.query().withGraphFetched('bills').findById(jobGuid), SFAccount.query().withGraphFetched('rectype').findById(vendorGuid)]);
+
+            appResponse.addError(...OrderJob.validateReadyServiceJobToInProgress(serviceJob));
+            appResponse.addError(...SFAccount.validateAccountForServiceJob(vendor));
+            appResponse.throwErrorsIfExist();
+
+            // get agent and contact info and validate
+            const [agent, contact] = await Promise.all([OrderJobService.manageContactAccount(trx, vendor, agentGuid, agentInfo, 'Agent'), OrderJobService.manageContactAccount(trx, vendor, contactGuid, contactInfo, 'Contact')]);
+
+            const promises = [];
+            const dateStarted = DateTime.now().toISO();
+
+            // unshift is used to ensure dispatch response is always first in Promise.all array
+            promises.unshift(OrderJobDispatch.query(trx).insertAndFetch({
+                jobGuid: serviceJob.guid,
+                vendorGuid: vendor.guid,
+                vendorContactGuid: contact?.guid ?? null,
+                vendorAgentGuid: agent?.guid ?? null,
+                createdByGuid: currentUser,
+                updatedByGuid: currentUser,
+                isAccepted: true,
+                isValid: true,
+                isPending: false,
+                isDeclined: false,
+                isDeleted: false,
+                isCanceled: false,
+                dateAccepted: dateStarted
+            }));
+            
+            promises.push(serviceJob.$query(trx).patch({
+                vendorGuid: vendor.guid,
+                vendorContactGuid: contact?.guid ?? null,
+                vendorAgentGuid: agent?.guid ?? null,
+                dateStarted,
+                status: OrderJob.STATUS.IN_PROGRESS,
+                updatedByGuid: currentUser
+            }));
+
+            promises.push(
+                InvoiceBill.query(trx)
+                    .findByIds(serviceJob.bills.map(bill => bill.guid))
+                    .whereNull('consigneeGuid')
+                    .patch({
+                        consigneeGuid: vendor.guid
+                    })
+            );
+
+            const [dispatch] = await Promise.all(promises);
+
+            await trx.commit();
+
+            emitter.emit('orderjob_service_dispatched', { jobGuid: serviceJob.guid, dispatchGuid: dispatch.guid, currentUser });
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
+    static async manageContactAccount(trx, vendor, contactAccountGuid, contactAccountInfo, type)
+    {
+        let contactAccount = null;
+
+        // validate info coming from body
+        if (contactAccountGuid || Object.keys(contactAccountInfo).length)
+        {
+            if (contactAccountGuid)
+            {
+                contactAccount = await SFContact.query(trx).modify('byId', contactAccountGuid).first();
+                if (!contactAccount)
+                    throw new NotFoundError(`${type} not found. Please select a valid ${type.toLowerCase()}.`);
+                if (contactAccount.accountId !== vendor.sfId)
+                    throw new DataConflictError(`${type} is not associated with this vendor.`);
+            }
+            else
+                contactAccount = await SFContact.query(trx).insertAndFetch(SFContact.fromJson(contactAccountInfo));
+
+            // associate contact account with vendor
+            await contactAccount.$query(trx).patch({
+                accountId: vendor.sfId
+            });
+        }
+ 
+        return contactAccount;
+    }
+
     // Sets job as pick up
     static async undeliverJob(jobGuid, currentUser)
     {
@@ -1829,6 +1922,28 @@ class OrderJobService
         `))
             .with('deliveriesGroupByStop', deliveriesGroupByStop)
             .innerJoin('deliveriesGroupByStop', 'deliveriesGroupByStop.guid', 'OS2.guid');
+    }
+
+    static async checkJobToDelete(jobGuid, trx)
+    {
+        const jobStatus = [
+            OrderJob.query(trx).alias('OJ').select('OJ.orderGuid', 'OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
+                .modify('isServiceJob').modify('vendorName'),
+            OrderJob.query(trx).alias('job')
+                .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
+            OrderJob.query(trx).findOne('guid', jobGuid).modify('canServiceJobMarkAsDeleted')
+        ];
+
+        const [job, jobIsDispatched, canServiceJobMarkAsDeleted] = await Promise.all(jobStatus);
+
+        if (!job)
+            throw new NotFoundError('Job does not exist');
+
+        job.jobIsDispatched = jobIsDispatched;
+        job.canServiceJobMarkAsDeleted = canServiceJobMarkAsDeleted?.canbemarkasdeleted;
+        job.validateJobForDeletion();
+
+        return job;
     }
 }
 

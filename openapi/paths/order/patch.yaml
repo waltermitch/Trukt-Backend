@@ -88,6 +88,8 @@ requestBody:
             allOf:
               - description: The account that referred this order to us.
               - $ref: '../../components/schemas/Common.yaml#/guidObjectNullable'
+          referrerRebate:
+              $ref: '../../components/schemas/Order.yaml#/Order/properties/referrerRebate'
           salesperson:
             allOf:
               - description: The salesperson responsible for managing this order.

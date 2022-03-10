@@ -11,6 +11,7 @@ class AppResponse
     /**
      * @private
      * @type {number} - The http status code of the exception collection.
+     * Do not default this value. Otherwise you will need to update toJSON method.
      */
     #status = undefined;
 
@@ -33,9 +34,9 @@ class AppResponse
      * @param {unknown} error - The error to add to the collection.
      * @returns {AppResponse}
      */
-    addError(error)
+    addError(...error)
     {
-        this.#errors.push(error);
+        this.#errors.push(...error);
 
         return this;
     }
@@ -47,7 +48,7 @@ class AppResponse
     setData(data)
     {
         this.#data = data;
-        
+
         return this;
     }
 
@@ -58,7 +59,7 @@ class AppResponse
     setStatus(status)
     {
         this.#status = status;
-        
+
         return this;
     }
 
@@ -71,12 +72,19 @@ class AppResponse
         const errors = [];
 
         if (this.doErrorsExist())
+        {
             for (let index = 0; index < this.#errors.length; index++)
             {
                 const formattedError = formatErrorMessageStructure(this.#errors[index]);
                 errorCodes.push(formattedError.status);
                 errors.push(...formattedError.errors);
             }
+
+        }
+        else
+        {
+            this.#status = 200;
+        }
 
         return {
             status: this.#status ?? this.#getHighestErrorCode(errorCodes),
@@ -104,7 +112,7 @@ class AppResponse
     combineResponse(appResponse)
     {
         const uniqueErrors = [...new Set([...this.#errors, ...appResponse.#errors])];
- 
+
         this.#errors = uniqueErrors;
 
         if (!this.#data && appResponse.#data)
@@ -122,7 +130,7 @@ class AppResponse
         if (this.doErrorsExist())
             throw this;
     }
-    
+
     /**
      * Validates if the exception collection has errors.
      * @returns {boolean}

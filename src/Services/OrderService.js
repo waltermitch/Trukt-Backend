@@ -1,5 +1,5 @@
-const { MissingDataError, DataConflictError, NotFoundError, ValidationError } = require('../ErrorHandling/Exceptions');
-const { BulkResponse } = require('../ErrorHandling/Responses');
+const { MissingDataError, DataConflictError, NotFoundError, ValidationError, ApiError } = require('../ErrorHandling/Exceptions');
+const { BulkResponse, AppResponse } = require('../ErrorHandling/Responses');
 const ActivityManagerService = require('./ActivityManagerService');
 const OrderJobService = require('../Services/OrderJobService');
 const InvoiceLineItem = require('../Models/InvoiceLineItem');
@@ -18,7 +18,6 @@ const SFAccount = require('../Models/SFAccount');
 const OrderStop = require('../Models/OrderStop');
 const SFContact = require('../Models/SFContact');
 const Commodity = require('../Models/Commodity');
-const ArcgisClient = require('../ArcgisClient');
 const { MilesToMeters } = require('./../Utils');
 const OrderJob = require('../Models/OrderJob');
 const Terminal = require('../Models/Terminal');
@@ -31,22 +30,15 @@ const User = require('../Models/User');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const { v4: uuid } = require('uuid');
-const axios = require('axios');
-const https = require('https');
 const R = require('ramda');
-
-// this is the apora that will hold the falling down requirments above.
+const EDI990Payload = require('../EDI/Payload/EDI990Payload');
+const EDIApi = require('../EDI/EDIApi');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
+const SYSTEM_USER = process.env.SYSTEM_USER;
 
 let dateFilterComparisonTypes;
-
-const logicAppInstance = axios.create({
-    baseURL: process.env.AZURE_LOGICAPP_BASEURL,
-    httpsAgent: new https.Agent({ keepAlive: true }),
-    headers: { 'Content-Type': 'application/json' }
-});
 
 class OrderService
 {
@@ -153,6 +145,7 @@ class OrderService
     {
         // TODO split this up so that query is faster and also doesnt give 500 error.
         let order = await Order.query().skipUndefined().findById(orderGuid);
+
         if (order)
         {
             const trx = await Order.startTransaction();
@@ -245,7 +238,8 @@ class OrderService
         {
             // client is required and always should be checked.
             // vehicles are not checked and are created or found
-            const dataCheck = { client: true, vehicles: false, terminals: false };
+            // referrerRebate should be check in case it is pass but no referrer is send
+            const dataCheck = { client: true, vehicles: false, terminals: false, referrerRebate: true };
 
             // order object will be used to link OrderStopLink from the job
             const order = Order.fromJson({
@@ -280,10 +274,13 @@ class OrderService
             orderInfoPromises.push(dataCheck.dispatcher = isUseful(orderObj.dispatcher) ? User.query(trx).findById(orderObj.dispatcher.guid) : null);
             orderInfoPromises.push(dataCheck.referrer = isUseful(orderObj.referrer) ? SFAccount.query(trx).findById(orderObj.referrer.guid) : null);
             orderInfoPromises.push(dataCheck.salesperson = isUseful(orderObj.salesperson) ? SFAccount.query(trx).findById(orderObj.salesperson.guid) : null);
-            orderInfoPromises.push(Promise.all(orderObj.terminals.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender }))));
+            orderInfoPromises.push(OrderService.getTerminalWithDefaultStopNotes(orderObj.terminals, orderObj.stops).then(async terminalsWithNotes =>
+                await Promise.all(terminalsWithNotes.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender })))
+            ));
 
             const commodities = orderObj.commodities.map(com => Commodity.fromJson(com));
             orderInfoPromises.push(Promise.all(commodities.map(com => isUseful(com) && com.isVehicle() ? Vehicle.fromJson(com.vehicle).findOrCreate(trx) : null)));
+            orderInfoPromises.push(dataCheck.referrerRebate = orderObj?.referrerRebate && !orderObj?.referrer?.guid ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null);
 
             for (const job of orderObj.jobs)
             {
@@ -629,8 +626,10 @@ class OrderService
                 orderJobs.push(jobData);
             }
 
+            const referrerInvoice = OrderService.createReferrerRebateInvoice(orderObj?.referrerRebate, referrer, currentUser);
+
             order.jobs = orderJobs;
-            order.invoices = OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee);
+            order.invoices = [OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee), ...referrerInvoice];
 
             const orderCreated = await Order.query(trx)
                 .skipUndefined()
@@ -644,6 +643,62 @@ class OrderService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser)
+    {
+        const referrerInvoice = [];
+        if (referrer)
+        {
+            const referrerRebateInvoiceAmount = referrerRebateAmount || '0.00';
+
+            // This id is static, it is always 7 for "rebate" invoices
+            const referrerRebateItemId = 7;
+            const referrerRebateLine = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, referrerRebateItemId, currentUser, null);
+
+            referrerInvoice.push(OrderService.createInvoiceBillGraph([referrerRebateLine], true, currentUser, referrer));
+        }
+        return referrerInvoice;
+    }
+
+    /**
+     * Adds the stop notes to the terminal notes if the terminal does not have any notes
+     * 1) Get terminals that have guid to search for them in DB
+     * 2) Search for the terminals in DB that have a guid and get the notes
+     * 3) For every terminal sended in the payload:
+     * -> If new terminal (No guid) -> add default notes from stop link to it
+     * -> If not new -> Search for its notes, if it does not have, select the ones from the stop link to it
+     */
+    static async getTerminalWithDefaultStopNotes(terminals, stops, trx)
+    {
+        // 1)
+        const terminalsGuids = terminals?.reduce((terminalsGuids, terminal) =>
+        {
+            if (terminal?.guid)
+                terminalsGuids.push(terminal.guid);
+
+            return terminalsGuids;
+        }, []);
+
+        // 2)
+        const terminalsNotesFromDb = await Terminal.query(trx).select('guid', 'notes').whereIn('guid', terminalsGuids);
+
+        // 3)
+        return terminals.map(terminal =>
+        {
+
+            if (terminal?.guid)
+            {
+                const terminalNotes = terminalsNotesFromDb.find(terminalNotes => terminalNotes.guid === terminal.guid);
+                terminal.notes = terminalNotes?.notes || stops.find(stop => stop?.terminal === terminal?.index)?.notes || '';
+            }
+
+            // New terminal
+            else
+                terminal.notes = stops.find(stop => stop?.terminal === terminal?.index)?.notes || '';
+
+            return terminal;
+        });
     }
 
     static createInvoiceLineGraph(amount, itemId, currentUser, commodity)
@@ -851,246 +906,260 @@ class OrderService
     }
 
     /**
-     * Method is to accepts load tenders. Validates, sends requests and updates the database in our system.
-     * @param {string []} orderGuids
-     * @param {string} currentUser
-     * @returns {BulkResponse} BulkResponse object
+     * Accept load tenders in our system. Use where needed.
+     * @param {String[]} orderGuids
+     * @param {String | User} currentUser
+     * @returns {Promise}
      */
-    static async acceptLoadTenders(orderGuids, currentUser)
+    static handleTendersAccept(orderGuids, currentUser)
     {
-        // valdiate orders for accepting or declineing
-        const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
+        const actionObj = {
+            action: 'accept',
+            eventName: 'tender_accepted',
+            query: OrderService.acceptTenders
+        };
 
-        // send request to logic
-        const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('accept', successfulTenders, null);
+        return OrderService.handleTenders(actionObj, orderGuids, currentUser)
+            .then((bulkResponse) =>
+            {
+                for (const guid of orderGuids)
+                {
+                    const response = bulkResponse.getResponse(guid);
+                    if (!(response.doErrorsExist()))
+                    {
+                        emitter.emit('order_created', guid);
+                    }
+                }
+                return bulkResponse;
+            });
+    }
 
-        failedTenders.push(...failedOrders);
+    /**
+     * Reject load tenders in our system
+     * @param {String[]} orderGuids
+     * @param {String | User} currentUser
+     * @returns {Promise}
+     */
+    static handleTenderReject(orderGuids, currentUser, reason)
+    {
+        const actionObj = {
+            action: 'reject',
+            eventName: 'tender_rejected',
+            query: OrderService.rejectTenders
+        };
 
+        return OrderService.handleTenders(actionObj, orderGuids, currentUser, { reason });
+    }
+
+    /**
+     * Accept or Reject a load tender in our system.
+     * @param {Object} actionObj required action, eventName, query
+     * @param {String[]} orderGuids
+     * @param {String | User} currentUser
+     * @param {*} options
+     * @returns BulkResponse
+     */
+    static async handleTenders({ action, eventName, query }, orderGuids, currentUser = SYSTEM_USER, options = {})
+    {
         const bulkResponse = new BulkResponse();
 
-        // add errored orders to body message
-        for (const order of failedTenders)
+        // For checking if orders exist
+        const missingOrders = {};
+        const validOrders = [];
+        const respOkOrders = [];
+        const respFailOrders = [];
+        for (const orderGuid of orderGuids)
         {
-            bulkResponse
-                .addResponse(order.orderGuid, order.errors)
-                .getResponse(order.orderGuid)
-                .setStatus(order.status);
+            bulkResponse.addResponse(orderGuid);
         }
 
-        // update the tenders into order
-        if (goodOrders.length > 0)
+        const trx = await Order.startTransaction();
+
+        try
         {
-            const data = await Promise.all([
-                Order.query().skipUndefined().findByIds(goodOrders).patch({
-                    isTender: false,
-                    isDeleted: false,
-                    status: 'new',
-                    updatedByGuid: currentUser
-                }),
-                OrderJob.query().skipUndefined().patch({
-                    isDeleted: false,
-                    status: 'new',
-                    updatedByGuid: currentUser
-                }).whereIn('orderGuid', goodOrders).returning('guid', 'orderGuid')
-            ]);
+            const orders = await Order.query(trx).findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
 
-            // loop through successfull jobs and emmit event to update acivity logs
-            for (const job of data[1])
+            // Using Javascript to calculate the missing GUIDS because it is quicker to write than SQL
+            // Also more straight forward.
+            for (const guid of orderGuids)
             {
-                bulkResponse
-                    .addResponse(job.orderGuid)
-                    .getResponse(job.orderGuid)
-                    .setStatus(200)
-                    .setData({ jobGuid: job.guid });
-
-                emitter.emit('tender_accepted', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
-                emitter.emit('order_created', job.orderGuid);
+                missingOrders[guid] = true;
             }
+
+            for (const order of orders)
+            {
+
+                const validationErrors = OrderService.validateLoadTenderOrder(order);
+                bulkResponse.addResponse(order.guid, validationErrors);
+
+                if (!bulkResponse.getResponse(order.guid).doErrorsExist())
+                {
+                    validOrders.push(order);
+                }
+                delete missingOrders[order.guid];
+            }
+
+            for (const guid of Object.keys(missingOrders))
+            {
+                bulkResponse.addResponse(guid, new NotFoundError('This order does not exist.', { orderGuid: guid }));
+            }
+
+            const requests = [];
+            for (const order of validOrders)
+            {
+                const payload = new EDI990Payload();
+                payload.addOrder(order)
+                    .addPartner(order.client)
+                    .addSCAC('RCGQ')
+                    .addDatetime()
+                    .addAction(action)
+                    .addEDIData(order.ediData)
+                    .addReason(options.reason);
+
+                const req = EDIApi.send990(payload);
+                requests.push(req);
+            }
+
+            const responses = await Promise.allSettled(requests);
+
+            // responses coincide with validOrders array
+            for (let i = 0; i < responses.length; i++)
+            {
+                const order = validOrders[i];
+                const resp = responses[i];
+                if (resp.status === 'rejected')
+                {
+                    respFailOrders.push(order);
+                    bulkResponse.addResponse(order.guid, new ApiError(`EDI 990 failed to ${action}`, { apiError: resp.reason.message }));
+                }
+                else
+                {
+                    respOkOrders.push(order);
+                }
+            }
+
+            let queryBuilders = query(respOkOrders, currentUser);
+            if (!Array.isArray(queryBuilders))
+            {
+                queryBuilders = [queryBuilders];
+            }
+
+            for (const query of queryBuilders)
+            {
+                query.transacting(trx);
+            }
+
+            await Promise.all(queryBuilders);
+
+            for (const order of respOkOrders)
+            {
+                for (const job of order.jobs)
+                {
+                    const eventData = {
+                        jobGuid: job.guid,
+                        orderGuid: order.guid,
+                        currentUser
+                    };
+                    emitter.emit(eventName, eventData);
+                }
+            }
+
+            await trx.commit();
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
         }
 
         return bulkResponse;
     }
 
     /**
-     * Method is to rejects load tenders. Validates, sends requests and updated the database in our system.
-     * @param {string []} orderGuids
-     * @param {string} reason
-     * @param {BulkResponse} currentUser
+     * Creates a QueryBuilder which will mark the Orders in the database as accepted
+     * @param {Order[]} orders
+     * @param {String | User} currentUser
+     * @returns { QueryBuilder}
      */
-    static async rejectLoadTenders(orderGuids, reason, currentUser)
+    static acceptTenders(orders, currentUser)
     {
-        // valdiate orders for accepting or declineing
-        const { successfulTenders, failedTenders } = await OrderService.validateLoadTendersState(orderGuids);
+        const orderGuids = orders.map(order => order.guid);
+        return Order.query()
+            .findByIds(orderGuids)
+            .patch({
+                isTender: false,
+                status: 'new',
+                updatedByGuid: currentUser
+            });
+    }
 
-        // send request to logic
-        const { goodOrders, failedOrders } = await OrderService.handleLoadTendersAPICall('reject', successfulTenders, reason);
-
-        failedTenders.push(...failedOrders);
-
-        const bulkResponse = new BulkResponse();
-
-        // add errored orders to body message
-        for (const order of failedTenders)
+    /**
+     * Creates QueryBuilders which will mark the Orders in the database as rejected, as well as the OrderJobs
+     * @param {Order[]} orders Must have nested Jobs array
+     * @param {String | User} currentUser
+     * @returns {QueryBuilder[]}
+     */
+    static rejectTenders(orders, currentUser)
+    {
+        const orderGuids = orders.map(order => order.guid);
+        const jobGuids = orders.reduce((jobGuids, order) =>
         {
-            bulkResponse
-                .addResponse(order.orderGuid, order.errors)
-                .getResponse(order.orderGuid)
-                .setStatus(order.status);
-        }
+            jobGuids.push(...order.jobs.map(job => job.guid));
+            return jobGuids;
+        }, []);
 
-        // update the tenders into order
-        if (goodOrders.length > 0)
-        {
-            const data = await Promise.all([
-                Order.query().skipUndefined().findByIds(goodOrders).patch({
-                    isTender: false,
+        return [
+            Order.query()
+                .findByIds(orderGuids)
+                .patch({
                     isDeleted: true,
                     status: 'deleted',
                     deletedByGuid: currentUser
                 }),
-                OrderJob.query().skipUndefined().patch({
+            OrderJob.query()
+                .findByIds(jobGuids)
+                .patch({
                     isDeleted: true,
                     status: 'deleted',
                     deletedByGuid: currentUser
-                }).whereIn('orderGuid', goodOrders).returning('guid', 'orderGuid')
-            ]);
-
-            // loop through successfull jobs and emmit event to update acivity logs
-            for (const job of data[1])
-            {
-                bulkResponse
-                    .addResponse(job.orderGuid)
-                    .getResponse(job.orderGuid)
-                    .setStatus(200)
-                    .setData({ jobGuid: job.guid });
-
-                emitter.emit('tender_rejected', { jobGuid: job.guid, orderGuid: job.orderGuid, currentUser });
-            }
-        }
-
-        return bulkResponse;
+                })
+        ];
     }
 
     /**
-     * This method will be taking in acction, array of order objects, and a reason.
-     * @param {('accept' | 'reject')} action
-     * @param {object []} orderObjectsArray
-     * @param {string} reason
-     * @returns {{orderGuid: string, jobGuid: string, status: number, message: string | null}} reason
+     *  Validates the state of the Order to make sure it is okay to accept as a Tender
+     * @param {Order} order
+     * @returns {AppResponse}
      */
-    static async handleLoadTendersAPICall(action, orderObjectsArray, reason)
+    static validateLoadTenderOrder(order)
     {
-        // composing payload for edi endpoint
-        const logicAppPayloads = orderObjectsArray.map((item) => ({
-            order: {
-                guid: item.guid,
-                number: item.number
-            },
-            partner: item.client.sfId,
-            reference: item.referenceNumber,
-            action: action,
-            date: DateTime.utc().toString(),
-            scac: 'RCGQ',
-            edi: item.ediData?.[0].data,
-            reason
-        }));
+        const response = new AppResponse();
+        const isTender = order.ediData && order.isTender;
 
-        // sending multiple requests to logic app
-        const apiResponses = await Promise.allSettled(logicAppPayloads.map((item) => logicAppInstance.post(process.env.AZURE_LOGICAPP_PARAMS, item)));
-
-        const failed = [];
-        const goodGuids = [];
-
-        // looping through responses to separate failed ones
-        for (let i = 0; i < apiResponses.length; i++)
+        // EDI Tender is defined by having an ediData record related to it that is a 204
+        if (!isTender)
         {
-            if (apiResponses[i].status === 'fulfilled')
-            {
-                goodGuids.push(orderObjectsArray[i].guid);
-            }
-            else if (apiResponses[i].status === 'rejected')
-            {
-                failed.push({
-                    orderGuid: orderObjectsArray[i].guid,
-                    jobGuid: orderObjectsArray[i].jobs[0].guid,
-                    status: 400,
-                    errors: [apiResponses[i]?.reason?.message]
-                });
-            }
+            response.addError(new DataConflictError('This order is not a load tender.'));
         }
 
-        return { goodOrders: goodGuids, failedOrders: failed };
-    }
-
-    /**
-     * Method take in order guid for validation. Creates errors of orders that failed, and return an object
-     * with successfull payload and failed ones.
-     * @param {uuid []} orderGuids
-     * @returns
-     */
-    static async validateLoadTendersState(orderGuids)
-    {
-        // query all of the data
-        const orders = await Order.query().skipUndefined().findByIds(orderGuids).withGraphJoined('[client, ediData, jobs]');
-
-        // for array of data
-        const orderExceptions = [];
-        const existingOrders = [];
-
-        // creating object with orderGuid as keys for map validation
-        const hashedOrders = orders.reduce((map, obj) =>
+        if (order.isDeleted)
         {
-            map[obj.guid] = obj;
-            return map;
-        }, {});
-
-        // loop through all guids validate the data
-        for (const guid of orderGuids)
-        {
-            const errors = [];
-            if (hashedOrders[guid] === undefined)
+            if (isTender)
             {
-                orderExceptions.push({
-                    orderGuid: guid,
-                    jobGuid: null,
-                    status: 404,
-                    errors: ['Order not found.']
-                });
+                response.addError(new DataConflictError('This load tender is already declined'));
             }
             else
             {
-                if (hashedOrders[guid].jobs[0].isTransport === false)
-                {
-                    errors.push('Order does not have a transport job.');
-                }
-
-                if (hashedOrders[guid].isTender === false)
-                {
-                    errors.push('Order is not a tender.');
-                }
-
-                if (hashedOrders[guid].isDeleted === true)
-                {
-                    errors.push('Order is deleted.');
-                }
-
-                if (errors.length > 0)
-                {
-                    orderExceptions.push({
-                        orderGuid: guid,
-                        jobGuid: hashedOrders[guid].jobs[0].guid,
-                        status: 400,
-                        errors: errors
-                    });
-                }
-
-                if (hashedOrders[guid].isTender && !hashedOrders[guid].isDeleted)
-                {
-                    existingOrders.push(hashedOrders[guid]);
-                }
+                response.addError(new DataConflictError('This order is deleted.'));
             }
         }
-        return { successfulTenders: existingOrders, failedTenders: orderExceptions };
+
+        if (!(order.jobs.some(job => job.isTransport)))
+        {
+            response.addError(new DataConflictError('This order doesn\'t have any transport jobs'));
+        }
+
+        return response;
     }
 
     static async updateClientNote(orderGuid, body, currentUser)
@@ -1534,12 +1603,13 @@ class OrderService
             terminals = [],
             stops = [],
             jobs = [],
+            referrerRebate,
             ...orderData
         } = orderInput;
 
         try
         {
-            await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
+            const jobsWithDeletedItems = await OrderService.handleDeletes(guid, jobs, commodities, stops, trx, currentUser);
 
             // create new order
             const [
@@ -1553,7 +1623,8 @@ class OrderService
                 orderInvoices,
                 referencesChecked,
                 oldStopData,
-                oldOrder
+                oldOrder,
+                referrerInvoice
             ] = await Promise.all([
                 OrderService.buildCache(),
 
@@ -1564,10 +1635,13 @@ class OrderService
                     clientContact,
                     guid,
                     stops,
-                    terminals
+                    terminals,
+                    trx
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
-                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload)
+                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
+                referrer?.guid && await OrderService.getOrderReferrerRebateInvoice(guid, trx),
+                !referrer && referrerRebate ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null
             ]);
 
             // terminalsChecked and stopsChecked contains the action to perform for terminals and stop terminal contacts.
@@ -1632,6 +1706,7 @@ class OrderService
                 consignee,
                 currentUser
             );
+            const referrerInvoiceToUpdate = OrderService.updateReferrerRebateInvoiceGraph(referrer, referrerRebate, referrerInvoice, currentUser);
 
             const contacts = OrderService.getContactReferences({
                 referrer: { guid: referrer?.guid || referrer },
@@ -1644,7 +1719,7 @@ class OrderService
                 guid,
                 instructions,
                 stops: stopsGraphsToUpdate,
-                invoices: orderInvoicesToUpdate,
+                invoices: [...orderInvoicesToUpdate, ...referrerInvoiceToUpdate],
                 jobs: jobsToUpdateWithExpenses,
                 ...orderData,
                 ...contacts
@@ -1676,6 +1751,10 @@ class OrderService
             }
 
             emitter.emit('order_updated', { oldOrder: oldOrder, newOrder: orderUpdated });
+            for (const job of jobsWithDeletedItems)
+            {
+                emitter.emit('commodity_deleted', { orderGuid: guid, jobGuid: job.jobGuid, commodities: job.commodities, currentUser });
+            }
 
             return orderUpdated;
         }
@@ -1689,6 +1768,7 @@ class OrderService
     static async handleDeletes(orderGuid, jobs, commodities, stops, trx, currentUser)
     {
         const delProms = [];
+        const jobsWithDeletedItems = [];
         for (const job of jobs || [])
         {
             const toDelete = job.delete;
@@ -1731,6 +1811,23 @@ class OrderService
 
                             });
                             delProms.push(deleteComsProm);
+
+                            const commoditiesForLogs = await Commodity.query().select(
+                                [
+                                    'guid',
+                                    'description',
+                                    'identifier',
+                                    'lotNumber'
+                                ]
+                            ).findByIds(toDelete.commodities)
+                                .withGraphFetched('[vehicle]')
+                                .modifyGraph('vehicle', builder => builder.select('name'));
+
+                            jobsWithDeletedItems.push({
+                                jobGuid: job.guid,
+                                commodities: commoditiesForLogs
+                            });
+
                             break;
                         default:
 
@@ -1741,6 +1838,8 @@ class OrderService
         }
 
         delProms && await Promise.all(delProms);
+
+        return jobsWithDeletedItems;
     }
 
     static _removeByGuid(someGuid, somelistGuids)
@@ -1809,13 +1908,47 @@ class OrderService
         return InvoiceBill.fetchGraph(allInvoices, '[lines.link]', { transaction: trx });
     }
 
+    /**
+     * Search for oldest order invoice that has a invoice.consignee = order.referrer and that invoice has a line use for rebate.
+     * We filter by invoice.Consignee = to order.Referrer to get only those use for rebate. If order does not has referrer -> cretae new rebate invoice.
+     *
+     * In case the order.referrer is the same as the order.consignee, we may have multiple invoices were the invoice.consignee = order.referrer,
+     * for those cases we also need to check for invoices that have "rebate" lines. If non invoice is return -> cretae new rebate invoice
+     */
+    static async getOrderReferrerRebateInvoice(orderGuid, trx)
+    {
+
+        const referrerInvoice = await InvoiceBill.query(trx).alias('IB').select('IB.guid')
+            .innerJoin('rcgTms. invoiceBillLines as IBL', 'IB.guid', 'IBL.invoiceGuid')
+            .whereIn(
+                'IB.guid',
+                Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
+            )
+            .andWhere('IB.consigneeGuid',
+                Order.query(trx).select('referrerGuid').where('guid', orderGuid)
+            )
+            .andWhere('IBL.itemId', 7)
+            .orderBy('IB.dateCreated')
+            .limit(1);
+
+        if (!referrerInvoice)
+            return {};
+
+        const [invoice] = await InvoiceBill.fetchGraph(referrerInvoice, '[lines]', { transaction: trx });
+        return invoice;
+    }
+
     static async validateReferencesBeforeUpdate(
         orderContact,
         orderGuid,
         stops,
-        terminals
+        terminals,
+        trx
     )
     {
+        // Add stops default notes to terminals
+        const terminalWithDefaultNotes = await OrderService.getTerminalWithDefaultStopNotes(terminals, stops, trx);
+
         const orderContacToCheck = orderContact
             ? OrderService.checkContactReference(orderContact, orderGuid)
             : undefined;
@@ -1827,7 +1960,7 @@ class OrderService
 
         // Return new terminals with info checked if needs to be updated or created
         const terminalsToChecked = [];
-        for (const terminal of terminals)
+        for (const terminal of terminalWithDefaultNotes)
             terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal));
 
         const [orderChecked, terminalsChecked, stopsChecked] =
@@ -1874,10 +2007,10 @@ class OrderService
      * Checks the action to performed for a terminal.
      * Rules:
      * 0) If terminal GUID is provided, we check if the information is the same as the DB, this is to avoid
-     *    calling Arcgis if the terminal has the same information.
+     *    calling maps api if the terminal has the same information.
      * 1) updateExtraFields: The B.I. is the same and only the E.I. changed, so we only update those fields
      *    of that existing Terminal
-     * 2) findOrCreate: The B.I. changed, so we have to call Arcgis and then check in the DB if that record
+     * 2) findOrCreate: The B.I. changed, so we have to call maps api and then check in the DB if that record
      *    exists or we create a new one.
      * 3) nothingToDo: The terminal is the same and there is no need to do anything
      * @param {*} terminalInput
@@ -2086,9 +2219,9 @@ class OrderService
     /**
      * Base information (B.I.): Fields use to create the address; Street1, city, state, zipCode and Country
      * Extra information (E.I.): Fields that are not use to create the address; Street2 and Name
-     * findOrCreate: We call Arcgis to get Lat and Long -> We look in DB for that key, if it exists
+     * findOrCreate: We call maps api to get Lat and Long -> We look in DB for that key, if it exists
      *      we pull that record and update the E.I., if not, we create a new record.
-     *      In case Arcgis does not return a Lat and Long, we save the terminal without Lat and Long as
+     *      In case maps api does not return a Lat and Long, we save the terminal without Lat and Long as
      *      an Unresolved Terminal.
      * @param {*} terminalInput
      * @param {*} currentUser
@@ -2111,14 +2244,14 @@ class OrderService
                 return { terminal: terminalUpdated, index };
             case 'findOrCreate':
                 let terminalCreated = {};
-                const addressStr = Terminal.createStringAddress(terminalData);
 
-                const arcgisTerminal = ArcgisClient.isSetuped() &&
-                    (await ArcgisClient.findGeocode(addressStr));
+                const stringAddress = Terminal.createStringAddress(terminalData);
 
-                if (arcgisTerminal && ArcgisClient.isAddressFound(arcgisTerminal))
+                const candidate = await TerminalService.geocodeAddress(stringAddress);
+
+                if (candidate && candidate.geo?.length > 0)
                 {
-                    const { latitude, longitude } = ArcgisClient.getCoordinatesFromTerminal(arcgisTerminal);
+                    const [longitude, latitude] = candidate.geo;
                     const terminalToUpdate = await Terminal.query(trx).findOne({
                         latitude,
                         longitude
@@ -2825,7 +2958,7 @@ class OrderService
         });
 
         if (orderInvoiceFromDB.length > 0)
-            orderInvoiceFromDB[0].lines = orderInvoiceListToCreate;
+            orderInvoiceFromDB[0].lines.push(...orderInvoiceListToCreate);
 
         if (consignee?.guid && orderInvoiceFromDB?.length)
         {
@@ -2836,6 +2969,49 @@ class OrderService
         }
 
         return { jobsToUpdateWithExpenses, orderInvoicesToUpdate: orderInvoiceFromDB };
+    }
+
+    /**
+     * Rules:
+     * 1) If referrer and referrerInvoice is empty -> create invoice and line, if non referrerRebate was provided use default 0.00
+     * 2) If referrer and referrerInvoice -> Update invoice with new values for invoice.consignee and amoun
+     * @param {*} referrer referrer Guid provided in request payload
+     * @param {*} referrerRebate amount provided in request payload, this is the invoiceLine amount
+     * @param {*} referrerInvoice invoice (If exists) with referrer rebate line
+     * @returns {
+     *  referrerInvoice: Invoice with the referrer line. If no rule apply, return an empty array so nothing is updated
+     * }
+     */
+    static updateReferrerRebateInvoiceGraph(referrer, referrerRebateAmount, referrerInvoice, currentUser)
+    {
+        const referrerInvoiceToReturn = [];
+
+        // Rule 1
+        if (referrer?.guid && !referrerInvoice)
+        {
+            const [referrerInvoiceToCreate] = OrderService.createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser);
+            referrerInvoiceToReturn.push(referrerInvoiceToCreate);
+        }
+
+        // Rule 2
+        else if (referrerInvoice && (referrer?.guid || referrerRebateAmount))
+        {
+            if (referrer?.guid)
+            {
+                referrerInvoice.consigneeGuid = referrer.guid;
+                referrerInvoice.setUpdatedBy(currentUser);
+            }
+
+            if (referrerRebateAmount)
+            {
+                referrerInvoice.lines[0].amount = referrerRebateAmount;
+                referrerInvoice.lines[0].setUpdatedBy(currentUser);
+            }
+
+            referrerInvoiceToReturn.push(referrerInvoice);
+        }
+
+        return referrerInvoiceToReturn;
     }
 
     /**

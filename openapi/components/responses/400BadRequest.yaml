@@ -1,0 +1,13 @@
+description: Bad Request
+content:
+  application/json:
+    schema:
+      type: object
+      properties:
+        status:
+          type: integer
+          default: 400
+        errors:
+          type: array
+          items:
+            $ref: ../schemas/Models/Error.yaml

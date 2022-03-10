@@ -1,0 +1,20 @@
+description: Not Found
+content:  
+  application/json:
+    schema:
+      type: object
+      properties:
+        status: 
+          type: integer
+          default: 404
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              errorType: 
+                type: string
+                default: NotFoundError
+              message:
+                type: string
+                example: Something broke, why did you let this happen?!

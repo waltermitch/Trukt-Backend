@@ -5,9 +5,11 @@ const OrderStopLink = require('../Models/OrderStopLink');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
 const SFAccount = require('../Models/SFAccount');
-const Job = require('../Models/OrderJob');
+const OrderJob = require('../Models/OrderJob');
 const Loadboard = require('./Loadboard');
 const { DateTime } = require('luxon');
+const telemetry = require('../ErrorHandling/Insights');
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 
 const { SYSTEM_USER } = process.env;
 
@@ -230,7 +232,7 @@ class ShipCars extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                const job = await OrderJob.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
                 for (const comPromise of commodityPromises)
                 {
@@ -274,7 +276,7 @@ class ShipCars extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                const job = await OrderJob.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
                 for (const comPromise of commodityPromises)
                 {
@@ -312,7 +314,7 @@ class ShipCars extends Loadboard
             }
             else
             {
-                const job = await Job.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                const job = await OrderJob.query().findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.vehicles);
                 for (const comPromise of commodityPromises)
                 {
@@ -320,7 +322,7 @@ class ShipCars extends Loadboard
                 }
                 allPromises.push(...commodityPromises);
             }
-            objectionPost.setUpdatedBy(process.env.SYSTEM_USER);
+            objectionPost.setUpdatedBy(SYSTEM_USER);
 
             allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionPost.guid));
             await Promise.all(allPromises);
@@ -352,7 +354,7 @@ class ShipCars extends Loadboard
 
                 dispatch.setToError(response.errors);
                 dispatch.setUpdatedBy(dispatch.createdByGuid);
-                allPromises.push(Job.query(trx).patch({ status: Job.STATUS.READY }).findById(objectionPost.jobGuid));
+                allPromises.push(OrderJob.query(trx).patch({ status: OrderJob.STATUS.READY }).findById(objectionPost.jobGuid));
             }
             else
             {
@@ -362,7 +364,7 @@ class ShipCars extends Loadboard
                 dispatch.externalGuid = response.dispatchRes.id;
                 dispatch.setUpdatedBy(dispatch.createdByGuid);
 
-                const job = await Job.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
+                const job = await OrderJob.query(trx).findById(objectionPost.jobGuid).withGraphFetched('[ commodities(distinct, isNotDeleted).[vehicle]]');
                 const commodityPromises = this.updateCommodity(job.commodities, response.dispatchRes.vehicles);
                 for (const comPromise of commodityPromises)
                 {
@@ -417,16 +419,11 @@ class ShipCars extends Loadboard
         const allPromises = [];
         try
         {
-            const job = Job.fromJson({
-                vendorGuid: null,
-                vendorContactGuid: null,
-                vendorAgentGuid: null,
-                dateStarted: null,
-                status: 'ready'
-            });
+            const job = OrderJob.fromJson();
+            job.setToUndispatched();
             job.setUpdatedBy(SYSTEM_USER);
 
-            allPromises.push(Job.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
+            allPromises.push(OrderJob.query(trx).patch(job).findById(payloadMetadata.dispatch.jobGuid));
 
             const dispatch = OrderJobDispatch.fromJson(payloadMetadata.dispatch);
             dispatch.setToCanceled(dispatch.loadboardPost.updatedByGuid);
@@ -535,41 +532,27 @@ class ShipCars extends Loadboard
                         'vendorAgent.name as vendorAgentName');
 
                 const objectionDispatch = OrderJobDispatch.fromJson(dispatch);
-
                 objectionDispatch.setToDeclined();
                 objectionDispatch.setUpdatedBy(SYSTEM_USER);
 
-                // have to put table name because externalGuid is also on loadboard post and not
-                // specifying it makes the query ambiguous
-                allPromises.push(OrderJobDispatch.query(trx).patch(objectionDispatch).where({
-                    'orderJobDispatches.externalGuid': payloadMetadata.externalDispatchGuid,
-                    isPending: true,
-                    isCanceled: false
-                }));
+                allPromises.push(OrderJobDispatch.query(trx).patch(objectionDispatch).findById(dispatch.guid));
 
                 // 2. Remove vendor fields from the job
-                const job = Job.fromJson({
-                    dateStarted: null,
-                    status: 'declined'
-                });
+                const job = OrderJob.fromJson();
+                job.setToDeclined();
                 job.setUpdatedBy(SYSTEM_USER);
-                allPromises.push(Job.query(trx).patch(job).findById(objectionDispatch.jobGuid));
+
+                allPromises.push(OrderJob.query(trx).patch(job).findById(objectionDispatch.jobGuid));
 
                 // 3. Set the loadboard post record external guid to the new
                 // load that has been created
-                const objectionPost = LoadboardPost.fromJson({
-                    externalGuid: response.id,
-                    externalPostGuid: null,
-                    isCreated: true,
-                    isSynced: true,
-                    hasError: false,
-                    apiError: null
-                });
+                const objectionPost = LoadboardPost.fromJson();
+                objectionPost.setToCreated(response.id);
                 objectionPost.setUpdatedBy(SYSTEM_USER);
                 allPromises.push(LoadboardPost.query(trx).patch(objectionPost).findById(objectionDispatch.loadboardPostGuid));
 
                 // 4. update the vehicle ship car ids
-                const commodities = await Commodity.query().where({ isDeleted: false }).whereIn('guid',
+                const commodities = await Commodity.query(trx).where({ isDeleted: false }).whereIn('guid',
                     OrderStopLink.query().select('commodityGuid')
                         .where({ 'jobGuid': objectionDispatch.jobGuid })
                         .distinctOn('commodityGuid')).withGraphFetched('[vehicle]');
@@ -589,9 +572,7 @@ class ShipCars extends Loadboard
                             .distinctOn('stopGuid')
                     ));
 
-                await Promise.all(allPromises);
-
-                await trx.commit();
+                await Promise.all(allPromises).then(trx.commit);
 
                 await ActivityManagerService.createActivityLog({
                     orderGuid,
@@ -611,10 +592,17 @@ class ShipCars extends Loadboard
 
                 return objectionDispatch.jobGuid;
             }
-            catch (e)
+            catch (error)
             {
-                await trx.rollback(e);
-                throw new Error(e.message);
+                await trx.rollback();
+                telemetry.trackException({
+                    exception: error,
+                    properties: {
+                        action: 'carrierDeclineDispatch',
+                        post: payloadMetadata
+                    },
+                    severity: SeverityLevel.Error
+                });
             }
         }
     }

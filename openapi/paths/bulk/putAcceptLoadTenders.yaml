@@ -21,8 +21,12 @@ requestBody:
 
 responses:
   200:
-    description: Tender
+    description: OK
     content:
       application/json:
         schema:
-          $ref: ../../components/schemas/EDI.yaml#/LoadTenderResponses
+          type: object
+          additionalProperties:
+            $ref: ../../components/schemas/Models/AppResponse.yaml
+  500:
+    $ref: ../../components/responses/500InternalServerError.yaml

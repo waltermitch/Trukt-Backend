@@ -49,7 +49,7 @@ TerminalBase:
       $ref: './Common.yaml#/latitude'
     longitude:
       $ref: './Common.yaml#/longitude'
-
+      
 # All of the required properties for a Terminal
 RequiredProps:
   - name
@@ -64,6 +64,10 @@ TerminalOutbound:
         guid:
           $ref: './Common.yaml#/guid'
     - $ref: '#/TerminalBase'
+    - type: object
+      properties:
+        notes: 
+          $ref: '../../components/schemas/Common.yaml#/notes'
 
 TerminalIsResolved:
   allOf:
