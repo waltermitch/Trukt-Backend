@@ -36,15 +36,16 @@ class BulkResponse
             this.#responses[key].addError(error);
         else
             this.#responses[key] = new AppResponse(error);
-        
+
         return this;
     }
-    
+
     /**
      * @returns {Record<string, AppResponse}
      */
     toJSON()
     {
+
         return this.#responses;
     }
 

@@ -1,3 +1,4 @@
+const EDIPayload = require('./EDIPayload');
 const { DateTime } = require('luxon');
 
 /**
@@ -28,40 +29,15 @@ const { DateTime } = require('luxon');
     }
  */
 
-class EDI214Payload
+class EDI214Payload extends EDIPayload
 {
     constructor()
     {
-        this.order;
-        this.partner;
-        this.reference;
+        super();
         this.datetime;
         this.location;
         this.pickupStop;
         this.status = {};
-    }
-
-    /**
-     * @description Add the Order information to the payload
-     * @param {Order} order
-     */
-    addOrder(order)
-    {
-        this.order = {
-            guid: order.guid,
-            number: order.number
-        };
-        this.reference = order.referenceNumber;
-    }
-
-    /**
-     * @description Add the EDI partner to the payload.
-     * @param {SFAccount} sfAccount
-     */
-    addPartner(sfAccount)
-    {
-        this.partner = sfAccount.sfId;
-        this.sla = sfAccount.slaDays + ' days';
     }
 
     /**
@@ -95,15 +71,6 @@ class EDI214Payload
     addReason(reason)
     {
         this.status.reason = reason;
-    }
-
-    /**
-     * @description Include the EDI data that was sent over back to create proper document
-     * @param {EDIData} ediData
-     */
-    addEDIData(ediData)
-    {
-        this.edi = ediData.data;
     }
 
     /**

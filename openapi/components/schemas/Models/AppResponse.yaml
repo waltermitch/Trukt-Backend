@@ -1,0 +1,11 @@
+description: Typical Application Response object.
+type: object
+properties:
+  errors:
+    type: array
+    items:
+      $ref: './Error.yaml'
+  status:
+    type: integer
+    enum: [200, 400, 401, 404, 500]
+  data: {}

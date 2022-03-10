@@ -1,0 +1,23 @@
+description: Internal Server Error
+content:  
+  application/json:
+    schema:
+      type: object
+      properties:
+        status: 
+          type: integer
+          default: 500
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              errorType: 
+                type: string
+                default: Error
+              message:
+                type: string
+                example: Something really bad happened with the server.
+              stack:
+                description: This is the stacktrace of where the error occured in the server.
+                type: string
