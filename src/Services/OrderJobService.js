@@ -1197,8 +1197,7 @@ class OrderJobService
         try
         {
             const job = await OrderJob.query().findById(jobGuid)
-                .withGraphJoined('order')
-                .withGraphJoined('stopLinks');
+                .withGraphJoined('[order,stopLinks]');
     
             const appResponse = new AppResponse();
     

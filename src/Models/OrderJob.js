@@ -1084,8 +1084,6 @@ class OrderJob extends BaseModel
                 errors.push(new DataConflictError('Job has not been started. Please remove the started flag before completing this job.'));
             if (!job.dateVerified)
                 errors.push(new DataConflictError('Job has not been verified. Please verify this job before completing this job.'));
-            if (!job.dateStarted)
-                errors.push(new DataConflictError('Job has not been started. Please start this job before completing this job.'));
         }
         
         return errors;
