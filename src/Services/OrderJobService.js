@@ -1784,7 +1784,7 @@ class OrderJobService
                 isCanceled: false,
                 dateAccepted: dateStarted
             }));
-            
+
             promises.push(serviceJob.$query(trx).patch({
                 vendorGuid: vendor.guid,
                 vendorContactGuid: contact?.guid ?? null,
@@ -1839,7 +1839,7 @@ class OrderJobService
                 accountId: vendor.sfId
             });
         }
- 
+
         return contactAccount;
     }
 
@@ -1951,7 +1951,7 @@ class OrderJobService
             .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'))
             .modify('isServiceJob')
             .modify('canServiceJobMarkAsOnHold')
-            .groupBy('OJ.guid', 'OJ.number', 'OJ.orderGuid', 'OJ.status', raw('isServiceJob'));
+            .groupBy('OJ.guid', 'OJ.number', 'OJ.orderGuid', 'OJ.status', raw('"isServiceJob"'));
 
         if (!job)
             throw new NotFoundError('Job not found');

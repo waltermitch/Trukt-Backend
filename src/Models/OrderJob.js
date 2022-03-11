@@ -681,7 +681,7 @@ class OrderJob extends BaseModel
         // Uses OrderJob alias as OJ
         isServiceJob: (queryBuilder) =>
         {
-            queryBuilder.select(raw('(case when o_j_t.category=\'service\' then true else false END) as isServiceJob'))
+            queryBuilder.select(raw('(case when o_j_t.category=\'service\' then true else false END) as "isServiceJob"'))
                 .innerJoin('rcgTms.orderJobTypes as OJT', 'OJ.typeId', 'OJT.id');
         },
 
@@ -706,7 +706,7 @@ class OrderJob extends BaseModel
             queryBuilder.select(raw(`bool_and(
                 (is_deleted = false and is_canceled = false and is_complete = false)
                 and date_completed is null
-            ) as canbemarkasonhold
+            ) as "canBeMarkAsOnHold"
             `));
         }
     };
@@ -954,14 +954,14 @@ class OrderJob extends BaseModel
     }
 
     /**
-     * Use OrderJob modifier "isServiceJob" to get the property "isservicejob".
+     * Use OrderJob modifier "isServiceJob" to get the property "isServiceJob".
      * Use OrderJob modifier "canServiceJobMarkAsCanceled" to get the property "canServiceJobMarkAsCanceled"
      * Use OrderJob modifier "vendorName" to get the property "vendorName"
      */
     validateJobForCanceling()
     {
         // Validation for service jobs
-        if (this.isservicejob)
+        if (this.isServiceJob)
         {
             if (this.vendorGuid)
                 throw new DataConflictError(`Please un-dispatch the vendor '${this.vendorName}' before canceling the job`);
@@ -981,14 +981,14 @@ class OrderJob extends BaseModel
     }
 
     /**
-     * Use OrderJob modifier "isServiceJob" to get the property "isservicejob".
+     * Use OrderJob modifier "isServiceJob" to get the property "isServiceJob".
      * Use OrderJob modifier "canServiceJobMarkAsDeleted" to get the property "canServiceJobMarkAsDeleted"
      * Use OrderJob modifier "vendorName" to get the property "vendorName"
      */
     validateJobForDeletion()
     {
         // Validation for service jobs
-        if (this.isservicejob)
+        if (this.isServiceJob)
         {
             if (this.vendorGuid)
                 throw new DataConflictError(`Please un-dispatch the vendor '${this.vendorName}' before deleting the job`);
@@ -1101,9 +1101,9 @@ class OrderJob extends BaseModel
     validateJobToAddHold()
     {
         // Validation for service jobs
-        if (this.isservicejob)
+        if (this.isServiceJob)
         {
-            if (!this.canbemarkasonhold)
+            if (!this.canBeMarkAsOnHold)
                 throw new DataConflictError(`Cannot place on hold because the job is '${this.status}'`);
         }
 
