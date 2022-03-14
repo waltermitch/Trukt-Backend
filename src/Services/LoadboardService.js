@@ -1275,6 +1275,18 @@ class LoadboardService
                 .leftJoinRelated('posting.job')
                 .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
 
+            const carrier = await SFAccount.query(trx).modify('externalIdandDot', queryRequest.extraExternalData.carrierInfo.guid, queryRequest.carrierIdentifier);
+
+            // validate carriers
+            if (!carrier)
+            {
+                throw new NotFoundError(`Carrier does not exist in our system. USDOT:${queryRequest.carrierIdentifier}; Name:${queryRequest.extraExternalData.carrierInfo.guid}`);
+            }
+            else if (carrier.blacklist == true || carrier.active == false)
+            {
+                throw new NotAllowedError('Carrier is inactive or blacklisted.');
+            }
+
             const promiseArray = [];
             const jobGuid = queryRequest.jobGuid;
             const orderGuid = queryRequest.orderGuid;
@@ -1314,6 +1326,9 @@ class LoadboardService
                 error.message = 'Failed to accept request';
                 throw error;
             }
+
+            // attaching carrier to returned payload
+            Object.assign(offerPayload.data.carrier, carrier);
 
             // create offer in our sysytem
             const createdOffer = await LoadboardService.createInternalOffer(trx, jobGuid, internalPostGuid, offerPayload.data, currentUser);
@@ -1371,6 +1386,7 @@ class LoadboardService
                 }
             });
             await trx.rollback();
+            throw error;
         }
     }
 
@@ -1427,18 +1443,6 @@ class LoadboardService
         upPostInternalPosting.setUpdatedBy(currentUser);
         promiseArray.push(upPostInternalPosting.$query(trx).patch());
 
-        const carrier = await SFAccount.query(trx).modify('externalIdandDot', offerPayload.carrier.guid, offerPayload.carrier.usdot);
-
-        // validate carriers
-        if (!carrier)
-        {
-            throw new NotFoundError(`Carrier does not exist in our system. USDOT:${offerPayload.carrier.usdot}; Name:${offerPayload.carrier.name}`);
-        }
-        else if (carrier.blacklist == true || carrier.active == false)
-        {
-            throw new NotAllowedError('Carrier is inactive or blacklisted.');
-        }
-
         let carrierContact;
 
         // if driver being assigned through internal
@@ -1453,7 +1457,7 @@ class LoadboardService
                 name: offerPayload.driver.name,
                 email: offerPayload.driver.email,
                 phoneNumber: offerPayload.driver.phoneNumber,
-                accountId: carrier.sfId
+                accountId: offerPayload.carrier.sfId
             });
             carrierContact = await carrierContact.$query(trx).insertAndFetch();
         }
@@ -1487,7 +1491,7 @@ class LoadboardService
         const dispatch = OrderJobDispatch.fromJson({
             job: { '#dbRef': jobGuid },
             loadboardPost: { '#dbRef': internalPostGuid },
-            vendor: { '#dbRef': carrier.guid },
+            vendor: { '#dbRef': offerPayload.carrier.guid },
             vendorAgent: { '#dbRef': carrierContact.guid },
             externalGuid: offerPayload.externalPostGuid,
             paymentTermId: offerPayload.paymentTerm,
