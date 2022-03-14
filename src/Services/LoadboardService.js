@@ -1275,7 +1275,40 @@ class LoadboardService
                 .leftJoinRelated('posting.job')
                 .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
 
-            const carrier = await SFAccount.query(trx).modify('externalIdandDot', queryRequest.extraExternalData.carrierInfo.guid, queryRequest.carrierIdentifier);
+            const promiseArray = [];
+            const jobGuid = queryRequest.jobGuid;
+            const orderGuid = queryRequest.orderGuid;
+            const internalPostGuid = queryRequest.loadboardPostGuid;
+
+            if (queryRequest.datePickupEnd < queryRequest.dateDeliveryStart || queryRequest.dateDeliveryEnd < queryRequest.datePickupStart)
+            {
+                throw new DataConflictError('Pickup dates should be before delivery date');
+            }
+
+            // get Job with all data
+            const [job, carrier] = await Promise.all([
+                OrderJob
+                    .query(trx)
+                    .findById(jobGuid)
+                    .withGraphFetched(`[
+                stops(distinct).[primaryContact, terminal], 
+                loadboardPosts(getPosted).requests(validActive),
+                commodities(distinct, isNotDeleted).[vehicle, commType], 
+                bills.lines(isNotDeleted, transportOnly).item,
+                dispatches(activeDispatch), 
+                type, 
+                order.[client, clientContact, dispatcher, invoices.lines(isNotDeleted, transportOnly).item]
+            ]`),
+                SFAccount.query(trx).modify('externalIdandDot', queryRequest.extraExternalData.carrierInfo.guid, queryRequest.carrierIdentifier)
+            ]);
+
+            if (!job)
+            {
+                throw new NotFoundError('Job Not Found');
+            }
+
+            // validate job not be be in
+            job.validateJobForDispatch();
 
             // validate carriers
             if (!carrier)
@@ -1286,11 +1319,6 @@ class LoadboardService
             {
                 throw new NotAllowedError('Carrier is inactive or blacklisted.');
             }
-
-            const promiseArray = [];
-            const jobGuid = queryRequest.jobGuid;
-            const orderGuid = queryRequest.orderGuid;
-            const internalPostGuid = queryRequest.loadboardPostGuid;
 
             // remove fields that do not exist to update table correctly
             delete queryRequest.jobGuid;
@@ -1331,7 +1359,7 @@ class LoadboardService
             Object.assign(offerPayload.data.carrier, carrier);
 
             // create offer in our sysytem
-            const createdOffer = await LoadboardService.createInternalOffer(trx, jobGuid, internalPostGuid, offerPayload.data, currentUser);
+            const createdOffer = await LoadboardService.createInternalOffer(trx, job, internalPostGuid, offerPayload.data, currentUser);
 
             // get all active requests for the current job
             const activeRequests = await LoadboardRequest.query(trx).leftJoinRelated('posting').where('posting.guid', internalPostGuid).andWhereNot('loadboardRequests.guid', queryRequest.guid).modify('validActive');
@@ -1393,42 +1421,15 @@ class LoadboardService
     /**
      * Method creates a offer internally and handles all un posting of loadboards.
      * @param {Object} trx
-     * @param {uuid} jobGuid
+     * @param {Object} job
      * @param {uuid} internalPostGuid
      * @param {Obejct} offerPayload
      * @param {uuid} currentUser
      * @returns Created offer
      */
-    static async createInternalOffer(trx, jobGuid, internalPostGuid, offerPayload, currentUser)
+    static async createInternalOffer(trx, job, internalPostGuid, offerPayload, currentUser)
     {
         const promiseArray = [];
-
-        if (offerPayload.pickup.pickUpEnd < offerPayload.delivery.deliveryStart || offerPayload.delivery.deliveryEnd < offerPayload.pickup.pickUpStart)
-        {
-            throw new Error('Pickup dates should be before delivery date');
-        }
-
-        // get Job with all data
-        const job = await OrderJob
-            .query(trx)
-            .findById(jobGuid)
-            .withGraphFetched(`[
-                stops(distinct).[primaryContact, terminal], 
-                loadboardPosts(getPosted).requests(validActive),
-                commodities(distinct, isNotDeleted).[vehicle, commType], 
-                bills.lines(isNotDeleted, transportOnly).item,
-                dispatches(activeDispatch), 
-                type, 
-                order.[client, clientContact, dispatcher, invoices.lines(isNotDeleted, transportOnly).item]
-            ]`);
-
-        if (!job)
-        {
-            throw new NotFoundError('Job Not Found');
-        }
-
-        // validate job not be be in
-        job.validateJobForDispatch();
 
         // get only first and last stop only
         job.stops = OrderStop.firstAndLast(job.stops);
@@ -1489,7 +1490,7 @@ class LoadboardService
 
         // create Offer in our system
         const dispatch = OrderJobDispatch.fromJson({
-            job: { '#dbRef': jobGuid },
+            job: { '#dbRef': job.guid },
             loadboardPost: { '#dbRef': internalPostGuid },
             vendor: { '#dbRef': offerPayload.carrier.guid },
             vendorAgent: { '#dbRef': carrierContact.guid },
@@ -1523,7 +1524,7 @@ class LoadboardService
                     exception: r.reason,
                     properties:
                     {
-                        jobGuid: jobGuid,
+                        jobGuid: job.guid,
                         postGuid: internalPostGuid,
                         extraAnnotations: {
                             loadboard: offerPayload.loadboard,
@@ -1542,7 +1543,7 @@ class LoadboardService
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,
                     activityId: 3,
-                    jobGuid: jobGuid,
+                    jobGuid: job.guid,
                     extraAnnotations: {
                         loadboard: post.loadboard
                     }
