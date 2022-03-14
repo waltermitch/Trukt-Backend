@@ -452,4 +452,31 @@ listener.on('orderjob_service_dispatched', ({ jobGuid, currentUser }) =>
     });
 });
 
+listener.on('orderjob_completed', ({ jobGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        try
+        {
+            const currentJob = await OrderJobService.getJobData(jobGuid);
+
+            const proms = await Promise.allSettled([
+                PubSubService.jobUpdated(jobGuid, currentJob),
+                ActivityManagerService.createActivityLog({
+                    orderGuid: currentJob.orderGuid,
+                    jobGuid,
+                    userGuid: currentUser,
+                    activityId: 35
+                })
+            ]);
+
+            logEventErrors(proms, 'orderjob_completed');
+        }
+        catch (error)
+        {
+            logEventErrors(error, 'orderjob_completed');
+        }
+    });
+});
+
 module.exports = listener;
