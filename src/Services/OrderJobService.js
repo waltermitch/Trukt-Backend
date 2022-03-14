@@ -1193,43 +1193,48 @@ class OrderJobService
 
     static async markJobAsComplete(jobGuid, currentUser)
     {
-        const job = await OrderJob.query().where(
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            const job = await OrderJob.query().findById(jobGuid)
+                .withGraphJoined('[order,stopLinks]');
+    
+            const appResponse = new AppResponse();
+    
+            appResponse.addError(...OrderJob.validateJobForCompletion(job));
+            appResponse.throwErrorsIfExist();
+    
+            if (job.typeId === 1)
             {
-                'orderJobs.guid': jobGuid
-            })
-            .withGraphJoined('order')
-            .withGraphJoined('stopLinks').first();
+                const allCompleted = job.stopLinks.every(stop => stop.isStarted && stop.isCompleted);
+        
+                if (!allCompleted)
+                    throw new DataConflictError('All stops must be completed before job can be marked as complete.');
+         
+                await OrderJob.query(trx).patch({ 'isComplete': true, 'updatedByGuid': currentUser, 'status': OrderJob.STATUS.COMPLETED }).where('guid', jobGuid);
+        
+                emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: OrderJob.STATUS.COMPLETED } });
+            }
+            else
+            {
+                await job.$query(trx).patch({
+                    isComplete: true,
+                    updatedByGuid: currentUser,
+                    status: OrderJob.STATUS.COMPLETED,
+                    dateCompleted: DateTime.now().toISO()
+                });
+            }
 
-        if (!job)
-            throw new DataConflictError('Job Doesn\'t Match Criteria To Move To Complete State');
-        else if (!job.isReady)
-            throw new DataConflictError('Job Is Not Ready');
-        else if (job.isOnHold)
-            throw new DataConflictError('Job Is On Hold');
-        else if (job.isDeleted)
-            throw new DataConflictError('Job Is Deleted');
-        else if (job.isCanceled)
-            throw new DataConflictError('Job Is Canceled');
-        else if (!job.vendorGuid)
-            throw new MissingDataError('Job Has No Vendor');
-        else if (!job.dispatcherGuid)
-            throw new MissingDataError('Job Has No Dispatcher');
-        else if (job.order.isTender)
-            throw new DataConflictError('Job Is Part Of Tender Order');
-        else if (job.isComplete)
+            emitter.emit('orderjob_completed', { jobGuid, currentUser });
+            await trx.commit();
+ 
             return 200;
-
-        const allCompleted = job.stopLinks.every(stop => stop.isStarted && stop.isCompleted);
-
-        if (!allCompleted)
-            throw new DataConflictError('All stops must be completed before job can be marked as complete.');
-
-        await OrderJob.query().patch({ 'isComplete': true, 'updatedByGuid': currentUser, 'status': OrderJob.STATUS.COMPLETED }).where('guid', jobGuid);
-
-        emitter.emit('orderjob_completed', jobGuid);
-        emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: OrderJob.STATUS.COMPLETED } });
-
-        return 200;
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
     }
 
     static async markJobAsUncomplete(jobGuid, currentUser)

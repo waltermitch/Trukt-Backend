@@ -1047,6 +1047,47 @@ class OrderJob extends BaseModel
 
         return errors;
     }
+
+    static validateJobForCompletion(job)
+    {
+        const errors = [];
+
+        if (!job)
+            errors.push(new NotFoundError('Job doesn\'t exist.'));
+        if (!job.vendorGuid)
+            errors.push(new MissingDataError('Job has no vendor assigned.'));
+        if (!job.isReady)
+            errors.push(new DataConflictError('Job is not ready to be completed.'));
+        if (job.isOnHold)
+            errors.push(new DataConflictError('Job is on hold. Please remove the on hold flag before completing this job.'));
+        if (job.isDeleted)
+            errors.push(new DataConflictError('Job is deleted. Please remove the deleted flag before completing this job.'));
+        if (job.isCanceled)
+            errors.push(new DataConflictError('Job is canceled. Please remove the canceled flag before completing this job.'));
+        if (job.isComplete)
+            errors.push(new DataConflictError('Job has already been completed.'));
+        if (!job.dispatcherGuid)
+            errors.push(new MissingDataError('Job has no dispatcher. Please assign a dispatcher'));
+        
+        if (job.typeId === 1)
+        {
+            if (job.order.isTender)
+                errors.push(new DataConflictError('Job is part of tender order'));
+        }
+        else
+        {
+            if (job.isTransport)
+                errors.push(new DataConflictError('Job with type service is marked as transport job. Please remove the transport flag before completing this job.'));
+            if (!job.verifiedByGuid)
+                errors.push(new DataConflictError('Job has not been verified. Please verify this job before completing this job.'));
+            if (!job.dateStarted)
+                errors.push(new DataConflictError('Job has not been started. Please remove the started flag before completing this job.'));
+            if (!job.dateVerified)
+                errors.push(new DataConflictError('Job has not been verified. Please verify this job before completing this job.'));
+        }
+        
+        return errors;
+    }
 }
 
 Object.assign(OrderJob.prototype, RecordAuthorMixin);
