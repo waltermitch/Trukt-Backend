@@ -16,7 +16,7 @@ exports.up = function(knex)
             job record;
             loadboard_request_guid uuid;
             is_valid_stop boolean default false;
-            valid_new_job_count integer;
+            valid_job_count integer;
         begin
             select
             *
@@ -30,23 +30,14 @@ exports.up = function(knex)
         inner join rcg_tms.loadboard_requests lr 
         on lp.guid = lr.loadboard_post_guid where lp.job_guid = param_job_guid;
 
-        -- evaluate new state
-        if job.is_ready = false
-            and job.vendor_guid is null
-            and job.vendor_contact_guid is null
-            and job.vendor_agent_guid is null
-            and loadboard_request_guid is null
-            and job.is_on_hold = false
-            and job.is_deleted = false
-            and job.is_canceled = false
-            and job.is_complete = false 
-        then
-            -- new state for transport jobs
+        -- get job information for validating new and ready state
             if job.type_id = 1 then 
                 select count(*)
                 into 
-                    valid_new_job_count  from 
-                (select
+                    valid_job_count
+                from 
+                (
+                select
                     (
                     select
                         count(*) > 0
@@ -66,6 +57,7 @@ exports.up = function(knex)
                     stop.bad_pickup_address,
                     stop.bad_delivery_address,
                     stop.commodity_guid
+        
                 from
                     rcg_tms.order_jobs oj
                 join (
@@ -110,19 +102,17 @@ exports.up = function(knex)
                     stop.job_guid = oj.guid
                 where
                     guid = param_job_guid 
-                    and oj.is_transport) as valid_stops;
-
-                if valid_new_job_count > 0 then 
-                    job_status := 'new';
-                end if;
-            -- new state for any other job
+                    and oj.is_transport
+            ) as valid_stops;
+        --	 for any other job
             else
                 select
                     count(*)
                 into
-                    valid_new_job_count
+                    valid_job_count
                 from 
-                (select
+                (
+                select
                     (
                         select
                             count(*) > 0
@@ -160,18 +150,41 @@ exports.up = function(knex)
                     stop.job_guid = oj.guid
                 where
                     guid = param_job_guid
-                    and oj.is_transport = false) as valid_stops;
-            
-                if valid_new_job_count > 0 then
-                    job_status := 'new';
-                end if;
+                    and oj.is_transport = false
+                ) as valid_stops;
+
             end if;
+
+        -- evaluate new state
+        if job.is_ready = false
+            and job.vendor_guid is null
+            and job.vendor_contact_guid is null
+            and job.vendor_agent_guid is null
+            and loadboard_request_guid is null
+            and job.is_on_hold = false
+            and job.is_deleted = false
+            and job.is_canceled = false
+            and job.is_complete = false 
+            and valid_job_count > 0
+            and job.status = 'new'
+        then
+            job_status := job.status;
+
+        -- evaluate ready state
+        elsif job.is_ready
+            and job.date_verified is not null
+            and job.verified_by_guid is not null
+            and job.updated_by_guid is not null
+            and job.status = 'ready' 
+            and valid_job_count > 0
+        then
+            job_status := job.status;
         end if;
 
             return job_status;
         end;
         $$;
-    `);
+        `);
 };
 
 exports.down = function(knex)
