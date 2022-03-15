@@ -1261,23 +1261,7 @@ class OrderJobService
 
         try
         {
-            // Get the job with dispatches and requests
-            const job = await OrderJob.query(trx)
-                .select('guid', 'number')
-                .findById(jobGuid)
-                .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
-                .modifyGraph('loadboardPosts', builder => builder
-                    .select('loadboardPosts.guid', 'loadboard', 'externalGuid')
-                    .orWhere({ loadboard: 'SUPERDISPATCH' }))
-                .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
-                .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
-
-            if (!job)
-                throw new NotFoundError('Job not found');
-
-            // job cannot be dispatched before being put on hold
-            if (job.dispatches.length >= 1)
-                throw new DataConflictError('Job must be undispatched before it can be moved to On Hold');
+            const job = await OrderJobService.checkJobToAddHold(jobGuid, trx);
 
             // extract all the loadboard post guids so that we can cancel the
             // requests for any loadboard posts that exist
@@ -1800,7 +1784,7 @@ class OrderJobService
                 isCanceled: false,
                 dateAccepted: dateStarted
             }));
-            
+
             promises.push(serviceJob.$query(trx).patch({
                 vendorGuid: vendor.guid,
                 vendorContactGuid: contact?.guid ?? null,
@@ -1855,7 +1839,7 @@ class OrderJobService
                 accountId: vendor.sfId
             });
         }
- 
+
         return contactAccount;
     }
 
@@ -1947,6 +1931,32 @@ class OrderJobService
         job.jobIsDispatched = jobIsDispatched;
         job.canServiceJobMarkAsDeleted = canServiceJobMarkAsDeleted?.canbemarkasdeleted;
         job.validateJobForDeletion();
+
+        return job;
+    }
+
+    static async checkJobToAddHold(jobGuid, trx)
+    {
+
+        // Use modifier "isServiceJob" and "canServiceJobMarkAsOnHold" for service job validations
+        const job = await OrderJob.query(trx)
+            .alias('OJ')
+            .select('OJ.guid', 'OJ.number', 'OJ.orderGuid', 'OJ.status')
+            .findById(jobGuid)
+            .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
+            .modifyGraph('loadboardPosts', builder => builder
+                .select('loadboardPosts.guid', 'loadboard', 'externalGuid')
+                .orWhere({ loadboard: 'SUPERDISPATCH' }))
+            .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
+            .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'))
+            .modify('isServiceJob')
+            .modify('canServiceJobMarkAsOnHold')
+            .groupBy('OJ.guid', 'OJ.number', 'OJ.orderGuid', 'OJ.status', raw('"isServiceJob"'));
+
+        if (!job)
+            throw new NotFoundError('Job not found');
+
+        job.validateJobToAddHold();
 
         return job;
     }
