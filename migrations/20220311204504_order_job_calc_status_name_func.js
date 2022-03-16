@@ -12,11 +12,12 @@ exports.up = function(knex)
         as
         $$ 
         declare 
-            job_status varchar default 'no valid status';
+            job_status varchar;
             job record;
             loadboard_request_guid uuid;
             is_valid_stop boolean default false;
             valid_job_count integer;
+            on_hold_post record;
         begin
             select
             *
@@ -179,12 +180,50 @@ exports.up = function(knex)
             and valid_job_count > 0
         then
             job_status := job.status;
+
+        -- evaluate on hold status 
+        elseif job.is_ready = false
+            and job.status = 'on hold'
+            and job.is_on_hold = true
+            and job.updated_by_guid is not null
+        then
+            select
+                *,
+                lp.status as lp_status,
+                lr.status as lr_status
+            into
+                on_hold_post 
+            from
+                rcg_tms.loadboard_posts lp 
+            left join rcg_tms.loadboard_requests lr 
+            on lp.guid = lr.loadboard_post_guid
+            where lp.job_guid = param_job_guid;
+
+            if (
+                on_hold_post.is_posted = false
+                and on_hold_post.lp_status = 'unposted'
+                and on_hold_post.external_post_guid is null
+            )
+                or on_hold_post.loadboard <> 'SUPERDISPATCH'
+                or (
+                    on_hold_post.is_valid = false
+                    and on_hold_post.is_canceled = false
+                    and on_hold_post.is_declined = true
+                    and on_hold_post.is_synced = true
+                    and on_hold_post.lr_status = 'declined'
+                    and on_hold_post.decline_reason is not null
+                    and on_hold_post.updated_by_guid is not null
+                )
+            then
+                job_status := job.status;
+            end if;
+            
         end if;
 
             return job_status;
         end;
         $$;
-        `);
+    `);
 };
 
 exports.down = function(knex)
