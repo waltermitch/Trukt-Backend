@@ -18,6 +18,8 @@ exports.up = function(knex)
             is_valid_stop boolean default false;
             valid_job_count integer;
             on_hold_post record;
+            job_bills integer;
+            job_dispatches integer;
         begin
             select
             *
@@ -38,18 +40,18 @@ exports.up = function(knex)
                     valid_job_count
                 from 
                 (
-                select
-                    (
                     select
-                        count(*) > 0
-                    from
-                        rcg_tms.loadboard_requests lbr
-                    left join rcg_tms.loadboard_posts lbp2 on
-                        lbp2.guid = lbr.loadboard_post_guid
-                    where
-                        lbr.is_valid
-                        and lbr.is_accepted
-                        and lbp2.job_guid = oj.guid
+                    (
+                        select
+                            count(*) > 0
+                        from
+                            rcg_tms.loadboard_requests lbr
+                        left join rcg_tms.loadboard_posts lbp2 on
+                            lbp2.guid = lbr.loadboard_post_guid
+                        where
+                            lbr.is_valid
+                            and lbr.is_accepted
+                            and lbp2.job_guid = oj.guid
                     ) as has_accepted_requests,
                     stop.pickup_requested_date,
                     stop.delivery_requested_date,
@@ -59,52 +61,52 @@ exports.up = function(knex)
                     stop.bad_delivery_address,
                     stop.commodity_guid
         
-                from
-                    rcg_tms.order_jobs oj
-                join (
-                    select
-                    distinct
-                    os.date_requested_start pickup_requested_date,
-                    os2.date_requested_start delivery_requested_date,
-                    osl.job_guid,
-                    os."sequence" pickup_sequence,
-                    os2."sequence" delivery_sequence,
-                    osl.commodity_guid,
-                    case
-                        when t.is_resolved then null
-                        else CONCAT(t.street1, ' ', t.city, ' ', t.state, ' ', t.zip_code)
-                    end as bad_pickup_address,
-                    case
-                        when t2.is_resolved then null
-                        else CONCAT(t2.street1, ' ', t2.city, ' ', t2.state, ' ', t2.zip_code)
-                    end as bad_delivery_address
+                    from
+                        rcg_tms.order_jobs oj
+                    join (
+                        select
+                        distinct
+                        os.date_requested_start pickup_requested_date,
+                        os2.date_requested_start delivery_requested_date,
+                        osl.job_guid,
+                        os."sequence" pickup_sequence,
+                        os2."sequence" delivery_sequence,
+                        osl.commodity_guid,
+                        case
+                            when t.is_resolved then null
+                            else CONCAT(t.street1, ' ', t.city, ' ', t.state, ' ', t.zip_code)
+                        end as bad_pickup_address,
+                        case
+                            when t2.is_resolved then null
+                            else CONCAT(t2.street1, ' ', t2.city, ' ', t2.state, ' ', t2.zip_code)
+                        end as bad_delivery_address
                 
-                from
-                    rcg_tms.order_stop_links osl
-                left join rcg_tms.order_stops os on
-                    osl.stop_guid = os.guid
-                left join rcg_tms.terminals t on
-                    os.terminal_guid = t.guid,
-                    rcg_tms.order_stop_links osl2
-                left join rcg_tms.order_stops os2 on
-                    osl2.stop_guid = os2.guid
-                left join rcg_tms.terminals t2 on
-                    os2.terminal_guid = t2.guid
-                where
-                    os.stop_type = 'pickup'
-                    and os2.stop_type = 'delivery'
-                    and os."sequence" < os2."sequence"
-                    and osl.order_guid = osl2.order_guid
-                    and osl.job_guid = param_job_guid 
-                order by
-                    os2."sequence" desc,
-                    os."sequence" asc
-                limit 1) as stop on
-                    stop.job_guid = oj.guid
-                where
-                    guid = param_job_guid 
-                    and oj.is_transport
-            ) as valid_stops;
+                    from
+                        rcg_tms.order_stop_links osl
+                    left join rcg_tms.order_stops os on
+                        osl.stop_guid = os.guid
+                    left join rcg_tms.terminals t on
+                        os.terminal_guid = t.guid,
+                        rcg_tms.order_stop_links osl2
+                    left join rcg_tms.order_stops os2 on
+                        osl2.stop_guid = os2.guid
+                    left join rcg_tms.terminals t2 on
+                        os2.terminal_guid = t2.guid
+                    where
+                        os.stop_type = 'pickup'
+                        and os2.stop_type = 'delivery'
+                        and os."sequence" < os2."sequence"
+                        and osl.order_guid = osl2.order_guid
+                        and osl.job_guid = param_job_guid 
+                    order by
+                        os2."sequence" desc,
+                        os."sequence" asc
+                    limit 1) as stop on
+                        stop.job_guid = oj.guid
+                    where
+                        guid = param_job_guid 
+                        and oj.is_transport
+                ) as valid_stops;
         --	 for any other job
             else
                 select
@@ -217,7 +219,38 @@ exports.up = function(knex)
             then
                 job_status := job.status;
             end if;
+
+        -- evaluate pending/dispatch state for transport jobs
+        elseif job.is_dummy = false
+            and job.is_on_hold = false
+            and job.dispatcher_guid is not null
+            and job.is_ready = true
+            and job.is_deleted = false
+            and job.is_canceled = false
+            and job.status = 'pending'
+        then
+            -- get bills count
+            select
+                count(*)
+            into
+                job_bills
+            from
+                rcg_tms.bills b
+            where b.job_guid = param_job_guid;
+
+            -- get active dispatches count
+            select
+                count(*)
+            into
+                job_dispatches
+            from
+                rcg_tms.order_job_dispatches ojd
+            where ojd.job_guid = param_job_guid and ojd.is_pending = true;
             
+            if job_bills > 0 and job_dispatches > 0 then
+                job_status := job.status;
+            end if;
+
         end if;
 
             return job_status;
