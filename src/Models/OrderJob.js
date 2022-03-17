@@ -708,6 +708,15 @@ class OrderJob extends BaseModel
                 and date_completed is null
             ) as "canBeMarkAsOnHold"
             `));
+        },
+        canServiceJobMarkAsReady: (queryBuilder) =>
+        {
+            queryBuilder.select(raw(`bool_and(
+                is_deleted = false 
+                and is_canceled = false 
+                and is_on_hold = true
+            ) as "canBeMarkAsReady"
+            `));
         }
     };
 
