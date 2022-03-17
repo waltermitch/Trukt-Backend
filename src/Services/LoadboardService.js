@@ -1,27 +1,27 @@
+const { NotFoundError, DataConflictError, ValidationError, NotAllowedError } = require('../ErrorHandling/Exceptions');
+const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 const ActivityManagerService = require('./ActivityManagerService');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
 const LoadboardContact = require('../Models/LoadboardContact');
 const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const LoadboardRequest = require('../Models/LoadboardRequest');
+const { AppResponse } = require('../ErrorHandling/Responses');
+const LoadboardsApi = require('../Loadboards/LoadboardsApi');
 const { ServiceBusClient } = require('@azure/service-bus');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
+const telemetry = require('../ErrorHandling/Insights');
 const InvoiceBill = require('../Models/InvoiceBill');
 const emitter = require('../EventListeners/index');
+const PubSubService = require('./PubSubService');
 const Loadboard = require('../Models/Loadboard');
 const SFAccount = require('../Models/SFAccount');
 const SFContact = require('../Models/SFContact');
 const OrderStop = require('../Models/OrderStop');
-const BillService = require('./BIllService');
 const OrderJob = require('../Models/OrderJob');
+const BillService = require('./BIllService');
 const { DateTime } = require('luxon');
 const R = require('ramda');
-const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
-const telemetry = require('../ErrorHandling/Insights');
-const PubSubService = require('./PubSubService');
-const LoadboardsApi = require('../Loadboards/LoadboardsApi');
-const { NotFoundError, DataConflictError, ValidationError, NotAllowedError } = require('../ErrorHandling/Exceptions');
-const { AppResponse } = require('../ErrorHandling/Responses');
 
 const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
@@ -1219,8 +1219,7 @@ class LoadboardService
             .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
 
         // to pass it on to the event
-        const jobGuid = queryRequest.jobGuid;
-        const orderGuid = queryRequest.orderGuid;
+        const { jobGuid, orderGuid } = queryRequest;
 
         // remove fields that do not exist to update table correctly
         delete queryRequest.jobGuid;
@@ -1252,6 +1251,7 @@ class LoadboardService
         });
 
         PubSubService.publishJobRequests(jobGuid, updatedRequest);
+
         return updatedRequest;
     }
 
@@ -1266,20 +1266,21 @@ class LoadboardService
         const trx = await LoadboardRequest.startTransaction();
 
         // finding request to update and attach orderGUID and jobGUID
-        let queryRequest;
+        const queryRequest = await LoadboardRequest
+            .query(trx)
+            .findOne({ 'loadboardRequests.guid': requestGuid })
+            .leftJoinRelated('posting.job')
+            .select('loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
+
+        // check if request is found
+        if (!queryRequest)
+            throw new NotFoundError(`The request with guid ${requestGuid} doesn't exist`);
+
+        const { jobGuid, orderGuid, loadboardPostGuid: internalPostGuid } = queryRequest;
+
         try
         {
-            queryRequest = await LoadboardRequest
-                .query(trx)
-                .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
-                .leftJoinRelated('posting.job')
-                .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
-
             const promiseArray = [];
-            const jobGuid = queryRequest.jobGuid;
-            const orderGuid = queryRequest.orderGuid;
-            const internalPostGuid = queryRequest.loadboardPostGuid;
-
             if (queryRequest.datePickupEnd < queryRequest.dateDeliveryStart || queryRequest.dateDeliveryEnd < queryRequest.datePickupStart)
             {
                 throw new DataConflictError('Pickup dates should be before delivery date');
@@ -1299,7 +1300,8 @@ class LoadboardService
                 type, 
                 order.[client, clientContact, dispatcher, invoices.lines(isNotDeleted, transportOnly).item]
             ]`),
-                SFAccount.query(trx).modify('externalIdandDot', queryRequest.extraExternalData.carrierInfo.guid, queryRequest.carrierIdentifier)
+                SFAccount.query(trx)
+                    .modify('externalIdandDot', queryRequest.extraExternalData.carrierInfo.guid, queryRequest.carrierIdentifier)
             ]);
 
             if (!job)
@@ -1401,7 +1403,7 @@ class LoadboardService
                 exception: error,
                 properties:
                 {
-                    jobGuid: queryRequest.jobGuid,
+                    jobGuid: jobGuid,
                     postGuid: queryRequest.loadboardPostGuid,
                     requestGuid: requestGuid,
                     extraAnnotations: {
@@ -1494,7 +1496,7 @@ class LoadboardService
             loadboardPost: { '#dbRef': internalPostGuid },
             vendor: { '#dbRef': offerPayload.carrier.guid },
             vendorAgent: { '#dbRef': carrierContact.guid },
-            externalGuid: offerPayload.externalPostGuid,
+            externalGuid: offerPayload.externalOfferGuid || offerPayload.externalPostGuid,
             paymentTermId: offerPayload.paymentTerm,
             price: offerPayload.price
         });

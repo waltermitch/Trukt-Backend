@@ -306,16 +306,15 @@ class TerminalService
         };
 
         // add these fields if they exist
-        const { attributes: atr } = match;
 
-        if (atr.StAddr)
-            payload.street1 = atr.StAddr;
-        if (atr.City)
-            payload.city = atr.City;
-        if (atr.State)
-            payload.state = atr.RegionAbbr || atr.Region;
-        if (atr.Postal)
-            payload.zipCode = atr.Postal;
+        if (match.street)
+            payload.street1 = match.street;
+        if (match.city)
+            payload.city = match.city;
+        if (match.state)
+            payload.state = match.state;
+        if (match.zip)
+            payload.zipCode = match.zip;
 
         // update current terminal with normalized address since no match was found
         await Terminal.query(trx)
