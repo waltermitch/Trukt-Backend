@@ -1638,7 +1638,7 @@ class OrderService
                 oldOrder,
                 referrerInvoice
             ] = await Promise.all([
-                OrderService.buildCache(),
+                OrderService.buildCache(trx),
 
                 client?.guid ? OrderService.findSFClient(client.guid, trx) : undefined,
                 OrderService.getJobBills(jobs, trx),
@@ -1651,7 +1651,7 @@ class OrderService
                     trx
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
-                Order.query().findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
+                Order.query(trx).findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
                 referrer?.guid && await OrderService.getOrderReferrerRebateInvoice(guid, trx),
                 !referrer && referrerRebate ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null
             ]);
@@ -1962,18 +1962,18 @@ class OrderService
         const terminalWithDefaultNotes = await OrderService.getTerminalWithDefaultStopNotes(terminals, stops, trx);
 
         const orderContacToCheck = orderContact
-            ? OrderService.checkContactReference(orderContact, orderGuid)
+            ? OrderService.checkContactReference(orderContact, orderGuid, trx)
             : undefined;
 
         // Return new stops with info checked if needs to be updated or created
         const stopsToChecked = [];
         for (const stop of stops)
-            stopsToChecked.push(OrderService.getStopsWithInfoChecked(stop, orderGuid));
+            stopsToChecked.push(OrderService.getStopsWithInfoChecked(stop, orderGuid, trx));
 
         // Return new terminals with info checked if needs to be updated or created
         const terminalsToChecked = [];
         for (const terminal of terminalWithDefaultNotes)
-            terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal));
+            terminalsToChecked.push(OrderService.getTerminalWithInfoChecked(terminal, trx));
 
         const [orderChecked, terminalsChecked, stopsChecked] =
             await Promise.all([orderContacToCheck, Promise.all(terminalsToChecked), Promise.all(stopsToChecked)]);
@@ -1991,13 +1991,14 @@ class OrderService
         return { newOrderContactChecked, terminalsChecked, stopsChecked };
     }
 
-    static async getStopsWithInfoChecked(stop, orderGuid)
+    static async getStopsWithInfoChecked(stop, orderGuid, trx)
     {
         const contacTypes = ['primaryContact', 'alternativeContact'];
         const contactsActionPromise = contacTypes.map((contactType) =>
             OrderService.checkTerminalContactReference(
                 stop[contactType],
-                orderGuid
+                orderGuid,
+                trx
             )
         );
 
@@ -2028,14 +2029,14 @@ class OrderService
      * @param {*} terminalInput
      * @returns
      */
-    static async getTerminalWithInfoChecked(terminalInput)
+    static async getTerminalWithInfoChecked(terminalInput, trx)
     {
         let terminalAction = 'findOrCreate';
 
         if (terminalInput.guid)
         {
             const terminalDB =
-                (await Terminal.query().findById(terminalInput.guid)) || {};
+                (await Terminal.query(trx).findById(terminalInput.guid)) || {};
             const hasSameBaseInfo = Terminal.hasTerminalsSameBaseInformation(
                 terminalDB,
                 terminalInput
@@ -2053,18 +2054,18 @@ class OrderService
         return { terminalAction, ...terminalInput };
     }
 
-    static async checkContactReference(contact, orderGuid)
+    static async checkContactReference(contact, orderGuid, trx)
     {
         if (contact.guid === null && Object.keys(contact).length === 1)
             return 'removeContact';
         else if (!contact.guid) return 'createNewContact';
 
-        const searchInOrder = Order.query()
+        const searchInOrder = Order.query(trx)
             .count('guid')
             .where('clientContactGuid', contact.guid)
             .andWhereNot('guid', orderGuid);
 
-        const searchInJobs = OrderJob.query()
+        const searchInJobs = OrderJob.query(trx)
             .count('orderGuid')
             .where('vendorContactGuid', contact.guid)
             .andWhereNot('orderGuid', orderGuid)
@@ -2093,14 +2094,14 @@ class OrderService
      * @param {*} stopTerminalContactInput
      * @returns string with the action to perform later by updateCreateStopContacts function
      */
-    static async checkTerminalContactReference(terminalContact, orderGuid)
+    static async checkTerminalContactReference(terminalContact, orderGuid, trx)
     {
         if (terminalContact === null) return 'remove';
         else if (terminalContact === undefined) return 'nothingToDo';
         else if (terminalContact?.guid === undefined) return 'findOrCreate';
         else
         {
-            const [{ count }] = await OrderStopLink.query()
+            const [{ count }] = await OrderStopLink.query(trx)
                 .count('orderGuid')
                 .whereIn(
                     'stopGuid',
@@ -2670,7 +2671,7 @@ class OrderService
      * This method is used to minimize amount of queries to be done
      * to get stuff like commTypes, recordTypes, etc.
      */
-    static async buildCache()
+    static async buildCache(trx)
     {
         if (!cache.has('orderInfo'))
         {
@@ -2681,10 +2682,10 @@ class OrderService
                 invoiceLineItems
             ] = await Promise.all(
                 [
-                    SFRecordType.query().modify('byType', 'contact').modify('byName', 'account contact'),
-                    CommodityType.query(),
-                    OrderJobType.query(),
-                    InvoiceLineItem.query()
+                    SFRecordType.query(trx).modify('byType', 'contact').modify('byName', 'account contact'),
+                    CommodityType.query(trx),
+                    OrderJobType.query(trx),
+                    InvoiceLineItem.query(trx)
                 ]);
 
             cache.set('orderInfo', {
