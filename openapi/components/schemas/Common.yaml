@@ -155,11 +155,11 @@ Enums:
   accountType:
     type: string
     enum:
-      - client
       - carrier
-      - referrer
+      - client
       - employee
-      - dispatcher
+      - referrer
+      - vendor
   inspectionType:
     type: string
     enum:
