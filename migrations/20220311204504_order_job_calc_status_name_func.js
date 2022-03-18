@@ -20,6 +20,7 @@ exports.up = function(knex)
             on_hold_post record;
             job_bills integer;
             job_dispatches integer;
+            is_job_posted boolean;
         begin
             select
             *
@@ -251,6 +252,24 @@ exports.up = function(knex)
                 job_status := job.status;
             end if;
 
+        elseif job.status = 'posted'
+            and job.vendor_guid is null
+            and job.vendor_agent_guid is null
+            and job.vendor_contact_guid is null
+        then
+            select
+                count(*) > 0
+            into
+                is_job_posted
+            from
+                rcg_tms.loadboard_posts lp
+            where
+                lp.job_guid = param_job_guid
+                and lp.is_posted = true;
+
+            if is_job_posted then
+                job_status := job.status;
+            end if;
         end if;
 
             return job_status;
