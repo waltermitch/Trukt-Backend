@@ -143,21 +143,19 @@ class OrderService
 
     static async getOrderByGuid(orderGuid)
     {
-        // TODO split this up so that query is faster and also doesnt give 500 error.
-        let order = await Order.query().skipUndefined().findById(orderGuid);
+        const trx = await Order.startTransaction();
 
-        if (order)
+        try
         {
-            const trx = await Order.startTransaction();
+            // TODO split this up so that query is faster and also doesnt give 500 error.
+            let order = await Order.query(trx).skipUndefined().findById(orderGuid);
 
-            try
+            if (order)
             {
                 order = await Order.fetchGraph(order, Order.fetch.payload, {
                     transaction: trx,
                     skipFetched: true
                 }).skipUndefined();
-
-                await trx.commit();
 
                 const terminalCache = {};
                 order.stops = OrderStopLink.toStops(order.stopLinks);
@@ -209,7 +207,7 @@ class OrderService
                 if (order.clientNotes?.updatedByGuid)
                 {
                     // getting the user details so we can show the note users details
-                    const user = await User.query().findById(
+                    const user = await User.query(trx).findById(
                         order.clientNotes.updatedByGuid
                     );
                     Object.assign(order?.clientNotes || {}, {
@@ -219,15 +217,17 @@ class OrderService
                         }
                     });
                 }
-            }
-            catch (err)
-            {
-                await trx.rollback();
-                throw err;
-            }
-        }
 
-        return order;
+                await trx.commit();
+            }
+
+            return order;
+        }
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
     }
 
     static async create(orderObj, currentUser)
