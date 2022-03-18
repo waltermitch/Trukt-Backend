@@ -1,3 +1,4 @@
+const { NotFoundError } = require('../ErrorHandling/Exceptions');
 const SFAccount = require('../Models/SFAccount');
 
 const addressTypes = ['billing', 'shipping'];
@@ -54,7 +55,7 @@ class AccountService
 
     static async getById(accountType, accountId)
     {
-        const qb = SFAccount.query().where('guid', accountId);
+        const qb = SFAccount.query().findOne('guid', accountId);
 
         if (accountType)
         {
@@ -64,13 +65,18 @@ class AccountService
             {
                 case 'carrier':
                 case 'client':
+                case 'vendor':
                     qb.withGraphFetched('[contacts, primaryContact]');
-
                     break;
             }
         }
 
         const result = await qb;
+
+        if (!result)
+        {
+            throw new NotFoundError('The account was not found.');
+        }
 
         return result;
     }
