@@ -934,7 +934,7 @@ class LoadboardService
             // create an order job dispatch &
             // update the job with vendor
             await Promise.all([
-                LoadboardRequest.query().patch({ 'isValid': false, 'isDeclined': true }).where('externalPostGuid', postingGuid),
+                LoadboardRequest.query(trx).patch({ 'isValid': false, 'isDeclined': true }).where('externalPostGuid', postingGuid),
                 LoadboardService.unpostPostings(posting.job.guid, posting.job.loadboardPosts, SYSUSER),
                 OrderJob.query(trx).patch({ 'vendorGuid': vendor.guid }).where('guid', posting.job.guid),
                 OrderJobDispatch.query(trx).insert({
@@ -999,7 +999,10 @@ class LoadboardService
      */
     static async getRequestsbyJobID(jobGuid)
     {
-        const requests = await LoadboardRequest.query().leftJoinRelated('posting').where('posting.jobGuid', jobGuid).orderBy('dateOfferSent', 'desc');
+        const requests = await LoadboardRequest.query()
+            .leftJoinRelated('posting')
+            .where('posting.jobGuid', jobGuid)
+            .orderBy('dateOfferSent', 'desc');
 
         return requests;
     }
@@ -1212,8 +1215,7 @@ class LoadboardService
      */
     static async declineRequestByGuid(requestGuid, reason, currentUser)
     {
-        const queryRequest = await LoadboardRequest
-            .query()
+        const queryRequest = await LoadboardRequest.query()
             .findOne({ 'rcgTms.loadboardRequests.guid': requestGuid })
             .leftJoinRelated('posting.job')
             .select('rcgTms.loadboardRequests.*', 'posting.jobGuid', 'posting:job.orderGuid');
@@ -1338,6 +1340,7 @@ class LoadboardService
             catch (error)
             {
                 await trx.rollback();
+
                 telemetry.trackException({
                     exception: error,
                     properties:
@@ -1353,7 +1356,9 @@ class LoadboardService
                         }
                     }
                 });
+
                 error.message = 'Failed to accept request';
+
                 throw error;
             }
 
@@ -1399,6 +1404,7 @@ class LoadboardService
         }
         catch (error)
         {
+            await trx.rollback();
             telemetry.trackException({
                 exception: error,
                 properties:
@@ -1415,7 +1421,6 @@ class LoadboardService
                     }
                 }
             });
-            await trx.rollback();
             throw error;
         }
     }
