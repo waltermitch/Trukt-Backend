@@ -210,7 +210,7 @@ class TerminalService
                     // if no such terminal exists we will simply update this terminal with the lat/long
                     await Terminal.transaction(async trx =>
                     {
-                        const existingTerminal = await Terminal.query()
+                        const existingTerminal = await Terminal.query(trx)
                             .select('guid')
                             .where('latitude', lat)
                             .andWhere('longitude', long)
@@ -235,7 +235,7 @@ class TerminalService
                     // this will not resolve the terminal but will merge it into a duplicate unresolved terminal
                     await Terminal.transaction(async trx =>
                     {
-                        const existingTerminal = await Terminal.query()
+                        const existingTerminal = await Terminal.query(trx)
                             .select('guid')
                             .where({
                                 'name': terminal.name,
