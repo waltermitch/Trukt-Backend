@@ -19,7 +19,7 @@
         "check-settings": "bash ./tools/decrypt.sh './envs/%NODE_ENV%.enc' './envs/%NODE_ENV%.copy2.env' && diff './envs/%NODE_ENV%.copy2.env' './envs/%NODE_ENV%.copy.env'",
         "postcheck-settings": "rm './envs/%NODE_ENV%.copy2.env'",
         "knex-debug": "set DEBUG=knex* && node main.js",
-        "api-bundle": "openapi lint && openapi bundle main --output public/openapi/spec.yaml",
+        "api-bundle": "openapi lint && openapi bundle main --output public/openapi/spec.yaml && git rev-list --tags --max-count=1 | xargs git describe --tags | xargs -tI {} sed  -i 's/\\$\\$version\\$\\$/{}/' public/openapi/spec.yaml",
         "bundle-run": "npm run api-bundle && nodemon",
         "azure:validate:env": "node ./tools/validate-azure-env.js dev rcg_production truktapi --save",
         "azure:create:env": "node ./tools/create-azure-env-file.js azure.env.json %NODE_ENV%"

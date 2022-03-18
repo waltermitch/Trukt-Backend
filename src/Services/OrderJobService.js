@@ -915,21 +915,23 @@ class OrderJobService
         return { goodJobs, badJobs };
     }
 
-    // TODO: DEPRICATE SOON
+    // This is use to validate if a job can be mark as ready or it has some data conflict, it returns the job information and/or the specific error it has
     static async getJobForReadyCheck(jobGuids)
     {
         const jobsNotFoundExceptions = new AppResponse();
 
         // getting all jobs guid and tranport field to help differentiate job types
-        const jobsGuidsFound = await OrderJob.query().select('guid', 'isTransport').findByIds(jobGuids);
+        const jobsGuidsFound = await OrderJob.query().alias('OJ').select('OJ.guid')
+            .modify('isServiceJob')
+            .findByIds(jobGuids);
 
         // Separate jobs types to throw differnet exceptions to the user.
         const { serviceJobsFound, transportJobsFound } = jobsGuidsFound.reduce((allJobs, job) =>
         {
-            if (job.isTransport)
-                allJobs.transportJobsFound.push(job.guid);
-            else
+            if (job.isServiceJob)
                 allJobs.serviceJobsFound.push(job.guid);
+            else
+                allJobs.transportJobsFound.push(job.guid);
             return allJobs;
         }, { serviceJobsFound: [], transportJobsFound: [] });
 
@@ -941,7 +943,7 @@ class OrderJobService
             for (let i = 0; i < jobGuids.length; i++)
             {
                 if (jobsFound.indexOf(jobGuids[i]) == -1)
-                    jobsNotFoundExceptions.addError(new NotFoundError(`Job with guid ${jobGuids[i]} cannot be found`));
+                    jobsNotFoundExceptions.addError(new NotFoundError('Job does not exist'));
             }
         }
 
@@ -959,12 +961,16 @@ class OrderJobService
 
         const { jobsExceptions, goodJobs } = allJobsChecked?.reduce((allJobs, jobs) =>
         {
-            allJobs.jobsExceptions.push(...jobs.exceptions);
+            if (jobs.exceptions?.length)
+                allJobs.jobsExceptions.addError(...jobs.exceptions);
             allJobs.goodJobs.push(...jobs.goodJobsGuids);
 
             return allJobs;
-        }, { jobsExceptions: [], goodJobs: [] });
-        const allJobsExceptions = [...jobsExceptions, ...jobsNotFoundExceptions.toJSON().errors];
+        }, { jobsExceptions: new AppResponse(), goodJobs: [] });
+
+        const allJobsExceptions = new AppResponse();
+        allJobsExceptions.combineResponse(jobsExceptions);
+        allJobsExceptions.combineResponse(jobsNotFoundExceptions);
 
         const jobs = await OrderJob
             .query()
@@ -1103,30 +1109,37 @@ class OrderJobService
         return { exceptions, goodJobsGuids };
     }
 
-    // TODO: DEPRICATE SOON
+    // This is use to validate if a service job can be mark as ready
     static async checkServiceJobsToMarkAsReady(serviceJobsFound)
     {
         // Check jobs that have at leats one stop, with 1 commodity asigned and dateRequested is not null
-        const jobsChecked = await OrderStopLink.query().distinct('jobGuid', 'dispatcherGuid')
+        const jobsChecked = await OrderStopLink.query().distinct('jobGuid', 'OJ.dispatcherGuid', 'OJ.status', raw('o_j."canBeMarkAsReady"'))
             .joinRelated('stop')
-            .joinRelated('job')
+            .innerJoin(
+                OrderJob.query().select('guid', 'dispatcherGuid', 'status')
+                    .modify('canServiceJobMarkAsReady')
+                    .groupBy('guid').as('OJ'),
+                'jobGuid', 'OJ.guid'
+            )
             .whereIn('jobGuid', serviceJobsFound)
             .whereNotNull('dateRequestedStart');
 
         return serviceJobsFound?.reduce((allJobs, jobGuid) =>
         {
-            const jobHasCorrectStops = R.find(R.propEq('jobGuid', jobGuid))(jobsChecked);
+            const jobToValidate = R.find(R.propEq('jobGuid', jobGuid))(jobsChecked);
 
             // If jobfound is not in jobsChecked array, it is because it does not have at leaast 1 stop with 1 commodity with date requested start
-            if (!jobHasCorrectStops)
+            if (!jobToValidate)
             {
                 allJobs.exceptions.push(new DataConflictError(`Job ${jobGuid} has incorrect stop, please ensure it has at least stop with one commodity and requested date start`));
                 return allJobs;
             }
 
-            // If jobFound is in jobsChecked array, but does not have a dispatcher, add esception, other wise it fullfills service job checks
-            if (!jobHasCorrectStops?.dispatcherGuid)
+            // Check for job conditions to be mark as ready
+            if (!jobToValidate?.dispatcherGuid)
                 allJobs.exceptions.push(new MissingDataError(`Job ${jobGuid} does not have a dispatcher`));
+            else if (!jobToValidate.canBeMarkAsReady)
+                allJobs.exceptions.push(new DataConflictError(`Cannot remove hold from job because it is '${jobToValidate.status}'`));
             else
                 allJobs.goodJobsGuids.push(jobGuid);
 
@@ -1198,21 +1211,21 @@ class OrderJobService
         {
             const job = await OrderJob.query().findById(jobGuid)
                 .withGraphJoined('[order,stopLinks]');
-    
+
             const appResponse = new AppResponse();
-    
+
             appResponse.addError(...OrderJob.validateJobForCompletion(job));
             appResponse.throwErrorsIfExist();
-    
+
             if (job.typeId === 1)
             {
                 const allCompleted = job.stopLinks.every(stop => stop.isStarted && stop.isCompleted);
-        
+
                 if (!allCompleted)
                     throw new DataConflictError('All stops must be completed before job can be marked as complete.');
-         
+
                 await OrderJob.query(trx).patch({ 'isComplete': true, 'updatedByGuid': currentUser, 'status': OrderJob.STATUS.COMPLETED }).where('guid', jobGuid);
-        
+
                 emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: OrderJob.STATUS.COMPLETED } });
             }
             else
@@ -1227,7 +1240,7 @@ class OrderJobService
 
             emitter.emit('orderjob_completed', { jobGuid, currentUser });
             await trx.commit();
- 
+
             return 200;
         }
         catch (error)
@@ -1261,23 +1274,7 @@ class OrderJobService
 
         try
         {
-            // Get the job with dispatches and requests
-            const job = await OrderJob.query(trx)
-                .select('guid', 'number')
-                .findById(jobGuid)
-                .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
-                .modifyGraph('loadboardPosts', builder => builder
-                    .select('loadboardPosts.guid', 'loadboard', 'externalGuid')
-                    .orWhere({ loadboard: 'SUPERDISPATCH' }))
-                .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
-                .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'));
-
-            if (!job)
-                throw new NotFoundError('Job not found');
-
-            // job cannot be dispatched before being put on hold
-            if (job.dispatches.length >= 1)
-                throw new DataConflictError('Job must be undispatched before it can be moved to On Hold');
+            const job = await OrderJobService.checkJobToAddHold(jobGuid, trx);
 
             // extract all the loadboard post guids so that we can cancel the
             // requests for any loadboard posts that exist
@@ -1357,7 +1354,7 @@ class OrderJobService
         {
             const queryRes = await OrderJobService.getJobForReadyCheck([jobGuid]);
 
-            if (queryRes.jobs.length < 1)
+            if (queryRes.jobs.length < 1 && queryRes.exceptions?.doErrorsExist())
             {
                 queryRes.exceptions.throwErrorsIfExist();
             }
@@ -1383,11 +1380,15 @@ class OrderJobService
                     const post = await LoadboardPost.query(trx).select('externalGuid')
                         .findOne({ loadboard: 'SUPERDISPATCH', jobGuid: res.guid });
 
-                    const { status } = await Loadboards.rollbackManualSDStatusChange(post.externalGuid);
-                    if (status !== 200)
+                    if (post?.externalGuid)
                     {
-                        throw new ApiError('Could not remove hold from order on Superdispatch', { status });
+                        const { status } = await Loadboards.rollbackManualSDStatusChange(post.externalGuid);
+                        if (status !== 200)
+                        {
+                            throw new ApiError('Could not remove hold from order on Superdispatch', { status });
+                        }
                     }
+
                 }
                 else if (readyResult instanceof ApplicationError)
                 {
@@ -1800,7 +1801,7 @@ class OrderJobService
                 isCanceled: false,
                 dateAccepted: dateStarted
             }));
-            
+
             promises.push(serviceJob.$query(trx).patch({
                 vendorGuid: vendor.guid,
                 vendorContactGuid: contact?.guid ?? null,
@@ -1855,7 +1856,7 @@ class OrderJobService
                 accountId: vendor.sfId
             });
         }
- 
+
         return contactAccount;
     }
 
@@ -1947,6 +1948,32 @@ class OrderJobService
         job.jobIsDispatched = jobIsDispatched;
         job.canServiceJobMarkAsDeleted = canServiceJobMarkAsDeleted?.canbemarkasdeleted;
         job.validateJobForDeletion();
+
+        return job;
+    }
+
+    static async checkJobToAddHold(jobGuid, trx)
+    {
+
+        // Use modifier "isServiceJob" and "canServiceJobMarkAsOnHold" for service job validations
+        const job = await OrderJob.query(trx)
+            .alias('OJ')
+            .select('OJ.guid', 'OJ.number', 'OJ.orderGuid', 'OJ.status')
+            .findById(jobGuid)
+            .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
+            .modifyGraph('loadboardPosts', builder => builder
+                .select('loadboardPosts.guid', 'loadboard', 'externalGuid')
+                .orWhere({ loadboard: 'SUPERDISPATCH' }))
+            .modifyGraph('dispatches', builder => builder.select('orderJobDispatches.guid'))
+            .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'))
+            .modify('isServiceJob')
+            .modify('canServiceJobMarkAsOnHold')
+            .groupBy('OJ.guid', 'OJ.number', 'OJ.orderGuid', 'OJ.status', raw('"isServiceJob"'));
+
+        if (!job)
+            throw new NotFoundError('Job not found');
+
+        job.validateJobToAddHold();
 
         return job;
     }
