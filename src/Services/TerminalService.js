@@ -447,8 +447,8 @@ class TerminalService
         // create a new terminal
         const newTerminal = await Terminal.query(trx).insert(term);
 
-        // everytime we create a new terminal, we want to queue it up
-        await terminalsQueue.batchSend(newTerminal);
+        // everytime we create a new terminal, we want to fire async event to resolve terminal
+        emitter.emit('terminal_created', { terminalGuid: newTerminal.guid });
 
         newTerminal['#id'] = terminal['#id'];
 
