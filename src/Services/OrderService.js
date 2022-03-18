@@ -81,64 +81,76 @@ class OrderService
         globalSearch
     )
     {
-        dateFilterComparisonTypes = dates && (await OrderService.getComparisonTypesCached());
+        const trx = await OrderJob.startTransaction();
 
-        // beggining of base query for jobs with return of specific fields
-        const baseOrderQuery = OrderJob.query()
-            .alias('job')
-            .select(OrderJob.fetch.getOrdersPayload)
-            .page(page, rowCount);
-
-        // if global search is enabled
-        // global search includes job#, customerName, customerContactName, customerContactEmail, Vin, lot, carrierName
-        if (globalSearch?.query)
-            baseOrderQuery.modify('globalSearch', globalSearch.query);
-
-        const queryFilterPickup = OrderService.addFilterPickups(
-            baseOrderQuery,
-            pickup
-        );
-
-        OrderService.addFilterDeliveries(
-            queryFilterPickup,
-            delivery
-        );
-
-        baseOrderQuery.where(baseQueryAnd =>
+        try
         {
-            for (const s of status)
+            dateFilterComparisonTypes = dates && (await OrderService.getComparisonTypesCached(trx));
+
+            // beggining of base query for jobs with return of specific fields
+            const baseOrderQuery = OrderJob.query(trx)
+                .alias('job')
+                .select(OrderJob.fetch.getOrdersPayload)
+                .page(page, rowCount);
+
+            // if global search is enabled
+            // global search includes job#, customerName, customerContactName, customerContactEmail, Vin, lot, carrierName
+            if (globalSearch?.query)
+                baseOrderQuery.modify('globalSearch', globalSearch.query);
+
+            const queryFilterPickup = OrderService.addFilterPickups(
+                baseOrderQuery,
+                pickup
+            );
+
+            OrderService.addFilterDeliveries(
+                queryFilterPickup,
+                delivery
+            );
+
+            baseOrderQuery.where(baseQueryAnd =>
             {
-                baseQueryAnd.orWhere(baseQueryOr =>
+                for (const s of status)
                 {
-                    if (s in OrderService.statusMap)
-                        baseQueryOr.modify(OrderService.statusMap[s]);
-                });
-            }
-        });
+                    baseQueryAnd.orWhere(baseQueryOr =>
+                    {
+                        if (s in OrderService.statusMap)
+                            baseQueryOr.modify(OrderService.statusMap[s]);
+                    });
+                }
+            });
 
-        const queryFilterDates = OrderService.addFilterDates(
-            baseOrderQuery,
-            dates
-        );
+            const queryFilterDates = OrderService.addFilterDates(
+                baseOrderQuery,
+                dates
+            );
 
-        const queryAllFilters = OrderService.addFilterModifiers(
-            queryFilterDates,
-            { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier }
-        );
+            const queryAllFilters = OrderService.addFilterModifiers(
+                queryFilterDates,
+                { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier }
+            );
 
-        const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
+            const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
 
-        const { total, results } = await queryWithGraphModifiers;
+            const { total, results } = await queryWithGraphModifiers;
 
-        const ordersWithDeliveryAddress =
+            const ordersWithDeliveryAddress =
+            {
+                results: OrderService.addDeliveryAddress(results),
+                page: page + 1,
+                rowCount,
+                total
+            };
+
+            await trx.commit();
+
+            return ordersWithDeliveryAddress;
+        }
+        catch (error)
         {
-            results: OrderService.addDeliveryAddress(results),
-            page: page + 1,
-            rowCount,
-            total
-        };
-
-        return ordersWithDeliveryAddress;
+            await trx.rollback();
+            throw error;
+        }
     }
 
     static async getOrderByGuid(orderGuid)
@@ -1404,11 +1416,11 @@ class OrderService
         }
     }
 
-    static async getComparisonTypesCached()
+    static async getComparisonTypesCached(trx)
     {
         if (!cache.has('comparisonTypes'))
         {
-            const comparisonTypesDB = await ComparisonType.query().select(
+            const comparisonTypesDB = await ComparisonType.query(trx).select(
                 'label',
                 'value'
             );
