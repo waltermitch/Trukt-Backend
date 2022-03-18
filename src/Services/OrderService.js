@@ -274,7 +274,7 @@ class OrderService
             orderInfoPromises.push(dataCheck.dispatcher = isUseful(orderObj.dispatcher) ? User.query(trx).findById(orderObj.dispatcher.guid) : null);
             orderInfoPromises.push(dataCheck.referrer = isUseful(orderObj.referrer) ? SFAccount.query(trx).findById(orderObj.referrer.guid) : null);
             orderInfoPromises.push(dataCheck.salesperson = isUseful(orderObj.salesperson) ? SFAccount.query(trx).findById(orderObj.salesperson.guid) : null);
-            orderInfoPromises.push(OrderService.getTerminalWithDefaultStopNotes(orderObj.terminals, orderObj.stops).then(async terminalsWithNotes =>
+            orderInfoPromises.push(OrderService.getTerminalWithDefaultStopNotes(orderObj.terminals, orderObj.stops, trx).then(async terminalsWithNotes =>
                 await Promise.all(terminalsWithNotes.map(t => TerminalService.findOrCreate(t, currentUser, trx, { isTender: order?.isTender })))
             ));
 
