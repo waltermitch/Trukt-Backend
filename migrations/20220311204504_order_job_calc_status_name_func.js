@@ -12,7 +12,6 @@ exports.up = function(knex)
         as
         $$ 
         declare 
-            job_status varchar;
             job record;
             loadboard_request_guid uuid;
             is_valid_stop boolean default false;
@@ -21,6 +20,7 @@ exports.up = function(knex)
             job_bills integer;
             job_dispatches integer;
             is_job_posted boolean;
+            is_dispatch_valid boolean;
         begin
             select
             *
@@ -172,7 +172,7 @@ exports.up = function(knex)
             and valid_job_count > 0
             and job.status = 'new'
         then
-            job_status := job.status;
+            return job.status;
 
         -- evaluate ready state
         elsif job.is_ready
@@ -182,7 +182,7 @@ exports.up = function(knex)
             and job.status = 'ready' 
             and valid_job_count > 0
         then
-            job_status := job.status;
+            return job.status;
 
         -- evaluate on hold status 
         elseif job.is_ready = false
@@ -218,7 +218,7 @@ exports.up = function(knex)
                     and on_hold_post.updated_by_guid is not null
                 )
             then
-                job_status := job.status;
+                return job.status;
             end if;
 
         -- evaluate pending/dispatch state for transport jobs
@@ -249,9 +249,10 @@ exports.up = function(knex)
             where ojd.job_guid = param_job_guid and ojd.is_pending = true;
             
             if job_bills > 0 and job_dispatches > 0 then
-                job_status := job.status;
+                return job.status;
             end if;
 
+        -- evaluate posted status
         elseif job.status = 'posted'
             and job.vendor_guid is null
             and job.vendor_agent_guid is null
@@ -268,11 +269,39 @@ exports.up = function(knex)
                 and lp.is_posted = true;
 
             if is_job_posted then
-                job_status := job.status;
+                return job.status;
             end if;
+
+        -- evaluate dispatched status
+        elseif job.status = 'dispatched'
+            and (job.vendor_guid is not null
+            or job.vendor_agent_guid is not null
+            or job.vendor_contact_guid is not null)
+        then
+            select
+                count(*) = 1
+            into
+                is_dispatch_valid
+            from
+                rcg_tms.order_job_dispatches ojd
+            where
+                ojd.job_guid = param_job_guid
+                and ojd.is_pending = false
+                and ojd.is_accepted = true
+                and ojd.is_canceled = false
+                and ojd.is_declined = false
+                and ojd.is_valid = true
+                and ojd.date_accepted is not null
+                and ojd.date_deleted is null
+                and ojd.date_canceled is null;
+            
+            if is_dispatch_valid then
+                return job.status;
+            end if;
+            return job.status;
         end if;
 
-            return job_status;
+        return 'no valid status';
         end;
         $$;
     `);
