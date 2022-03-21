@@ -21,6 +21,8 @@ exports.up = function(knex)
             job_dispatches integer;
             is_job_posted boolean;
             is_dispatch_valid boolean;
+            is_job_declined boolean;
+            is_job_picked_up boolean;
         begin
             select
             *
@@ -298,7 +300,48 @@ exports.up = function(knex)
             if is_dispatch_valid then
                 return job.status;
             end if;
-            return job.status;
+
+        -- evaluate declined status
+        elseif job.status = 'declined'
+            and (job.vendor_guid is null
+            or job.vendor_agent_guid is null
+            or job.vendor_contact_guid is null)
+            and job.is_on_hold = false
+        then
+            select
+                *
+            into
+                is_job_declined
+            from
+                rcg_tms.order_job_dispatches ojd
+            where
+                ojd.is_declined = true
+                and ojd.job_guid = param_job_guid;
+            
+            if is_job_declined then
+                return job.status;
+            end if;
+
+        -- evaluate picked up state 
+        elseif job.status = 'picked up'
+            and job.is_transport = true
+            and (job.vendor_guid is not null
+            or job.vendor_agent_guid is not null
+            or job.vendor_contact_guid is not null)
+        then
+            select
+                count(*) > 0
+            into is_job_picked_up
+            from rcg_tms.order_stop_links osl
+            inner join rcg_tms.order_stops os
+            on osl.stop_guid = os.guid
+            where osl.job_guid = param_job_guid
+            and os.stop_type = 'pickup'
+            and osl.is_completed = true;
+
+            if is_job_picked_up then
+                return job.status;
+            end if;
         end if;
 
         return 'no valid status';
