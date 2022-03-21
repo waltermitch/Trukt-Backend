@@ -338,10 +338,7 @@ class OrderJobService
             const bulkResponse = new BulkResponse();
             jobsUpdated.forEach((jobUpdated) =>
             {
-                const jobGuid = jobUpdated.value?.jobGuid;
-                const status = jobUpdated.value?.status;
-                const error = jobUpdated.value?.error;
-                const data = jobUpdated.value?.data;
+                const { jobGuid, status, error, data } = jobUpdated.value;
 
                 bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
             });
@@ -378,10 +375,13 @@ class OrderJobService
 
         if (statusToUpdate == 'ready')
         {
-            const [job] = await OrderJob.query(trx).select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid').where('guid', jobGuid);
+            const [job] = await OrderJob.query(trx)
+                .select('dispatcherGuid', 'vendorGuid', 'vendorContactGuid', 'vendorAgentGuid')
+                .where('guid', jobGuid);
+
             if (!job)
                 return { jobGuid, error: 'Job Not Found', status: 400 };
-            if (!job?.dispatcherGuid)
+            if (!job.dispatcherGuid)
                 return { jobGuid, error: 'Job cannot be marked as Ready without a dispatcher', status: 400 };
             if (job.vendorGuid || job.vendorContactGuid || job.vendorAgentGuid)
                 return { jobGuid, error: 'Job cannot transition to Ready with assigned vendor', status: 400 };
@@ -1538,7 +1538,7 @@ class OrderJobService
     static async checkJobToCancel(jobGuid, trx)
     {
         const jobStatus = [
-            OrderJob.query(trx).alias('OJ').select('OJ.orderGuid', 'OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
+            OrderJob.query(trx).alias('job').select('job.orderGuid', 'job.isDeleted', 'job.status', 'job.vendorGuid').findOne('job.guid', jobGuid)
                 .modify('isServiceJob').modify('vendorName'),
             OrderJob.query(trx).alias('job')
                 .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
