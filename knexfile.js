@@ -10,7 +10,9 @@ const {
     KNEX_CONNECTION_USER,
     KNEX_CONNECTION_PASSWORD,
     KNEX_CONNECTION_PORT,
-    KNEX_CONNECTION_DATABASE
+    KNEX_CONNECTION_DATABASE,
+    KNEX_MAX_POOL_SIZE,
+    KNEX_ACQUIRE_TIMEOUT_MILLIS
 } = process.env;
 
 const conConfig = {
@@ -21,6 +23,11 @@ const conConfig = {
     },
     seeds: {
         directory: KNEX_MIGRATION_SEEDS
+    },
+    pool: {
+        acquireTimeoutMillis: KNEX_ACQUIRE_TIMEOUT_MILLIS && parseInt(KNEX_ACQUIRE_TIMEOUT_MILLIS) || 30000,
+        min: 1,
+        max: KNEX_MAX_POOL_SIZE && parseInt(KNEX_MAX_POOL_SIZE) || 50
     },
     ...knexSnakeCaseMappers({ underscoreBetweenUppercaseLetters: true })
 };
@@ -61,7 +68,6 @@ module.exports = () =>
                 const c = await Heroku.getConfig();
                 return Object.assign(base, urlParser(c.DATABASE_URL));
             };
-            conConfig.pool = { min: 1, max: 25 };
             break;
         default:
             throw new Error('Unknown environment set : ' + NODE_ENV);
