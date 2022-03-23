@@ -862,7 +862,7 @@ class OrderJobService
                 errors.push('Cannot set to "Ready" because the job is Deleted');
             if (job.is_complete)
                 errors.push('Cannot set to "Ready" because the job is Compelete');
-            if (job.is_ready || job.verified_by_guid || job.date_verified)
+            if (job.is_ready && (job.verified_by_guid || job.date_verified))
                 errors.push('Order has been verified already.');
             if (job.vendor_guid && job.is_transport === false)
                 errors.push('Please un-assign the Vendor first.');
