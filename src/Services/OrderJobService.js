@@ -1503,12 +1503,14 @@ class OrderJobService
         {
             // validate if you job conditions
             const job = await OrderJobService.checkJobToCancel(jobGuid, trx);
+            const state = { status: OrderJob.STATUS.CANCELED, oldStatus: job.status };
 
             // deleted all postings attached to the job
             await LoadboardService.deletePostings(jobGuid, currentUser);
 
             // setting up canceled payload
             const payload = OrderJobService.createStatusPayload('canceled', currentUser);
+            payload.status = OrderJob.STATUS.CANCELED;
 
             // creating canceled request payload
             const loadboardRequestPayload = LoadboardRequest.createStatusPayload(currentUser).canceled;
@@ -1521,10 +1523,8 @@ class OrderJobService
             ]);
             await trx.commit();
 
-            // setting off an event to update status manager
-            // this event will actually update the jobs status field and
-            // send the updated job info to the client
-            emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
+            // setting off an event to update status manager, this event will send the updated job info to the client
+            emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, currentUser, jobGuid, state });
 
             return { status: 200 };
         }
