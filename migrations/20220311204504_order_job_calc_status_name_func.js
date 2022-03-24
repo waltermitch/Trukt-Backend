@@ -2,7 +2,7 @@ const FUNCTION_NAME = 'rcg_order_job_calc_status_name';
 
 exports.up = function(knex)
 {
-    return knex.withSchema('rcg_tms').raw(`
+    return knex.raw(`
         drop function if exists rcg_order_job_calc_status_name;
 
         create or replace 
@@ -172,22 +172,23 @@ exports.up = function(knex)
             and job.is_canceled = false
             and job.is_complete = false 
             and valid_job_count > 0
-            and job.status = 'new'
         then
-            return job.status;
+            return 'new';
+        end if;
 
         -- evaluate ready state
-        elsif job.is_ready
+        if job.is_ready
             and job.date_verified is not null
             and job.verified_by_guid is not null
             and job.updated_by_guid is not null
             and job.status = 'ready' 
             and valid_job_count > 0
         then
-            return job.status;
+            return 'ready';
+        end if;
 
         -- evaluate on hold status 
-        elseif job.is_ready = false
+        if job.is_ready = false
             and job.status = 'on hold'
             and job.is_on_hold = true
             and job.updated_by_guid is not null
@@ -220,17 +221,17 @@ exports.up = function(knex)
                     and on_hold_post.updated_by_guid is not null
                 )
             then
-                return job.status;
+                return 'on hold';
             end if;
+        end if;
 
         -- evaluate pending/dispatch state for transport jobs
-        elseif job.is_dummy = false
+        if job.is_dummy = false
             and job.is_on_hold = false
             and job.dispatcher_guid is not null
             and job.is_ready = true
             and job.is_deleted = false
             and job.is_canceled = false
-            and job.status = 'pending'
         then
             -- get bills count
             select
@@ -251,12 +252,12 @@ exports.up = function(knex)
             where ojd.job_guid = param_job_guid and ojd.is_pending = true;
             
             if job_bills > 0 and job_dispatches > 0 then
-                return job.status;
+                return 'pending';
             end if;
+        end if;
 
         -- evaluate posted status
-        elseif job.status = 'posted'
-            and job.vendor_guid is null
+        if job.vendor_guid is null
             and job.vendor_agent_guid is null
             and job.vendor_contact_guid is null
         then
@@ -271,11 +272,12 @@ exports.up = function(knex)
                 and lp.is_posted = true;
 
             if is_job_posted then
-                return job.status;
+                return 'posted';
             end if;
+        end if;
 
         -- evaluate dispatched status
-        elseif job.status = 'dispatched'
+        if job.status = 'dispatched'
             and (job.vendor_guid is not null
             or job.vendor_agent_guid is not null
             or job.vendor_contact_guid is not null)
@@ -298,12 +300,12 @@ exports.up = function(knex)
                 and ojd.date_canceled is null;
             
             if is_dispatch_valid then
-                return job.status;
+                return 'dispatched';
             end if;
+        end if;
 
         -- evaluate declined status
-        elseif job.status = 'declined'
-            and (job.vendor_guid is null
+        if (job.vendor_guid is null
             or job.vendor_agent_guid is null
             or job.vendor_contact_guid is null)
             and job.is_on_hold = false
@@ -319,32 +321,73 @@ exports.up = function(knex)
                 and ojd.job_guid = param_job_guid;
             
             if is_job_declined then
-                return job.status;
-            end if;
-
-        -- evaluate picked up state 
-        elseif job.status = 'picked up'
-            and job.is_transport = true
-            and (job.vendor_guid is not null
-            or job.vendor_agent_guid is not null
-            or job.vendor_contact_guid is not null)
-        then
-            select
-                count(*) > 0
-            into is_job_picked_up
-            from rcg_tms.order_stop_links osl
-            inner join rcg_tms.order_stops os
-            on osl.stop_guid = os.guid
-            where osl.job_guid = param_job_guid
-            and os.stop_type = 'pickup'
-            and osl.is_completed = true;
-
-            if is_job_picked_up then
-                return job.status;
+                return 'declined';
             end if;
         end if;
 
-        return 'no valid status';
+        -- evaluate picked up state 
+        --if job.status = 'picked up'
+        --	and (job.vendor_guid is not null
+        --	or job.vendor_agent_guid is not null
+        --	or job.vendor_contact_guid is not null)
+        --then
+        --	select
+        --		count(*) > 0
+        --	into is_job_picked_up
+        --	from rcg_tms.order_stop_links osl
+        --	inner join rcg_tms.order_stops os
+        --	on osl.stop_guid = os.guid
+        --	inner join rcg_tms.order_stops os2
+        --	on osl.stop_guid = os2.guid
+        --	where osl.job_guid = param_job_guid
+        --	and (os.stop_type = 'pickup'
+        --	and osl.is_completed = true
+        --	and os.is_started = true);
+        --
+        --	if is_job_picked_up then
+        --		return 'picked up';
+        --	end if;
+        --end if;
+
+        -- evaluate delivered status
+
+        -- evaluate deleted status 
+        if job.is_canceled = false
+            and job.is_on_hold = false
+            and job.is_ready = false
+            and job.is_deleted = true
+            and job.deleted_by_guid is not null
+        then
+            return 'deleted';
+        end if;
+
+        -- evaluate canceled status 
+        if job.is_canceled = true
+            and job.is_on_hold = false
+            and job.is_ready = false
+            and job.is_deleted = false
+            and job.deleted_by_guid is null
+        then 
+            return 'canceled';
+        end if;
+
+        -- evaluate completed status
+        if job.is_complete = true 
+            and job.date_completed is not null
+            and job.updated_by_guid is not null
+        then 
+            return 'completed';
+        end if;
+
+        -- evaluate in progress status
+        if job.is_transport = false
+            and job.vendor_guid is not null
+            and job.date_started is not null
+            and job.updated_by_guid is not null
+        then
+            return 'in progress';
+        end if;
+
         end;
         $$;
     `);
