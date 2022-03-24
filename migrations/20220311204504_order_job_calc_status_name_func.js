@@ -176,7 +176,7 @@ exports.up = function(knex)
             and job.is_complete = false 
             and valid_job_count > 0
         then
-            return ${OrderJob.STATUS.NEW};
+            return '${OrderJob.STATUS.NEW}';
         end if;
 
         -- evaluate ready state
@@ -184,15 +184,15 @@ exports.up = function(knex)
             and job.date_verified is not null
             and job.verified_by_guid is not null
             and job.updated_by_guid is not null
-            and job.status = ${OrderJob.STATUS.READY} 
+            and job.status = '${OrderJob.STATUS.READY}' 
             and valid_job_count > 0
         then
-            return ${OrderJob.STATUS.READY};
+            return '${OrderJob.STATUS.READY}';
         end if;
 
         -- evaluate on hold status 
         if job.is_ready = false
-            and job.status = ${OrderJob.STATUS.ON_HOLD}
+            and job.status = '${OrderJob.STATUS.ON_HOLD}'
             and job.is_on_hold = true
             and job.updated_by_guid is not null
         then
@@ -224,7 +224,7 @@ exports.up = function(knex)
                     and on_hold_post.updated_by_guid is not null
                 )
             then
-                return ${OrderJob.STATUS.ON_HOLD};
+                return '${OrderJob.STATUS.ON_HOLD}';
             end if;
         end if;
 
@@ -255,7 +255,7 @@ exports.up = function(knex)
             where ojd.job_guid = param_job_guid and ojd.is_pending = true;
             
             if job_bills > 0 and job_dispatches > 0 then
-                return ${OrderJob.STATUS.PENDING};
+                return '${OrderJob.STATUS.PENDING}';
             end if;
         end if;
 
@@ -275,12 +275,12 @@ exports.up = function(knex)
                 and lp.is_posted = true;
 
             if is_job_posted then
-                return ${OrderJob.STATUS.POSTED};
+                return '${OrderJob.STATUS.POSTED}';
             end if;
         end if;
 
         -- evaluate dispatched status
-        if job.status = ${OrderJob.STATUS.DISPATCHED}
+        if job.status = '${OrderJob.STATUS.DISPATCHED}'
             and (job.vendor_guid is not null
             or job.vendor_agent_guid is not null
             or job.vendor_contact_guid is not null)
@@ -303,7 +303,7 @@ exports.up = function(knex)
                 and ojd.date_canceled is null;
             
             if is_dispatch_valid then
-                return ${OrderJob.STATUS.DISPATCHED};
+                return '${OrderJob.STATUS.DISPATCHED}';
             end if;
         end if;
 
@@ -324,7 +324,7 @@ exports.up = function(knex)
                 and ojd.job_guid = param_job_guid;
             
             if is_job_declined then
-                return ${OrderJob.STATUS.DECLINED};
+                return '${OrderJob.STATUS.DECLINED}';
             end if;
         end if;
 
@@ -365,9 +365,9 @@ exports.up = function(knex)
                 and os.is_started = true);
 
             if pickup_count > 0 and delivery_count = 0 then
-                return ${OrderJob.STATUS.PICKED_UP};
+                return '${OrderJob.STATUS.PICKED_UP}';
             elseif pickup_count > 0 and delivery_count > 0 then
-                return ${OrderJob.STATUS.DELIVERED};
+                return '${OrderJob.STATUS.DELIVERED}';
             end if;
         end if;
 
@@ -378,7 +378,7 @@ exports.up = function(knex)
             and job.is_deleted = true
             and job.deleted_by_guid is not null
         then
-            return ${OrderJob.STATUS.DELETED};
+            return '${OrderJob.STATUS.DELETED}';
         end if;
 
         -- evaluate canceled status 
@@ -388,7 +388,7 @@ exports.up = function(knex)
             and job.is_deleted = false
             and job.deleted_by_guid is null
         then 
-            return ${OrderJob.STATUS.CANCELED};
+            return '${OrderJob.STATUS.CANCELED}';
         end if;
 
         -- evaluate completed status
@@ -396,7 +396,7 @@ exports.up = function(knex)
             and job.date_completed is not null
             and job.updated_by_guid is not null
         then 
-            return ${OrderJob.STATUS.COMPLETED};
+            return '${OrderJob.STATUS.COMPLETED}';
         end if;
 
         -- evaluate in progress status
@@ -429,7 +429,7 @@ exports.up = function(knex)
                 ) as last_dispatch
             )
         then
-            return ${OrderJob.STATUS.IN_PROGRESS};
+            return '${OrderJob.STATUS.IN_PROGRESS}';
         end if;
 
         return null;
@@ -440,5 +440,5 @@ exports.up = function(knex)
 
 exports.down = function(knex)
 {
-    return knex.withSchema('rcg_tms').raw(`DROP FUNCTION IF EXISTS rcg_tms.${FUNCTION_NAME};`);
+    return knex.raw(`DROP FUNCTION IF EXISTS rcg_tms.${FUNCTION_NAME};`);
 };
