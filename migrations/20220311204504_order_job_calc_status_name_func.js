@@ -1,12 +1,14 @@
+const OrderJob = require('../src/Models/OrderJob');
+
 const FUNCTION_NAME = 'rcg_order_job_calc_status_name';
 
 exports.up = function(knex)
 {
     return knex.raw(`
-        drop function if exists rcg_order_job_calc_status_name;
+        drop function if ${FUNCTION_NAME};
 
         create or replace 
-        function rcg_order_job_calc_status_name(param_job_guid uuid)
+        function ${FUNCTION_NAME}(param_job_guid uuid)
         returns varchar
         language plpgsql
         as
@@ -22,7 +24,8 @@ exports.up = function(knex)
             is_job_posted boolean;
             is_dispatch_valid boolean;
             is_job_declined boolean;
-            is_job_picked_up boolean;
+            pickup_count integer;
+            delivery_count integer;
         begin
             select
             *
@@ -173,7 +176,7 @@ exports.up = function(knex)
             and job.is_complete = false 
             and valid_job_count > 0
         then
-            return 'new';
+            return ${OrderJob.STATUS.NEW};
         end if;
 
         -- evaluate ready state
@@ -181,15 +184,15 @@ exports.up = function(knex)
             and job.date_verified is not null
             and job.verified_by_guid is not null
             and job.updated_by_guid is not null
-            and job.status = 'ready' 
+            and job.status = ${OrderJob.STATUS.READY} 
             and valid_job_count > 0
         then
-            return 'ready';
+            return ${OrderJob.STATUS.READY};
         end if;
 
         -- evaluate on hold status 
         if job.is_ready = false
-            and job.status = 'on hold'
+            and job.status = ${OrderJob.STATUS.ON_HOLD}
             and job.is_on_hold = true
             and job.updated_by_guid is not null
         then
@@ -221,7 +224,7 @@ exports.up = function(knex)
                     and on_hold_post.updated_by_guid is not null
                 )
             then
-                return 'on hold';
+                return ${OrderJob.STATUS.ON_HOLD};
             end if;
         end if;
 
@@ -252,7 +255,7 @@ exports.up = function(knex)
             where ojd.job_guid = param_job_guid and ojd.is_pending = true;
             
             if job_bills > 0 and job_dispatches > 0 then
-                return 'pending';
+                return ${OrderJob.STATUS.PENDING};
             end if;
         end if;
 
@@ -272,12 +275,12 @@ exports.up = function(knex)
                 and lp.is_posted = true;
 
             if is_job_posted then
-                return 'posted';
+                return ${OrderJob.STATUS.POSTED};
             end if;
         end if;
 
         -- evaluate dispatched status
-        if job.status = 'dispatched'
+        if job.status = ${OrderJob.STATUS.DISPATCHED}
             and (job.vendor_guid is not null
             or job.vendor_agent_guid is not null
             or job.vendor_contact_guid is not null)
@@ -300,7 +303,7 @@ exports.up = function(knex)
                 and ojd.date_canceled is null;
             
             if is_dispatch_valid then
-                return 'dispatched';
+                return ${OrderJob.STATUS.DISPATCHED};
             end if;
         end if;
 
@@ -321,35 +324,52 @@ exports.up = function(knex)
                 and ojd.job_guid = param_job_guid;
             
             if is_job_declined then
-                return 'declined';
+                return ${OrderJob.STATUS.DECLINED};
             end if;
         end if;
 
-        -- evaluate picked up state 
-        --if job.status = 'picked up'
-        --	and (job.vendor_guid is not null
-        --	or job.vendor_agent_guid is not null
-        --	or job.vendor_contact_guid is not null)
-        --then
-        --	select
-        --		count(*) > 0
-        --	into is_job_picked_up
-        --	from rcg_tms.order_stop_links osl
-        --	inner join rcg_tms.order_stops os
-        --	on osl.stop_guid = os.guid
-        --	inner join rcg_tms.order_stops os2
-        --	on osl.stop_guid = os2.guid
-        --	where osl.job_guid = param_job_guid
-        --	and (os.stop_type = 'pickup'
-        --	and osl.is_completed = true
-        --	and os.is_started = true);
-        --
-        --	if is_job_picked_up then
-        --		return 'picked up';
-        --	end if;
-        --end if;
+        -- evaluate picked up and delivered state 
+        if job.is_transport
+            and job.is_ready 
+            and job.is_on_hold = false
+            and job.is_canceled = false
+            and job.is_deleted = false
+            and (job.vendor_guid is not null
+            or job.vendor_agent_guid is not null
+            or job.vendor_contact_guid is not null)
+        then
+            select
+                count(os.*)
+            into
+                pickup_count
+            from rcg_tms.order_stop_links osl
+            inner join rcg_tms.order_stops os
+            on osl.stop_guid = os.guid
+            inner join rcg_tms.order_stops os2
+            on osl.stop_guid = os2.guid
+            where osl.job_guid = param_job_guid
+                and (os.stop_type = 'pickup'
+                and osl.is_completed = true
+                and os.is_started = true);
+            
+            select
+                count(os.*)
+            into
+                delivery_count 
+            from rcg_tms.order_stop_links osl
+            inner join rcg_tms.order_stops os
+            on osl.stop_guid = os.guid
+            where osl.job_guid = param_job_guid
+                and (os.stop_type = 'delivery'
+                and osl.is_completed = true
+                and os.is_started = true);
 
-        -- evaluate delivered status
+            if pickup_count > 0 and delivery_count = 0 then
+                return ${OrderJob.STATUS.PICKED_UP};
+            elseif pickup_count > 0 and delivery_count > 0 then
+                return ${OrderJob.STATUS.DELIVERED};
+            end if;
+        end if;
 
         -- evaluate deleted status 
         if job.is_canceled = false
@@ -358,7 +378,7 @@ exports.up = function(knex)
             and job.is_deleted = true
             and job.deleted_by_guid is not null
         then
-            return 'deleted';
+            return ${OrderJob.STATUS.DELETED};
         end if;
 
         -- evaluate canceled status 
@@ -368,7 +388,7 @@ exports.up = function(knex)
             and job.is_deleted = false
             and job.deleted_by_guid is null
         then 
-            return 'canceled';
+            return ${OrderJob.STATUS.CANCELED};
         end if;
 
         -- evaluate completed status
@@ -376,7 +396,7 @@ exports.up = function(knex)
             and job.date_completed is not null
             and job.updated_by_guid is not null
         then 
-            return 'completed';
+            return ${OrderJob.STATUS.COMPLETED};
         end if;
 
         -- evaluate in progress status
@@ -384,10 +404,35 @@ exports.up = function(knex)
             and job.vendor_guid is not null
             and job.date_started is not null
             and job.updated_by_guid is not null
+
+        -- get last valid dispatch if exists
+            and (
+                select
+                    count(*) = 1
+                from (
+                    select
+                        *
+                    from 
+                        rcg_tms.order_job_dispatches ojd
+                    where
+                        ojd.job_guid = param_job_guid
+                        and ojd.vendor_guid is not null
+                        and ojd.is_accepted
+                        and ojd.is_valid
+                        and ojd.is_pending = false 
+                        and ojd.is_declined = false
+                        and ojd.is_deleted = false
+                        and ojd.is_canceled = false
+                        and ojd.date_accepted is not null
+                    order by ojd.date_accepted desc
+                    limit 1
+                ) as last_dispatch
+            )
         then
-            return 'in progress';
+            return ${OrderJob.STATUS.IN_PROGRESS};
         end if;
 
+        return null;
         end;
         $$;
     `);
