@@ -5,7 +5,7 @@ const FUNCTION_NAME = 'rcg_order_job_calc_status_name';
 exports.up = function(knex)
 {
     return knex.raw(`
-        drop function if ${FUNCTION_NAME};
+        drop function if exists ${FUNCTION_NAME};
 
         create or replace 
         function ${FUNCTION_NAME}(param_job_guid uuid)
