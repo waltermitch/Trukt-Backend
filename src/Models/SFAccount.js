@@ -120,8 +120,12 @@ class SFAccount extends BaseModel
     $formatJson(json)
     {
         json = super.$formatJson(json);
-
         json.rtype = json.rtype?.toLowerCase() ?? 'unknown';
+
+        if (!Object.keys(FieldFilters.whitelist.endpoint.byType.outgoing).includes(json.rtype))
+        {
+            json.rtype = 'unknown';
+        }
 
         const whitelist = FieldFilters.whitelist.endpoint.byType.outgoing[json.rtype];
         const copy = {};
