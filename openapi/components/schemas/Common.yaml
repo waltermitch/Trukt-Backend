@@ -56,7 +56,7 @@ deletedByGuid:
 currency:
   type: string
   format: currency
-  pattern: ^(?:[1-9][0-9]*|0)/.[0-9]{2}$
+  pattern: ^(?:[1-9][0-9]*|0)\.[0-9]{2}$
   example: '12345.67'
 date:
   type: string
