@@ -35,6 +35,16 @@ class Vehicle extends BaseModel
         };
     }
 
+    static get modifiers()
+    {
+        return {
+            withoutWeightClass: builder =>
+            {
+                builder.select('year', 'make', 'model', 'trim');
+            }
+        };
+    }
+
     hasId()
     {
         return 'id' in this;
