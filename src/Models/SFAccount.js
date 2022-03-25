@@ -153,7 +153,7 @@ class SFAccount extends BaseModel
 
         if (!account)
             errors.push(new NotFoundError('Vendor does not exist'));
-        if (account.blackList)
+        if (account?.blackList)
             errors.push(new DataConflictError('Vendor is blacklisted.'));
         if (account?.rectype?.name?.toLowerCase() !== 'vendor')
             errors.push(new DataConflictError('Provided vendor is not a valid vendor. Please contact support'));
