@@ -1,6 +1,16 @@
-summary: Get account by type
-operationId: getAccountByType
-description: Get account by type
+summary: Search for Accounts
+operationId: searchAccounts
+description: |
+  Search for Accounts by the different types. Searching will depend on the type.
+  
+  - Carrier   - Search by "name" or "dotNumber" or address fields
+  - Client    - Search by "name" or address fields
+  - Employee  - Search by "name" or address fields
+  - Referrer  - Search by "name" or address fields
+  - Vendor    - Search by "name" or address fields
+
+  Returns all the contacts and primaryContact.
+  
 tags:
   - Account
 parameters:
@@ -24,6 +34,18 @@ parameters:
     required: true
 responses:
   200:
-    description: Account
+    description: OK
     content:
-      application/json: {}
+      application/json:
+        schema:
+          type: array
+          items:
+            oneOf:
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Carrier'
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Client'
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Employee'
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Referrer'
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Vendor'
+
+  400:
+    $ref: '../../components/responses/400BadRequest.yaml'

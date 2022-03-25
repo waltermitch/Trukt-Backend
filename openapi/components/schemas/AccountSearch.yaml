@@ -1,0 +1,28 @@
+# This is used for the search functionality. This includes the models and gives them a proper name.
+# Without this file, the API docs will not display the proper names of the different objects
+# Instead it will display [Object] [Object] [Object] which is not helpful at all.
+
+Referrer:
+  allOf:
+    - $ref: './Account.yaml#/Referrer'
+    - $ref: './Account.yaml#/Account With Contacts'
+
+Client:
+  allOf:
+    - $ref: './Account.yaml#/Client'
+    - $ref: './Account.yaml#/Account With Contacts'
+
+Carrier:
+  allOf:
+    - $ref: './Account.yaml#/Carrier'
+    - $ref: './Account.yaml#/Account With Contacts'
+
+Employee:
+  allOf:
+    - $ref: './Account.yaml#/Employee'
+    - $ref: './Account.yaml#/Account With Contacts'
+
+Vendor:
+  allOf:
+    - $ref: './Account.yaml#/Vendor'
+    - $ref: './Account.yaml#/Account With Contacts'

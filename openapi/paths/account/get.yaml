@@ -1,6 +1,8 @@
-summary: Get account by id and type
-operationId: getAccountById
-description: Get account by id and type
+summary: Get an Account by guid
+operationId: getAccountByGuid
+description: |
+  Get an Account by guid and specified type.
+
 tags:
   - Account
 parameters:
@@ -16,6 +18,17 @@ parameters:
     required: true
 responses:
   200:
-    description: Account
+    description: OK
     content:
-      application/json: {}
+      application/json:
+        schema:
+          type: array
+          items:
+            oneOf:
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Carrier'
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Client'
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Employee'
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Referrer'
+              - $ref: '../../components/schemas/AccountSearch.yaml#/Vendor'
+  400:
+    $ref: '../../components/responses/400BadRequest.yaml'
