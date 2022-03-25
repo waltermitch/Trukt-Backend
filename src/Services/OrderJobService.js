@@ -1765,7 +1765,8 @@ class OrderJobService
         const {
             vendor: { guid: vendorGuid } = {},
             agent: { guid: agentGuid, ...agentInfo } = {},
-            contact: { guid: contactGuid, ...contactInfo } = {}
+            contact: { guid: contactGuid, ...contactInfo } = {},
+            paymentTerm, price, dispatchDate
         } = body ?? {};
 
         try
@@ -1773,7 +1774,7 @@ class OrderJobService
             // to collect and throw serviceJob and vendor errors
             const appResponse = new AppResponse();
 
-            const [serviceJob, vendor] = await Promise.all([OrderJob.query().withGraphFetched('bills').findById(jobGuid), SFAccount.query().withGraphFetched('rectype').findById(vendorGuid)]);
+            const [serviceJob, vendor] = await Promise.all([OrderJob.query(trx).withGraphFetched('[bills, stops(distinct)]').findById(jobGuid), SFAccount.query(trx).withGraphFetched('rectype').findById(vendorGuid)]);
 
             appResponse.addError(...OrderJob.validateReadyServiceJobToInProgress(serviceJob));
             appResponse.addError(...SFAccount.validateAccountForServiceJob(vendor));
@@ -1799,7 +1800,9 @@ class OrderJobService
                 isDeclined: false,
                 isDeleted: false,
                 isCanceled: false,
-                dateAccepted: dateStarted
+                dateAccepted: dateStarted,
+                paymentTermId: paymentTerm,
+                price: price
             }));
 
             promises.push(serviceJob.$query(trx).patch({
@@ -1819,6 +1822,13 @@ class OrderJobService
                         consigneeGuid: vendor.guid
                     })
             );
+
+            // Set scheduled date on the first pickup stop
+            const [firstPickUpStop] = OrderStop.firstAndLast(serviceJob?.stops);
+            firstPickUpStop.setScheduledDates(dispatchDate.dateType, dispatchDate.startDate, dispatchDate?.endDate);
+            firstPickUpStop.setUpdatedBy(currentUser);
+
+            promises.push(OrderStop.query(trx).patch(firstPickUpStop).findById(firstPickUpStop.guid));
 
             const [dispatch] = await Promise.all(promises);
 
