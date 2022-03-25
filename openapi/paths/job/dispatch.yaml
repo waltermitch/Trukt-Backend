@@ -16,6 +16,9 @@ requestBody:
         type: object
         required:
          - vendor
+         - price
+         - paymentTerm
+         - dispatchDate
         properties:
           vendor:
             $ref: '../../components/schemas/Common.yaml#/guidObject'
@@ -23,6 +26,26 @@ requestBody:
             $ref: '../../components/schemas/ContactWithoutMobile.yaml'
           contact:
             $ref: '../../components/schemas/ContactWithoutMobile.yaml'
+          paymentTerm:
+            type: number
+            description: payment term id used for paying carrier
+          price: 
+            $ref: '../../components/schemas/Common.yaml#/currency'
+          dispatchDate:
+            type: object
+            description: the date type and the possible start and end dates of the service
+            properties:
+              dateType:
+                $ref: '../../components/schemas/Common.yaml#/Enums/stopDateType'
+              startDate:
+                $ref: '../../components/schemas/Common.yaml#/dateTime'
+                description: the earliest date time the service can start
+              endDate:
+                $ref: '../../components/schemas/Common.yaml#/dateTime'
+                description: the latest date time the service can finish
+            required:
+              - dateType
+              - startDate          
 responses:
   204:
     description: Job Marked Succesfully
