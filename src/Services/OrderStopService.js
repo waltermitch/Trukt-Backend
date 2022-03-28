@@ -76,14 +76,14 @@ class OrderStopService
         // convert to a POJO unfortunately it is all snake_case
         const job = jobRes.rows.shift();
 
-        // getting order guid for updating commodities
-        const orderGuid = job.order_guid;
-
         // if job doesn't exist
         if (!job)
         {
             throw new NotFoundError('Job does not exist');
         }
+ 
+        // getting order guid for updating commodities
+        const orderGuid = job.order_guid;
 
         // if stop doens't exist
         if (!jobStop.rows[0])
@@ -134,13 +134,13 @@ class OrderStopService
 
             // updating or clearing job stop links depending on status
             if (status === 'started' && date == null)
-                Object.assign(stopLinksUpdate, { 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
+                Object.assign(stopLinksUpdate, { isStarted: false, dateStarted: date, isCompleted: false, dateCompleted: date });
             else if (status === 'started' && date != null)
-                Object.assign(stopLinksUpdate, { 'isStarted': true, 'dateStarted': date });
+                Object.assign(stopLinksUpdate, { isStarted: true, dateStarted: date });
             else if (status === 'completed' && date == null)
-                Object.assign(stopLinksUpdate, { 'isStarted': false, 'dateStarted': date, 'isCompleted': false, 'dateCompleted': date });
+                Object.assign(stopLinksUpdate, { isStarted: false, dateStarted: date, isCompleted: false, dateCompleted: date });
             else if (status === 'completed' && date != null)
-                Object.assign(stopLinksUpdate, { 'isStarted': true, 'dateStarted': date, 'isCompleted': true, 'dateCompleted': date });
+                Object.assign(stopLinksUpdate, { isStarted: true, dateStarted: date, isCompleted: true, dateCompleted: date });
 
             // updating job stop link
             await StopLinksQuery.modify('jobStop', jobGuid, stopGuid).whereIn('commodityGuid', commodities).patch(stopLinksUpdate);
@@ -332,15 +332,21 @@ class OrderStopService
             UPDATE rcg_tms.order_stops as stop
             SET
                 updated_by_guid = '${currentUser}',
-            	status = CASE 
-            				WHEN is_started = false AND is_completed = false then NULL
-            				WHEN stop_type = 'pickup' AND is_started = true AND is_completed = true THEN 'picked up'
-            				WHEN (stop_type = 'pickup' OR stop_type = 'delivery') AND is_completed = false AND is_started = true THEN 'en route'
-            				WHEN stop_type = 'delivery' and is_started = true and is_completed = true then 'delivered'
-            				WHEN stop_type IS NULL and is_started = true AND is_completed = false THEN 'started'
-            				WHEN stop_type IS NULL and is_started = true AND is_completed = true THEN 'completed'
-            			END 
-            WHERE guid = '${stopGuid}';
+            	status = CASE
+                            WHEN job.type_id = 1 THEN
+                                CASE 
+                                    WHEN stop.is_started = false AND stop.is_completed = false then NULL
+                                    WHEN stop.stop_type = 'pickup' AND stop.is_started = true AND stop.is_completed = true THEN 'picked up'
+                                    WHEN (stop.stop_type = 'pickup' OR stop.stop_type = 'delivery') AND stop.is_completed = false AND stop.is_started = true THEN 'en route'
+                                    WHEN stop.stop_type = 'delivery' and stop.is_started = true and stop.is_completed = true then 'delivered'
+                                END 
+                            WHEN (stop.stop_type IS NULL OR stop.stop_type = 'pickup' OR stop.stop_type = 'delivery') and stop.is_started = true AND stop.is_completed = false THEN 'started'
+                            WHEN (stop.stop_type IS NULL OR stop.stop_type = 'pickup' OR stop.stop_type = 'delivery') and stop.is_started = true AND stop.is_completed = true THEN 'completed'
+                        END
+            FROM rcg_tms.order_jobs job, rcg_tms.order_stop_links link
+            WHERE stop.guid = '${stopGuid}'
+                AND stop.guid = link.stop_guid
+                AND link.job_guid = job.guid;
         `;
     }
 

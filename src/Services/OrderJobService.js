@@ -1605,6 +1605,7 @@ class OrderJobService
                 oj.is_complete,
                 oj.is_deleted,
                 oj.is_canceled,
+                oj.type_id,
 
                 ( SELECT bool_or(links.is_completed) 
                 FROM rcg_tms.order_stop_links links
@@ -1612,12 +1613,25 @@ class OrderJobService
                 WHERE links.job_guid = oj.guid AND stop.stop_type = 'pickup' ) AS is_pickedup,
                 
                 ( SELECT bool_and(links.is_completed) FROM rcg_tms.order_stop_links links LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid WHERE links.job_guid = oj.guid AND stop.stop_type = 'delivery' ) AS is_delivered,
+
                 ( SELECT count(*) > 0 FROM rcg_tms.loadboard_posts lbp WHERE lbp.job_guid = oj.guid AND lbp.is_posted) AS is_posted,
+
                 ( SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
                     LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbp2.job_guid = oj.guid) AS has_requests,
+
                 ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_pending) AS is_pending,
+
                 ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_declined) AS is_declined,
+
                 ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_accepted AND oj.vendor_guid IS NOT NULL ) AS is_dispatched,
+
+                (SELECT bool_and(links.is_completed) 
+                FROM rcg_tms.order_stop_links links
+                LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid
+                WHERE links.job_guid = oj.guid
+                    AND (stop.stop_type = 'pickup' OR stop.stop_type = 'delivery' OR stop.stop_type IS NULL) )
+                AS is_service_job_completed,
+
                 oj.is_ready,
                 o.is_tender
             FROM
@@ -1632,6 +1646,7 @@ class OrderJobService
             if (!statusArray)
                 throw new NotFoundError('Job does not exist');
 
+            console.log(statusArray);
             const p = { currentStatus: statusArray.current_status };
 
             if (statusArray.is_on_hold)
@@ -1650,11 +1665,11 @@ class OrderJobService
             {
                 p.expectedStatus = OrderJob.STATUS.CANCELED;
             }
-            else if (statusArray.is_delivered)
+            else if (statusArray.is_delivered && statusArray.type_id === 1)
             {
                 p.expectedStatus = OrderJob.STATUS.DELIVERED;
             }
-            else if (statusArray.is_pickedup)
+            else if (statusArray.is_pickedup && statusArray.type_id === 1)
             {
                 p.expectedStatus = OrderJob.STATUS.PICKED_UP;
             }
@@ -1670,9 +1685,17 @@ class OrderJobService
             {
                 p.expectedStatus = OrderJob.STATUS.DECLINED;
             }
-            else if (statusArray.is_dispatched)
+            else if (statusArray.is_dispatched && statusArray.type_id === 1)
             {
                 p.expectedStatus = OrderJob.STATUS.DISPATCHED;
+            }
+            else if (statusArray.is_dispatched && !statusArray.is_service_job_completed && statusArray.type_id !== 1)
+            {
+                p.expectedStatus = OrderJob.STATUS.IN_PROGRESS;
+            }
+            else if (statusArray.is_service_job_completed && statusArray.type_id !== 1)
+            {
+                p.expectedStatus = OrderJob.STATUS.COMPLETED;
             }
             else if (statusArray.is_ready)
             {
@@ -1696,6 +1719,8 @@ class OrderJobService
     {
         // recalcuate
         const state = await OrderJobService.recalcJobStatus(jobGuid);
+
+        console.log(state);
 
         // only do updates when status is different
         if (state.currentStatus === state.expectedStatus)
