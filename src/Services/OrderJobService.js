@@ -1646,7 +1646,6 @@ class OrderJobService
             if (!statusArray)
                 throw new NotFoundError('Job does not exist');
 
-            console.log(statusArray);
             const p = { currentStatus: statusArray.current_status };
 
             if (statusArray.is_on_hold)
@@ -1720,8 +1719,6 @@ class OrderJobService
         // recalcuate
         const state = await OrderJobService.recalcJobStatus(jobGuid);
 
-        console.log(state);
-
         // only do updates when status is different
         if (state.currentStatus === state.expectedStatus)
         {
@@ -1733,7 +1730,7 @@ class OrderJobService
         else
         {
             const job = await OrderJob.query()
-                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser }))
+                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser, isComplete: state.expectedStatus === OrderJob.STATUS.COMPLETED }))
                 .findById(jobGuid)
                 .returning('status');
 

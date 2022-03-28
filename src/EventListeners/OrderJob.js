@@ -92,13 +92,13 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
         try
         {
             const status = await OrderJobService.updateStatusField(jobGuid, currentUser);
-            const [[{ pickupsInProgress }], [{ isStatusForLastDelivery }]] =
-                await Promise.all([OrderJobService.getNumberOfPickupsInProgress(jobGuid), OrderJobService.isJobStatusForLastDelivery(jobGuid)]);
+            const [[{ pickupsInProgress }], [{ isStatusForLastDelivery }], job] =
+                await Promise.all([OrderJobService.getNumberOfPickupsInProgress(jobGuid), OrderJobService.isJobStatusForLastDelivery(jobGuid), OrderJob.query().findById(jobGuid)]);
 
             /**
              * Registers the activity log to 'Pickup' only when the first commmodity of the job is pick up
              */
-            if (jobStop.stop_type == 'pickup' && pickupsInProgress == 1 && userAction == 'completed')
+            if (jobStop.stop_type == 'pickup' && pickupsInProgress == 1 && userAction == 'completed' && job.typeId === 1)
             {
                 await ActivityManagerService.createActivityLog({
                     orderGuid: orderGuid,
@@ -137,13 +137,23 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
             /**
              * Registers the activity log to 'Rollback to pickup' only when the last delivered commodity of the job is back to 'pick up'
              */
-            else if (jobStop.stop_type == 'delivery' && userAction == 'started' && isStatusForLastDelivery)
+            else if (jobStop.stop_type == 'delivery' && userAction == 'started' && isStatusForLastDelivery && job.typeId === 1)
             {
                 await ActivityManagerService.createActivityLog({
                     orderGuid: orderGuid,
                     jobGuid: jobGuid,
                     userGuid: currentUser,
                     activityId: 32
+                });
+            }
+
+            else if (status === OrderJob.STATUS.COMPLETED)
+            {
+                await ActivityManagerService.createActivityLog({
+                    orderGuid: orderGuid,
+                    jobGuid: jobGuid,
+                    userGuid: currentUser,
+                    activityId: 35
                 });
             }
         }
