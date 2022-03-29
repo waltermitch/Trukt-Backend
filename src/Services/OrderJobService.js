@@ -920,7 +920,9 @@ class OrderJobService
         const jobsNotFoundExceptions = new AppResponse();
 
         // getting all jobs guid and tranport field to help differentiate job types
-        const jobsGuidsFound = await OrderJob.query().alias('job').select('job.guid')
+        const jobsGuidsFound = await OrderJob.query()
+            .alias('job')
+            .select('job.guid')
             .modify('isServiceJob')
             .findByIds(jobGuids);
 
