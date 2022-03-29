@@ -681,15 +681,15 @@ class OrderJob extends BaseModel
         // Uses OrderJob alias as OJ
         isServiceJob: (queryBuilder) =>
         {
-            queryBuilder.select(raw('(case when o_j_t.category=\'service\' then true else false END) as "isServiceJob"'))
-                .innerJoin('rcgTms.orderJobTypes as OJT', 'OJ.typeId', 'OJT.id');
+            queryBuilder.select(raw('(case when job_types.category=\'service\' then true else false END) as "isServiceJob"'))
+                .innerJoin('rcgTms.orderJobTypes as job_types', 'job.typeId', '=', 'job_types.id');
         },
 
         // Uses OrderJob alias as OJ
         vendorName: (queryBuilder) =>
         {
             queryBuilder.select('V.name as vendorName')
-                .leftJoin('salesforce.accounts as V', 'OJ.vendorGuid', 'V.guid');
+                .leftJoin('salesforce.accounts as V', 'job.vendorGuid', 'V.guid');
 
         },
         canServiceJobMarkAsDeleted: (queryBuilder) =>
