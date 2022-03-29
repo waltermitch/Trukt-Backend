@@ -339,7 +339,7 @@ class OrderJobService
             const bulkResponse = new BulkResponse();
             jobsUpdated.forEach((jobUpdated) =>
             {
-                const { jobGuid, status, error, data } = jobUpdated.value;
+                const { jobGuid, status, error, data } = jobUpdated.value || {};
 
                 bulkResponse.addResponse(jobGuid, error).getResponse(jobGuid).setStatus(status).setData(data);
             });
