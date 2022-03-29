@@ -127,31 +127,14 @@ class InvoiceController
 
     static async getOrderFinances(req, res, next, type)
     {
-        let orderGuid = req.params.orderGuid;
+        const guid = req.params.orderGuid || req.params.jobGuid;
 
         try
         {
-            // get request is job
-            if (type == 'job')
-            {
-                // get Order Guid
-                const result = await OrderJob.query().findById(req.params.jobGuid);
+            const result = await InvoiceService.getOrderFinances(guid, type);
 
-                if (!result)
-                    throw new NotFoundError(`Job with Guid ${req.params.jobGuid} not found.`);
-
-                orderGuid = result.orderGuid;
-            }
-
-            const result = await InvoiceService.getOrderInvoicesandBills(orderGuid);
-
-            if (!result)
-                throw new NotFoundError(`Order with Guid ${orderGuid} not found.`);
-            else
-            {
-                res.status(200);
-                res.json(result);
-            }
+            res.status(200);
+            res.json(result);
         }
         catch (error)
         {

@@ -98,6 +98,44 @@ class InvoiceBill extends BaseModel
                     },
                     item: true
                 }
+            },
+            'linkedInvoices': {
+                $modify: ['isNotDeleted'],
+                paymentTerms: true,
+                paymentMethod: true,
+                consignee: true,
+                lines: {
+                    $modify: ['isNotDeleted'],
+                    createdBy: true,
+                    commodity: {
+                        commType: true,
+                        vehicle: true
+                    },
+                    item: true,
+                    link:
+                    {
+                        $modify: ['isNotDeleted'],
+                        invoiceBill: {
+                            $modify: ['isNotDeleted'],
+                            paymentTerms: true,
+                            paymentMethod: true,
+                            consignee: true,
+                            lines: {
+                                $modify: ['isNotDeleted', 'isNonZero'],
+                                createdBy: true,
+                                commodity: {
+                                    commType: true,
+                                    vehicle:
+                                    {
+                                        $modify: ['withoutWeightClass']
+                                    }
+                                },
+                                item: true
+                            },
+                            order: true
+                        }
+                    }
+                }
             }
         };
     }
