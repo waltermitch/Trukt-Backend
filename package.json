@@ -30,7 +30,7 @@
         "@azure/service-bus": "^7.3.0",
         "@azure/storage-blob": "^12.8.0",
         "@azure/web-pubsub": "^1.0.0",
-        "@rcg_logistics/trimble-maps-node-sdk": "^1.0.5",
+        "@rcg_logistics/trimble-maps-node-sdk": "^1.0.7",
         "ajv": "^8.2.0",
         "ajv-keywords": "^5.0.0",
         "applicationinsights": "^2.1.9",
@@ -54,7 +54,6 @@
         "pg": "^8.7.1",
         "pg-connection-string": "^2.5.0",
         "ramda": "^0.27.1",
-        "trimble-maps-node-sdk": "^1.0.7",
         "us-state-codes": "^1.1.2",
         "uuid": "^8.3.2",
         "winston": "^3.3.3"
