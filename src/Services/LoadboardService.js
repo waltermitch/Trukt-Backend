@@ -492,7 +492,7 @@ class LoadboardService
                     extraAnnotations: {
                         loadboard: 'TRUKT',
                         code: 'ready',
-                        vendorGuid: dispatch.vendor.guid,
+                        vendorGuid: dispatch.vendor?.guid ?? null,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
                         vendorName: dispatch.vendor.name,
                         vendorAgentName: dispatch.vendorAgent.name,
@@ -534,9 +534,9 @@ class LoadboardService
                     .whereNotNull('rcgTms.orderStopLinks.orderGuid')
                     .distinctOn('rcgTms.orderStops.guid')
             ]);
-            const order = job.order;
             if (!job)
                 throw new NotFoundError('Job not found');
+            const order = job.order;
 
             job.validateJobForAccepting();
 

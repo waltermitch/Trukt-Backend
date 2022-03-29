@@ -120,8 +120,12 @@ class SFAccount extends BaseModel
     $formatJson(json)
     {
         json = super.$formatJson(json);
-
         json.rtype = json.rtype?.toLowerCase() ?? 'unknown';
+
+        if (!Object.keys(FieldFilters.whitelist.endpoint.byType.outgoing).includes(json.rtype))
+        {
+            json.rtype = 'unknown';
+        }
 
         const whitelist = FieldFilters.whitelist.endpoint.byType.outgoing[json.rtype];
         const copy = {};
@@ -153,7 +157,7 @@ class SFAccount extends BaseModel
 
         if (!account)
             errors.push(new NotFoundError('Vendor does not exist'));
-        if (account.blackList)
+        if (account?.blackList)
             errors.push(new DataConflictError('Vendor is blacklisted.'));
         if (account?.rectype?.name?.toLowerCase() !== 'vendor')
             errors.push(new DataConflictError('Provided vendor is not a valid vendor. Please contact support'));

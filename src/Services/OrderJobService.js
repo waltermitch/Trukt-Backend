@@ -863,7 +863,7 @@ class OrderJobService
                 errors.push('Cannot set to "Ready" because the job is Deleted');
             if (job.is_complete)
                 errors.push('Cannot set to "Ready" because the job is Compelete');
-            if (job.is_ready || job.verified_by_guid || job.date_verified)
+            if (job.is_ready && (job.verified_by_guid || job.date_verified))
                 errors.push('Order has been verified already.');
             if (job.vendor_guid && job.is_transport === false)
                 errors.push('Please un-assign the Vendor first.');
@@ -1504,12 +1504,14 @@ class OrderJobService
         {
             // validate if you job conditions
             const job = await OrderJobService.checkJobToCancel(jobGuid, trx);
+            const state = { status: OrderJob.STATUS.CANCELED, oldStatus: job.status };
 
             // deleted all postings attached to the job
             await LoadboardService.deletePostings(jobGuid, currentUser);
 
             // setting up canceled payload
             const payload = OrderJobService.createStatusPayload('canceled', currentUser);
+            payload.status = OrderJob.STATUS.CANCELED;
 
             // creating canceled request payload
             const loadboardRequestPayload = LoadboardRequest.createStatusPayload(currentUser).canceled;
@@ -1523,10 +1525,8 @@ class OrderJobService
 
             await trx.commit();
 
-            // setting off an event to update status manager
-            // this event will actually update the jobs status field and
-            // send the updated job info to the client
-            emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
+            // setting off an event to update status manager, this event will send the updated job info to the client
+            emitter.emit('orderjob_canceled', { orderGuid: job.orderGuid, currentUser, jobGuid, state });
 
             return { status: 200 };
         }
@@ -1602,26 +1602,40 @@ class OrderJobService
 
         return knex.raw(`
             SELECT
-                oj.status as current_status,
-                oj.is_on_hold,
-                oj.is_complete,
-                oj.is_deleted,
-                oj.is_canceled,
+                oj.status AS "currentStatus",
+                oj.is_on_hold AS "isOnHold",
+                oj.is_complete AS "isComplete",
+                oj.is_deleted AS "isDeleted",
+                oj.is_canceled AS "isCanceled",
+                oj.type_id AS "typeId",
 
                 ( SELECT bool_or(links.is_completed) 
                 FROM rcg_tms.order_stop_links links
                 LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid
-                WHERE links.job_guid = oj.guid AND stop.stop_type = 'pickup' ) AS is_pickedup,
+                WHERE links.job_guid = oj.guid AND stop.stop_type = '${OrderStop.TYPES.PICKUP}' ) AS "isPickedUp",
                 
-                ( SELECT bool_and(links.is_completed) FROM rcg_tms.order_stop_links links LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid WHERE links.job_guid = oj.guid AND stop.stop_type = 'delivery' ) AS is_delivered,
-                ( SELECT count(*) > 0 FROM rcg_tms.loadboard_posts lbp WHERE lbp.job_guid = oj.guid AND lbp.is_posted) AS is_posted,
+                ( SELECT bool_and(links.is_completed) FROM rcg_tms.order_stop_links links LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid WHERE links.job_guid = oj.guid AND stop.stop_type = '${OrderStop.TYPES.DELIVERY}' ) AS "isDelivered",
+
+                ( SELECT count(*) > 0 FROM rcg_tms.loadboard_posts lbp WHERE lbp.job_guid = oj.guid AND lbp.is_posted) AS "isPosted",
+
                 ( SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
-                    LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbp2.job_guid = oj.guid) AS has_requests,
-                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_pending) AS is_pending,
-                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_declined) AS is_declined,
-                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_accepted AND oj.vendor_guid IS NOT NULL ) AS is_dispatched,
-                oj.is_ready,
-                o.is_tender
+                    LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbp2.job_guid = oj.guid) AS "hasRequests",
+
+                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_pending) AS "isPending",
+
+                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_declined) AS "isDeclined",
+
+                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_accepted AND oj.vendor_guid IS NOT NULL ) AS "isDispatched",
+
+                (SELECT bool_and(links.is_completed) 
+                    FROM rcg_tms.order_stop_links links
+                    LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid
+                    WHERE links.job_guid = oj.guid
+                        AND (stop.stop_type = '${OrderStop.TYPES.PICKUP}' OR stop.stop_type = '${OrderStop.TYPES.DELIVERY}' OR stop.stop_type IS NULL))
+                AS "isServiceJobCompleted",
+
+                oj.is_ready AS "isReady",
+                o.is_tender AS "isTender"
             FROM
                 rcg_tms.order_jobs oj
             LEFT JOIN rcg_tms.orders o
@@ -1634,53 +1648,61 @@ class OrderJobService
             if (!statusArray)
                 throw new NotFoundError('Job does not exist');
 
-            const p = { currentStatus: statusArray.current_status };
+            const p = { currentStatus: statusArray.currentStatus };
 
-            if (statusArray.is_on_hold)
+            if (statusArray.isOnHold)
             {
                 p.expectedStatus = OrderJob.STATUS.ON_HOLD;
             }
-            else if (statusArray.is_complete)
+            else if (statusArray.isComplete)
             {
                 p.expectedStatus = OrderJob.STATUS.COMPLETED;
             }
-            else if (statusArray.is_deleted)
+            else if (statusArray.isDeleted)
             {
                 p.expectedStatus = OrderJob.STATUS.DELETED;
             }
-            else if (statusArray.is_canceled)
+            else if (statusArray.isCanceled)
             {
                 p.expectedStatus = OrderJob.STATUS.CANCELED;
             }
-            else if (statusArray.is_delivered)
+            else if (statusArray.isDelivered && statusArray.typeId === OrderJobType.TYPES.TRANSPORT)
             {
                 p.expectedStatus = OrderJob.STATUS.DELIVERED;
             }
-            else if (statusArray.is_pickedup)
+            else if (statusArray.isPickedUp && statusArray.typeId === OrderJobType.TYPES.TRANSPORT)
             {
                 p.expectedStatus = OrderJob.STATUS.PICKED_UP;
             }
-            else if (statusArray.is_posted || statusArray.has_requests)
+            else if (statusArray.isPosted || statusArray.hasRequests)
             {
                 p.expectedStatus = OrderJob.STATUS.POSTED;
             }
-            else if (statusArray.is_pending)
+            else if (statusArray.isPending)
             {
                 p.expectedStatus = OrderJob.STATUS.PENDING;
             }
-            else if (statusArray.is_declined)
+            else if (statusArray.isDeclined)
             {
                 p.expectedStatus = OrderJob.STATUS.DECLINED;
             }
-            else if (statusArray.is_dispatched)
+            else if (statusArray.isDispatched && statusArray.typeId === OrderJobType.TYPES.TRANSPORT)
             {
                 p.expectedStatus = OrderJob.STATUS.DISPATCHED;
             }
-            else if (statusArray.is_ready)
+            else if (statusArray.isDispatched && !statusArray.isServiceJobCompleted && statusArray.typeId !== OrderJobType.TYPES.TRANSPORT)
+            {
+                p.expectedStatus = OrderJob.STATUS.IN_PROGRESS;
+            }
+            else if (statusArray.isServiceJobCompleted && statusArray.typeId !== OrderJobType.TYPES.TRANSPORT)
+            {
+                p.expectedStatus = OrderJob.STATUS.COMPLETED;
+            }
+            else if (statusArray.isReady)
             {
                 p.expectedStatus = OrderJob.STATUS.READY;
             }
-            else if (statusArray.is_tender)
+            else if (statusArray.isTender)
             {
                 p.expectedStatus = 'tender';
             }
@@ -1710,7 +1732,7 @@ class OrderJobService
         else
         {
             const job = await OrderJob.query()
-                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser }))
+                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser, isComplete: state.expectedStatus === OrderJob.STATUS.COMPLETED }))
                 .findById(jobGuid)
                 .returning('status');
 
@@ -1767,7 +1789,8 @@ class OrderJobService
         const {
             vendor: { guid: vendorGuid } = {},
             agent: { guid: agentGuid, ...agentInfo } = {},
-            contact: { guid: contactGuid, ...contactInfo } = {}
+            contact: { guid: contactGuid, ...contactInfo } = {},
+            paymentTerm, price, dispatchDate
         } = body ?? {};
 
         try
@@ -1775,7 +1798,7 @@ class OrderJobService
             // to collect and throw serviceJob and vendor errors
             const appResponse = new AppResponse();
 
-            const [serviceJob, vendor] = await Promise.all([OrderJob.query().withGraphFetched('bills').findById(jobGuid), SFAccount.query().withGraphFetched('rectype').findById(vendorGuid)]);
+            const [serviceJob, vendor] = await Promise.all([OrderJob.query(trx).withGraphFetched('[bills, stops(distinct)]').findById(jobGuid), SFAccount.query(trx).withGraphFetched('rectype').findById(vendorGuid)]);
 
             appResponse.addError(...OrderJob.validateReadyServiceJobToInProgress(serviceJob));
             appResponse.addError(...SFAccount.validateAccountForServiceJob(vendor));
@@ -1801,7 +1824,9 @@ class OrderJobService
                 isDeclined: false,
                 isDeleted: false,
                 isCanceled: false,
-                dateAccepted: dateStarted
+                dateAccepted: dateStarted,
+                paymentTermId: paymentTerm,
+                price: price
             }));
 
             promises.push(serviceJob.$query(trx).patch({
@@ -1821,6 +1846,13 @@ class OrderJobService
                         consigneeGuid: vendor.guid
                     })
             );
+
+            // Set scheduled date on the first pickup stop
+            const [firstPickUpStop] = OrderStop.firstAndLast(serviceJob?.stops);
+            firstPickUpStop.setScheduledDates(dispatchDate.dateType, dispatchDate.startDate, dispatchDate?.endDate);
+            firstPickUpStop.setUpdatedBy(currentUser);
+
+            promises.push(OrderStop.query(trx).patch(firstPickUpStop).findById(firstPickUpStop.guid));
 
             const [dispatch] = await Promise.all(promises);
 

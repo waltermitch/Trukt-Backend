@@ -2,6 +2,16 @@ const BaseModel = require('./BaseModel');
 
 class OrderJobType extends BaseModel
 {
+    static TYPES = {
+        TRANSPORT: 1,
+        LOCKSMITH: 2,
+        UNLOADING: 3,
+        LOADING: 4,
+        REPAIR: 5,
+        DIAGNOSTICS: 6,
+        DRY_RUN: 7
+    }
+
     static get tableName()
     {
         return 'rcgTms.orderJobTypes';
