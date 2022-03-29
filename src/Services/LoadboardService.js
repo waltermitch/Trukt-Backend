@@ -492,7 +492,7 @@ class LoadboardService
                     extraAnnotations: {
                         loadboard: 'TRUKT',
                         code: 'ready',
-                        vendorGuid: dispatch.vendor.guid,
+                        vendorGuid: dispatch.vendor?.guid ?? null,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
                         vendorName: dispatch.vendor.name,
                         vendorAgentName: dispatch.vendorAgent.name,

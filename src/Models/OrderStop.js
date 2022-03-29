@@ -3,6 +3,12 @@ const BaseModel = require('./BaseModel');
 
 class OrderStop extends BaseModel
 {
+    static TYPES = {
+        PICKUP: 'pickup',
+        DELIVERY: 'delivery',
+        SERVICE: null
+    };
+
     static get tableName()
     {
         return 'rcgTms.orderStops';

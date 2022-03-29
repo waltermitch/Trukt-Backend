@@ -23,6 +23,7 @@ const OrderJobDispatch = require('../Models/OrderJobDispatch');
 const SFAccount = require('../Models/SFAccount');
 const SFContact = require('../Models/SFContact');
 const InvoiceBill = require('../Models/InvoiceBill');
+const OrderJobType = require('../Models/OrderJobType');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -1600,26 +1601,40 @@ class OrderJobService
 
         return knex.raw(`
             SELECT
-                oj.status as current_status,
-                oj.is_on_hold,
-                oj.is_complete,
-                oj.is_deleted,
-                oj.is_canceled,
+                oj.status AS "currentStatus",
+                oj.is_on_hold AS "isOnHold",
+                oj.is_complete AS "isComplete",
+                oj.is_deleted AS "isDeleted",
+                oj.is_canceled AS "isCanceled",
+                oj.type_id AS "typeId",
 
                 ( SELECT bool_or(links.is_completed) 
                 FROM rcg_tms.order_stop_links links
                 LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid
-                WHERE links.job_guid = oj.guid AND stop.stop_type = 'pickup' ) AS is_pickedup,
+                WHERE links.job_guid = oj.guid AND stop.stop_type = '${OrderStop.TYPES.PICKUP}' ) AS "isPickedUp",
                 
-                ( SELECT bool_and(links.is_completed) FROM rcg_tms.order_stop_links links LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid WHERE links.job_guid = oj.guid AND stop.stop_type = 'delivery' ) AS is_delivered,
-                ( SELECT count(*) > 0 FROM rcg_tms.loadboard_posts lbp WHERE lbp.job_guid = oj.guid AND lbp.is_posted) AS is_posted,
+                ( SELECT bool_and(links.is_completed) FROM rcg_tms.order_stop_links links LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid WHERE links.job_guid = oj.guid AND stop.stop_type = '${OrderStop.TYPES.DELIVERY}' ) AS "isDelivered",
+
+                ( SELECT count(*) > 0 FROM rcg_tms.loadboard_posts lbp WHERE lbp.job_guid = oj.guid AND lbp.is_posted) AS "isPosted",
+
                 ( SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
-                    LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbp2.job_guid = oj.guid) AS has_requests,
-                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_pending) AS is_pending,
-                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_declined) AS is_declined,
-                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_accepted AND oj.vendor_guid IS NOT NULL ) AS is_dispatched,
-                oj.is_ready,
-                o.is_tender
+                    LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbp2.job_guid = oj.guid) AS "hasRequests",
+
+                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_pending) AS "isPending",
+
+                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_declined) AS "isDeclined",
+
+                ( SELECT count(*) > 0 FROM rcg_tms.order_job_dispatches ojd WHERE ojd.job_guid = oj.guid AND ojd.is_valid AND ojd.is_accepted AND oj.vendor_guid IS NOT NULL ) AS "isDispatched",
+
+                (SELECT bool_and(links.is_completed) 
+                    FROM rcg_tms.order_stop_links links
+                    LEFT JOIN rcg_tms.order_stops stop ON stop.guid = links.stop_guid
+                    WHERE links.job_guid = oj.guid
+                        AND (stop.stop_type = '${OrderStop.TYPES.PICKUP}' OR stop.stop_type = '${OrderStop.TYPES.DELIVERY}' OR stop.stop_type IS NULL))
+                AS "isServiceJobCompleted",
+
+                oj.is_ready AS "isReady",
+                o.is_tender AS "isTender"
             FROM
                 rcg_tms.order_jobs oj
             LEFT JOIN rcg_tms.orders o
@@ -1632,53 +1647,61 @@ class OrderJobService
             if (!statusArray)
                 throw new NotFoundError('Job does not exist');
 
-            const p = { currentStatus: statusArray.current_status };
+            const p = { currentStatus: statusArray.currentStatus };
 
-            if (statusArray.is_on_hold)
+            if (statusArray.isOnHold)
             {
                 p.expectedStatus = OrderJob.STATUS.ON_HOLD;
             }
-            else if (statusArray.is_complete)
+            else if (statusArray.isComplete)
             {
                 p.expectedStatus = OrderJob.STATUS.COMPLETED;
             }
-            else if (statusArray.is_deleted)
+            else if (statusArray.isDeleted)
             {
                 p.expectedStatus = OrderJob.STATUS.DELETED;
             }
-            else if (statusArray.is_canceled)
+            else if (statusArray.isCanceled)
             {
                 p.expectedStatus = OrderJob.STATUS.CANCELED;
             }
-            else if (statusArray.is_delivered)
+            else if (statusArray.isDelivered && statusArray.typeId === OrderJobType.TYPES.TRANSPORT)
             {
                 p.expectedStatus = OrderJob.STATUS.DELIVERED;
             }
-            else if (statusArray.is_pickedup)
+            else if (statusArray.isPickedUp && statusArray.typeId === OrderJobType.TYPES.TRANSPORT)
             {
                 p.expectedStatus = OrderJob.STATUS.PICKED_UP;
             }
-            else if (statusArray.is_posted || statusArray.has_requests)
+            else if (statusArray.isPosted || statusArray.hasRequests)
             {
                 p.expectedStatus = OrderJob.STATUS.POSTED;
             }
-            else if (statusArray.is_pending)
+            else if (statusArray.isPending)
             {
                 p.expectedStatus = OrderJob.STATUS.PENDING;
             }
-            else if (statusArray.is_declined)
+            else if (statusArray.isDeclined)
             {
                 p.expectedStatus = OrderJob.STATUS.DECLINED;
             }
-            else if (statusArray.is_dispatched)
+            else if (statusArray.isDispatched && statusArray.typeId === OrderJobType.TYPES.TRANSPORT)
             {
                 p.expectedStatus = OrderJob.STATUS.DISPATCHED;
             }
-            else if (statusArray.is_ready)
+            else if (statusArray.isDispatched && !statusArray.isServiceJobCompleted && statusArray.typeId !== OrderJobType.TYPES.TRANSPORT)
+            {
+                p.expectedStatus = OrderJob.STATUS.IN_PROGRESS;
+            }
+            else if (statusArray.isServiceJobCompleted && statusArray.typeId !== OrderJobType.TYPES.TRANSPORT)
+            {
+                p.expectedStatus = OrderJob.STATUS.COMPLETED;
+            }
+            else if (statusArray.isReady)
             {
                 p.expectedStatus = OrderJob.STATUS.READY;
             }
-            else if (statusArray.is_tender)
+            else if (statusArray.isTender)
             {
                 p.expectedStatus = 'tender';
             }
@@ -1708,7 +1731,7 @@ class OrderJobService
         else
         {
             const job = await OrderJob.query()
-                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser }))
+                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser, isComplete: state.expectedStatus === OrderJob.STATUS.COMPLETED }))
                 .findById(jobGuid)
                 .returning('status');
 
