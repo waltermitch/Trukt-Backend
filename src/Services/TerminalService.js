@@ -1,5 +1,5 @@
 const { MissingDataError, DataConflictError, ValidationError } = require('../ErrorHandling/Exceptions');
-const { SingleSearch, RoutingApi } = require('trimble-maps-node-sdk');
+const { Trimble } = require('@rcg_logistics/trimble-maps-node-sdk');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
@@ -21,8 +21,7 @@ const keywordFields =
     'address': ['street1', 'street2']
 };
 
-SingleSearch.setKey(key);
-RoutingApi.setKey(key);
+Trimble.setKey(key);
 
 const terminalsQueue = new Queue({ queue: 'unresolved_terminals' });
 
@@ -30,7 +29,7 @@ class TerminalService
 {
     static async geocodeAddress(address)
     {
-        const [res] = await SingleSearch.geocodeAddress(address);
+        const [res] = await Trimble.geocodeAddress(address, { format: true });
 
         return res;
     }
@@ -198,7 +197,7 @@ class TerminalService
                 const terminalAddress = Terminal.createStringAddress(terminal);
 
                 // lookup candidates
-                const [candidate] = await SingleSearch.geocodeAddress(terminalAddress);
+                const [candidate] = await Trimble.geocodeAddress(terminalAddress, { format: true });
 
                 // check score of first candidate
                 if (candidate?.score <= 2)
