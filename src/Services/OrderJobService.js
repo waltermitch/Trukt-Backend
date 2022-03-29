@@ -71,8 +71,6 @@ class OrderJobService
 
     static async bulkUpdateUsers({ jobs = [], dispatcher = undefined })
     {
-        const results = {};
-
         // additional fields can be added here
         const payload =
         {
