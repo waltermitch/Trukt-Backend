@@ -1538,11 +1538,19 @@ class OrderJobService
     static async checkJobToCancel(jobGuid, trx)
     {
         const jobStatus = [
-            OrderJob.query(trx).alias('job').select('job.orderGuid', 'job.isDeleted', 'job.status', 'job.vendorGuid').findOne('job.guid', jobGuid)
-                .modify('isServiceJob').modify('vendorName'),
             OrderJob.query(trx).alias('job')
-                .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
-            OrderJob.query(trx).findOne('guid', jobGuid).modify('canServiceJobMarkAsCanceled')
+                .select('job.orderGuid', 'job.isDeleted', 'job.status', 'job.vendorGuid')
+                .findOne('job.guid', jobGuid)
+                .modify('isServiceJob').modify('vendorName'),
+
+            OrderJob.query(trx).alias('job')
+                .select('guid')
+                .findOne('guid', jobGuid)
+                .modify('statusDispatched'),
+
+            OrderJob.query(trx)
+                .findOne('guid', jobGuid)
+                .modify('canServiceJobMarkAsCanceled')
         ];
 
         const [job, jobIsDispatched, canServiceJobMarkAsCanceled] = await Promise.all(jobStatus);
