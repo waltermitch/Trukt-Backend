@@ -920,7 +920,7 @@ class OrderJobService
         const jobsNotFoundExceptions = new AppResponse();
 
         // getting all jobs guid and tranport field to help differentiate job types
-        const jobsGuidsFound = await OrderJob.query().alias('OJ').select('OJ.guid')
+        const jobsGuidsFound = await OrderJob.query().alias('job').select('job.guid')
             .modify('isServiceJob')
             .findByIds(jobGuids);
 
@@ -1112,13 +1112,13 @@ class OrderJobService
     static async checkServiceJobsToMarkAsReady(serviceJobsFound)
     {
         // Check jobs that have at leats one stop, with 1 commodity asigned and dateRequested is not null
-        const jobsChecked = await OrderStopLink.query().distinct('jobGuid', 'OJ.dispatcherGuid', 'OJ.status', raw('o_j."canBeMarkAsReady"'))
+        const jobsChecked = await OrderStopLink.query().distinct('jobGuid', 'job.dispatcherGuid', 'job.status', raw('o_j."canBeMarkAsReady"'))
             .joinRelated('stop')
             .innerJoin(
                 OrderJob.query().select('guid', 'dispatcherGuid', 'status')
                     .modify('canServiceJobMarkAsReady')
-                    .groupBy('guid').as('OJ'),
-                'jobGuid', 'OJ.guid'
+                    .groupBy('guid').as('job'),
+                'jobGuid', 'job.guid'
             )
             .whereIn('jobGuid', serviceJobsFound)
             .whereNotNull('dateRequestedStart');
@@ -1973,11 +1973,22 @@ class OrderJobService
     static async checkJobToDelete(jobGuid, trx)
     {
         const jobStatus = [
-            OrderJob.query(trx).alias('OJ').select('OJ.orderGuid', 'OJ.isDeleted', 'OJ.status', 'OJ.vendorGuid').findOne('OJ.guid', jobGuid)
-                .modify('isServiceJob').modify('vendorName'),
-            OrderJob.query(trx).alias('job')
-                .select('guid').findOne('guid', jobGuid).modify('statusDispatched'),
-            OrderJob.query(trx).findOne('guid', jobGuid).modify('canServiceJobMarkAsDeleted')
+            OrderJob.query(trx)
+                .alias('job')
+                .select('job.orderGuid', 'job.isDeleted', 'job.status', 'job.vendorGuid')
+                .findOne('job.guid', jobGuid)
+                .modify('isServiceJob')
+                .modify('vendorName'),
+
+            OrderJob.query(trx)
+                .alias('job')
+                .select('guid')
+                .findOne('guid', jobGuid)
+                .modify('statusDispatched'),
+
+            OrderJob.query(trx)
+                .findOne('guid', jobGuid)
+                .modify('canServiceJobMarkAsDeleted')
         ];
 
         const [job, jobIsDispatched, canServiceJobMarkAsDeleted] = await Promise.all(jobStatus);
@@ -1997,8 +2008,8 @@ class OrderJobService
 
         // Use modifier "isServiceJob" and "canServiceJobMarkAsOnHold" for service job validations
         const job = await OrderJob.query(trx)
-            .alias('OJ')
-            .select('OJ.guid', 'OJ.number', 'OJ.orderGuid', 'OJ.status')
+            .alias('job')
+            .select('job.guid', 'job.number', 'job.orderGuid', 'job.status')
             .findById(jobGuid)
             .withGraphFetched('[loadboardPosts(getPosted), dispatches(activeDispatch), requests(validActive)]')
             .modifyGraph('loadboardPosts', builder => builder
@@ -2008,7 +2019,7 @@ class OrderJobService
             .modifyGraph('requests', builder => builder.select('loadboardRequests.guid'))
             .modify('isServiceJob')
             .modify('canServiceJobMarkAsOnHold')
-            .groupBy('OJ.guid', 'OJ.number', 'OJ.orderGuid', 'OJ.status', raw('"isServiceJob"'));
+            .groupBy('job.guid', 'job.number', 'job.orderGuid', 'job.status', raw('"isServiceJob"'));
 
         if (!job)
             throw new NotFoundError('Job not found');
