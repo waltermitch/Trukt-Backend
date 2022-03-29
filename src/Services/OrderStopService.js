@@ -6,6 +6,7 @@ const OrderJob = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
 const R = require('ramda');
 const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
+const OrderJobType = require('../Models/OrderJobType');
 
 class OrderStopService
 {
@@ -333,15 +334,15 @@ class OrderStopService
             SET
                 updated_by_guid = '${currentUser}',
             	status = CASE
-                            WHEN job.type_id = 1 THEN
+                            WHEN job.type_id = ${OrderJobType.TYPES.TRANSPORT} THEN
                                 CASE 
                                     WHEN stop.is_started = false AND stop.is_completed = false then NULL
-                                    WHEN stop.stop_type = 'pickup' AND stop.is_started = true AND stop.is_completed = true THEN 'picked up'
-                                    WHEN (stop.stop_type = 'pickup' OR stop.stop_type = 'delivery') AND stop.is_completed = false AND stop.is_started = true THEN 'en route'
-                                    WHEN stop.stop_type = 'delivery' and stop.is_started = true and stop.is_completed = true then 'delivered'
+                                    WHEN stop.stop_type = '${OrderStop.TYPES.PICKUP}' AND stop.is_started = true AND stop.is_completed = true THEN 'picked up'
+                                    WHEN (stop.stop_type = '${OrderStop.TYPES.PICKUP}' OR stop.stop_type = '${OrderStop.TYPES.DELIVERY}') AND stop.is_completed = false AND stop.is_started = true THEN 'en route'
+                                    WHEN stop.stop_type = '${OrderStop.TYPES.DELIVERY}' and stop.is_started = true and stop.is_completed = true then 'delivered'
                                 END 
-                            WHEN (stop.stop_type IS NULL OR stop.stop_type = 'pickup' OR stop.stop_type = 'delivery') and stop.is_started = true AND stop.is_completed = false THEN 'started'
-                            WHEN (stop.stop_type IS NULL OR stop.stop_type = 'pickup' OR stop.stop_type = 'delivery') and stop.is_started = true AND stop.is_completed = true THEN 'completed'
+                            WHEN (stop.stop_type IS NULL OR stop.stop_type = '${OrderStop.TYPES.PICKUP}' OR stop.stop_type = '${OrderStop.TYPES.DELIVERY}') and stop.is_started = true AND stop.is_completed = false THEN 'started'
+                            WHEN (stop.stop_type IS NULL OR stop.stop_type = '${OrderStop.TYPES.PICKUP}' OR stop.stop_type = '${OrderStop.TYPES.DELIVERY}') and stop.is_started = true AND stop.is_completed = true THEN 'completed'
                         END
             FROM rcg_tms.order_jobs job, rcg_tms.order_stop_links link
             WHERE stop.guid = '${stopGuid}'
