@@ -1,28 +1,29 @@
+const { MissingDataError, NotFoundError, DataConflictError, ValidationError, ApiError, ApplicationError } = require('../ErrorHandling/Exceptions');
+const { AppResponse, BulkResponse } = require('../ErrorHandling/Responses');
 const LoadboardService = require('../Services/LoadboardService');
 const LoadboardRequest = require('../Models/LoadboardRequest');
+const OrderJobDispatch = require('../Models/OrderJobDispatch');
+const InvoiceLineLink = require('../Models/InvoiceLineLink');
 const LoadboardPost = require('../Models/LoadboardPost');
 const OrderStopLink = require('../Models/OrderStopLink');
+const OrderJobType = require('../Models/OrderJobType');
 const InvoiceLine = require('../Models/InvoiceLine');
 const { uuidRegexStr } = require('../Utils/Regexes');
+const InvoiceBill = require('../Models/InvoiceBill');
 const emitter = require('../EventListeners/index');
 const knex = require('../Models/BaseModel').knex();
+const SFAccount = require('../Models/SFAccount');
+const SFContact = require('../Models/SFContact');
 const OrderStop = require('../Models/OrderStop');
 const Commodity = require('../Models/Commodity');
+const Loadboards = require('../Loadboards/API');
 const OrderJob = require('../Models/OrderJob');
 const Invoice = require('../Models/Invoice');
 const Currency = require('currency.js');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
-const R = require('ramda');
-const InvoiceLineLink = require('../Models/InvoiceLineLink');
-const Loadboards = require('../Loadboards/API');
 const { raw } = require('objection');
-const { MissingDataError, NotFoundError, DataConflictError, ValidationError, ApiError, ApplicationError } = require('../ErrorHandling/Exceptions');
-const { AppResponse, BulkResponse } = require('../ErrorHandling/Responses');
-const OrderJobDispatch = require('../Models/OrderJobDispatch');
-const SFAccount = require('../Models/SFAccount');
-const SFContact = require('../Models/SFContact');
-const InvoiceBill = require('../Models/InvoiceBill');
+const R = require('ramda');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -391,9 +392,9 @@ class OrderJobService
             return await OrderJobService[`${generalBulkFunctionName}Job`](jobGuid, userGuid)
                 .then(result =>
                 {
-                    const status = result.status;
-                    const { data } = result?.message;
-                    return { jobGuid, error: null, status, data };
+                    const { status, message } = result;
+
+                    return { jobGuid, error: null, status, data: message?.data };
                 })
                 .catch(error =>
                 {
@@ -1519,6 +1520,7 @@ class OrderJobService
                 LoadboardRequest.query(trx).patch(loadboardRequestPayload).whereIn('loadboardPostGuid',
                     LoadboardPost.query(trx).select('guid').where('jobGuid', jobGuid))
             ]);
+
             await trx.commit();
 
             // setting off an event to update status manager
