@@ -202,7 +202,7 @@ class TerminalService
                 // check score of first candidate
                 if (candidate?.score <= 2)
                 {
-                    const [long, lat] = candidate.geo;
+                    const { lat, long } = candidate;
 
                     // at this point we have a match, but we don't know if there is a terminal with this lat/long in the db already
                     // if there is an existing terminal we need to update all the objects related to this terminal to use that one
@@ -294,7 +294,7 @@ class TerminalService
     // in the processing normalizing the address formatting, etc and mark it as resolved
     static async normalizeTerminal(terminal, match, trx)
     {
-        const [long, lat] = match.geo;
+        const { lat, long } = match;
 
         const payload =
         {
