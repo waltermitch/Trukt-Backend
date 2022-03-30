@@ -1,3 +1,4 @@
+const { MissingDataError } = require('../ErrorHandling/Exceptions');
 const { WebPubSubServiceClient } = require('@azure/web-pubsub');
 
 const connectionString = process.env.AZURE_PUBSUB_CONNECTIONSTRING;
@@ -14,9 +15,25 @@ class PubSub
         return token;
     }
 
-    static async publishToGroup(groupName, message)
+    static async publishToGroup(data, object, parent = {})
     {
-        await service.group(groupName).sendToAll(message);
+        // data is always required
+        if (!data)
+            throw new MissingDataError('data property is required to publish to pubsub');
+
+        // generic structure for all messages
+        const message =
+        {
+            metadata:
+            {
+                object,
+                parent
+            },
+            data
+        };
+
+        // our group name is the same as the hub name
+        await service.group(hubName).sendToAll(message);
     }
 }
 
