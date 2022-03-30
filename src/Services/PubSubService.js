@@ -13,13 +13,13 @@ class PubSubService
         else if (Object.keys(payload).length === 0)
             throw new MissingDataError('non-empty payload is required to publish to job updates to pubsub', { payload });
 
-        const data =
+        const object =
         {
-            'object': 'job',
-            'data': payload
+            'name': 'job',
+            'guid': jobGuid
         };
 
-        await PubSub.publishToGroup(jobGuid, data);
+        await PubSub.publishToGroup(payload, object);
     }
 
     static async jobActivityUpdate(jobGuid, payload)
@@ -29,13 +29,9 @@ class PubSubService
         else if (Object.keys(payload).length === 0)
             throw new MissingDataError('non-empty payload is required to publish to job updates to pubsub', { payload });
 
-        const data =
-        {
-            'object': 'activity',
-            'data': payload
-        };
+        const { parent, object } = PubSubService.buildObjectAndParent(jobGuid, 'job', 'activity', payload);
 
-        await PubSub.publishToGroup(jobGuid, data);
+        await PubSub.publishToGroup(payload, object, parent);
     }
 
     static async publishJobPostings(jobGuid, payload)
@@ -45,13 +41,9 @@ class PubSubService
         else if (Object.keys(payload).length === 0)
             throw new MissingDataError('non-empty payload is required to publish to job updates to pubsub ', { payload });
 
-        const data =
-        {
-            'object': 'posting',
-            'data': payload
-        };
+        const { parent, object } = PubSubService.buildObjectAndParent(jobGuid, 'job', 'posting', payload);
 
-        await PubSub.publishToGroup(jobGuid, data);
+        await PubSub.publishToGroup(payload, object, parent);
     }
 
     static async publishJobRequests(jobGuid, payload)
@@ -61,13 +53,40 @@ class PubSubService
         else if (Object.keys(payload).length === 0)
             throw new MissingDataError('non-empty payload is required to publish to job updates to pubsub, received: ' + JSON.stringify(payload));
 
-        const data =
+        const { parent, object } = PubSubService.buildObjectAndParent(jobGuid, 'job', 'request', payload);
+
+        await PubSub.publishToGroup(payload, object, parent);
+    }
+
+    // here we use parentGuid because sometimes its a job guid and sometimes it's an order guid
+    static async publishNote(parentGuid, parentName, payload, action)
+    {
+        if (!parentGuid || !parentName)
+            throw new MissingDataError('parentGuid and parentName are required to publish to note updates to pubsub');
+
+        const { object, parent } = PubSubService.buildObjectAndParent(parentGuid, parentName, 'note', payload);
+
+        // set the action on the object (created, updated, deleted)
+        object.action = action;
+
+        await PubSub.publishToGroup(payload, object, parent);
+    }
+
+    static buildObjectAndParent(parentGuid, parentName, objectName, objectInfo)
+    {
+        const parent =
         {
-            'object': 'requests',
-            'data': payload
+            'name': parentName,
+            'guid': parentGuid
         };
 
-        await PubSub.publishToGroup(jobGuid, data);
+        const object =
+        {
+            'name': objectName,
+            'guid': objectInfo.guid
+        };
+
+        return { parent, object };
     }
 }
 
