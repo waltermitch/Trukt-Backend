@@ -678,18 +678,18 @@ class OrderJob extends BaseModel
             `));
         },
 
-        // Uses OrderJob alias as OJ
+        // Uses OrderJob alias as job
         isServiceJob: (queryBuilder) =>
         {
-            queryBuilder.select(raw('(case when o_j_t.category=\'service\' then true else false END) as "isServiceJob"'))
-                .innerJoin('rcgTms.orderJobTypes as OJT', 'OJ.typeId', 'OJT.id');
+            queryBuilder.select(raw('(case when job_types.category=\'service\' then true else false END) as "isServiceJob"'))
+                .innerJoin('rcgTms.orderJobTypes as job_types', 'job.typeId', '=', 'job_types.id');
         },
 
-        // Uses OrderJob alias as OJ
+        // Uses OrderJob alias as job
         vendorName: (queryBuilder) =>
         {
             queryBuilder.select('V.name as vendorName')
-                .leftJoin('salesforce.accounts as V', 'OJ.vendorGuid', 'V.guid');
+                .leftJoin('salesforce.accounts as V', 'job.vendorGuid', 'V.guid');
 
         },
         canServiceJobMarkAsDeleted: (queryBuilder) =>
@@ -912,17 +912,23 @@ class OrderJob extends BaseModel
     static ordersWithInvoicesPaidQuery(Model)
     {
         const ordersGroupByInvoicesPaid = OrderJob.baseAccountingGroupByAllPaid(Model, 'orderGuid', 'invoiceBills', 'invoiceGuid', 'guid');
-        return OrderJob.query().alias('OJ').with('ordersFullPaid', ordersGroupByInvoicesPaid)
+        return OrderJob.query()
+            .alias('OJ')
+            .with('ordersFullPaid', ordersGroupByInvoicesPaid)
             .innerJoin('ordersFullPaid as OFP', 'OFP.orderGuid', 'OJ.orderGuid')
-            .select('guid').where('all_paid', true);
+            .select('guid')
+            .where('all_paid', true);
     }
 
     static ordersWithLinesPaidQuery(Model)
     {
         const ordersGroupByLinesPaid = OrderJob.baseAccountingGroupByAllPaid(Model, 'orderGuid', 'invoiceBillLines as IBL', 'invoiceGuid', 'IBL.invoiceGuid');
-        return OrderJob.query().alias('OJ').with('orderLinesFullPaid', ordersGroupByLinesPaid)
+        return OrderJob.query()
+            .alias('OJ')
+            .with('orderLinesFullPaid', ordersGroupByLinesPaid)
             .innerJoin('orderLinesFullPaid as OFP', 'OJ.orderGuid', 'OFP.orderGuid')
-            .select('guid').where('all_paid', true);
+            .select('guid')
+            .where('all_paid', true);
     }
 
     /**

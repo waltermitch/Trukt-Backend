@@ -1,5 +1,5 @@
 const { MissingDataError, DataConflictError, ValidationError } = require('../ErrorHandling/Exceptions');
-const { SingleSearch, RoutingApi } = require('trimble-maps-node-sdk');
+const { Trimble } = require('@rcg_logistics/trimble-maps-node-sdk');
 const LocationLinks = require('../Models/CopartLocationLinks');
 const TerminalContacts = require('../Models/TerminalContact');
 const telemetryClient = require('../ErrorHandling/Insights');
@@ -21,8 +21,7 @@ const keywordFields =
     'address': ['street1', 'street2']
 };
 
-SingleSearch.setKey(key);
-RoutingApi.setKey(key);
+Trimble.setKey(key);
 
 const terminalsQueue = new Queue({ queue: 'unresolved_terminals' });
 
@@ -30,7 +29,7 @@ class TerminalService
 {
     static async geocodeAddress(address)
     {
-        const [res] = await SingleSearch.geocodeAddress(address);
+        const [res] = await Trimble.geocodeAddress(address, { format: true });
 
         return res;
     }
@@ -198,12 +197,12 @@ class TerminalService
                 const terminalAddress = Terminal.createStringAddress(terminal);
 
                 // lookup candidates
-                const [candidate] = await SingleSearch.geocodeAddress(terminalAddress);
+                const [candidate] = await Trimble.geocodeAddress(terminalAddress, { format: true });
 
                 // check score of first candidate
                 if (candidate?.score <= 2)
                 {
-                    const [long, lat] = candidate.geo;
+                    const { lat, long } = candidate;
 
                     // at this point we have a match, but we don't know if there is a terminal with this lat/long in the db already
                     // if there is an existing terminal we need to update all the objects related to this terminal to use that one
@@ -295,7 +294,7 @@ class TerminalService
     // in the processing normalizing the address formatting, etc and mark it as resolved
     static async normalizeTerminal(terminal, match, trx)
     {
-        const [long, lat] = match.geo;
+        const { lat, long } = match;
 
         const payload =
         {
