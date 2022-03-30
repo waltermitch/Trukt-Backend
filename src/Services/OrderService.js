@@ -2262,12 +2262,12 @@ class OrderService
 
                 const candidate = await TerminalService.geocodeAddress(stringAddress);
 
-                if (candidate && candidate.geo?.length > 0)
+                if (candidate.lat && candidate.long)
                 {
-                    const [longitude, latitude] = candidate.geo;
+                    const { lat, long } = candidate;
                     const terminalToUpdate = await Terminal.query(trx).findOne({
-                        latitude,
-                        longitude
+                        lat,
+                        long
                     });
 
                     // Terminal exists, now we have to add non essential information
@@ -2294,8 +2294,8 @@ class OrderService
                         const { guid, ...terminalInfoToCreate } = terminalData;
                         const terminalToCreate = Terminal.fromJson({
                             ...terminalInfoToCreate,
-                            latitude,
-                            longitude,
+                            lat,
+                            long,
                             isResolved: true
                         });
                         terminalToCreate.setCreatedBy(currentUser);
