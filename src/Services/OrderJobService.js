@@ -1569,38 +1569,54 @@ class OrderJobService
 
     static async uncancelJob(jobGuid, currentUser)
     {
-        const job = await OrderJob.query().select('orderGuid', 'isCanceled', 'status').findOne('guid', jobGuid);
-        if (!job)
-            throw new NotFoundError('Job does not exist');
-        if (!job.isCanceled)
-            return { status: 200, message: { data: { status: job.status } } };
+        const trx = await OrderJob.startTransaction();
 
-        // setting job to 'new' status so it can pass the conditions to
-        // transition to ready
-        const payload = OrderJobService.createStatusPayload('new', currentUser);
-        const jobUpdated = await OrderJob.query().patchAndFetchById(jobGuid, payload);
-
-        const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([jobUpdated.guid]);
-        let data;
-        if (goodJobs.length === 1)
+        try
         {
-            data = await OrderJob.query().patch({
-                isReady: true,
-                dateVerified: DateTime.utc().toString(),
-                verifiedByGuid: currentUser,
-                updatedByGuid: currentUser
-            }).findById(goodJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady');
+            const job = await OrderJob.query(trx).select('orderGuid', 'isCanceled', 'status').findOne('guid', jobGuid);
+            const appResponse = new AppResponse(OrderJob.validateJobToUncancel(job));
+
+            appResponse.throwErrorsIfExist();
+
+            if (!job.isCanceled)
+                return { status: 200, message: { data: { status: job.status } } };
+
+            // setting job to 'new' status so it can pass the conditions to
+            // transition to ready
+            const payload = OrderJobService.createStatusPayload('new', currentUser);
+            const jobUpdated = await OrderJob.query(trx).patchAndFetchById(jobGuid, payload);
+
+            await trx.commit();
+            
+            const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([jobUpdated.guid]);
+            let data;
+            if (goodJobs.length === 1)
+            {
+                data = await OrderJob.transaction(async (jobTrx) =>
+                    await OrderJob.query(jobTrx).patch({
+                        isReady: true,
+                        dateVerified: DateTime.utc().toString(),
+                        verifiedByGuid: currentUser,
+                        updatedByGuid: currentUser
+                    }).findById(goodJobs).returning('guid', 'orderGuid', 'number', 'status', 'isReady')
+                );
+            }
+            else
+            {
+                throw new DataConflictError(jobsExceptions[0].errors[0]);
+            }
+ 
+            // the status manager will handle actually changing the jobs status field
+            // and sending the updated job to the client
+            emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
+
+            return { status: 200, message: { data: { status: data.status } } };
         }
-        else
+        catch (error)
         {
-            throw new DataConflictError(jobsExceptions[0].errors[0]);
+            await trx.rollback();
+            throw error;
         }
-
-        // the status manager will handle actually changing the jobs status field
-        // and sending the updated job to the client
-        emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
-
-        return { status: 200, message: { data: { status: data.status } } };
     }
 
     static recalcJobStatus(jobGuid)
