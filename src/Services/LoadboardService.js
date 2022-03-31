@@ -712,7 +712,20 @@ class LoadboardService
         const stops = await this.getFirstAndLastStops(job.stops);
 
         if (job.order.invoices.length != 0)
-            this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
+        {
+            // TEMP FIX FOR INVOICE LINES
+            // THIS SHOULD GO AWAY WITH NEW LOADBOARDS IMPLEMENTATION
+            // if there are multiple invoices, cyce through until one is found that has lines
+            let invoice;
+            for (const inv of job.order.invoices)
+                if (inv.lines.length != 0)
+                {
+                    invoice = inv;
+                    break;
+                }
+
+            this.combineCommoditiesWithLines(job.commodities, invoice, 'invoice');
+        }
 
         if (job.bills.length != 0)
             this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
