@@ -59,14 +59,16 @@ const myMessageHandler = async (message) =>
                 case 'undispatch':
                 case 'carrierDeclineDispatch':
                     const job = await OrderJobService.getJobData(jobGuid);
-                    await Promise.allSettled([PubSubService.jobUpdated(jobGuid, job)]);
+                    PubSubService.jobUpdated(jobGuid, job);
                     break;
                 case 'post':
                 case 'unpost':
                 case 'update':
                 default:
                     // getting status field by current state data is in, and active post that belongs to the post
-                    const [{ value: status, reason: error }, posts] = await Promise.allSettled([OrderJobService.updateStatusField(jobGuid), LoadboardService.getLoadboardPosts(jobGuid, loadboards)]);
+                    const [{ value: status, reason: error }, posts] = await Promise.allSettled([
+                        OrderJobService.updateStatusField(jobGuid),
+                        LoadboardService.getLoadboardPosts(jobGuid, loadboards)]);
 
                     if (!status)
                         throw error;

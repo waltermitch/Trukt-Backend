@@ -1,8 +1,8 @@
+const { DataConflictError, MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const { snakeCaseString } = require('../Utils');
 const { ref, raw } = require('objection');
 const BaseModel = require('./BaseModel');
-const { snakeCaseString } = require('../Utils');
-const { DataConflictError, MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
 
 const jobTypeFields = ['category', 'type'];
 const EDI_DEFAULT_INSPECTION_TYPE = 'standard';
@@ -1140,6 +1140,28 @@ class OrderJob extends BaseModel
             errors.push(new NotFoundError('Job does not exist.'));
         if (!job.isDeleted)
             errors.push(new DataConflictError('Job is not deleted. Please delete the job before un-deleting it.'));
+
+        return errors;
+    }
+	
+	static validateJobToUncancel(job)
+    {
+        const errors = [];
+
+        if (!job)
+            errors.push(new NotFoundError('Job does not exist.'));
+
+        if (job.isDeleted)
+            errors.push(new DataConflictError('Job is deleted. Please remove the deleted flag before uncanceling.'));
+
+        if (job.isComplete)
+            errors.push(new DataConflictError('Job has already been completed. Please remove the complete flag before uncanceling.'));
+
+        if (job.isOnHold)
+            errors.push(new DataConflictError('Job is on hold. Please remove the on hold flag before uncanceling.'));
+
+        if (job.isDeleted)
+            errors.push(new DataConflictError('Job is deleted. Please remove the deleted flag before uncanceling.'));
 
         return errors;
     }
