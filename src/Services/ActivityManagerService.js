@@ -1,12 +1,12 @@
-const PubSubService = require('../Services/PubSubService');
+const { ValidationError, NotFoundError } = require('../ErrorHandling/Exceptions');
+const { AppResponse } = require('../ErrorHandling/Responses');
 const ActivityLogType = require('../Models/ActivityLogType');
-const { uuidRegex } = require('../Utils/Regexes');
+const PubSubService = require('../Services/PubSubService');
 const ActivityLog = require('../Models/ActivityLogs');
+const { uuidRegex } = require('../Utils/Regexes');
 const OrderJob = require('../Models/OrderJob');
 const Order = require('../Models/Order');
 const User = require('../Models/User');
-const { ValidationError, NotFoundError } = require('../ErrorHandling/Exceptions');
-const { AppResponse } = require('../ErrorHandling/Responses');
 
 class ActivityManagerService
 {
@@ -166,7 +166,7 @@ class ActivityManagerService
     static async registerDeletedCommodities(orderGuid, jobGuid, commodities, currentUser)
     {
         const comPromies = [];
-        for(const com of commodities)
+        for (const com of commodities)
         {
             comPromies.push(ActivityManagerService.createActivityLog({
                 orderGuid,
