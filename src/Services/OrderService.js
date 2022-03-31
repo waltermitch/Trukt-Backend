@@ -2266,8 +2266,8 @@ class OrderService
                 {
                     const { lat, long } = candidate;
                     const terminalToUpdate = await Terminal.query(trx).findOne({
-                        lat,
-                        long
+                        latitude: lat,
+                        longitude: long
                     });
 
                     // Terminal exists, now we have to add non essential information
@@ -2294,8 +2294,8 @@ class OrderService
                         const { guid, ...terminalInfoToCreate } = terminalData;
                         const terminalToCreate = Terminal.fromJson({
                             ...terminalInfoToCreate,
-                            lat,
-                            long,
+                            latitude: lat,
+                            longitude: long,
                             isResolved: true
                         });
                         terminalToCreate.setCreatedBy(currentUser);
