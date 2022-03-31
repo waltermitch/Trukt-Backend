@@ -12,6 +12,10 @@ class PubSub
     {
         const token = await service.getClientAccessToken({ userId, roles: ['webpubsub.joinLeaveGroup'], expirationTimeInMinutes: 1440 });
 
+        // append hub name to token
+        token.hubName = hubName;
+        token.groupName = hubName;
+
         return token;
     }
 

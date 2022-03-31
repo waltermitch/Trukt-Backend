@@ -1,5 +1,5 @@
-const PubSub = require('../Azure/PubSub');
 const { MissingDataError } = require('../ErrorHandling/Exceptions');
+const PubSub = require('../Azure/PubSub');
 
 class PubSubService
 {
@@ -87,6 +87,13 @@ class PubSubService
         };
 
         return { parent, object };
+    }
+
+    static async getAuthToken(userGuid)
+    {
+        const token = await PubSub.getSubToken(userGuid);
+
+        return token;
     }
 }
 
