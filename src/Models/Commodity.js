@@ -1,7 +1,7 @@
 const { RecordAuthorMixin, AuthorRelationMappings, isNotDeleted } = require('./Mixins/RecordAuthors');
+const { ValidationError } = require('../ErrorHandling/Exceptions');
 const FindOrCreateMixin = require('./Mixins/FindOrCreate');
 const BaseModel = require('./BaseModel');
-const { ValidationError } = require('../ErrorHandling/Exceptions');
 
 // used for flattening the commodity in/out api
 const vehicleFields = [

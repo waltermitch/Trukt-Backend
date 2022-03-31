@@ -1,9 +1,8 @@
+const { DataConflictError, MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const { snakeCaseString } = require('../Utils');
 const { ref, raw } = require('objection');
 const BaseModel = require('./BaseModel');
-const { snakeCaseString } = require('../Utils');
-const { DataConflictError, MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
-const { TYPES } = require('./OrderJobType');
 
 const jobTypeFields = ['category', 'type'];
 const EDI_DEFAULT_INSPECTION_TYPE = 'standard';

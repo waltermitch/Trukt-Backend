@@ -1,10 +1,10 @@
+const { MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
 const LoadboardService = require('../Services/LoadboardService');
 const LoadboardRequest = require('../Models/LoadboardRequest');
 
 // this is imported here because the file needs to be imported somewhere
 // in order for it to be able to listen to incoming events from service bus
 const LoadboardHandler = require('../Loadboards/LoadboardHandler');
-const { MissingDataError, NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class LoadboardController
 {
@@ -143,7 +143,7 @@ class LoadboardController
 
     static async getRequestsByJobGuid(req, res)
     {
-        const result = await LoadboardService.getRequestsbyJobID(req?.params?.jobGuid);
+        const result = await LoadboardService.getRequestsbyJobID(req.params.jobGuid);
 
         if (result)
         {
