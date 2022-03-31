@@ -1131,6 +1131,28 @@ class OrderJob extends BaseModel
 
         }
     }
+
+    static validateJobToUncancel(job)
+    {
+        const errors = [];
+
+        if (!job)
+            errors.push(new NotFoundError('Job does not exist.'));
+
+        if (job.isDeleted)
+            errors.push(new DataConflictError('Job is deleted. Please remove the deleted flag before uncanceling.'));
+
+        if (job.isComplete)
+            errors.push(new DataConflictError('Job has already been completed. Please remove the complete flag before uncanceling.'));
+
+        if (job.isOnHold)
+            errors.push(new DataConflictError('Job is on hold. Please remove the on hold flag before uncanceling.'));
+
+        if (job.isDeleted)
+            errors.push(new DataConflictError('Job is deleted. Please remove the deleted flag before uncanceling.'));
+
+        return errors;
+    }
 }
 
 Object.assign(OrderJob.prototype, RecordAuthorMixin);
