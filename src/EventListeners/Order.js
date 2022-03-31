@@ -10,7 +10,18 @@ listener.on('order_updated', ({ oldOrder, newOrder }) =>
     setImmediate(async () =>
     {
         const dispatchesToUpdate = LoadboardService.updateDispatchPrice(newOrder.jobs);
-        const proms = await Promise.allSettled([OrderService.validateStopsBeforeUpdate(oldOrder, newOrder), newOrder.jobs.map(async (job) => await LoadboardService.updatePostings(job.guid).catch(err => console.log(err))), ...dispatchesToUpdate]);
+
+        const proms = await Promise.allSettled([
+
+            // validate stops statuses
+            OrderService.validateStopsBeforeUpdate(oldOrder, newOrder),
+
+            // update loadboard postings
+            newOrder.jobs.map(async (job) =>
+                await LoadboardService.updatePostings(job.guid).catch(err => console.log(err))),
+
+            ...dispatchesToUpdate
+        ]);
 
         logEventErrors(proms, 'order_updated');
     });

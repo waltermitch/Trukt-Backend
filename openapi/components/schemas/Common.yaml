@@ -171,9 +171,11 @@ Enums:
       Describes the type of stop, use pickup to indicate that the stop is for
       picking up commodities, use delivery for dropping off commodities.
     type: string
+    nullable: true
     enum:
       - pickup
       - delivery
+      - null
   stopDateType:
     type: string
     enum:
