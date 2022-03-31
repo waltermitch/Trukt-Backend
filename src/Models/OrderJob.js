@@ -1131,6 +1131,18 @@ class OrderJob extends BaseModel
 
         }
     }
+
+    static validateJobForUndelete(job)
+    {
+        const errors = [];
+
+        if (!job)
+            errors.push(new NotFoundError('Job does not exist.'));
+        if (!job.isDeleted)
+            errors.push(new DataConflictError('Job is not deleted. Please delete the job before un-deleting it.'));
+
+        return errors;
+    }
 }
 
 Object.assign(OrderJob.prototype, RecordAuthorMixin);

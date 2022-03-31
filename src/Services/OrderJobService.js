@@ -1467,25 +1467,36 @@ class OrderJobService
 
         try
         {
-            const job = await OrderJob.query(trx).select('orderGuid', 'isDeleted').findOne('guid', jobGuid);
+            const job = await OrderJob.query(trx).findById(jobGuid);
 
-            if (!job)
-                throw new NotFoundError('Job does not exist');
+            const appResponse = new AppResponse(OrderJob.validateJobForUndelete(job));
+            appResponse.throwErrorsIfExist();
 
-            if (!job?.isDeleted)
-                return { status: 200 };
-
-            // setting order back to ready status
-            const payload = OrderJobService.createStatusPayload('ready', currentUser);
-
-            // udpating orderJob in data base
-            await OrderJob.query(trx).patch(payload).findById(jobGuid);
+            // updating orderJob in data base
+            await job.$query(trx).patch({
+                isDeleted: false,
+                updatedByGuid: currentUser
+            });
 
             // commiting transaction
             await trx.commit();
 
+            // Recalculating the status of the job
+            const jobStatus = await job.$query().patch({
+                status: raw('rcg_tms.rcg_order_job_calc_status_name(?)', jobGuid)
+            }).returning('status');
+
+            // this is required to orderjob_status_updated event to be emitted
+            jobStatus.oldStatus = OrderJob.STATUS.DELETED;
+
             // emit the event to register with status manager Will randomly update ORDER TO DELETED INCORRECT
-            emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, currentUser, jobGuid });
+            emitter.emit('orderjob_undeleted', {
+                orderGuid: job.orderGuid,
+                currentUser,
+                jobGuid,
+                jobType: job.typeId,
+                status: jobStatus
+            });
 
             return { status: 200 };
         }
