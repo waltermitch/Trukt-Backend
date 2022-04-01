@@ -1587,7 +1587,7 @@ class OrderJobService
             const jobUpdated = await OrderJob.query(trx).patchAndFetchById(jobGuid, payload);
 
             await trx.commit();
-            
+
             const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([jobUpdated.guid]);
             let data;
             if (goodJobs.length === 1)
@@ -1605,7 +1605,7 @@ class OrderJobService
             {
                 throw new DataConflictError(jobsExceptions[0].errors[0]);
             }
- 
+
             // the status manager will handle actually changing the jobs status field
             // and sending the updated job to the client
             emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
@@ -2045,6 +2045,155 @@ class OrderJobService
         job.validateJobToAddHold();
 
         return job;
+    }
+
+    static async getRateConfirmation(jobGuid)
+    {
+
+        const query = OrderJob.query()
+            .findById(jobGuid)
+            .withGraphFetched(OrderJob.fetch.fullData)
+            .withGraphFetched({ dispatches: OrderJobDispatch.fetch.fullData })
+            .withGraphFetched(OrderJob.fetch.billingData)
+            .select([
+                'rcgTms.orderJobs.guid',
+                'rcgTms.orderJobs.number',
+                'rcgTms.orderJobs.distance',
+                'rcgTms.orderJobs.loadType',
+                'rcgTms.orderJobs.instructions'
+            ])
+            .modifyGraph('stops', qb =>
+            {
+                qb.select([
+                    'guid',
+                    'stopType',
+                    'sequence',
+                    'notes',
+                    'dateScheduledStart',
+                    'dateScheduledEnd',
+                    'dateScheduledType',
+                    'dateRequestedStart',
+                    'dateRequestedEnd',
+                    'dateRequestedType'
+                ]);
+            })
+            .modifyGraph('stops.terminal', qb =>
+            {
+                qb.select([
+                    'name',
+                    'guid',
+                    'locationType',
+                    'street1',
+                    'street2',
+                    'state',
+                    'city',
+                    'country',
+                    'zipCode',
+                    'latitude',
+                    'longitude'
+                ]);
+            })
+
+            .modifyGraph('dispatches', qb =>
+            {
+                qb.select(['guid', 'dateAccepted']);
+            })
+            .modifyGraph('dispatches.vendor', qb =>
+            {
+                qb.select([
+                    'billingCity',
+                    'billingCountry',
+                    'billingPostalCode',
+                    'billingState',
+                    'billingStreet',
+                    'email',
+                    'guid',
+                    'name',
+                    'phoneNumber'
+                ]);
+            })
+            .modifyGraph('dispatches', qb =>
+            {
+                qb.findOne({
+                    isValid: true,
+                    isAccepted: true,
+                    isCanceled: false,
+                    isDeclined: false,
+                    isPending: false
+                })
+                    .orderBy('dateCreated', 'desc');
+            })
+            .modifyGraph('bills', qb =>
+            {
+                qb.select(['guid']);
+            })
+            .modifyGraph('bills.lines', qb =>
+            {
+                qb.select(['amount', 'dateCreated', 'dateCharged']);
+            });
+
+        // strict select fields for the SFAccount
+        for (const path of ['vendor', 'dispatches.vendor', 'bills.consignee'])
+        {
+            query.modifyGraph(path, qb =>
+            {
+                qb.select([
+                    'billingCity',
+                    'billingCountry',
+                    'billingPostalCode',
+                    'billingLatitude',
+                    'billingLongitude',
+                    'billingState',
+                    'billingStreet',
+                    'email',
+                    'guid',
+                    'name',
+                    'phoneNumber',
+                    raw('\'vendor\' as rtype')
+                ]);
+            });
+        }
+
+        // strict select fields for the Commodities in the Order
+
+        for (const path of ['stops.commodities', 'bills.lines.commodity'])
+        {
+            query.modifyGraph(path, qb =>
+            {
+                qb.select([
+                    'guid',
+                    'capacity',
+                    'damaged',
+                    'inoperable',
+                    'length',
+                    'weight',
+                    'quantity',
+                    'description',
+                    'identifier',
+                    'lotNumber'
+                ]);
+            });
+        }
+
+        const orderJobInfo = await query;
+
+        if (orderJobInfo == undefined)
+        {
+            throw new NotFoundError('This job does not exist');
+        }
+        orderJobInfo.dispatch = orderJobInfo.dispatches[0];
+        delete orderJobInfo.dispatches;
+
+        // sort the stops in the correct sequence
+        orderJobInfo.stops.sort((a, b) => a.sequence - b.sequence);
+
+        // normalize the sequence numbers for the stops
+        let seq = 1;
+        for (const stop of orderJobInfo.stops)
+        {
+            stop.sequence = seq++;
+        }
+        return orderJobInfo;
     }
 }
 
