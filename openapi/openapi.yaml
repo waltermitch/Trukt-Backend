@@ -88,6 +88,9 @@ paths:
   /job/{jobGuid}/uncomplete:
     put:
       $ref: paths/job/setToUncomplete.yaml
+  /job/{jobGuid}/doc/rate-confirmation:
+    get:
+      $ref: paths/job/rateConfirmation.yaml
   /order/{orderGuid}/hold:
     put:
       $ref: paths/order/markOnHold.yaml

@@ -161,6 +161,7 @@ CommodityTypeIdProperties:
         * `21` - freight: bulk
         * `22` - freight: crushed cars
         * `23` - freight: other
+        * `24` - freight: pallets
     type: integer
     minimum: 1
-    maximum: 23
+    maximum: 24
