@@ -1,4 +1,4 @@
-const { NotFoundError, DataConflictError, ValidationError, NotAllowedError } = require('../ErrorHandling/Exceptions');
+const { NotFoundError, DataConflictError, ValidationError, NotAllowedError, MissingDataError } = require('../ErrorHandling/Exceptions');
 const { SeverityLevel } = require('applicationinsights/out/Declarations/Contracts');
 const ActivityManagerService = require('./ActivityManagerService');
 const loadboardClasses = require('../Loadboards/LoadboardsList');
@@ -492,7 +492,7 @@ class LoadboardService
                     extraAnnotations: {
                         loadboard: 'TRUKT',
                         code: 'ready',
-                        vendorGuid: dispatch.vendor.guid,
+                        vendorGuid: dispatch.vendor?.guid ?? null,
                         vendorAgentGuid: dispatch.vendorAgentGuid,
                         vendorName: dispatch.vendor.name,
                         vendorAgentName: dispatch.vendorAgent.name,
@@ -534,9 +534,9 @@ class LoadboardService
                     .whereNotNull('rcgTms.orderStopLinks.orderGuid')
                     .distinctOn('rcgTms.orderStops.guid')
             ]);
-            const order = job.order;
             if (!job)
                 throw new NotFoundError('Job not found');
+            const order = job.order;
 
             job.validateJobForAccepting();
 
@@ -712,7 +712,20 @@ class LoadboardService
         const stops = await this.getFirstAndLastStops(job.stops);
 
         if (job.order.invoices.length != 0)
-            this.combineCommoditiesWithLines(job.commodities, job.order.invoices[0], 'invoice');
+        {
+            // TEMP FIX FOR INVOICE LINES
+            // THIS SHOULD GO AWAY WITH NEW LOADBOARDS IMPLEMENTATION
+            // if there are multiple invoices, cyce through until one is found that has lines
+            let invoice;
+            for (const inv of job.order.invoices)
+                if (inv.lines.length != 0)
+                {
+                    invoice = inv;
+                    break;
+                }
+
+            this.combineCommoditiesWithLines(job.commodities, invoice, 'invoice');
+        }
 
         if (job.bills.length != 0)
             this.combineCommoditiesWithLines(job.commodities, job.bills[0], 'bill');
@@ -1017,6 +1030,9 @@ class LoadboardService
      */
     static async createRequestfromWebhook(requestModel, externalPost, carrier, currentUser)
     {
+        if (!carrier.usDot)
+            throw MissingDataError('Carrier does not have a US DOT number - cannot create Load Request');
+
         // query our database for requests from incoming payload
         const lbPosting = await LoadboardPost.query().withGraphJoined('[job, requests(CarrierSpecific)]')
             .modifiers({
@@ -1033,11 +1049,9 @@ class LoadboardService
             });
 
         if (!lbPosting)
-        {
             throw new NotFoundError(`The posting for ${externalPost.guid} doesn't exist for carrier ${carrier.usDot}`);
-        }
 
-        const job = lbPosting.job;
+        const { job } = lbPosting;
 
         const existingRequests = lbPosting.requests;
 
@@ -1045,7 +1059,9 @@ class LoadboardService
         if (existingRequests.length > 0)
         {
             const updates = existingRequests.map(req => { req.setCanceled(); req.setUpdatedBy(currentUser); return req.$query().patch(); });
+
             const results = await Promise.allSettled(updates);
+
             const activities = [];
             for (const res of results)
             {
@@ -1128,6 +1144,9 @@ class LoadboardService
      */
     static async cancelRequestfromWebhook(requestModel, externalPost, carrier, currentUser)
     {
+        if (!carrier.usDot)
+            throw MissingDataError('Carrier does not have a US DOT number - cannot cancel Load Request');
+
         // query our database for requests from incoming payload
         const lbPosting = await LoadboardPost.query().withGraphJoined('[job, requests(CarrierSpecific)]')
             .modifiers({
@@ -1283,10 +1302,9 @@ class LoadboardService
         try
         {
             const promiseArray = [];
+
             if (queryRequest.datePickupEnd < queryRequest.dateDeliveryStart || queryRequest.dateDeliveryEnd < queryRequest.datePickupStart)
-            {
                 throw new DataConflictError('Pickup dates should be before delivery date');
-            }
 
             // get Job with all data
             const [job, carrier] = await Promise.all([
@@ -1307,22 +1325,17 @@ class LoadboardService
             ]);
 
             if (!job)
-            {
                 throw new NotFoundError('Job Not Found');
-            }
 
             // validate job not be be in
             job.validateJobForDispatch();
 
             // validate carriers
             if (!carrier)
-            {
                 throw new NotFoundError(`Carrier does not exist in our system. USDOT:${queryRequest.carrierIdentifier}; Name:${queryRequest.extraExternalData.carrierInfo.guid}`);
-            }
+
             else if (carrier.blacklist == true || carrier.active == false)
-            {
                 throw new NotAllowedError('Carrier is inactive or blacklisted.');
-            }
 
             // remove fields that do not exist to update table correctly
             delete queryRequest.jobGuid;
@@ -1369,7 +1382,10 @@ class LoadboardService
             const createdOffer = await LoadboardService.createInternalOffer(trx, job, internalPostGuid, offerPayload.data, currentUser);
 
             // get all active requests for the current job
-            const activeRequests = await LoadboardRequest.query(trx).leftJoinRelated('posting').where('posting.guid', internalPostGuid).andWhereNot('loadboardRequests.guid', queryRequest.guid).modify('validActive');
+            const activeRequests = await LoadboardRequest.query(trx)
+                .leftJoinRelated('posting').where('posting.guid', internalPostGuid)
+                .andWhereNot('loadboardRequests.guid', queryRequest.guid)
+                .modify('validActive');
 
             // 'Load is no longer available.'
             for (const request of activeRequests)
@@ -1405,6 +1421,7 @@ class LoadboardService
         catch (error)
         {
             await trx.rollback();
+
             telemetry.trackException({
                 exception: error,
                 properties:
@@ -1421,6 +1438,7 @@ class LoadboardService
                     }
                 }
             });
+
             throw error;
         }
     }
@@ -1440,6 +1458,7 @@ class LoadboardService
 
         // get only first and last stop only
         job.stops = OrderStop.firstAndLast(job.stops);
+
         const bill = job?.bills[0];
         const firstStop = job.stops[0];
         const lastStop = job.stops[1];
@@ -1467,11 +1486,13 @@ class LoadboardService
                 phoneNumber: offerPayload.driver.phoneNumber,
                 accountId: offerPayload.carrier.sfId
             });
+
             carrierContact = await carrierContact.$query(trx).insertAndFetch();
         }
 
         // split cost amongst commoditites
         const lines = BillService.splitCarrierPay(bill, job.commodities, offerPayload.price, currentUser);
+
         for (const line of lines)
             line.transacting(trx);
 
@@ -1491,9 +1512,9 @@ class LoadboardService
 
         // update job status
         job.setUpdatedBy(currentUser);
-        promiseArray.push(job.$query(trx).patch({
-            status: OrderJob.STATUS.PENDING
-        }));
+
+        promiseArray.push(job.$query(trx)
+            .patch({ status: OrderJob.STATUS.PENDING }));
 
         // create Offer in our system
         const dispatch = OrderJobDispatch.fromJson({
@@ -1505,7 +1526,9 @@ class LoadboardService
             paymentTermId: offerPayload.paymentTerm,
             price: offerPayload.price
         });
+
         dispatch.setCreatedBy(currentUser);
+
         const myDispatch = await OrderJobDispatch.query(trx).insertGraphAndFetch(dispatch, { relate: true });
 
         const postArray = [];
@@ -1523,6 +1546,7 @@ class LoadboardService
         }
 
         const res = await Promise.allSettled(postArray);
+
         for (const r of res)
         {
             if (r.status == 'rejected')
@@ -1546,6 +1570,7 @@ class LoadboardService
             else if (r.value)
             {
                 const post = r.value.data.data;
+
                 await ActivityManagerService.createActivityLog({
                     orderGuid: job.orderGuid,
                     userGuid: currentUser,

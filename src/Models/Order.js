@@ -1,8 +1,8 @@
 const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
+const { ValidationError } = require('../ErrorHandling/Exceptions');
 const BaseModel = require('./BaseModel');
 const currency = require('currency.js');
 const { DateTime } = require('luxon');
-const { ValidationError } = require('../ErrorHandling/Exceptions');
 
 class Order extends BaseModel
 {

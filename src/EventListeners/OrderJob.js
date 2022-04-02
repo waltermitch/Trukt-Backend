@@ -92,13 +92,13 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
         try
         {
             const status = await OrderJobService.updateStatusField(jobGuid, currentUser);
-            const [[{ pickupsInProgress }], [{ isStatusForLastDelivery }]] =
-                await Promise.all([OrderJobService.getNumberOfPickupsInProgress(jobGuid), OrderJobService.isJobStatusForLastDelivery(jobGuid)]);
-    
+            const [[{ pickupsInProgress }], [{ isStatusForLastDelivery }], job] =
+                await Promise.all([OrderJobService.getNumberOfPickupsInProgress(jobGuid), OrderJobService.isJobStatusForLastDelivery(jobGuid), OrderJob.query().findById(jobGuid)]);
+
             /**
              * Registers the activity log to 'Pickup' only when the first commmodity of the job is pick up
              */
-            if (jobStop.stop_type == 'pickup' && pickupsInProgress == 1 && userAction == 'completed')
+            if (jobStop.stop_type == 'pickup' && pickupsInProgress == 1 && userAction == 'completed' && job.typeId === 1)
             {
                 await ActivityManagerService.createActivityLog({
                     orderGuid: orderGuid,
@@ -107,7 +107,7 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
                     activityId: 29
                 });
             }
-    
+
             /**
             * Registers the activity log to 'delivered' only when the last commmodity of the job is delivered
             */
@@ -120,7 +120,7 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
                     activityId: 27
                 });
             }
-    
+
             /**
             * Registers the activity log to 'dispatched'
             */
@@ -133,17 +133,27 @@ listener.on('orderjob_stop_update', ({ orderGuid, jobGuid, currentUser, jobStop,
                     activityId: 31
                 });
             }
-    
+
             /**
              * Registers the activity log to 'Rollback to pickup' only when the last delivered commodity of the job is back to 'pick up'
              */
-            else if (jobStop.stop_type == 'delivery' && userAction == 'started' && isStatusForLastDelivery)
+            else if (jobStop.stop_type == 'delivery' && userAction == 'started' && isStatusForLastDelivery && job.typeId === 1)
             {
                 await ActivityManagerService.createActivityLog({
                     orderGuid: orderGuid,
                     jobGuid: jobGuid,
                     userGuid: currentUser,
                     activityId: 32
+                });
+            }
+
+            else if (status === OrderJob.STATUS.COMPLETED)
+            {
+                await ActivityManagerService.createActivityLog({
+                    orderGuid: orderGuid,
+                    jobGuid: jobGuid,
+                    userGuid: currentUser,
+                    activityId: 35
                 });
             }
         }
@@ -324,7 +334,7 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
                 OrderJobService.updateStatusField(jobGuid, currentUser),
                 ...orderUpdatePromise
             ]);
-    
+
             logEventErrors(proms, 'orderjob_deleted');
         }
         catch (error)
@@ -358,21 +368,16 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
                 activityId: 20
             })
         ]);
-        
+
         logEventErrors(proms, 'orderjob_undeleted');
     });
 });
 
-listener.on('orderjob_canceled', ({ orderGuid, currentUser, jobGuid }) =>
+listener.on('orderjob_canceled', ({ orderGuid, currentUser, jobGuid, state }) =>
 {
-    /**
-    * Register job activity
-    * validate job status field
-    */
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            OrderJobService.updateStatusField(jobGuid, currentUser),
             ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
@@ -380,6 +385,9 @@ listener.on('orderjob_canceled', ({ orderGuid, currentUser, jobGuid }) =>
                 activityId: 23
             })
         ]);
+
+        // Notify the client of the status update
+        listener.emit('orderjob_status_updated', { jobGuid, currentUser, state });
 
         logEventErrors(proms, 'orderjob_canceled');
     });
@@ -416,7 +424,7 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
         {
             const currrentJob = await OrderJobService.getJobData(jobGuid);
             const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, currrentJob), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
-    
+
             logEventErrors(proms, 'orderjob_status_updated');
         }
         catch (error)

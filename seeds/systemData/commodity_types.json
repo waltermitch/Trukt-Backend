@@ -117,6 +117,11 @@
             "id": 23,
             "category": "freight",
             "type": "other"
+        },
+        {
+            "id": 24,
+            "category": "freight",
+            "type": "pallets"
         }
     ]
 }

@@ -1,14 +1,15 @@
+const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
+const { AppResponse } = require('../ErrorHandling/Responses');
 const AccountingFunc = require('../Azure/AccountingFunc');
 const LineLinks = require('../Models/InvoiceLineLink');
 const InvoiceLine = require('../Models/InvoiceLine');
 const InvoiceBill = require('../Models/InvoiceBill');
+const OrderJob = require('../Models/OrderJob');
 const Line = require('../Models/InvoiceLine');
 const Invoice = require('../Models/Invoice');
 const Order = require('../Models/Order');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
-const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
-const { AppResponse } = require('../ErrorHandling/Responses');
 
 class InvoiceService
 {
@@ -111,6 +112,7 @@ class InvoiceService
                     number: res.number
                 }
             });
+
             return res.invoices;
         }
     }
@@ -413,10 +415,10 @@ class InvoiceService
                         results[order.guid].errors.setStatus(400);
                         results[order.guid].errors.addError(
                             new DataConflictError(`Invoice ${invoice.guid} has no client/consignee or client/consignee doesn't have a QBO Id`,
-                            {
-                                guid: invoice.guid,
-                                data: invoice
-                            })
+                                {
+                                    guid: invoice.guid,
+                                    data: invoice
+                                })
                         );
                     }
                     else
@@ -458,9 +460,9 @@ class InvoiceService
                 results[invoiceObj.orderGuid].errors.setStatus(status);
                 results[invoiceObj.orderGuid].errors.addError(
                     new DataConflictError(error,
-                    {
-                        guid: error.guid
-                    })
+                        {
+                            guid: error.guid
+                        })
                 );
             }
             else
@@ -517,9 +519,9 @@ class InvoiceService
                     results[invoiceObj.orderGuid].errors.setStatus(500);
                     results[invoiceObj.orderGuid].errors.addError(
                         new DataConflictError(err.message,
-                        {
-                            guid: data.guid
-                        })
+                            {
+                                guid: data.guid
+                            })
                     );
                 }
 
@@ -536,6 +538,91 @@ class InvoiceService
         const res = await InvoiceBill.query().where('order_guid', '=', search).withGraphJoined('lines');
 
         return res;
+    }
+
+    static async getOrderFinances(guid, type)
+    {
+        // const result = await InvoiceService.getOrderInvoicesandBills(orderGuid);
+
+        // the guid is either a job or order guid
+        // type is either 'job' or 'order'
+        // get request is job
+        if (type == 'job')
+        {
+            // we want to get all of bills for this job and only invoices that are linked to lines from the bill
+            const res = await OrderJob.query()
+                .findById(guid)
+                .withGraphJoined({ bills: InvoiceBill.fetch.linkedInvoices });
+
+            if (!res)
+                throw new NotFoundError(`Job with Guid ${guid} not found.`);
+
+            // for each bill append job info, and extract invoice info
+            const invoices = new Map();
+            for (const bill of res.bills)
+            {
+                bill.job =
+                {
+                    guid: res.guid,
+                    number: res.number
+                };
+
+                // each line may have links to other lines which have invoices
+                for (const line of bill.lines)
+                {
+                    for (const link of line.link)
+                    {
+                        const order = { guid: link.invoiceBill.order.guid, number: link.invoiceBill.order.number };
+
+                        link.invoiceBill.order = order;
+
+                        invoices.set(link.invoiceBill.guid, link.invoiceBill);
+
+                        // delete link
+                        delete line.link;
+                    }
+                }
+
+                // gonna convert payload a bit
+                const payload =
+                {
+                    invoices: Array.from(invoices.values()),
+                    bills: res.bills
+                };
+
+                return payload;
+            }
+
+        }
+        else
+        {
+            const result = await Order.query()
+                .findById(guid)
+                .withGraphJoined(
+                    {
+                        'jobs': { bills: InvoiceBill.fetch.details },
+                        invoices: InvoiceBill.fetch.details
+                    });
+
+            if (!result)
+                throw new NotFoundError(`Order with Guid ${guid} not found.`);
+
+            // format the result
+            const bills = [];
+            for (const job of result.jobs)
+            {
+                for (const bill of job.bills)
+                {
+                    bill.job = { guid: job.guid, number: job.number };
+                    bills.push(bill);
+                }
+            }
+
+            for (const invoice of result.invoices)
+                invoice.order = { guid: result.guid, number: result.number };
+
+            return { invoices: result.invoices, bills };
+        }
     }
 }
 
