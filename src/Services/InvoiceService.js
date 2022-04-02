@@ -369,6 +369,9 @@ class InvoiceService
                     invoice.orderGuid = order.guid;
                     invoice.orderNumber = order.number;
 
+                    // if invoice has reference number use it, otherwise use order number
+                    invoice.referenceNumber = invoice.referenceNumber || order.referenceNumber;
+
                     const client = invoice.consignee || order.client;
 
                     invoice.client =
