@@ -1253,14 +1253,61 @@ class OrderJobService
 
     static async markJobAsUncomplete(jobGuid, currentUser)
     {
-        await OrderJob.query()
-            .where({ 'guid': jobGuid })
-            .patch({ 'isComplete': false, 'updatedByGuid': currentUser, 'status': OrderJob.STATUS.DELIVERED }).first();
+        const trx = await OrderJob.startTransaction();
 
-        emitter.emit('orderjob_uncompleted', jobGuid);
-        emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: OrderJob.STATUS.DELIVERED } });
-
-        return 200;
+        try
+        {
+            const job = await OrderJob.query(trx).findById(jobGuid);
+            const appResponse = new AppResponse(OrderJob.validateJobForUncomplete(job));
+            appResponse.throwErrorsIfExist();
+            const isTransport = job.typeId === OrderJobType.TYPES.TRANSPORT;
+ 
+            if (isTransport)
+                await job.$query(trx)
+                    .patch({ dateCompleted: null, isComplete: false, updatedByGuid: currentUser, status: OrderJob.STATUS.DELIVERED });
+            else
+            {
+                await Promise.all([
+                    job.$query(trx)
+                        .patch({
+                            dateCompleted: null,
+                            isComplete: false,
+                            updatedByGuid: currentUser
+                        }),
+                    job.$relatedQuery('stopLinks', trx).patch({
+                        isCompleted: false,
+                        dateCompleted: null
+                    }),
+                    job.$relatedQuery('stops', trx).patch({
+                        status: null,
+                        isCompleted: false,
+                        dateCompleted: null
+                    })
+                ]);
+            }
+            
+            // to recalculate the job's status, we need all the order job changes to be applied
+           await job.$query(trx)
+                .patch({
+                    status: raw('rcg_tms.rcg_order_job_calc_status_name(?)', job.guid)
+                });
+            
+            await trx.commit();
+    
+            emitter.emit('orderjob_uncompleted', job.guid);
+            emitter.emit('orderjob_status_updated', {
+                jobGuid: job.guid,
+                currentUser,
+                state: { status: isTransport ? OrderJob.STATUS.DELIVERED : OrderJob.STATUS.IN_PROGRESS }
+            });
+    
+            return 200;
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
     }
 
     /**
@@ -1756,7 +1803,7 @@ class OrderJobService
         else
         {
             const job = await OrderJob.query()
-                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser, isComplete: state.expectedStatus === OrderJob.STATUS.COMPLETED }))
+                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser, isComplete: state.expectedStatus === OrderJob.STATUS.COMPLETED, dateCompleted: state.expectedStatus === OrderJob.STATUS.COMPLETED ? DateTime.now().toISO() : null }))
                 .findById(jobGuid)
                 .returning('status');
 
