@@ -1,4 +1,3 @@
-const FindOrCreate = require('./Mixins/FindOrCreate');
 const BaseModel = require('./BaseModel');
 const R = require('ramda');
 
@@ -258,5 +257,4 @@ class SFContact extends BaseModel
     }
 }
 
-Object.assign(SFContact.prototype, FindOrCreate);
 module.exports = SFContact;
