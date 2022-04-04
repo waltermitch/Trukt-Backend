@@ -2,7 +2,9 @@ const ActivityManagerService = require('../Services/ActivityManagerService');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderService = require('../Services/OrderService');
 const logEventErrors = require('./logEventErrors');
+const Notifier = require('../Webhooks/Notifier');
 const OrderJob = require('../Models/OrderJob');
+const Order = require('../Models/Order');
 const listener = require('./index');
 
 listener.on('order_updated', ({ oldOrder, newOrder }) =>
@@ -38,6 +40,16 @@ listener.on('order_created', (orderGuid) =>
     });
 });
 
+listener.on('order_distance_updated', (data) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([Notifier.orderDistanceUpdated(data)]);
+
+        logEventErrors(proms, 'order_distance_updated');
+    });
+});
+
 listener.on('order_client_notes_updated', (orderGuid) =>
 {
     setImmediate(async () =>
@@ -52,7 +64,19 @@ listener.on('order_ready', ({ orderGuid, currentUser }) =>
 {
     setImmediate(async () =>
     {
-        const proms = await Promise.allSettled([]);
+        // get order with client
+        const order = await Order.query()
+            .findById(orderGuid)
+            .withGraphJoined('client');
+
+        // compose payload
+        const payload = {
+            orderGuid,
+            clientGuid: order.client.guid,
+            orderNumber: order.number
+        };
+
+        const proms = await Promise.allSettled([Notifier.orderDistanceUpdated(payload)]);
 
         logEventErrors(proms, 'order_ready');
     });
