@@ -184,6 +184,7 @@ exports.up = function(knex)
             and job.verified_by_guid is not null
             and job.updated_by_guid is not null
             and valid_job_count > 0
+            and job.vendor_guid is null
         then
             return '${OrderJob.STATUS.READY}';
         end if;
@@ -292,9 +293,8 @@ exports.up = function(knex)
                     and ojd.date_deleted is null
                     and ojd.date_canceled is null
             )
-            and (job.vendor_guid is not null
-            or job.vendor_agent_guid is not null
-            or job.vendor_contact_guid is not null)
+            and job.is_transport = true
+            and job.vendor_guid is not null
         then
             return '${OrderJob.STATUS.DISPATCHED}';
         end if;
@@ -303,6 +303,7 @@ exports.up = function(knex)
         if (job.vendor_guid is null
             or job.vendor_agent_guid is null
             or job.vendor_contact_guid is null)
+            and job.is_transport = true
             and job.is_on_hold = false
         then
             select
@@ -394,8 +395,6 @@ exports.up = function(knex)
         -- evaluate in progress status
         if job.is_transport = false
             and job.vendor_guid is not null
-            and job.date_started is not null
-            and job.updated_by_guid is not null
 
         -- get last valid dispatch if exists
             and (
