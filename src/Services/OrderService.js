@@ -3706,11 +3706,13 @@ class OrderService
             // the following comparison only works because of javascript magic
             if (readyJobsCount >= 1)
             {
-                await Order.query().patch({
+                const order = await Order.query().patchAndFetchById(orderGuid, {
                     isReady: true,
                     status: 'ready',
                     'updatedByGuid': currentUser
-                }).findById(orderGuid);
+                });
+
+                emitter.emit('order_ready', { orderGuid, currentUser });
             }
         }
         catch (error)
