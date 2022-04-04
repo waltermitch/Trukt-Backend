@@ -1,6 +1,7 @@
+const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
+const FieldFilters = require('./ModelFieldMappers.json').SFAccount;
 const BaseModel = require('./BaseModel');
 const { raw } = require('objection');
-const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
 
 class SFAccount extends BaseModel
 {
@@ -119,66 +120,20 @@ class SFAccount extends BaseModel
     $formatJson(json)
     {
         json = super.$formatJson(json);
+        json.rtype = json.rtype?.toLowerCase() ?? 'unknown';
 
-        // based on rtype
-        if (json.rtype)
+        if (!Object.keys(FieldFilters.whitelist.endpoint.byType.outgoing).includes(json.rtype))
         {
-            json.rtype = json.rtype?.toLowerCase();
-
-            switch (json.rtype)
-            {
-                case 'client':
-                    delete json.dotNumber;
-                    delete json.referralAmount;
-                    delete json.mcNumber;
-                    delete json.preferred;
-                    delete json.blacklist;
-                    break;
-                case 'carrier':
-                    delete json.loadboardInstructions;
-                    delete json.orderInstructions;
-                    break;
-                case 'dispatcher':
-                case 'employee':
-                    delete json.referralAmount;
-                case 'referrer':
-                    for (const field of [
-                        'preferred',
-                        'blacklist',
-                        'dotNumber',
-                        'qbId',
-                        'scId',
-                        'sdGuid',
-                        'status',
-                        'syncInSuper',
-                        'sfId'
-                    ])
-                    {
-                        delete json[field];
-                    }
-
-                    for (const field of [
-                        'Street',
-                        'State',
-                        'PostalCode',
-                        'Longitude',
-                        'Latitude',
-                        'GeocodeAccuracy',
-                        'Country',
-                        'City'
-                    ])
-
-                        for (const type of ['billing', 'shipping'])
-
-                            delete json[type + field];
-
-                    delete json.orderInstructions;
-                    delete json.loadboardInstructions;
-                    delete json.mcNumber;
-                    break;
-            }
+            json.rtype = 'unknown';
         }
-        return json;
+
+        const whitelist = FieldFilters.whitelist.endpoint.byType.outgoing[json.rtype];
+        const copy = {};
+        for (const field of whitelist)
+        {
+            copy[field] = json[field];
+        }
+        return copy;
     }
 
     linkRecordType(recType)
@@ -202,7 +157,7 @@ class SFAccount extends BaseModel
 
         if (!account)
             errors.push(new NotFoundError('Vendor does not exist'));
-        if (account.blackList)
+        if (account?.blackList)
             errors.push(new DataConflictError('Vendor is blacklisted.'));
         if (account?.rectype?.name?.toLowerCase() !== 'vendor')
             errors.push(new DataConflictError('Provided vendor is not a valid vendor. Please contact support'));

@@ -97,3 +97,178 @@ Consignee:
       type: string
     shippingStreet:
       type: string
+
+Account:
+  type: object
+  properties:
+    guid:
+      $ref: './Common.yaml#/guid'
+    name:
+      type: string
+      example: Test Account Name
+    phoneNumber:
+      $ref: './Common.yaml#/phoneNumber'
+    email:
+      type: string
+      format: email
+
+Account With Contacts:
+  type: object
+  properties:
+    contacts:
+      type: array
+      items:
+        $ref: './Contact.yaml'
+    primaryContact:
+      $ref: './Contact.yaml'
+
+Carrier:
+  allOf:
+    - type: object
+      properties:
+        rtype:
+          type: string
+          enum:
+            - 'carrier'
+    - $ref: '#/Account'
+    - $ref: '#/Account Billing Info'
+    - type: object
+      properties:
+        blacklist:
+          type: boolean
+        dotNumber:
+          type: string
+          minLength: 4
+          maxLength: 9
+          nullable: true
+          example: 123456789
+        mcNumber:
+          type: string
+          nullable: true
+        preferred:
+          type: boolean
+        status:
+          type: string
+
+Client:
+  allOf:
+    - type: object
+      properties:
+        rtype:
+          type: string
+          enum:
+            - 'client'
+    - $ref: '#/Account'
+    - $ref: '#/Account Billing Info'
+    - type: object
+      properties:
+        slaDays:
+          type: number
+          format: integer
+          description: Service Level Agreement. The number of days for this agreement.
+        orderInstructions:
+          type: string
+          description: The default instructions from the Client, use this to populate the Order instructions when creating new Orders.
+        icpGp:
+          type: number
+          format: integer
+        icpMultiplier:
+          type: number
+          format: integer
+
+Referrer:
+  allOf:
+    - type: object
+      properties:
+        rtype:
+          type: string
+          enum:
+            - 'referrer'
+    - $ref: '#/Account'
+
+Vendor:
+  allOf:
+    - type: object
+      properties:
+        rtype:
+          type: string
+          enum:
+            - 'vendor'
+    - $ref: '#/Account'
+    - $ref: '#/Account Billing Info'
+    - type: object
+      properties:
+        blacklist:
+          type: boolean
+        preferred:
+          type: boolean
+        status:
+          type: string
+
+Employee:
+  allOf:
+    - type: object
+      properties:
+        rtype:
+          type: string
+          enum:
+            - 'employee'
+    - $ref: '#/Account'
+
+Account Billing Info:
+  type: object
+  properties:
+    billingCity:
+      type: string
+      nullable: true
+      example: 'Sacramento'
+    billingCountry:
+      type: string
+      nullable: true
+      example: 'USA'
+    billingLatitude:
+      type: number
+      format: float
+      nullable: true
+      example: 45.345676
+    billingLongitude:
+      type: number
+      format: float
+      nullable: true
+      example: 23.123545
+    billingPostalCode:
+      type: string
+      nullable: true
+    billingState:
+      type: string
+      nullable: true
+    billingStreet:
+      type: string
+      nullable: true
+
+Account Shipping Info:
+  type: object
+  properties:
+    shippingCity:
+      type: string
+      nullable: true
+    shippingCountry:
+      type: string
+      nullable: true
+    shippingLatitude:
+      type: number
+      format: float
+      nullable: true
+    shippingLongitude:
+      type: number
+      format: float
+      nullable: true
+    shippingPostalCode:
+      type: string
+      nullable: true
+    shippingState:
+      type: string
+      nullable: true
+    shippingStreet:
+      type: string
+      nullable: true

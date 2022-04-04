@@ -1,228 +1,155 @@
 {
     "SFAccount": {
-        "hide": {
+        "whitelist": {
             "database": {
-                "outa": [],
-                "into": []
+                "outgoing": [],
+                "incoming": []
             },
-            "external": {
-                "outa": [],
-                "into": [
-                    "accountNameDuplicate",
-                    "accountNumber",
-                    "accountSource",
-                    "active",
-                    "auctionId",
-                    "autoInsuranceExpiration",
-                    "autoimsClientId",
-                    "azureId",
-                    "bankAccountName",
-                    "bankAccountNumber",
-                    "bankAccountType",
-                    "bankRoutingNumber",
-                    "billingGeocodeAccuracy",
-                    "brokerAuthority",
-                    "businessType",
-                    "cargoInsuranceExpiration",
-                    "carrierType",
-                    "cellPhone",
-                    "certificateHolder",
-                    "clientAccountManager",
-                    "coiRequestDate",
-                    "commonAuthority",
-                    "contractAuthority",
-                    "counterPartyGuid",
-                    "createdById",
-                    "createdDate",
-                    "creditLimitAmount",
-                    "customerInQbo",
-                    "customerPriority",
-                    "datUsername",
-                    "dbaName",
-                    "deliveryNotes",
-                    "description",
-                    "dotNumberStatus",
-                    "emergencyPhone",
-                    "factoringCompany",
-                    "fax",
-                    "firstName",
-                    "flag",
-                    "flagHistory",
-                    "fraudIdentityTheftStatus",
-                    "freePhone",
-                    "icpEligible",
-                    "id",
-                    "inactive",
-                    "industry",
-                    "insuranceExpiration",
-                    "insuranceOnFile",
-                    "internalNotes",
-                    "isCustomerPortal",
-                    "isDeleted",
-                    "isPartner",
-                    "isPersonAccount",
-                    "isSyncedInSuper",
-                    "lastModifiedDate",
-                    "lastName",
-                    "lastReferencedDate",
-                    "lastViewedDate",
-                    "liabilityInsuranceExpiration",
-                    "lkqTrainingItems",
-                    "masterRecordGuid",
-                    "masterRecordId",
-                    "notes",
-                    "numberOfEmployees",
-                    "numberOfLocations",
-                    "operationsEmail",
-                    "ownerId",
-                    "parentId",
-                    "paymentMethod",
-                    "paymentTerms",
-                    "pendingCancellationDate",
-                    "personAssistantName",
-                    "personAssistantPhone",
-                    "personBirthDate",
-                    "personContactId",
-                    "personDepartment",
-                    "personEmail",
-                    "personEmailBouncedDate",
-                    "personEmailBouncedReason",
-                    "personHomePhone",
-                    "personIndividualId",
-                    "personLastCuRequestDate",
-                    "personLastCuUpdateDate",
-                    "personLeadSource",
-                    "personMailingCity",
-                    "personMailingCountry",
-                    "personMailingGeocodeAccuracy",
-                    "personMailingLatitude",
-                    "personMailingLongitude",
-                    "personMailingPostalCode",
-                    "personMailingState",
-                    "personMailingStreet",
-                    "personMobilePhone",
-                    "personOtherCity",
-                    "personOtherCountry",
-                    "personOtherGeocodeAccuracy",
-                    "personOtherLatitude",
-                    "personOtherLongitude",
-                    "personOtherPhone",
-                    "personOtherPostalCode",
-                    "personOtherState",
-                    "personOtherStreet",
-                    "personTitle",
-                    "photoUrl",
-                    "pickupNotes",
-                    "portfolioCode",
-                    "primaryContactId",
-                    "primaryContactPersonId",
-                    "rating",
-                    "recordTypeId",
-                    "referralCode",
-                    "requiresAttention",
-                    "salesAccountManager",
-                    "salutation",
-                    "searchAddress",
-                    "shippingGeocodeAccuracy",
-                    "sic",
-                    "sicDesc",
-                    "site",
-                    "sla",
-                    "slaExpirationDate",
-                    "slaSerialNumber",
-                    "subIndustry",
-                    "suite",
-                    "systemModStamp",
-                    "taxId",
-                    "track1099",
-                    "trainee",
-                    "trainer",
-                    "trainingDate",
-                    "trainingItems",
-                    "truckstopUsername",
-                    "type",
-                    "upsellOpportunity",
-                    "userRole",
-                    "usesFactoringCompany",
-                    "vendorType",
-                    "website"
-                ]
+            "endpoint": {
+                "outgoing": [
+                    "billingCity",
+                    "billingCountry",
+                    "billingLatitude",
+                    "billingLongitude",
+                    "billingPostalCode",
+                    "billingState",
+                    "billingStreet",
+                    "blacklist",
+                    "contacts",
+                    "dotNumber",
+                    "email",
+                    "guid",
+                    "icpGp",
+                    "icpMultiplier",
+                    "mcNumber",
+                    "name",
+                    "orderInstructions",
+                    "phoneNumber",
+                    "preferred",
+                    "primaryContact",
+                    "rtype",
+                    "slaDays",
+                    "status"
+                ],
+                "incoming": [],
+                "byType": {
+                    "outgoing": {
+                        "carrier": [
+                            "billingCity",
+                            "billingCountry",
+                            "billingLatitude",
+                            "billingLongitude",
+                            "billingPostalCode",
+                            "billingState",
+                            "billingStreet",
+                            "blacklist",
+                            "contacts",
+                            "dotNumber",
+                            "email",
+                            "guid",
+                            "mcNumber",
+                            "name",
+                            "phoneNumber",
+                            "preferred",
+                            "primaryContact",
+                            "rtype",
+                            "status"
+                        ],
+                        "client": [
+                            "billingCity",
+                            "billingCountry",
+                            "billingLatitude",
+                            "billingLongitude",
+                            "billingPostalCode",
+                            "billingState",
+                            "billingStreet",
+                            "contacts",
+                            "email",
+                            "guid",
+                            "icpGp",
+                            "icpMultiplier",
+                            "name",
+                            "orderInstructions",
+                            "phoneNumber",
+                            "primaryContact",
+                            "rtype",
+                            "slaDays",
+                            "status"
+                        ],
+                        "employee": [
+                            "contacts",
+                            "email",
+                            "guid",
+                            "name",
+                            "phoneNumber",
+                            "primaryContact",
+                            "rtype"
+                        ],
+                        "referrer": [
+                            "contacts",
+                            "email",
+                            "guid",
+                            "name",
+                            "phoneNumber",
+                            "primaryContact",
+                            "rtype"
+                        ],
+                        "vendor": [
+                            "billingCity",
+                            "billingCountry",
+                            "billingLatitude",
+                            "billingLongitude",
+                            "billingPostalCode",
+                            "billingState",
+                            "billingStreet",
+                            "blacklist",
+                            "contacts",
+                            "email",
+                            "guid",
+                            "name",
+                            "phoneNumber",
+                            "preferred",
+                            "primaryContact",
+                            "rtype",
+                            "status"
+                        ],
+                        "unknown": [
+                            "contacts",
+                            "email",
+                            "guid",
+                            "name",
+                            "phoneNumber",
+                            "primaryContact",
+                            "rtype"
+                        ]
+                    }
+                }
             }
         }
     },
     "SFContact": {
-        "hide": {
+        "whitelist": {
             "database": {
-                "outa": [],
-                "into": []
+                "outgoing": [],
+                "incoming": []
             },
-            "external": {
-                "outa": [],
-                "into": [
-                    "accountingContact",
-                    "assistantName",
-                    "assistantPhone",
-                    "birthDate",
-                    "createdDate",
-                    "department",
-                    "description",
-                    "emailBouncedDate",
-                    "emailBouncedReason",
-                    "fax",
-                    "firstName",
-                    "homePhone",
-                    "id",
-                    "individualId",
-                    "isDeleted",
-                    "isEmailBounced",
-                    "isPersonAccount",
-                    "lastName",
-                    "leadSource",
-                    "lkqTrainingItems",
-                    "mailingCity",
-                    "mailingCountry",
-                    "mailingGeocodeAccuracy",
-                    "mailingLatitude",
-                    "mailingLongitude",
-                    "mailingPostalCode",
-                    "mailingState",
-                    "mailingStreet",
-                    "otherCity",
-                    "otherCountry",
-                    "otherGeocodeAccuracy",
-                    "otherLatitude",
-                    "otherLongitude",
-                    "otherPhone",
-                    "otherPostalCode",
-                    "otherState",
-                    "otherStreet",
-                    "photoUrl",
-                    "primaryContact",
-                    "recordTypeId",
-                    "salutation",
-                    "sdGuid",
-                    "secondaryContact",
-                    "sfId",
-                    "systemModStamp",
-                    "title",
-                    "trainer",
-                    "trainingDate",
-                    "trainingItems"
-                ]
+            "endpoint": {
+                "outgoing": [
+                    "email",
+                    "guid",
+                    "mobileNumber",
+                    "name",
+                    "phoneNumber"
+                ],
+                "incoming": []
             }
         }
     },
     "Terminal": {
         "hide": {
             "database": {
-                "into": [
-                    "vectorName",
-                    "vectorAddress"
-                ],
-                "outa": [
-                    "vectorName",
-                    "vectorAddress"
-                ]
+                "into": ["vectorName", "vectorAddress"],
+                "outa": ["vectorName", "vectorAddress"]
             },
             "external": {
                 "into": [
@@ -239,10 +166,7 @@
                     "vectorName",
                     "vectorAddress"
                 ],
-                "outa": [
-                    "vectorName",
-                    "vectorAddress"
-                ]
+                "outa": ["vectorName", "vectorAddress"]
             }
         }
     },
@@ -299,11 +223,7 @@
     "User": {
         "hide": {
             "external": {
-                "into": [
-                    "dateCreated",
-                    "dateUpdated",
-                    "dateDeleted"
-                ]
+                "into": ["dateCreated", "dateUpdated", "dateDeleted"]
             }
         }
     },
@@ -344,11 +264,7 @@
     "Attachment": {
         "hide": {
             "external": {
-                "into": [
-                    "isDeleted",
-                    "dateDeleted",
-                    "deletedByGuid"
-                ]
+                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
             }
         }
     },
@@ -408,20 +324,14 @@
     "InvoicePaymentMethod": {
         "hide": {
             "external": {
-                "into": [
-                    "externalId",
-                    "externalSource"
-                ]
+                "into": ["externalId", "externalSource"]
             }
         }
     },
     "InvoicePaymentTerm": {
         "hide": {
             "external": {
-                "into": [
-                    "externalId",
-                    "externalSource"
-                ]
+                "into": ["externalId", "externalSource"]
             }
         }
     },

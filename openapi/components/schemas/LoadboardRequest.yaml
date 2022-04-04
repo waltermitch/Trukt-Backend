@@ -17,40 +17,40 @@ extraExternalData:
           type: string
           description: First contact number of the carrier.
           example: (916) 123-4566
+          nullable: true
         email:
           type: string
           description: Contact email address of the carrier.
           example: dimitar.derentsev+rcg@ship.cars
+          nullable: true
         contactName:
           type: string
           description: Name of the person who to contact.
-          nullable: true
           example: First Last
+          nullable: true
         address:
           type: string
           description: Street name and number from the carrier address.
           example: 1900 Tech Center Dr.
+          nullable: true
         city:
           type: string
           description: City name from the carrier address.
           example: Chicago
+          nullable: true
         state:
           type: string
           description: Abbreviation of the state from the company address.
           example: IL
+          nullable: true
         zip:
           type: string
           description: Zip code from the carrier address.
           example: 19505
+          nullable: true
       required:
         - guid
         - name
-        - phone
-        - email
-        - address
-        - city
-        - state
-        - zip
     externalOrderID:
       type: string
       description: order GUID of external post.

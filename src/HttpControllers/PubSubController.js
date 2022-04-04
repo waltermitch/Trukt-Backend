@@ -1,4 +1,4 @@
-const PubSub = require('../Azure/PubSub');
+const PubSubService = require('../Services/PubSubService');
 
 class PubSubController
 {
@@ -6,8 +6,8 @@ class PubSubController
     {
         try
         {
-            const result = await PubSub.getSubToken(req.session.userGuid);
-    
+            const result = await PubSubService.getAuthToken(req.session.userGuid);
+
             if (result)
             {
                 res.status(200);

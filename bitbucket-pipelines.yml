@@ -17,6 +17,7 @@ definitions:
           - mongo
         script:
           - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
+          - npm config set $NPM_AUTH_TOKEN
           - npm install
           - npm test
     - step: &lint-test
@@ -32,6 +33,7 @@ definitions:
           - node
         script:
           - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
+          - npm config set $NPM_AUTH_TOKEN
           - npm install
           - npm run test:unit
     - step: &integration-db-test
@@ -42,6 +44,7 @@ definitions:
           - node
         script:
           - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
+          - npm config set $NPM_AUTH_TOKEN
           - npm install
           - npm install --only=dev
           - node ./tools/migrator.js init
@@ -58,6 +61,7 @@ definitions:
           - node
         script:
           - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
+          - npm config set $NPM_AUTH_TOKEN
           - npm install
           - npm install --only=dev
           - node ./tools/migrator.js init
@@ -71,7 +75,8 @@ definitions:
         caches:
           - node
         script:
-          - cd $BITBUCKET_CLONE_DIR && npm install
+          - npm config set $NPM_AUTH_TOKEN
+          - cd $BITBUCKET_CLONE_DIR && npm config set $NPM_AUTH_TOKEN && npm install
           - npm install -g knex
           - npm run decrypt -- './envs/pipeline.enc' './envs/pipeline.env'
           - node ./tools/migrator.js init
@@ -81,7 +86,7 @@ definitions:
     - step: &azure-deployment
         name: Azure Deployment
         script:
-          - cd $BITBUCKET_CLONE_DIR && npm install
+          - cd $BITBUCKET_CLONE_DIR && npm config set $NPM_AUTH_TOKEN && npm install
           - npm run api-bundle
           - apt update && apt install zip
           - zip -r $NODE_ENV-$BITBUCKET_BUILD_NUMBER.zip src public .redocly.yaml knexfile.js envs main.js package-lock.json package.json web.config openapi
@@ -110,7 +115,7 @@ definitions:
         caches:
           - node
         script:
-          - cd $BITBUCKET_CLONE_DIR && npm install
+          - cd $BITBUCKET_CLONE_DIR && npm config set $NPM_AUTH_TOKEN && npm install
           - npm install -g knex
           - npm run decrypt -- './envs/$DOT_ENV_FILENAME.enc' './envs/$DOT_ENV_FILENAME.env'
           - node ./tools/migrator.js init
@@ -146,7 +151,7 @@ definitions:
         caches:
           - node
         script:
-          - cd $BITBUCKET_CLONE_DIR && npm install
+          - cd $BITBUCKET_CLONE_DIR && npm config set $NPM_AUTH_TOKEN && npm install
           - npm install -g knex
           - npm run decrypt -- './envs/prod.enc' './envs/prod.env'
           - node ./tools/migrator.js init

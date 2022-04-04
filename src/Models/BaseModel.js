@@ -41,9 +41,16 @@ class BaseModel extends Model
             delete json[field];
         }
 
-        delete json['#id'];
-        delete json['#ref'];
-        delete json['#dbRef'];
+        const whitelist = fieldMappings?.[this.constructor.name]?.whitelist?.endpoint?.outgoing;
+        if (whitelist)
+        {
+            const temp = json;
+            json = {};
+            for (const field of whitelist)
+            {
+                json[field] = temp[field];
+            }
+        }
 
         return json;
     }
