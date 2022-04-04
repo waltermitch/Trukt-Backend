@@ -2,6 +2,7 @@ const ActivityManagerService = require('../Services/ActivityManagerService');
 const LoadboardService = require('../Services/LoadboardService');
 const OrderService = require('../Services/OrderService');
 const logEventErrors = require('./logEventErrors');
+const Notifier = require('../Webhooks/Notifier');
 const OrderJob = require('../Models/OrderJob');
 const listener = require('./index');
 
@@ -35,6 +36,16 @@ listener.on('order_created', (orderGuid) =>
         const proms = await Promise.allSettled([OrderService.calculatedDistances(orderGuid), createSuperOrders(orderGuid)]);
 
         logEventErrors(proms, 'order_created');
+    });
+});
+
+listener.on('order_distance_updated', (data) =>
+{
+    setImmediate(async () =>
+    {
+        const proms = await Promise.allSettled([Notifier.orderDistanceUpdated(data)]);
+
+        logEventErrors(proms, 'order_distance_updated');
     });
 });
 
