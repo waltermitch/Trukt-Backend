@@ -750,18 +750,16 @@ class OrderService
     static _dataCheck(dataCheck, dataRecs)
     {
         const keys = Object.keys(dataCheck);
+
         keys.sort();
+
         if (keys.length != dataRecs.length)
-        {
             throw new ValidationError('_dataCheck dataCheck keys length do not match the dataRecs length');
-        }
 
         for (const [i, key] of keys.entries())
         {
             if (dataCheck[key] && !dataRecs[i])
-            {
                 throw new NotFoundError(`${key} record doesn't exist.`);
-            }
         }
     }
 
@@ -781,6 +779,7 @@ class OrderService
             // get OrderStops and JobStops from database Fancy smancy queries
             const order = await Order.query(trx)
                 .withGraphJoined({
+                    client: true,
                     jobs: { stops: stopRelationObj },
                     stops: stopRelationObj
                 })
@@ -815,6 +814,17 @@ class OrderService
 
             // execute all promises
             await Promise.all(patchPromises);
+
+            // compose event payload
+            const payload =
+            {
+                orderGuid: order.guid,
+                clientGuid: order.client.guid,
+                orderNumber: order.number
+            };
+
+            // emit event order_distance_updated
+            emitter.emit('order_distance_updated', payload);
         });
 
         return;
