@@ -1748,7 +1748,8 @@ class OrderService
             });
             orderGraph.setUpdatedBy(currentUser);
 
-            orderGraph.setClientNote(orderData.clientNotes?.note, currentUser);
+            if (orderData.clientNotes?.note)
+                orderGraph.setClientNote(orderData.clientNotes.note, currentUser);
 
             const orderToUpdate = Order.query(trx)
                 .skipUndefined()
