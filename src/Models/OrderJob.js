@@ -933,6 +933,18 @@ class OrderJob extends BaseModel
     }
 
     /**
+     * Recalculate job's status with sql function and return updated job if needed.
+     * @param {string} jobGuid
+     * @param {import('objection').TransactionOrKnex} [trx]
+     */
+    async updateStatus(jobGuid, trx)
+    {
+        return await this.$query(trx).patchAndFetch({
+            status: raw('rcg_tms.rcg_order_job_calc_status_name(?)', jobGuid)
+        });
+    }
+
+    /**
      * @description This is for EDI orders that do not provide the inspection type or equipment type on the job
      */
     setDefaultValues(isTender = false)

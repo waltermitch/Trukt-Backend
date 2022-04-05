@@ -1284,12 +1284,7 @@ class OrderJobService
             
             // to recalculate the job's status, we need all the order job changes to be applied
             // after that job instance is refreshed to get the latest status
-            job.$set(
-                await job.$query(trx)
-                    .patchAndFetch({
-                        status: raw('rcg_tms.rcg_order_job_calc_status_name(?)', job.guid)
-                    })
-            );
+            job.$set(await job.updateStatus(jobGuid, trx));
             
             await trx.commit();
 
