@@ -60,7 +60,7 @@ class Super extends Loadboard
             instructions: this.data?.instructions?.substring(0, 9998) || this.data.order?.instructions?.substring(0, 9998),
             loadboard_instructions: this.postObject.instructions || this.data.loadboardInstructions,
             transport_type: this.setEquipmentType(this.data.equipmentType?.name),
-            inspection_type: this.data.order.inspectionType,
+            inspection_type: this.data?.inspectionType || this.data.order.inspectionType,
             pickup:
             {
                 first_available_pickup_date: this.data.pickup.dateRequestedStart,
