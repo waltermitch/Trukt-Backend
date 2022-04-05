@@ -1262,43 +1262,42 @@ class OrderJobService
             appResponse.throwErrorsIfExist();
             const isTransport = job.typeId === OrderJobType.TYPES.TRANSPORT;
  
-            if (isTransport)
-                await job.$query(trx)
-                    .patch({ dateCompleted: null, isComplete: false, updatedByGuid: currentUser, status: OrderJob.STATUS.DELIVERED });
-            else
-            {
-                await Promise.all([
-                    job.$query(trx)
-                        .patch({
-                            dateCompleted: null,
-                            isComplete: false,
-                            updatedByGuid: currentUser
-                        }),
-                    job.$relatedQuery('stopLinks', trx).patch({
-                        isCompleted: false,
-                        dateCompleted: null
+            await Promise.all([
+                job.$query(trx)
+                    .patch({
+                        dateCompleted: null,
+                        isComplete: false,
+                        updatedByGuid: currentUser
                     }),
-                    job.$relatedQuery('stops', trx).patch({
-                        status: null,
-                        isCompleted: false,
-                        dateCompleted: null
-                    })
-                ]);
-            }
+                job.$relatedQuery('stopLinks', trx).patch({
+                    isCompleted: false,
+                    dateCompleted: null
+                }),
+                job.$relatedQuery('stops', trx).patch({
+                    status: isTransport ? OrderStop.STATUSES.PICKED_UP : OrderStop.STATUSES.IN_PROGRESS,
+                    isCompleted: false,
+                    dateCompleted: null
+                })
+                .orderBy('sequence', 'desc')
+                .limit(1)
+            ]);
             
             // to recalculate the job's status, we need all the order job changes to be applied
-           await job.$query(trx)
-                .patch({
-                    status: raw('rcg_tms.rcg_order_job_calc_status_name(?)', job.guid)
-                });
+            // after that job instance is refreshed to get the latest status
+            job.$set(
+                await job.$query(trx)
+                    .patchAndFetch({
+                        status: raw('rcg_tms.rcg_order_job_calc_status_name(?)', job.guid)
+                    })
+            );
             
             await trx.commit();
-    
+
             emitter.emit('orderjob_uncompleted', job.guid);
             emitter.emit('orderjob_status_updated', {
                 jobGuid: job.guid,
                 currentUser,
-                state: { status: isTransport ? OrderJob.STATUS.DELIVERED : OrderJob.STATUS.IN_PROGRESS }
+                state: { status: job.status }
             });
     
             return 200;
