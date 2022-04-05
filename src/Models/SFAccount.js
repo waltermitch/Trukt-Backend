@@ -1,7 +1,7 @@
-const BaseModel = require('./BaseModel');
-const { raw } = require('objection');
 const { NotFoundError, DataConflictError } = require('../ErrorHandling/Exceptions');
 const FieldFilters = require('./ModelFieldMappers.json').SFAccount;
+const BaseModel = require('./BaseModel');
+const { raw } = require('objection');
 
 class SFAccount extends BaseModel
 {

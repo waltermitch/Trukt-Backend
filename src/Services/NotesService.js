@@ -1,8 +1,8 @@
+const { NotFoundError } = require('../ErrorHandling/Exceptions');
+const PubSubService = require('../Services/PubSubService');
 const OrderJob = require('../Models/OrderJob');
-const pubsub = require('../Azure/PubSub');
 const Notes = require('../Models/Notes');
 const Order = require('../Models/Order');
-const { NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class NotesService
 {
@@ -30,7 +30,8 @@ class NotesService
     static async updateNote(noteGuid, notePayload)
     {
         // creating payload to update
-        const note = {
+        const note =
+        {
             title: (notePayload.title || null),
             body: notePayload.body,
             type: notePayload.type,
@@ -38,44 +39,36 @@ class NotesService
         };
 
         // find note by note GUID and patch the note and return job/order guid
-        const updatedNote = await Notes.query().patchAndFetchById(noteGuid, note).withGraphFetched('[job, order, createdBy]');
+        const updatedNote = await Notes.query()
+            .patchAndFetchById(noteGuid, note)
+            .withGraphFetched('[job, order, createdBy]');
 
         // not doesn't exist
         if (updatedNote == undefined)
-        {
             throw new NotFoundError('Note does not exist');
-        }
 
-        // assigning guid
-        const guid = updatedNote.job?.guid || updatedNote.order?.guid;
-
-        // removing job/order fields to update sub with payload
-        delete updatedNote.order;
-        delete updatedNote.job;
+        const { parentGuid, parentName } = NotesService.buildPubSubPayload(updatedNote);
 
         // update pubsub accordingly
-        await pubsub.publishToGroup(guid, { object: 'note', data: updatedNote });
+        await PubSubService.publishNote(parentGuid, parentName, updatedNote, 'updated');
     }
 
     // function to delete not
     static async deleteNote(noteGuid)
     {
         // find note being that needs to be deleted return job/order guid
-        const updatedNote = await Notes.query().patchAndFetchById(noteGuid, { isDeleted: true }).withGraphFetched('[job, order, createdBy]');
+        const updatedNote = await Notes.query()
+            .patchAndFetchById(noteGuid, { isDeleted: true })
+            .withGraphFetched('[job, order, createdBy]');
 
         // not doesn't exist
         if (!updatedNote)
             throw new NotFoundError('Note does not exist');
 
-        // assigning guid
-        const guid = updatedNote.job?.guid || updatedNote.order?.guid;
-
-        // removing job/order fields to update sub with payload
-        delete updatedNote.order;
-        delete updatedNote.job;
+        const { parentGuid, parentName } = NotesService.buildPubSubPayload(updatedNote);
 
         // update pubsub accordingly
-        await pubsub.publishToGroup(guid, { object: 'note', data: updatedNote.guid });
+        await PubSubService.publishNote(parentGuid, parentName, updatedNote, 'deleted');
     }
 
     // to create any note
@@ -96,10 +89,20 @@ class NotesService
         // get related user
         const note = await Notes.query().findById(createdNote.guid).withGraphFetched('createdBy');
 
-        // update pubsub accordingly
-        await pubsub.publishToGroup(`${model.guid}`, { object: 'note', data: note });
+        // depending on model being job or order, publish to pubsub accordingly
+        let parentName;
+        if (model instanceof OrderJob)
+            parentName = 'job';
+        else
+            parentName = 'order';
 
-        // return full note
+        delete note.order;
+        delete note.job;
+
+        // update pubsub accordingly
+        await PubSubService.publishNote(model.guid, parentName, note, 'created');
+
+        // return note
         return note;
     }
 
@@ -145,6 +148,29 @@ class NotesService
             'order': order.notes,
             'jobs': jobNotes
         };
+    }
+
+    static buildPubSubPayload(note)
+    {
+        // assigning guid
+        let parentGuid;
+        let parentName;
+
+        if (note.job)
+        {
+            parentGuid = note.job.guid;
+            parentName = 'job';
+        }
+        else
+        {
+            parentGuid = note.order.guid;
+            parentName = 'order';
+        }
+
+        delete note.order;
+        delete note.job;
+
+        return { parentGuid, parentName };
     }
 }
 

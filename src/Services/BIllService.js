@@ -206,6 +206,7 @@ class BillService
                     bill.orderNumber = order.number;
                     bill.jobNumber = job.number;
                     bill.jobType = job.type.category;
+                    bill.referenceNumber = bill.referenceNumber || order.referenceNumber;
 
                     bill.vendor =
                     {
