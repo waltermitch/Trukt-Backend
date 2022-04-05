@@ -2093,10 +2093,15 @@ class OrderJobService
                     'longitude'
                 ]);
             })
-
             .modifyGraph('dispatches', qb =>
             {
-                qb.select(['guid', 'dateAccepted']);
+                qb.select(['guid', 'dateAccepted'])
+                    .findOne({
+                        isValid: true,
+                        isCanceled: false,
+                        isDeclined: false
+                    })
+                    .orderBy('dateCreated', 'desc');
             })
             .modifyGraph('dispatches.vendor', qb =>
             {
@@ -2111,17 +2116,6 @@ class OrderJobService
                     'name',
                     'phoneNumber'
                 ]);
-            })
-            .modifyGraph('dispatches', qb =>
-            {
-                qb.findOne({
-                    isValid: true,
-                    isAccepted: true,
-                    isCanceled: false,
-                    isDeclined: false,
-                    isPending: false
-                })
-                    .orderBy('dateCreated', 'desc');
             })
             .modifyGraph('bills', qb =>
             {
@@ -2149,7 +2143,8 @@ class OrderJobService
                     'guid',
                     'name',
                     'phoneNumber',
-                    raw('\'vendor\' as rtype')
+                    'dotNumber',
+                    raw('\'carrier\' as rtype')
                 ]);
             });
         }
