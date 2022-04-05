@@ -2103,20 +2103,6 @@ class OrderJobService
                     })
                     .orderBy('dateCreated', 'desc');
             })
-            .modifyGraph('dispatches.vendor', qb =>
-            {
-                qb.select([
-                    'billingCity',
-                    'billingCountry',
-                    'billingPostalCode',
-                    'billingState',
-                    'billingStreet',
-                    'email',
-                    'guid',
-                    'name',
-                    'phoneNumber'
-                ]);
-            })
             .modifyGraph('bills', qb =>
             {
                 qb.select(['guid']);
