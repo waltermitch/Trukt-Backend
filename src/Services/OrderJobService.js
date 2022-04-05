@@ -2077,6 +2077,11 @@ class OrderJobService
                     'dateRequestedType'
                 ]);
             })
+            .modifyGraph('stops.commodities', qb =>
+            {
+                qb.where('jobGuid', jobGuid)
+                    .distinctOn('stopGuid', 'commodityGuid');
+            })
             .modifyGraph('stops.terminal', qb =>
             {
                 qb.select([
