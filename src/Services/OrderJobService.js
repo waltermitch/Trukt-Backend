@@ -1471,23 +1471,24 @@ class OrderJobService
 
             const appResponse = new AppResponse(OrderJob.validateJobForUndelete(job));
             appResponse.throwErrorsIfExist();
-
+            
             // updating orderJob in data base
             await job.$query(trx).patch({
                 isDeleted: false,
                 updatedByGuid: currentUser
             });
+            
+            // this is required to orderjob_status_updated event to be emitted
+            const jobStatus = { oldStatus: job.status };
+
+            // Recalculating the status of the job
+            job.$set(await job.updateStatus(jobGuid, trx));
 
             // commiting transaction
             await trx.commit();
 
-            // Recalculating the status of the job
-            const jobStatus = await job.$query().patch({
-                status: raw('rcg_tms.rcg_order_job_calc_status_name(?)', jobGuid)
-            }).returning('status');
-
-            // this is required to orderjob_status_updated event to be emitted
-            jobStatus.oldStatus = OrderJob.STATUS.DELETED;
+            // adding just calculated status in jobStatus
+            jobStatus.status = job.status;
 
             // emit the event to register with status manager Will randomly update ORDER TO DELETED INCORRECT
             emitter.emit('orderjob_undeleted', {
