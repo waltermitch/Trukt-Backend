@@ -92,7 +92,7 @@ class OrderJob extends BaseModel
                 },
                 modify: (qb) =>
                 {
-                    qb.distinctOn('stopGuid');
+                    qb.distinctOn('guid');
                 }
             },
             commodities: {
