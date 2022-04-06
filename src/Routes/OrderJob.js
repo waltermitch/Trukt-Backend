@@ -20,6 +20,9 @@ router
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/cancel`, controller.cancelJob)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/uncancel`, controller.uncancelJob)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/deliver`, controller.deliveredJob)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/undeliver`, controller.undeliverJob);
+    .put(`${prefix}/:jobGuid(${uuidRegexStr})/undeliver`, controller.undeliverJob)
+
+    // generated documents
+    .get(`${prefix}/:jobGuid(${uuidRegexStr})/doc/rate-confirmation`, controller.getRateConfirmation);
 
 module.exports = router;

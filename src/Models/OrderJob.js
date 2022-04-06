@@ -89,6 +89,10 @@ class OrderJob extends BaseModel
                         to: 'rcgTms.orderStopLinks.stopGuid'
                     },
                     to: 'rcgTms.orderStops.guid'
+                },
+                modify: (qb) =>
+                {
+                    qb.distinctOn('guid');
                 }
             },
             commodities: {
@@ -818,7 +822,42 @@ class OrderJob extends BaseModel
                 'job.actualExpense',
                 'job.dateUpdated',
                 'job.grossProfitMargin'
-            ]
+            ],
+            fullData: {
+                vendor: true,
+                vendorContact: true,
+                vendorAgent: true,
+                dispatcher: true,
+                jobType: true,
+                equipmentType: true,
+                stops: {
+                    terminal: true,
+                    primaryContact: true,
+                    alternativeContact: true,
+                    commodities: {
+                        vehicle: {
+                            weightClass: true
+                        },
+                        commType: true
+                    }
+                }
+            },
+            billingData:
+            {
+                bills: {
+                    consignee: true,
+                    paymentTerms: true,
+                    paymentMethod: true,
+                    lines: {
+                        item: true,
+                        commodity: {
+                            vehicle: {
+                                weightClass: true
+                            }
+                        }
+                    }
+                }
+            }
         };
     }
 
