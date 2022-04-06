@@ -488,4 +488,29 @@ listener.on('orderjob_completed', ({ jobGuid, currentUser }) =>
     });
 });
 
+listener.on('orderjob_uncompleted', ({ jobGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        try
+        {
+            const currentJob = await OrderJobService.getJobData(jobGuid);
+
+            const proms = await Promise.allSettled([
+                ActivityManagerService.createActivityLog({
+                    orderGuid: currentJob.orderGuid,
+                    jobGuid,
+                    userGuid: currentUser,
+                    activityId: 36
+                })
+            ]);
+
+            logEventErrors(proms, 'orderjob_uncompleted');
+        }
+        catch (error)
+        {
+            logEventErrors(error, 'orderjob_uncompleted');
+        }
+    });
+});
 module.exports = listener;

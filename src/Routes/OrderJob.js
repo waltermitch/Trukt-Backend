@@ -14,7 +14,7 @@ router
     .delete(`${prefix}/:jobGuid(${uuidRegexStr})/hold`, controller.removeHold)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/ready`, controller.setJobToReadySingle)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/complete`, controller.markJobAsComplete)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/uncomplete`, (req, res) => http(req, res, controller.markJobAsUncomplete))
+    .put(`${prefix}/:jobGuid(${uuidRegexStr})/uncomplete`, controller.markJobAsUncomplete)
     .delete(`${prefix}/:jobGuid(${uuidRegexStr})`, controller.deleteJob)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/undelete`, controller.undeleteJob)
     .put(`${prefix}/:jobGuid(${uuidRegexStr})/cancel`, controller.cancelJob)

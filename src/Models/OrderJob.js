@@ -3,6 +3,7 @@ const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const { snakeCaseString } = require('../Utils');
 const { ref, raw } = require('objection');
 const BaseModel = require('./BaseModel');
+const OrderJobType = require('./OrderJobType');
 
 const jobTypeFields = ['category', 'type'];
 const EDI_DEFAULT_INSPECTION_TYPE = 'standard';
@@ -1159,6 +1160,36 @@ class OrderJob extends BaseModel
             if (!job.dateVerified)
                 errors.push(new DataConflictError('Job has not been verified. Please verify this job before completing this job.'));
         }
+
+        return errors;
+    }
+
+    static validateJobForUncomplete(job)
+    {
+        const errors = [];
+
+        if (!job)
+            errors.push(new NotFoundError('Job does not exist.'));
+        if (!job.dispatcherGuid)
+            errors.push(new MissingDataError('Job has no dispatcher. Please assign a dispatcher'));
+        if (!job.vendorGuid)
+            errors.push(new MissingDataError('Job has no vendor assigned. Please assign a vendor'));
+        if (job.typeId !== OrderJobType.TYPES.TRANSPORT && job.isTransport)
+            errors.push(new DataConflictError('Job with type service is marked as transport job. Please remove the transport flag before uncompleting this job.'));
+        if (job.typeId === OrderJobType.TYPES.TRANSPORT && !job.isTransport)
+            errors.push(new DataConflictError('Job with type transport is not marked as transport job. Please mark the job as transport job before uncompleting this job.'));
+        if (!job.isComplete || !job.dateCompleted)
+            errors.push(new DataConflictError('Job is not complete. Please add the complete flag before uncompleting this job.'));
+        if (!job.verifiedByGuid)
+            errors.push(new DataConflictError('Job has not been verified. Please verify this job before uncompleting this job.'));
+        if (!job.isReady)
+            errors.push(new DataConflictError('Job is not ready. Please mark as ready before uncompleting this job.'));
+        if (job.isDeleted)
+            errors.push(new DataConflictError('Job is deleted. Please remove the deleted flag before uncompleting this job.'));
+        if (job.isCanceled)
+            errors.push(new DataConflictError('Job is canceled. Please remove the canceled flag before uncompleting this job.'));
+        if (!job.dateStarted)
+            errors.push(new DataConflictError('Job has not been started. Please start the job before uncompleting it.'));
 
         return errors;
     }

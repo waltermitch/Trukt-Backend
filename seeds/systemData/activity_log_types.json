@@ -212,6 +212,12 @@
             "category": "job",
             "name": "Job Completed",
             "order_filter_label": "Job Completed On"
+        },
+        {
+            "id": 36,
+            "category": "job",
+            "name": "Job Uncompleted",
+            "order_filter_label": "Job Uncompleted On"
         }
     ]
 }

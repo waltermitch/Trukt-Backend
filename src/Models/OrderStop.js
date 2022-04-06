@@ -9,6 +9,12 @@ class OrderStop extends BaseModel
         SERVICE: null
     };
 
+    static STATUSES = {
+        PICKED_UP: 'picked up',
+        DELIVERED: 'delivered',
+        IN_PROGRESS: 'in progress'
+    }
+
     static get tableName()
     {
         return 'rcgTms.orderStops';
