@@ -74,26 +74,38 @@ class BillService
         return result;
     }
 
-    static async updateBillLine(billGuid, lineGuid, line)
+    static async updateBillLine(billGuid, lineGuid, line, currentUser)
     {
-        // To make sure if bill has been passed
-        const bill = await Bill.query().findById(billGuid);
+        const trx = await InvoiceLine.startTransaction();
+        try
+        {
+            // To make sure if bill has been passed
+            const bill = await Bill.query(trx).findById(billGuid);
+    
+            // if no bill throw error
+            if (!bill)
+                throw new NotFoundError('Bill does not exist.');
+    
+            // linking and updateing
+            line.linkBill(bill);
+    
+            // returning updated bill
+            const newLine = await InvoiceLine.query(trx).patchAndFetchById(lineGuid, line);
+    
+            // if line doesn't exist
+            if (!newLine)
+                throw new NotFoundError('Line does not exist.');
+    
+            await newLine.setAsPaidInvoiceBill(billGuid, currentUser, trx);
 
-        // if no bill throw error
-        if (!bill)
-            throw new NotFoundError('Bill does not exist.');
-
-        // linking and updateing
-        line.linkBill(bill);
-
-        // returning updated bill
-        const newLine = await InvoiceLine.query().patchAndFetchById(lineGuid, line);
-
-        // if line doesn't exist
-        if (!newLine)
-            throw new NotFoundError('Line does not exist.');
-
-        return newLine;
+            await trx.commit();
+            return newLine;
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
     }
 
     static async deleteBillLine(billGuid, lineGuid)

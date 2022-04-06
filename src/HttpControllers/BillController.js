@@ -30,9 +30,10 @@ class BillController
         const billGuid = req.params.billGuid;
         const lineGuid = req.params.lineGuid;
         const line = InvoiceLine.fromJson(req.body);
+        const currentUser = req.session.userGuid;
         try
         {
-            const result = await BillService.updateBillLine(billGuid, lineGuid, line);
+            const result = await BillService.updateBillLine(billGuid, lineGuid, line, currentUser);
             res.status(200);
             res.json(result);
         }

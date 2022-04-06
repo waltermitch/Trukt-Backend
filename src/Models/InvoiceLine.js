@@ -1,5 +1,6 @@
 const { RecordAuthorMixin, isNotDeleted, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
+const { DateTime } = require('luxon');
 
 class InvoiceLine extends BaseModel
 {
@@ -187,6 +188,37 @@ class InvoiceLine extends BaseModel
         {
             this.invoiceGuid = invoice.guid;
         }
+    }
+
+    /**
+     * Mark invoice/bill for this line as paid when all the lines are paid.
+     * @param {string} invoiceBillGuid
+     * @param {string} currentUser
+     * @param {import('objection').TransactionOrKnex} trx
+     */
+    async setAsPaidInvoiceBill(invoiceBillGuid, currentUser, trx)
+    {
+        this.invoiceBill = await this.$relatedQuery('invoiceBill', trx);
+
+        if (this.isPaid)
+        {
+            // this will set is_paid to true in bill if all lines with amount over 0 are paid
+            await this.invoiceBill.$query(trx).patch({
+                isPaid: true,
+                datePaid: DateTime.now().toISO(),
+                updatedByGuid: currentUser
+            })
+            .whereRaw('(SELECT count(*) FROM "rcg_tms"."invoice_bill_lines" WHERE invoice_bill_lines.amount > 0 AND invoice_bill_lines.invoice_guid = :invoiceBillGuid) = (SELECT count(*) FROM "rcg_tms"."invoice_bill_lines" WHERE invoice_bill_lines.invoice_guid = :invoiceBillGuid AND invoice_bill_lines.is_paid = true AND invoice_bill_lines.amount > 0)', { invoiceBillGuid });
+        }
+        else
+            if (this.invoiceBill.isPaid)
+
+                // this will set is_paid to false in bill if any line is not paid and if bill is paid already
+                await this.invoiceBill.$query(trx).patch({
+                    isPaid: false,
+                    datePaid: null,
+                    updatedByGuid: currentUser
+                });
     }
 }
 
