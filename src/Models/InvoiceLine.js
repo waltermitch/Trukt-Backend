@@ -219,6 +219,8 @@ class InvoiceLine extends BaseModel
                     datePaid: null,
                     updatedByGuid: currentUser
                 });
+
+        delete this.invoiceBill;
     }
 }
 
