@@ -173,19 +173,8 @@ class SFContact extends BaseModel
             if (uniqueCols)
             {
                 // if a column in postgres has a null value then we need to treat it as a unique value
-                const uniqueColsWithNulls = [];
-                const uniqueColsWithoutNulls = [];
-
-                uniqueCols.map(col =>
-                {
-                    // if a column is present but null, we need to treat it as a unique value
-                    if (this[col] === null)
-                        uniqueColsWithNulls.push(col);
-
-                    // if a column is present and not null, we can use it as a unique value as well
-                    else if (this[col] != undefined)
-                        uniqueColsWithoutNulls.push(col);
-                });
+                const uniqueColsWithNulls = uniqueCols.filter(col => this[col] === null);
+                const uniqueColsWithoutNulls = uniqueCols.filter(col => this[col] != undefined);
 
                 const qb = this.constructor.query(trx);
 
