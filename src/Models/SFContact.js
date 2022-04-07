@@ -189,7 +189,17 @@ class SFContact extends BaseModel
                 promises.push(qb.first());
             }
 
-            // vlad wrote the rest of this code
+            /* It would first try to find the record in the database that matches the record
+            using an ID (if possible) or the unique fields.
+            If those return multiple rows, then it will try to find the first closest matching record.
+            If it can’t find the record then it will try to create the record by using the model instance.
+            It removes the IdColumns if for some reason they exist, then creates a record in the database and returns the object.
+            It creates a shallow copy because the data will be changed and we want to preserve it outside of this method.
+            Because the method is supposed to be a mixin, it is written to be generic.
+            However you can make it specific to the SFContact, which means you can cut out some of the redundant code.
+            Remember, this is a “Find or create”.
+            If you can’t find the record in the database, you have to create it,
+            which is what the last part is doing if finding the record fails. */
             return Promise.all(promises).then(async (searches) =>
             {
                 // return the first non-nil element
