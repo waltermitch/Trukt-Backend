@@ -5,6 +5,7 @@ const PubSubService = require('../Services/PubSubService');
 const OrderService = require('../Services/OrderService');
 const SuperDispatch = require('../Loadboards/Super');
 const OrderJob = require('../Models/OrderJob');
+const OrderJobType = require('../Models/OrderJobType');
 const Order = require('../Models/Order');
 const listener = require('./index');
 const Super = require('../Loadboards/Super');
@@ -344,7 +345,7 @@ listener.on('orderjob_deleted', ({ orderGuid, currentUser, jobGuid }) =>
     });
 });
 
-listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
+listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid, jobType, status }) =>
 {
     /**
      * Register job and order as deleted for activities
@@ -353,8 +354,7 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            OrderJobService.updateStatusField(jobGuid, currentUser),
-            Super.updateStatus(jobGuid, 'deleted', 'notDeleted'),
+            ...(jobType === OrderJobType.TYPES.TRANSPORT ? [Super.updateStatus(jobGuid, 'deleted', 'notDeleted') ] : []),
             ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
@@ -368,7 +368,8 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid }) =>
                 activityId: 20
             })
         ]);
-
+        
+        listener.emit('orderjob_status_updated', { jobGuid, currentUser, state: status });
         logEventErrors(proms, 'orderjob_undeleted');
     });
 });
@@ -422,8 +423,8 @@ listener.on('orderjob_status_updated', ({ jobGuid, currentUser, state }) =>
     {
         try
         {
-            const currrentJob = await OrderJobService.getJobData(jobGuid);
-            const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, currrentJob), SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)]);
+            const currentJob = await OrderJobService.getJobData(jobGuid);
+            const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, currentJob), ...(currentJob.typeId === OrderJobType.TYPES.TRANSPORT ? [SuperDispatch.updateStatus(jobGuid, state.oldStatus, state.status)] : [])]);
 
             logEventErrors(proms, 'orderjob_status_updated');
         }
@@ -487,4 +488,29 @@ listener.on('orderjob_completed', ({ jobGuid, currentUser }) =>
     });
 });
 
+listener.on('orderjob_uncompleted', ({ jobGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        try
+        {
+            const currentJob = await OrderJobService.getJobData(jobGuid);
+
+            const proms = await Promise.allSettled([
+                ActivityManagerService.createActivityLog({
+                    orderGuid: currentJob.orderGuid,
+                    jobGuid,
+                    userGuid: currentUser,
+                    activityId: 36
+                })
+            ]);
+
+            logEventErrors(proms, 'orderjob_uncompleted');
+        }
+        catch (error)
+        {
+            logEventErrors(error, 'orderjob_uncompleted');
+        }
+    });
+});
 module.exports = listener;

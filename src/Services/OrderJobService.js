@@ -1253,14 +1253,55 @@ class OrderJobService
 
     static async markJobAsUncomplete(jobGuid, currentUser)
     {
-        await OrderJob.query()
-            .where({ 'guid': jobGuid })
-            .patch({ 'isComplete': false, 'updatedByGuid': currentUser, 'status': OrderJob.STATUS.DELIVERED }).first();
+        const trx = await OrderJob.startTransaction();
 
-        emitter.emit('orderjob_uncompleted', jobGuid);
-        emitter.emit('orderjob_status_updated', { jobGuid, currentUser, state: { status: OrderJob.STATUS.DELIVERED } });
+        try
+        {
+            const job = await OrderJob.query(trx).findById(jobGuid);
+            const appResponse = new AppResponse(OrderJob.validateJobForUncomplete(job));
+            appResponse.throwErrorsIfExist();
+            const isTransport = job.typeId === OrderJobType.TYPES.TRANSPORT;
+ 
+            await Promise.all([
+                job.$query(trx)
+                    .patch({
+                        dateCompleted: null,
+                        isComplete: false,
+                        updatedByGuid: currentUser
+                    }),
+                job.$relatedQuery('stopLinks', trx).patch({
+                    isCompleted: false,
+                    dateCompleted: null
+                }),
+                job.$relatedQuery('stops', trx).patch({
+                    status: isTransport ? OrderStop.STATUSES.PICKED_UP : OrderStop.STATUSES.IN_PROGRESS,
+                    isCompleted: false,
+                    dateCompleted: null
+                })
+                .orderBy('sequence', 'desc')
+                .limit(1)
+            ]);
+            
+            // to recalculate the job's status, we need all the order job changes to be applied
+            // after that job instance is refreshed to get the latest status
+            job.$set(await job.updateStatus(jobGuid, trx));
+            
+            await trx.commit();
 
-        return 200;
+            emitter.emit('orderjob_uncompleted', job.guid);
+            emitter.emit('orderjob_status_updated', {
+                jobGuid: job.guid,
+                currentUser,
+                state: { status: job.status }
+            });
+    
+            return 200;
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
     }
 
     /**
@@ -1467,25 +1508,37 @@ class OrderJobService
 
         try
         {
-            const job = await OrderJob.query(trx).select('orderGuid', 'isDeleted').findOne('guid', jobGuid);
+            const job = await OrderJob.query(trx).findById(jobGuid);
 
-            if (!job)
-                throw new NotFoundError('Job does not exist');
+            const appResponse = new AppResponse(OrderJob.validateJobForUndelete(job));
+            appResponse.throwErrorsIfExist();
+            
+            // updating orderJob in data base
+            await job.$query(trx).patch({
+                isDeleted: false,
+                updatedByGuid: currentUser
+            });
+            
+            // this is required to orderjob_status_updated event to be emitted
+            const jobStatus = { oldStatus: job.status };
 
-            if (!job?.isDeleted)
-                return { status: 200 };
-
-            // setting order back to ready status
-            const payload = OrderJobService.createStatusPayload('ready', currentUser);
-
-            // udpating orderJob in data base
-            await OrderJob.query(trx).patch(payload).findById(jobGuid);
+            // Recalculating the status of the job
+            job.$set(await job.updateStatus(jobGuid, trx));
 
             // commiting transaction
             await trx.commit();
 
+            // adding just calculated status in jobStatus
+            jobStatus.status = job.status;
+
             // emit the event to register with status manager Will randomly update ORDER TO DELETED INCORRECT
-            emitter.emit('orderjob_undeleted', { orderGuid: job.orderGuid, currentUser, jobGuid });
+            emitter.emit('orderjob_undeleted', {
+                orderGuid: job.orderGuid,
+                currentUser,
+                jobGuid,
+                jobType: job.typeId,
+                status: jobStatus
+            });
 
             return { status: 200 };
         }
@@ -1587,7 +1640,7 @@ class OrderJobService
             const jobUpdated = await OrderJob.query(trx).patchAndFetchById(jobGuid, payload);
 
             await trx.commit();
-            
+
             const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([jobUpdated.guid]);
             let data;
             if (goodJobs.length === 1)
@@ -1605,7 +1658,7 @@ class OrderJobService
             {
                 throw new DataConflictError(jobsExceptions[0].errors[0]);
             }
- 
+
             // the status manager will handle actually changing the jobs status field
             // and sending the updated job to the client
             emitter.emit('orderjob_uncanceled', { orderGuid: job.orderGuid, currentUser, jobGuid });
@@ -1756,7 +1809,7 @@ class OrderJobService
         else
         {
             const job = await OrderJob.query()
-                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser, isComplete: state.expectedStatus === OrderJob.STATUS.COMPLETED }))
+                .patch(OrderJob.fromJson({ 'status': state.expectedStatus, 'updatedByGuid': currentUser, isComplete: state.expectedStatus === OrderJob.STATUS.COMPLETED, dateCompleted: state.expectedStatus === OrderJob.STATUS.COMPLETED ? DateTime.now().toISO() : null }))
                 .findById(jobGuid)
                 .returning('status');
 
@@ -2045,6 +2098,141 @@ class OrderJobService
         job.validateJobToAddHold();
 
         return job;
+    }
+
+    static async getRateConfirmation(jobGuid)
+    {
+
+        const query = OrderJob.query()
+            .findById(jobGuid)
+            .withGraphFetched(OrderJob.fetch.fullData)
+            .withGraphFetched({ dispatches: OrderJobDispatch.fetch.fullData })
+            .withGraphFetched(OrderJob.fetch.billingData)
+            .select([
+                'rcgTms.orderJobs.guid',
+                'rcgTms.orderJobs.number',
+                'rcgTms.orderJobs.distance',
+                'rcgTms.orderJobs.loadType',
+                'rcgTms.orderJobs.instructions'
+            ])
+            .modifyGraph('stops', qb =>
+            {
+                qb.select([
+                    'guid',
+                    'stopType',
+                    'sequence',
+                    'notes',
+                    'dateScheduledStart',
+                    'dateScheduledEnd',
+                    'dateScheduledType',
+                    'dateRequestedStart',
+                    'dateRequestedEnd',
+                    'dateRequestedType'
+                ]);
+            })
+            .modifyGraph('stops.commodities', qb =>
+            {
+                qb.where('jobGuid', jobGuid)
+                    .distinctOn('stopGuid', 'commodityGuid');
+            })
+            .modifyGraph('stops.terminal', qb =>
+            {
+                qb.select([
+                    'name',
+                    'guid',
+                    'locationType',
+                    'street1',
+                    'street2',
+                    'state',
+                    'city',
+                    'country',
+                    'zipCode',
+                    'latitude',
+                    'longitude'
+                ]);
+            })
+            .modifyGraph('dispatches', qb =>
+            {
+                qb.select(['guid', 'dateAccepted'])
+                    .findOne({
+                        isValid: true,
+                        isCanceled: false,
+                        isDeclined: false
+                    })
+                    .orderBy('dateCreated', 'desc');
+            })
+            .modifyGraph('bills', qb =>
+            {
+                qb.select(['guid']);
+            })
+            .modifyGraph('bills.lines', qb =>
+            {
+                qb.select(['amount', 'dateCreated', 'dateCharged']);
+            });
+
+        // strict select fields for the SFAccount
+        for (const path of ['vendor', 'dispatches.vendor', 'bills.consignee'])
+        {
+            query.modifyGraph(path, qb =>
+            {
+                qb.select([
+                    'billingCity',
+                    'billingCountry',
+                    'billingPostalCode',
+                    'billingLatitude',
+                    'billingLongitude',
+                    'billingState',
+                    'billingStreet',
+                    'email',
+                    'guid',
+                    'name',
+                    'phoneNumber',
+                    'dotNumber',
+                    raw('\'carrier\' as rtype')
+                ]);
+            });
+        }
+
+        // strict select fields for the Commodities in the Order
+
+        for (const path of ['stops.commodities', 'bills.lines.commodity'])
+        {
+            query.modifyGraph(path, qb =>
+            {
+                qb.select([
+                    'guid',
+                    'capacity',
+                    'damaged',
+                    'inoperable',
+                    'length',
+                    'weight',
+                    'quantity',
+                    'description',
+                    'identifier',
+                    'lotNumber'
+                ]);
+            });
+        }
+
+        const orderJobInfo = await query;
+
+        if (orderJobInfo == undefined)
+        {
+            throw new NotFoundError('This job does not exist');
+        }
+        orderJobInfo.dispatch = orderJobInfo.dispatches[0];
+        delete orderJobInfo.dispatches;
+
+        // sort the stops in the correct sequence
+        orderJobInfo.stops.sort((a, b) => a.sequence - b.sequence);
+
+        // normalize the sequence numbers for the stops
+        let seq = 1;
+        for (const stop of orderJobInfo.stops)
+        {
+            stop.sequence = seq++;
+        }
+        return orderJobInfo;
     }
 }
 

@@ -236,6 +236,19 @@ class OrderJobController
             next(error);
         }
     }
+
+    static async getRateConfirmation(req, res, next)
+    {
+        try
+        {
+            const rateConf = await OrderJobService.getRateConfirmation(req.params.jobGuid);
+            res.status(200).json(rateConf);
+        }
+        catch(error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = OrderJobController;
