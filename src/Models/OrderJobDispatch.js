@@ -91,6 +91,19 @@ class OrderJobDispatch extends BaseModel
         };
     }
 
+    static get fetch()
+    {
+        return {
+            fullData: {
+                vendor: true,
+                vendorContact: true,
+                vendorAgent: true,
+                paymentMethod: true,
+                paymentTerm: true
+            }
+        };
+    }
+
     // this is meant to be used to update the dispatch when a carrier declines an offer
     setToDeclined()
     {
