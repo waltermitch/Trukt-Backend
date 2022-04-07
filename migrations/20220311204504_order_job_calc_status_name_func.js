@@ -22,7 +22,6 @@ exports.up = function(knex)
             job_bills integer;
             job_dispatches integer;
             is_job_posted boolean;
-            is_dispatch_valid boolean;
             is_job_declined boolean;
             pickup_count integer;
             delivery_count integer;
@@ -184,15 +183,14 @@ exports.up = function(knex)
             and job.date_verified is not null
             and job.verified_by_guid is not null
             and job.updated_by_guid is not null
-            and job.status = '${OrderJob.STATUS.READY}' 
             and valid_job_count > 0
+            and job.vendor_guid is null
         then
             return '${OrderJob.STATUS.READY}';
         end if;
 
         -- evaluate on hold status 
         if job.is_ready = false
-            and job.status = '${OrderJob.STATUS.ON_HOLD}'
             and job.is_on_hold = true
             and job.updated_by_guid is not null
         then
@@ -280,37 +278,32 @@ exports.up = function(knex)
         end if;
 
         -- evaluate dispatched status
-        if job.status = '${OrderJob.STATUS.DISPATCHED}'
-            and (job.vendor_guid is not null
-            or job.vendor_agent_guid is not null
-            or job.vendor_contact_guid is not null)
+        if (select
+                    count(*) = 1
+                from
+                    rcg_tms.order_job_dispatches ojd
+                where
+                    ojd.job_guid = param_job_guid
+                    and ojd.is_pending = false
+                    and ojd.is_accepted = true
+                    and ojd.is_canceled = false
+                    and ojd.is_declined = false
+                    and ojd.is_valid = true
+                    and ojd.date_accepted is not null
+                    and ojd.date_deleted is null
+                    and ojd.date_canceled is null
+            )
+            and job.is_transport = true
+            and job.vendor_guid is not null
         then
-            select
-                count(*) = 1
-            into
-                is_dispatch_valid
-            from
-                rcg_tms.order_job_dispatches ojd
-            where
-                ojd.job_guid = param_job_guid
-                and ojd.is_pending = false
-                and ojd.is_accepted = true
-                and ojd.is_canceled = false
-                and ojd.is_declined = false
-                and ojd.is_valid = true
-                and ojd.date_accepted is not null
-                and ojd.date_deleted is null
-                and ojd.date_canceled is null;
-            
-            if is_dispatch_valid then
-                return '${OrderJob.STATUS.DISPATCHED}';
-            end if;
+            return '${OrderJob.STATUS.DISPATCHED}';
         end if;
 
         -- evaluate declined status
         if (job.vendor_guid is null
             or job.vendor_agent_guid is null
             or job.vendor_contact_guid is null)
+            and job.is_transport = true
             and job.is_on_hold = false
         then
             select
@@ -402,8 +395,6 @@ exports.up = function(knex)
         -- evaluate in progress status
         if job.is_transport = false
             and job.vendor_guid is not null
-            and job.date_started is not null
-            and job.updated_by_guid is not null
 
         -- get last valid dispatch if exists
             and (
