@@ -192,35 +192,28 @@ class InvoiceLine extends BaseModel
 
     /**
      * Mark invoice/bill for this line as paid when all the lines are paid.
-     * @param {string} invoiceBillGuid
      * @param {string} currentUser
      * @param {import('objection').TransactionOrKnex} trx
      */
-    async setAsPaidInvoiceBill(invoiceBillGuid, currentUser, trx)
+    async setAsPaidInvoiceBill(currentUser, trx)
     {
-        this.invoiceBill = await this.$relatedQuery('invoiceBill', trx);
+        const invoiceBill = await this.$relatedQuery('invoiceBill', trx);
 
         if (this.isPaid)
         {
-            // this will set is_paid to true in bill if all lines with amount over 0 are paid
-            await this.invoiceBill.$query(trx).patch({
+            const lineQuery = InvoiceLine.query().select(1).where({
+                invoiceGuid: invoiceBill.guid,
+                isPaid: false
+            }).whereNot('amount', 0);
+
+            // this will set is_paid to true in bill/invoice if all lines with amount over 0 are paid
+            await invoiceBill.$query(trx).patch({
                 isPaid: true,
                 datePaid: DateTime.now().toISO(),
                 updatedByGuid: currentUser
             })
-            .whereRaw('(SELECT count(*) FROM "rcg_tms"."invoice_bill_lines" WHERE invoice_bill_lines.amount > 0 AND invoice_bill_lines.invoice_guid = :invoiceBillGuid) = (SELECT count(*) FROM "rcg_tms"."invoice_bill_lines" WHERE invoice_bill_lines.invoice_guid = :invoiceBillGuid AND invoice_bill_lines.is_paid = true AND invoice_bill_lines.amount > 0)', { invoiceBillGuid });
+            .whereNotExists(lineQuery);
         }
-        else
-            if (this.invoiceBill.isPaid)
-
-                // this will set is_paid to false in bill if any line is not paid and if bill is paid already
-                await this.invoiceBill.$query(trx).patch({
-                    isPaid: false,
-                    datePaid: null,
-                    updatedByGuid: currentUser
-                });
-
-        delete this.invoiceBill;
     }
 }
 

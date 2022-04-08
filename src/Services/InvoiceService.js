@@ -155,13 +155,13 @@ class InvoiceService
             // bulk insert into Lines table
             const [newLine1, newLine2] = await InvoiceLine.query(trx).insertAndFetch(linksArray);
 
-            await newLine1.setAsPaidInvoiceBill(invoiceGuid, currentUser, trx);
+            await newLine1.setAsPaidInvoiceBill(currentUser, trx);
 
             // if two lines then link lines
             if (newLine2)
             {
                 await InvoiceService.LinkLines(newLine1.guid, newLine2.guid, trx);
-                await newLine2.setAsPaidInvoiceBill(billGuid, currentUser, trx);
+                await newLine2.setAsPaidInvoiceBill(currentUser, trx);
             }
 
             // return only the invoice item
@@ -189,13 +189,13 @@ class InvoiceService
             line.linkInvoice(invoice);
     
             // returning updated bill
-            const newLine = await InvoiceLine.query(trx).patchAndFetchById(lineGuid, line);
+            const newLine = await InvoiceLine.query(trx).patchAndFetchById(lineGuid, { ...line, updatedByGuid: currentUser });
     
             // if line doesn't exist
             if (!newLine)
                 throw new NotFoundError('Line does not exist.');
     
-            await newLine.setAsPaidInvoiceBill(invoiceGuid, currentUser, trx);
+            await newLine.setAsPaidInvoiceBill(currentUser, trx);
             await trx.commit();
     
             return newLine;
