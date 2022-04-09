@@ -63,23 +63,32 @@ class StatusCacheManager
     // method that will aggregate jobs per it's status
     static async updateStatus()
     {
-        // array to fire off all request at same time
-        const promiseArray = [];
-
-        // looping through status map and applying rquires query
-        for (const [status] of Object.entries(cache.transport))
+        const trx = await OrderJob.transaction();
+        try
         {
-            promiseArray.push(OrderJob.query().alias('job').modify([StatusCacheManager.statusMap[status], 'transportJob']).resultSize().then((value) => cache.transport[status] = value));
-        }
 
-        // looping through all service job status queries
-        for (const [status] of Object.entries(cache.service))
+            // array to fire off all request at same time
+            const promiseArray = [];
+            for (const type of ['transport', 'service'])
+            {
+                const jobType = type + 'Job';
+
+                // looping through status map and applying rquires query
+                for (const [status] of Object.entries(cache[type]))
+                {
+                    promiseArray.push(OrderJob.query(trx).alias('job').modify([StatusCacheManager.statusMap[status], jobType]).resultSize().then((value) => cache[type][status] = value));
+                }
+            }
+
+            // executing all requests
+            await Promise.allSettled(promiseArray);
+            await trx.commit();
+        }
+        catch (error)
         {
-            promiseArray.push(OrderJob.query().alias('job').modify([StatusCacheManager.statusMap[status], 'serviceJob']).resultSize().then((value) => cache.service[status] = value));
+            await trx.rollback();
+            throw error;
         }
-
-        // executing all requests
-        await Promise.allSettled(promiseArray);
 
     }
 
