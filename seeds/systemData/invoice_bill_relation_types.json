@@ -1,0 +1,27 @@
+{
+    "schema": "rcg_tms",
+    "table": "invoice_bill_relation_types",
+    "unique": "id",
+    "data": [
+        {
+            "id": 1,
+            "name": "client"
+        },
+        {
+            "id": 2,
+            "name": "consignee"
+        },
+        {
+            "id": 3,
+            "name": "referrer"
+        },
+        {
+            "id": 4,
+            "name": "vendor"
+        },
+        {
+            "id": 5,
+            "name": "carrier"
+        }
+    ]
+}
