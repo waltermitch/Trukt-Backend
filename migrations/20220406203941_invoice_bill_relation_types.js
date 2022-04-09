@@ -6,7 +6,7 @@ exports.up = function (knex)
     return knex.schema.withSchema(SCHEMA_NAME).createTable(TABLE_NAME, table =>
     {
         table.increments('id').primary().unique().notNullable();
-        table.string('name').notNullable();
+        table.string('name').unique().notNullable();
     });
 };
 
