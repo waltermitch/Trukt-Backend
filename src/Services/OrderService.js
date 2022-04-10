@@ -33,6 +33,7 @@ const { v4: uuid } = require('uuid');
 const R = require('ramda');
 const EDI990Payload = require('../EDI/Payload/EDI990Payload');
 const EDIApi = require('../EDI/EDIApi');
+const InvoiceBillRelationTypes = require('../Models/InvoiceBillRelationType');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -623,8 +624,13 @@ class OrderService
                     return jobInvoiceLine;
                 });
 
+                console.log(jobData.jobType);
+
+                // if job is a transport job, add Invoice Bill Type
+                const billInvoiceType = jobData.isTransport ? InvoiceBillRelationTypes.TYPES.CARRIER : InvoiceBillRelationTypes.TYPES.VENDOR;
+
                 if (jobBillLines)
-                    jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser, null);
+                    jobData.bills = OrderService.createInvoiceBillGraph(jobBillLines, false, currentUser, null, billInvoiceType);
 
                 /**
                 * For order creation. given that all invoices are "transport", the actual and estimated expense and revenue have the same values
@@ -641,11 +647,9 @@ class OrderService
             const referrerInvoice = OrderService.createReferrerRebateInvoice(orderObj?.referrerRebate, referrer, currentUser);
 
             order.jobs = orderJobs;
-            order.invoices = [OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee), ...referrerInvoice];
+            order.invoices = [OrderService.createInvoiceBillGraph(orderInvoices, true, currentUser, consignee, InvoiceBillRelationTypes.TYPES.CONSIGNEE), ...referrerInvoice];
 
-            const orderCreated = await Order.query(trx)
-                .skipUndefined()
-                .insertGraph(order, { allowRefs: true });
+            const orderCreated = await Order.query(trx).insertGraph(order, { allowRefs: true });
 
             await trx.commit();
             return orderCreated;
@@ -664,11 +668,9 @@ class OrderService
         {
             const referrerRebateInvoiceAmount = referrerRebateAmount || '0.00';
 
-            // This id is static, it is always 7 for "rebate" invoices
-            const referrerRebateItemId = 7;
-            const referrerRebateLine = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, referrerRebateItemId, currentUser, null);
+            const referrerRebateLine = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, InvoiceLineItem.TYPE.REBATE, currentUser, null);
 
-            referrerInvoice.push(OrderService.createInvoiceBillGraph([referrerRebateLine], true, currentUser, referrer));
+            referrerInvoice.push(OrderService.createInvoiceBillGraph([referrerRebateLine], true, currentUser, referrer, InvoiceBillRelationTypes.TYPES.REFERRER));
         }
         return referrerInvoice;
     }
@@ -727,9 +729,10 @@ class OrderService
         return jobBillLine;
     }
 
-    static createInvoiceBillGraph(lines, isInvoice, currentUser, consignee)
+    static createInvoiceBillGraph(lines, isInvoice, currentUser, consignee, type)
     {
         const bill = InvoiceBill.fromJson({
+            relationTypeId: type,
             isInvoice,
             lines: [],
             consigneeGuid: consignee?.guid
@@ -1940,25 +1943,21 @@ class OrderService
      */
     static async getOrderReferrerRebateInvoice(orderGuid, trx)
     {
-
         const referrerInvoice = await InvoiceBill.query(trx).alias('IB').select('IB.guid')
             .innerJoin('rcgTms. invoiceBillLines as IBL', 'IB.guid', 'IBL.invoiceGuid')
             .whereIn(
                 'IB.guid',
-                Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
-            )
-            .andWhere('IB.consigneeGuid',
-                Order.query(trx).select('referrerGuid').where('guid', orderGuid)
+                Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid).andWhere('relationTypeId', InvoiceBillRelationTypes.TYPES.REFERRER)
             )
             .andWhere('IBL.itemId', 7)
             .orderBy('IB.dateCreated')
+            .withGraphJoined('lines')
             .limit(1);
 
         if (!referrerInvoice)
             return {};
 
-        const [invoice] = await InvoiceBill.fetchGraph(referrerInvoice, '[lines]', { transaction: trx });
-        return invoice;
+        return referrerInvoice[0];
     }
 
     static async validateReferencesBeforeUpdate(
@@ -3057,8 +3056,9 @@ class OrderService
             const billFound = invoiceBillsFromDB.find(bill => bill.job?.guid === job.guid);
             if (!billFound)
             {
+
                 const newJobBill = OrderService.createInvoiceBillGraph(
-                    [], false, currentUser, null
+                    [], false, currentUser, null, job.isTransport ? InvoiceBillRelationTypes.TYPES.CARRIER : InvoiceBillRelationTypes.TYPES.VENDOR
                 );
                 newJobBill.job = { guid: job.guid };
                 billsToCreate.push(

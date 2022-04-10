@@ -164,8 +164,10 @@ class OrderJob extends BaseModel
                 join: {
                     from: 'rcgTms.orderJobs.guid',
                     through: {
+                        modelClass: require('./Bill'),
                         from: 'rcgTms.bills.jobGuid',
-                        to: 'rcgTms.bills.billGuid'
+                        to: 'rcgTms.bills.billGuid',
+                        extra: ['relationTypeId']
                     },
                     to: 'rcgTms.invoiceBills.guid'
                 }
@@ -1225,8 +1227,8 @@ class OrderJob extends BaseModel
 
         return errors;
     }
-	
-	static validateJobToUncancel(job)
+
+    static validateJobToUncancel(job)
     {
         const errors = [];
 

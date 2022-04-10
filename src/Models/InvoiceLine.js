@@ -212,7 +212,7 @@ class InvoiceLine extends BaseModel
                 datePaid: DateTime.now().toISO(),
                 updatedByGuid: currentUser
             })
-            .whereNotExists(lineQuery);
+                .whereNotExists(lineQuery);
         }
     }
 }

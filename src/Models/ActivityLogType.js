@@ -17,7 +17,7 @@ class ActivityLogTypes extends BaseModel
         return {
             activityLogs: {
                 relation: BaseModel.HasManyRelation,
-                modeClass: require('./ActivityLogs'),
+                modelClass: require('./ActivityLogs'),
                 join: {
                     from: 'rcgTms.activityLogTypes.id',
                     to: 'rcgTms.activityLogs.activityId'

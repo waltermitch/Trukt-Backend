@@ -122,7 +122,7 @@ class InvoiceService
         const result = await InvoiceLine.transaction(async trx =>
         {
             // verifying bill and invoice
-            const [bill, invoice] = await Promise.all([billGuid && Bill.query(trx).findById(billGuid), Invoice.query(trx).findById(invoiceGuid)]);
+            const [bill, invoice] = await Promise.all([billGuid && Bill.query(trx).findOne({ billGuid }), Invoice.query(trx).findOne({ invoiceGuid })]);
 
             // if invoice doesn't exist in table throw error
             if (!invoice)
@@ -177,27 +177,27 @@ class InvoiceService
         try
         {
             // To make sure if bill has been passed
-            const invoice = await Invoice.query(trx).findById(invoiceGuid);
-    
+            const invoice = await Invoice.query(trx).findOne({ invoiceGuid });
+
             // if no bill throw error
             if (!invoice)
             {
                 throw new NotFoundError('Invoice does not exist.');
             }
-    
+
             // linking and updateing
             line.linkInvoice(invoice);
-    
+
             // returning updated bill
             const newLine = await InvoiceLine.query(trx).patchAndFetchById(lineGuid, { ...line, updatedByGuid: currentUser });
-    
+
             // if line doesn't exist
             if (!newLine)
                 throw new NotFoundError('Line does not exist.');
-    
+
             await newLine.setAsPaidInvoiceBill(currentUser, trx);
             await trx.commit();
-    
+
             return newLine;
         }
         catch (error)
@@ -210,7 +210,7 @@ class InvoiceService
     static async deleteInvoiceLine(invoiceGuid, lineGuid)
     {
         // To make sure correct invoice was passed in
-        const invoice = await Invoice.query().findById(invoiceGuid);
+        const invoice = await Invoice.query().findOne({ invoiceGuid });
 
         // if no bill throw error
         if (!invoice)
@@ -245,7 +245,7 @@ class InvoiceService
         const result = await InvoiceLine.transaction(async trx =>
         {
             // To make sure correct invoice was passed in
-            const invoice = await Invoice.query(trx).findById(invoiceGuid);
+            const invoice = await Invoice.query(trx).findOne({ invoiceGuid });
 
             // incorrect invoice
             if (!invoice)
