@@ -211,14 +211,14 @@ class Order extends BaseModel
                     }
                 },
                 invoices: {
-                    relation: true,
+                    relationInvoice: true,
                     lines: { item: true },
                     consignee: {
                         $modify: ['byType']
                     }
                 },
                 bills: {
-                    relation: true,
+                    relationInvoice: true,
                     lines: { item: true }
                 },
                 jobs: {
@@ -244,6 +244,7 @@ class Order extends BaseModel
                         }
                     },
                     bills: {
+                        relationBill: true,
                         lines: { item: true, link: true }
                     }
                 }

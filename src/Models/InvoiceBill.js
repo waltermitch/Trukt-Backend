@@ -6,6 +6,11 @@ const BaseModel = require('./BaseModel');
  */
 class InvoiceBill extends BaseModel
 {
+    static TYPE = {
+        BILL: 'bill',
+        INVOICE: 'invoice'
+    }
+
     static get tableName()
     {
         return 'rcgTms.invoiceBills';
@@ -78,7 +83,7 @@ class InvoiceBill extends BaseModel
                     to: 'rcgTms.invoiceBillPaymentMethods.id'
                 }
             },
-            relation: {
+            relationInvoice: {
                 relation: BaseModel.ManyToManyRelation,
                 modelClass: require('./InvoiceBillRelationType'),
                 join: {
@@ -90,6 +95,19 @@ class InvoiceBill extends BaseModel
                     },
                     to: 'rcgTms.invoiceBillRelationTypes.id'
                 }
+            },
+            relationBill: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./InvoiceBillRelationType'),
+                join: {
+                    from: 'rcgTms.invoiceBills.guid',
+                    through: {
+                        modelClass: require('./Bill'),
+                        from: 'rcgTms.bills.billGuid',
+                        to: 'rcgTms.bills.relationTypeId'
+                    },
+                    to: 'rcgTms.invoiceBillRelationTypes.id'
+                }
             }
         };
     }
@@ -97,23 +115,31 @@ class InvoiceBill extends BaseModel
     static get fetch()
     {
         return {
-            'details': {
-                $modify: ['isNotDeleted'],
-                paymentTerms: true,
-                paymentMethod: true,
-                consignee: true,
-                lines: {
+            'details': (type) =>
+            {
+                // Because its a 1 to 2 table relation, you have to specify which table you want to relate to
+                // This will be either the Invoices table or the Bills table
+                const struct = {
                     $modify: ['isNotDeleted'],
-                    createdBy: true,
-                    commodity: {
-                        commType: true,
-                        vehicle: true
-                    },
-                    item: true
-                }
+                    paymentTerms: true,
+                    paymentMethod: true,
+                    consignee: true,
+                    lines: {
+                        $modify: ['isNotDeleted'],
+                        createdBy: true,
+                        commodity: {
+                            commType: true,
+                            vehicle: true
+                        },
+                        item: true
+                    }
+                };
+                type === InvoiceBill.TYPE.BILL ? struct.relationBill = true : struct.relationInvoice = true;
+                return struct;
             },
             'linkedInvoices': {
                 $modify: ['isNotDeleted'],
+                relationBill: true,
                 paymentTerms: true,
                 paymentMethod: true,
                 consignee: true,
@@ -129,6 +155,7 @@ class InvoiceBill extends BaseModel
                     {
                         $modify: ['isNotDeleted'],
                         invoiceBill: {
+                            relationInvoice: true,
                             $modify: ['isNotDeleted'],
                             paymentTerms: true,
                             paymentMethod: true,
@@ -210,6 +237,19 @@ class InvoiceBill extends BaseModel
         if (json?.paymentMethod)
         {
             json.paymentMethod = json.paymentMethod.name;
+        }
+
+        if (this.isInvoice)
+        {
+            delete json.relationBill;
+            json.relation = json.relationInvoice;
+            delete json.relationInvoice;
+        }
+        else
+        {
+            delete json.relationInvoice;
+            json.relation = json.relationBill;
+            delete json.relationBill;
         }
 
         return json;

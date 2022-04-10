@@ -848,6 +848,7 @@ class OrderJob extends BaseModel
             billingData:
             {
                 bills: {
+                    relationBill: true,
                     consignee: true,
                     paymentTerms: true,
                     paymentMethod: true,

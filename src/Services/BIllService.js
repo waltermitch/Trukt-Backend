@@ -22,7 +22,9 @@ class BillService
 {
     static async getBill(guid)
     {
-        const res = await InvoiceBill.query().findById(guid).withGraphFetched(InvoiceBill.fetch.details);
+        const res = await InvoiceBill.query()
+            .findById(guid)
+            .withGraphFetched(InvoiceBill.fetch.details(InvoiceBill.TYPE.BILL));
 
         return res;
     }

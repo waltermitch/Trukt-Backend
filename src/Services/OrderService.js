@@ -161,7 +161,7 @@ class OrderService
         try
         {
             // TODO split this up so that query is faster and also doesnt give 500 error.
-            let order = await Order.query(trx).skipUndefined().findById(orderGuid);
+            let order = await Order.query(trx).findById(orderGuid);
 
             if (order)
             {
@@ -182,9 +182,8 @@ class OrderService
                     }
                 }
 
-                // set consignee (this is temporart until we move consignee out of order in UI)
-                if (order?.invoices?.[0]?.consignee)
-                    order.consignee = order.invoices[0].consignee;
+                order.consignee = order.invoices.filter(inv => inv.relationInvoice.find((rel) => rel.name === 'consignee'))?.[0]?.consignee || null;
+                order.referrer = order.invoices.filter(inv => inv.relationInvoice.find((rel) => rel.name === 'referrer'))?.[0]?.consignee || null;
 
                 delete order.invoices;
                 delete order.bills;

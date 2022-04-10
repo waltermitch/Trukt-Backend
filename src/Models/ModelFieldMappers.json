@@ -148,8 +148,14 @@
     "Terminal": {
         "hide": {
             "database": {
-                "into": ["vectorName", "vectorAddress"],
-                "outa": ["vectorName", "vectorAddress"]
+                "into": [
+                    "vectorName",
+                    "vectorAddress"
+                ],
+                "outa": [
+                    "vectorName",
+                    "vectorAddress"
+                ]
             },
             "external": {
                 "into": [
@@ -166,7 +172,10 @@
                     "vectorName",
                     "vectorAddress"
                 ],
-                "outa": ["vectorName", "vectorAddress"]
+                "outa": [
+                    "vectorName",
+                    "vectorAddress"
+                ]
             }
         }
     },
@@ -223,7 +232,11 @@
     "User": {
         "hide": {
             "external": {
-                "into": ["dateCreated", "dateUpdated", "dateDeleted"]
+                "into": [
+                    "dateCreated",
+                    "dateUpdated",
+                    "dateDeleted"
+                ]
             }
         }
     },
@@ -264,7 +277,11 @@
     "Attachment": {
         "hide": {
             "external": {
-                "into": ["isDeleted", "dateDeleted", "deletedByGuid"]
+                "into": [
+                    "isDeleted",
+                    "dateDeleted",
+                    "deletedByGuid"
+                ]
             }
         }
     },
@@ -285,22 +302,23 @@
         "hide": {
             "external": {
                 "into": [
-                    "isInvoice",
-                    "isDeleted",
-                    "deletedByGuid",
-                    "dateDeleted",
-                    "isGenerated",
-                    "isValid",
-                    "isSyncedExternalSource",
-                    "dateSyncedExternalSource",
-                    "createdByGuid",
-                    "updatedByGuid",
                     "consigneeGuid",
+                    "createdByGuid",
+                    "dateDeleted",
+                    "dateSyncedExternalSource",
+                    "deletedByGuid",
                     "externalSource",
-                    "externalSourceGuid",
                     "externalSourceData",
+                    "externalSourceGuid",
+                    "isDeleted",
+                    "isGenerated",
+                    "isInvoice",
+                    "isSyncedExternalSource",
+                    "isValid",
                     "paymentMethodId",
-                    "paymentTermId"
+                    "paymentTermId",
+                    "relationTypeId",
+                    "updatedByGuid"
                 ]
             }
         }
@@ -324,14 +342,20 @@
     "InvoicePaymentMethod": {
         "hide": {
             "external": {
-                "into": ["externalId", "externalSource"]
+                "into": [
+                    "externalId",
+                    "externalSource"
+                ]
             }
         }
     },
     "InvoicePaymentTerm": {
         "hide": {
             "external": {
-                "into": ["externalId", "externalSource"]
+                "into": [
+                    "externalId",
+                    "externalSource"
+                ]
             }
         }
     },

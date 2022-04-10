@@ -16,8 +16,8 @@ class InvoiceService
     static async getInvoice(guid)
     {
         const res = await InvoiceBill.query()
-            .findOne({ 'guid': guid, 'isDeleted': false })
-            .withGraphFetched(InvoiceBill.fetch.details);
+            .findById(guid)
+            .withGraphFetched(InvoiceBill.fetch.details(InvoiceBill.TYPE.INVOICE));
 
         return res;
     }
@@ -29,8 +29,8 @@ class InvoiceService
             .query()
             .findById(guid)
             .withGraphJoined({
-                invoices: InvoiceBill.fetch.details,
-                jobs: { bills: InvoiceBill.fetch.details }
+                invoices: InvoiceBill.fetch.details(InvoiceBill.TYPE.INVOICE),
+                jobs: { bills: InvoiceBill.fetch.details(InvoiceBill.TYPE.BILL) }
             });
 
         // order was not found, return undefined
@@ -76,8 +76,8 @@ class InvoiceService
             .query()
             .findById(guid)
             .withGraphJoined({
-                invoices: InvoiceBill.fetch.details,
-                jobs: { bills: InvoiceBill.fetch.details }
+                invoices: InvoiceBill.fetch.details(InvoiceBill.TYPE.INVOICE),
+                jobs: { bills: InvoiceBill.fetch.details(InvoiceBill.TYPE.BILL) }
             });
 
         // order was not found, return undefined
@@ -613,8 +613,8 @@ class InvoiceService
                 .findById(guid)
                 .withGraphJoined(
                     {
-                        'jobs': { bills: InvoiceBill.fetch.details },
-                        invoices: InvoiceBill.fetch.details
+                        jobs: { bills: InvoiceBill.fetch.details(InvoiceBill.TYPE.BILL) },
+                        invoices: InvoiceBill.fetch.details(InvoiceBill.TYPE.INVOICE)
                     });
 
             if (!result)
