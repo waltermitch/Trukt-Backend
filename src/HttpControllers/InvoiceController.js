@@ -48,10 +48,11 @@ class InvoiceController
         const invoiceGuid = req.params.invoiceGuid;
         const lineGuid = req.params.lineGuid;
         const line = InvoiceLine.fromJson(req.body);
+        const currentUser = req.session.userGuid;
 
         try
         {
-            const result = await InvoiceService.updateInvoiceLine(invoiceGuid, lineGuid, line);
+            const result = await InvoiceService.updateInvoiceLine(invoiceGuid, lineGuid, line, currentUser);
 
             res.status(200);
             res.json(result);

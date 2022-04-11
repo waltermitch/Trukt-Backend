@@ -155,10 +155,13 @@ class InvoiceService
             // bulk insert into Lines table
             const [newLine1, newLine2] = await InvoiceLine.query(trx).insertAndFetch(linksArray);
 
+            await newLine1.setAsPaidInvoiceBill(currentUser, trx);
+
             // if two lines then link lines
             if (newLine2)
             {
                 await InvoiceService.LinkLines(newLine1.guid, newLine2.guid, trx);
+                await newLine2.setAsPaidInvoiceBill(currentUser, trx);
             }
 
             // return only the invoice item
@@ -168,30 +171,40 @@ class InvoiceService
         return result;
     }
 
-    static async updateInvoiceLine(invoiceGuid, lineGuid, line)
+    static async updateInvoiceLine(invoiceGuid, lineGuid, line, currentUser)
     {
-        // To make sure if bill has been passed
-        const invoice = await Invoice.query().findById(invoiceGuid);
-
-        // if no bill throw error
-        if (!invoice)
+        const trx = await InvoiceLine.startTransaction();
+        try
         {
-            throw new NotFoundError('Invoice does not exist.');
+            // To make sure if bill has been passed
+            const invoice = await Invoice.query(trx).findById(invoiceGuid);
+    
+            // if no bill throw error
+            if (!invoice)
+            {
+                throw new NotFoundError('Invoice does not exist.');
+            }
+    
+            // linking and updateing
+            line.linkInvoice(invoice);
+    
+            // returning updated bill
+            const newLine = await InvoiceLine.query(trx).patchAndFetchById(lineGuid, { ...line, updatedByGuid: currentUser });
+    
+            // if line doesn't exist
+            if (!newLine)
+                throw new NotFoundError('Line does not exist.');
+    
+            await newLine.setAsPaidInvoiceBill(currentUser, trx);
+            await trx.commit();
+    
+            return newLine;
         }
-
-        // linking and updateing
-        line.linkInvoice(invoice);
-
-        // returning updated bill
-        const newLine = await InvoiceLine.query().patchAndFetchById(lineGuid, line);
-
-        // if line doesn't exist
-        if (!newLine)
+        catch (error)
         {
-            throw new NotFoundError('Line does not exist.');
+            await trx.rollback();
+            throw error;
         }
-
-        return newLine;
     }
 
     static async deleteInvoiceLine(invoiceGuid, lineGuid)
