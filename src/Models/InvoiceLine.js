@@ -1,5 +1,6 @@
 const { RecordAuthorMixin, isNotDeleted, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
+const { DateTime } = require('luxon');
 
 class InvoiceLine extends BaseModel
 {
@@ -186,6 +187,32 @@ class InvoiceLine extends BaseModel
         else if (invoice instanceof InvoiceBill)
         {
             this.invoiceGuid = invoice.guid;
+        }
+    }
+
+    /**
+     * Mark invoice/bill for this line as paid when all the lines are paid.
+     * @param {string} currentUser
+     * @param {import('objection').TransactionOrKnex} trx
+     */
+    async setAsPaidInvoiceBill(currentUser, trx)
+    {
+        const invoiceBill = await this.$relatedQuery('invoiceBill', trx);
+
+        if (this.isPaid)
+        {
+            const lineQuery = InvoiceLine.query().select(1).where({
+                invoiceGuid: invoiceBill.guid,
+                isPaid: false
+            }).whereNot('amount', 0);
+
+            // this will set is_paid to true in bill/invoice if all lines with amount over 0 are paid
+            await invoiceBill.$query(trx).patch({
+                isPaid: true,
+                datePaid: DateTime.now().toISO(),
+                updatedByGuid: currentUser
+            })
+            .whereNotExists(lineQuery);
         }
     }
 }
