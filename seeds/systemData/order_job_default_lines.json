@@ -1,0 +1,49 @@
+{
+    "schema": "rcg_tms",
+    "table": "order_job_system_invoice_lines",
+    "unique": "id",
+    "data": [
+        {
+            "id": 1,
+            "job_type_id": 1,
+            "line_item_id": 1,
+            "system_usage": "base_pay"
+        },
+        {
+            "id": 2,
+            "job_type_id": 2,
+            "line_item_id": 2,
+            "system_usage": "base_pay"
+        },
+        {
+            "id": 3,
+            "job_type_id": 3,
+            "line_item_id": 8,
+            "system_usage": "base_pay"
+        },
+        {
+            "id": 4,
+            "job_type_id": 4,
+            "line_item_id": 8,
+            "system_usage": "base_pay"
+        },
+        {
+            "id": 5,
+            "job_type_id": 5,
+            "line_item_id": 9,
+            "system_usage": "base_pay"
+        },
+        {
+            "id": 6,
+            "job_type_id": 6,
+            "line_item_id": 10,
+            "system_usage": "base_pay"
+        },
+        {
+            "id": 7,
+            "job_type_id": 1,
+            "line_item_id": 7,
+            "system_usage": "referrer"
+        }
+    ]
+}
