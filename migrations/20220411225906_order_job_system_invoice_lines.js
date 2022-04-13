@@ -15,6 +15,7 @@ exports.up = function (knex)
             table.foreign('system_usage').references('type').inTable('rcg_tms.invoice_bill_lines_system_fields');
             table.unique(['job_type_id', 'line_item_id', 'system_usage']);
         }).raw(`
+            -- RAW query to update all invoice bill line with correct data
             -- Updates all invoices of transport jobs to use the new system_usage field
             UPDATE  rcg_tms.invoice_bill_lines 
             SET system_defined = TRUE,
