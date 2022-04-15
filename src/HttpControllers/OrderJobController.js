@@ -2,8 +2,8 @@ const StatusCacheManager = require('../EventManager/StatusCacheManager');
 const OrderStopService = require('../Services/OrderStopService');
 const OrderJobService = require('../Services/OrderJobService');
 const NotesService = require('../Services/NotesService');
-const emitter = require('../EventListeners/index');
 const { NotFoundError } = require('../ErrorHandling/Exceptions');
+const OrderJob = require('../Models/OrderJob');
 
 class OrderJobController
 {
@@ -12,7 +12,7 @@ class OrderJobController
         try
         {
             const result = await NotesService.getJobNotes(req.params.jobGuid);
-    
+
             if (!result)
                 throw new NotFoundError('Job Not Found');
             else
@@ -63,7 +63,7 @@ class OrderJobController
         try
         {
             const { status, data } = await OrderJobService.getJobCarrier(req.params.jobGuid);
-    
+
             res.status(status).json(data);
         }
         catch (error)
@@ -154,6 +154,7 @@ class OrderJobController
             next(error);
         }
     }
+
     static async undeleteJob(req, res, next)
     {
         try
@@ -244,8 +245,46 @@ class OrderJobController
             const rateConf = await OrderJobService.getRateConfirmation(req.params.jobGuid);
             res.status(200).json(rateConf);
         }
-        catch(error)
+        catch (error)
         {
+            next(error);
+        }
+    }
+
+    static async updateCarrierPay(req, res, next)
+    {
+        const jobGuid = req.params.jobGuid;
+        const amount = req.body.amount;
+        const currentUser = req.session.userGuid;
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            await OrderJobService.updateCarrierPay(jobGuid, amount, currentUser, trx);
+            await trx.commit();
+            res.status(204).send();
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            next(error);
+        }
+    }
+
+    static async updateTariff(req, res, next)
+    {
+        const jobGuid = req.params.jobGuid;
+        const amount = req.body.amount;
+        const currentUser = req.session.userGuid;
+        const trx = await OrderJob.startTransaction();
+        try
+        {
+            await OrderJobService.updateTariff(jobGuid, amount, currentUser, trx);
+            await trx.commit();
+            res.status(204).send();
+        }
+        catch (error)
+        {
+            await trx.rollback();
             next(error);
         }
     }

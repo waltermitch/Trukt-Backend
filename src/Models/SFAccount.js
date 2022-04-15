@@ -40,7 +40,7 @@ class SFAccount extends BaseModel
                 modelClass: require('./SFRecordType'),
                 join: {
                     from: 'salesforce.accounts.recordTypeId',
-                    to: 'salesforce.record_types.sfId'
+                    to: 'salesforce.recordTypes.sfId'
                 }
             }
         };

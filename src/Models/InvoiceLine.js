@@ -69,6 +69,30 @@ class InvoiceLine extends BaseModel
                     },
                     to: 'rcgTms.invoiceBillLines.guid'
                 }
+            },
+            linkOne: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: InvoiceLine,
+                join: {
+                    from: 'rcgTms.invoiceBillLines.guid',
+                    through: {
+                        from: 'rcgTms.invoiceBillLineLinks.line1Guid',
+                        to: 'rcgTms.invoiceBillLineLinks.line2Guid'
+                    },
+                    to: 'rcgTms.invoiceBillLines.guid'
+                }
+            },
+            linkTwo: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: InvoiceLine,
+                join: {
+                    from: 'rcgTms.invoiceBillLines.guid',
+                    through: {
+                        from: 'rcgTms.invoiceBillLineLinks.line2Guid',
+                        to: 'rcgTms.invoiceBillLineLinks.line1Guid'
+                    },
+                    to: 'rcgTms.invoiceBillLines.guid'
+                }
             }
         };
 
@@ -79,6 +103,10 @@ class InvoiceLine extends BaseModel
     static get modifiers()
     {
         const modifiers = {
+            isSystemDefined(queryBuilder, value)
+            {
+                queryBuilder.where({ 'systemDefined': true, systemUsage: value });
+            },
             transportOnly(builder)
             {
                 builder.join('rcgTms.invoiceBillLineItems', 'rcgTms.InvoiceBillLines.itemId', 'rcgTms.invoiceBillLineItems.id').where(builder =>
@@ -212,7 +240,7 @@ class InvoiceLine extends BaseModel
                 datePaid: DateTime.now().toISO(),
                 updatedByGuid: currentUser
             })
-            .whereNotExists(lineQuery);
+                .whereNotExists(lineQuery);
         }
     }
 }

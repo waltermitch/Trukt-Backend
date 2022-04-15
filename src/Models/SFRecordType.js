@@ -4,7 +4,7 @@ class SFRecordType extends BaseModel
 {
     static get tableName()
     {
-        return 'salesforce.record_types';
+        return 'salesforce.recordTypes';
     }
 
     static get idColumn()
