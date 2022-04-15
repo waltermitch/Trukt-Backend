@@ -17,7 +17,7 @@ class CommodityType extends BaseModel
         return {
             commodities: {
                 relation: BaseModel.HasManyRelation,
-                modeClass: require('./Commodity'),
+                modelClass: require('./Commodity'),
                 join: {
                     from: 'rcgTms.commodityTypes.id',
                     to: 'rcgTms.commodities.type'

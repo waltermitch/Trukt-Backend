@@ -1,0 +1,16 @@
+{
+    "schema": "rcg_tms",
+    "table": "invoice_bill_lines_system_fields",
+    "unique": "type",
+    "data": [
+        {
+            "type": "none"
+        },
+        {
+            "type": "base_pay"
+        },
+        {
+            "type": "referrer"
+        }
+    ]
+}

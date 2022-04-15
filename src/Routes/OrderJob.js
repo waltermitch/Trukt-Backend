@@ -3,26 +3,30 @@ const { uuidRegexStr } = require('../Utils/Regexes');
 const router = require('express').Router();
 
 const prefix = '/job';
-
+const JOB_GUID = `:jobGuid(${uuidRegexStr})`;
 router
-    .get(`${prefix}/:jobGuid(${uuidRegexStr})/notes`, controller.getJobNotes)
+    .get(`${prefix}/${JOB_GUID}/notes`, controller.getJobNotes)
     .get(`${prefix}/statuses`, controller.getAllStatusCount)
-    .get(`${prefix}/:jobGuid(${uuidRegexStr})/dispatch/carrier`, controller.getCarrier)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/stop/:stopGuid(${uuidRegexStr})/status/:status`, controller.updateStopStatus)
-    .post(`${prefix}/:jobGuid(${uuidRegexStr})/hold`, controller.addHold)
-    .post(`${prefix}/:jobGuid(${uuidRegexStr})/dispatch`, controller.dispatchServiceJob)
-    .delete(`${prefix}/:jobGuid(${uuidRegexStr})/hold`, controller.removeHold)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/ready`, controller.setJobToReadySingle)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/complete`, controller.markJobAsComplete)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/uncomplete`, controller.markJobAsUncomplete)
-    .delete(`${prefix}/:jobGuid(${uuidRegexStr})`, controller.deleteJob)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/undelete`, controller.undeleteJob)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/cancel`, controller.cancelJob)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/uncancel`, controller.uncancelJob)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/deliver`, controller.deliveredJob)
-    .put(`${prefix}/:jobGuid(${uuidRegexStr})/undeliver`, controller.undeliverJob)
+    .get(`${prefix}/${JOB_GUID}/dispatch/carrier`, controller.getCarrier)
+    .put(`${prefix}/${JOB_GUID}/stop/:stopGuid(${uuidRegexStr})/status/:status`, controller.updateStopStatus)
+    .post(`${prefix}/${JOB_GUID}/hold`, controller.addHold)
+    .post(`${prefix}/${JOB_GUID}/dispatch`, controller.dispatchServiceJob)
+    .delete(`${prefix}/${JOB_GUID}/hold`, controller.removeHold)
+    .put(`${prefix}/${JOB_GUID}/ready`, controller.setJobToReadySingle)
+    .put(`${prefix}/${JOB_GUID}/complete`, controller.markJobAsComplete)
+    .put(`${prefix}/${JOB_GUID}/uncomplete`, controller.markJobAsUncomplete)
+    .delete(`${prefix}/${JOB_GUID}`, controller.deleteJob)
+    .put(`${prefix}/${JOB_GUID}/undelete`, controller.undeleteJob)
+    .put(`${prefix}/${JOB_GUID}/cancel`, controller.cancelJob)
+    .put(`${prefix}/${JOB_GUID}/uncancel`, controller.uncancelJob)
+    .put(`${prefix}/${JOB_GUID}/deliver`, controller.deliveredJob)
+    .put(`${prefix}/${JOB_GUID}/undeliver`, controller.undeliverJob)
+
+    // finances
+    .put(`${prefix}/${JOB_GUID}/fin/carrier-pay`, controller.updateCarrierPay)
+    .put(`${prefix}/${JOB_GUID}/fin/tariff`, controller.updateTariff)
 
     // generated documents
-    .get(`${prefix}/:jobGuid(${uuidRegexStr})/doc/rate-confirmation`, controller.getRateConfirmation);
+    .get(`${prefix}/${JOB_GUID}/doc/rate-confirmation`, controller.getRateConfirmation);
 
 module.exports = router;

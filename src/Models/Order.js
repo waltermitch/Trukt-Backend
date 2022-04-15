@@ -108,8 +108,10 @@ class Order extends BaseModel
                 join: {
                     from: 'rcgTms.orders.guid',
                     through: {
+                        modelClass: require('./Invoice'),
                         from: 'rcgTms.invoices.orderGuid',
-                        to: 'rcgTms.invoices.invoiceGuid'
+                        to: 'rcgTms.invoices.invoiceGuid',
+                        extra: ['relationTypeId']
                     },
                     to: 'rcgTms.invoiceBills.guid'
                 },
@@ -121,8 +123,10 @@ class Order extends BaseModel
                 join: {
                     from: 'rcgTms.orders.guid',
                     through: {
+                        modelClass: require('./Invoice'),
                         from: 'rcgTms.invoices.orderGuid',
-                        to: 'rcgTms.invoices.invoiceGuid'
+                        to: 'rcgTms.invoices.invoiceGuid',
+                        extra: ['relationTypeId']
                     },
                     to: 'rcgTms.invoiceBills.guid'
                 },
@@ -207,12 +211,14 @@ class Order extends BaseModel
                     }
                 },
                 invoices: {
+                    relationInvoice: true,
                     lines: { item: true },
                     consignee: {
                         $modify: ['byType']
                     }
                 },
                 bills: {
+                    relationInvoice: true,
                     lines: { item: true }
                 },
                 jobs: {
@@ -238,6 +244,7 @@ class Order extends BaseModel
                         }
                     },
                     bills: {
+                        relationBill: true,
                         lines: { item: true, link: true }
                     }
                 }

@@ -2,6 +2,16 @@ const BaseModel = require('./BaseModel');
 
 class InvoiceLineItem extends BaseModel
 {
+    static TYPE = {
+        TRANSPORT: 1,
+        KEYS: 2,
+        STORAGE: 3,
+        FUEL_SURCHARGE: 4,
+        REPOSSESSION_FEE: 5,
+        IMPOUND_FEE: 6,
+        REBATE: 7
+    }
+
     static get tableName()
     {
         return 'rcgTms.invoiceBillLineItems';

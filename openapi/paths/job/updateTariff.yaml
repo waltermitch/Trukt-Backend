@@ -1,0 +1,30 @@
+summary: Update Tariff
+description: |
+  Update Tariff on the Job and Splits it evenly across all commodities.
+operationId: updateTariff
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          amount: 
+            type: string
+            format: currency
+            description: Total Tariff for Job.
+
+
+responses:
+  204:
+    $ref: '../../components/responses/204NoContent.yaml'
+
+  400:
+    $ref: '../../components/responses/400BadRequest.yaml'
