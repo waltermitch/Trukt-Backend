@@ -400,6 +400,17 @@ class BillService
 
         return lines;
     }
+
+    static distributeCostAcrossLines(lines, costAmount, currentUser)
+    {
+        const amountArray = currency(costAmount).distribute(lines.length);
+        const updateLines = [];
+        for (const line of lines)
+        {
+            updateLines.push(line.$query().patch({ amount: amountArray.shift(), updatedByGuid: currentUser }));
+        }
+        return updateLines;
+    }
 }
 
 module.exports = BillService;

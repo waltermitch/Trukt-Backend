@@ -34,6 +34,7 @@ const R = require('ramda');
 const EDI990Payload = require('../EDI/Payload/EDI990Payload');
 const EDIApi = require('../EDI/EDIApi');
 const InvoiceBillRelationTypes = require('../Models/InvoiceBillRelationType');
+const InvoiceLines = require('../Models/InvoiceLine');
 
 const isUseful = R.compose(R.not, R.anyPass([R.isEmpty, R.isNil]));
 const cache = new NodeCache({ deleteOnExpire: true, stdTTL: 3600 });
@@ -608,7 +609,8 @@ class OrderService
                         commodityRevenue,
                         itemId,
                         currentUser,
-                        commodityReference
+                        commodityReference,
+                        'base_pay'
                     );
                     orderInvoices.push(orderInvoiceLine);
 
@@ -616,14 +618,13 @@ class OrderService
                         commodityExpense,
                         itemId,
                         currentUser,
-                        commodityReference
+                        commodityReference,
+                        'base_pay'
                     );
                     jobInvoiceLine.link = { '#ref': orderInvoiceLine['#id'] };
 
                     return jobInvoiceLine;
                 });
-
-                console.log(jobData.jobType);
 
                 // if job is a transport job, add Invoice Bill Type
                 const billInvoiceType = jobData.isTransport ? InvoiceBillRelationTypes.TYPES.CARRIER : InvoiceBillRelationTypes.TYPES.VENDOR;
@@ -667,7 +668,7 @@ class OrderService
         {
             const referrerRebateInvoiceAmount = referrerRebateAmount || '0.00';
 
-            const referrerRebateLine = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, InvoiceLineItem.TYPE.REBATE, currentUser, null);
+            const referrerRebateLine = OrderService.createInvoiceLineGraph(referrerRebateInvoiceAmount, InvoiceLineItem.TYPE.REBATE, currentUser, null, 'referrer');
 
             referrerInvoice.push(OrderService.createInvoiceBillGraph([referrerRebateLine], true, currentUser, referrer, InvoiceBillRelationTypes.TYPES.REFERRER));
         }
@@ -714,12 +715,14 @@ class OrderService
         });
     }
 
-    static createInvoiceLineGraph(amount, itemId, currentUser, commodity)
+    static createInvoiceLineGraph(amount, itemId, currentUser, commodity, systemUsage)
     {
         const jobBillLine = InvoiceLine.fromJson({
             amount,
             itemId,
-            commodity
+            commodity,
+            systemDefined: true,
+            systemUsage: systemUsage
         });
 
         jobBillLine['#id'] = uuid();
@@ -1880,9 +1883,6 @@ class OrderService
     }
 
     /**
-         
-         */
-    /**
      * If contactName.guid is null -> reference should be removed
      * If contactName.guid exists -> reference should be updated
      * If contactName.guid is undefined -> do nothing
@@ -1942,21 +1942,17 @@ class OrderService
      */
     static async getOrderReferrerRebateInvoice(orderGuid, trx)
     {
-        const referrerInvoice = await InvoiceBill.query(trx).alias('IB').select('IB.guid')
-            .innerJoin('rcgTms. invoiceBillLines as IBL', 'IB.guid', 'IBL.invoiceGuid')
-            .whereIn(
-                'IB.guid',
-                Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid).andWhere('relationTypeId', InvoiceBillRelationTypes.TYPES.REFERRER)
-            )
-            .andWhere('IBL.itemId', 7)
-            .orderBy('IB.dateCreated')
-            .withGraphJoined('lines')
-            .limit(1);
+        const invoiceBill = await InvoiceBill.query(trx)
+            .withGraphJoined('[relationInvoice, invoice, lines]')
+            .findOne({ 'relationInvoice.id': InvoiceBillRelationTypes.TYPES.REFERRER, 'invoice.orderGuid': orderGuid }).modifyGraph('lines', (builder) =>
+            {
+                builder.modify('isSystemDefined', 'referrer');
+            }).debug(true);
 
-        if (!referrerInvoice)
+        if (!invoiceBill)
             return {};
 
-        return referrerInvoice[0];
+        return invoiceBill;
     }
 
     static async validateReferencesBeforeUpdate(
@@ -2924,7 +2920,7 @@ class OrderService
                                 invocieLineFound.link[0].amount = commWithExpense.revenue;
                                 invocieLineFound.link[0].setUpdatedBy(currentUser);
 
-                                // Add bill to jobToUpdate
+                                // Add bill to jobToUpdate GOOD JOB
                                 if (!jobBillsWithLinesToUpdate.has(bill.guid))
                                     jobBillsWithLinesToUpdate.set(bill.guid, bill);
                             }
@@ -2942,7 +2938,9 @@ class OrderService
                     const orderInvoiceLineToCreate = OrderService.createInvoiceLineGraph(
                         commodityRevenue,
                         itemId,
-                        currentUser
+                        currentUser,
+                        undefined,
+                        'base_pay'
                     );
                     orderInvoiceLineToCreate.graphLink('commodity', commodity);
                     orderInvoiceListToCreate.push(orderInvoiceLineToCreate);
@@ -2950,7 +2948,9 @@ class OrderService
                     const jobInvoiceLineToCreate = OrderService.createInvoiceLineGraph(
                         commodityExpense,
                         itemId,
-                        currentUser
+                        currentUser,
+                        undefined,
+                        'base_pay'
                     );
 
                     jobInvoiceLineToCreate.graphLink('commodity', commodity);
@@ -3055,7 +3055,6 @@ class OrderService
             const billFound = invoiceBillsFromDB.find(bill => bill.job?.guid === job.guid);
             if (!billFound)
             {
-
                 const newJobBill = OrderService.createInvoiceBillGraph(
                     [], false, currentUser, null, job.isTransport ? InvoiceBillRelationTypes.TYPES.CARRIER : InvoiceBillRelationTypes.TYPES.VENDOR
                 );
@@ -3732,6 +3731,29 @@ class OrderService
 
         for (const order of orders)
             await OrderService.calculatedDistances(order.guid);
+    }
+
+    // Hector this function is for you. XD <3
+    // I accidnetly wrote it. My bad.
+    static updateReferrerInvoice(orderGuid, referrerAcc, amount, currentUser)
+    {
+        const referrerType = 'referrer';
+        const invoiceQB = Invoice.query().joinRelated('relation')
+            .where({ 'relation.name': referrerType, 'orderGuid': orderGuid }).select('invoiceGuid');
+
+        const lineQb = InvoiceLines.query()
+            .modify('isSystemDefined', referrerType).whereIn('invoiceGuid', invoiceQB)
+            .patch({ amount, updatedByGuid: currentUser });
+
+        if (referrerAcc === null)
+        {
+            lineQb.with('updateConsignee', undefined, InvoiceBill.query().patch({ consigneeGuid: referrerAcc, updatedByGuid: currentUser }).whereIn(invoiceQB));
+        }
+        else if (referrerAcc)
+        {
+            lineQb.with('updateConsignee', undefined, InvoiceBill.query().patch({ consigneeGuid: referrerAcc.guid, updatedByGuid: currentUser }).whereIn(invoiceQB));
+        }
+        return lineQb;
     }
 }
 
