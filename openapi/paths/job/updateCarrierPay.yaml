@@ -1,0 +1,31 @@
+summary: Update Carrier Pay
+description: |
+  Update Carrier Pay on the Job and Splits it evenly across all commodities.
+operationId: updateCarrierPay
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          amount: 
+            type: string
+            format: currency
+            description: Total Carrier Pay.
+
+
+responses:
+  204:
+    $ref: '../../components/responses/204NoContent.yaml'
+
+  400:
+    $ref: '../../components/responses/400BadRequest.yaml'
+  

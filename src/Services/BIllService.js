@@ -22,7 +22,9 @@ class BillService
 {
     static async getBill(guid)
     {
-        const res = await InvoiceBill.query().findById(guid).withGraphFetched(InvoiceBill.fetch.details);
+        const res = await InvoiceBill.query()
+            .findById(guid)
+            .withGraphFetched(InvoiceBill.fetch.details(InvoiceBill.TYPE.BILL));
 
         return res;
     }
@@ -32,7 +34,7 @@ class BillService
         const result = await InvoiceLine.transaction(async trx =>
         {
             // verifying bill and invoice
-            const [bill, invoice] = await Promise.all([Bill.query(trx).findById(billGuid), invoiceGuid && Invoice.query(trx).findById(invoiceGuid)]);
+            const [bill, invoice] = await Promise.all([Bill.query(trx).findOne({ billGuid }), invoiceGuid && Invoice.query(trx).findOne({ invoiceGuid })]);
 
             // if bill doesn't exist in table throw error
             if (!bill)
@@ -83,22 +85,22 @@ class BillService
         try
         {
             // To make sure if bill has been passed
-            const bill = await Bill.query(trx).findById(billGuid);
-    
+            const bill = await Bill.query(trx).findOne({ billGuid });
+
             // if no bill throw error
             if (!bill)
                 throw new NotFoundError('Bill does not exist.');
-    
+
             // linking and updateing
             line.linkBill(bill);
-    
+
             // returning updated bill
             const newLine = await InvoiceLine.query(trx).patchAndFetchById(lineGuid, { ...line, updatedByGuid: currentUser });
-    
+
             // if line doesn't exist
             if (!newLine)
                 throw new NotFoundError('Line does not exist.');
-    
+
             await newLine.setAsPaidInvoiceBill(currentUser, trx);
 
             await trx.commit();
@@ -114,7 +116,7 @@ class BillService
     static async deleteBillLine(billGuid, lineGuid)
     {
         // To make sure if bill has been passed
-        const bill = await Bill.query().findById(billGuid);
+        const bill = await Bill.query().findOne({ billGuid });
 
         // if no bill throw error
         if (!bill)
@@ -142,7 +144,7 @@ class BillService
         const result = await InvoiceLine.transaction(async trx =>
         {
             // To make sure if bill has been passed
-            const bill = await Bill.query(trx).findById(billGuid);
+            const bill = await Bill.query(trx).findOne({ billGuid });
 
             // if no bill throw error
             if (!bill)
@@ -397,6 +399,17 @@ class BillService
         }
 
         return lines;
+    }
+
+    static distributeCostAcrossLines(lines, costAmount, currentUser)
+    {
+        const amountArray = currency(costAmount).distribute(lines.length);
+        const updateLines = [];
+        for (const line of lines)
+        {
+            updateLines.push(line.$query().patch({ amount: amountArray.shift(), updatedByGuid: currentUser }));
+        }
+        return updateLines;
     }
 }
 

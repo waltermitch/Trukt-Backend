@@ -40,7 +40,7 @@ class SFAccount extends BaseModel
                 modelClass: require('./SFRecordType'),
                 join: {
                     from: 'salesforce.accounts.recordTypeId',
-                    to: 'salesforce.record_types.sfId'
+                    to: 'salesforce.recordTypes.sfId'
                 }
             }
         };
@@ -156,11 +156,9 @@ class SFAccount extends BaseModel
         const errors = [];
 
         if (!account)
-            errors.push(new NotFoundError('Vendor does not exist'));
+            errors.push(new NotFoundError('Carrier or vendor does not exist'));
         if (account?.blackList)
-            errors.push(new DataConflictError('Vendor is blacklisted.'));
-        if (account?.rectype?.name?.toLowerCase() !== 'vendor')
-            errors.push(new DataConflictError('Provided vendor is not a valid vendor. Please contact support'));
+            errors.push(new DataConflictError('Carrier or vendor is blacklisted.'));
 
         return errors;
     }

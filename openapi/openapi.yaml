@@ -91,6 +91,12 @@ paths:
   /job/{jobGuid}/doc/rate-confirmation:
     get:
       $ref: paths/job/rateConfirmation.yaml
+  /job/{jobGuid}/fin/carrier-pay:
+    put:
+      $ref: paths/job/updateCarrierPay.yaml
+  /job/{jobGuid}/fin/tariff:
+    put:
+      $ref: paths/job/updateTariff.yaml
   /order/{orderGuid}/hold:
     put:
       $ref: paths/order/markOnHold.yaml

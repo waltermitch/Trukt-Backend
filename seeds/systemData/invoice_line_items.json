@@ -51,6 +51,27 @@
             "type": "expense",
             "is_accessorial": false,
             "is_deprecated": false
+        },
+        {
+            "id": 8,
+            "name": "lumper",
+            "type": "revenue",
+            "is_accessorial": false,
+            "is_deprecated": false
+        },
+        {
+            "id": 9,
+            "name": "repair",
+            "type": "revenue",
+            "is_accessorial": false,
+            "is_deprecated": false
+        },
+        {
+            "id": 10,
+            "name": "diagnostics",
+            "type": "revenue",
+            "is_accessorial": false,
+            "is_deprecated": false
         }
     ]
 }
