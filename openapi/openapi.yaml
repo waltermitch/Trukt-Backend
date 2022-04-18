@@ -164,6 +164,9 @@ paths:
   /loadboard/{jobId}/accept:
     put:
       $ref: paths/loadboard/dispatch/accept.yaml
+  /invoice:
+    post: 
+      $ref: paths/invoice/create.yaml
   /invoice/{invoiceGuid}:
     get:
       $ref: paths/invoice/get.yaml
