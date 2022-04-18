@@ -2267,7 +2267,7 @@ class OrderJobService
 
         await Promise.all(linesQB);
 
-        // TODO: Event for pub sub
+        emitter.emit('orderjob_pay_updated', jobGuid);
     }
 
     static async updateTariff(jobGuid, amount, currentUser, trx)
@@ -2327,7 +2327,7 @@ class OrderJobService
 
         await Promise.all(linesQB);
 
-        // TODO: Event for pub sub
+        emitter.emit('orderjob_pay_updated', jobGuid);
     }
 
     static getSystemLines(jobGuid, relationName)
