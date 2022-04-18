@@ -1947,7 +1947,7 @@ class OrderService
             .findOne({ 'relationInvoice.id': InvoiceBillRelationTypes.TYPES.REFERRER, 'invoice.orderGuid': orderGuid }).modifyGraph('lines', (builder) =>
             {
                 builder.modify('isSystemDefined', 'referrer');
-            }).debug(true);
+            });
 
         if (!invoiceBill)
             return {};

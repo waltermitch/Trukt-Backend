@@ -354,7 +354,7 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid, jobType, s
     setImmediate(async () =>
     {
         const proms = await Promise.allSettled([
-            ...(jobType === OrderJobType.TYPES.TRANSPORT ? [Super.updateStatus(jobGuid, 'deleted', 'notDeleted') ] : []),
+            ...(jobType === OrderJobType.TYPES.TRANSPORT ? [Super.updateStatus(jobGuid, 'deleted', 'notDeleted')] : []),
             ActivityManagerService.createActivityLog({
                 orderGuid: orderGuid,
                 jobGuid: jobGuid,
@@ -368,7 +368,7 @@ listener.on('orderjob_undeleted', ({ orderGuid, currentUser, jobGuid, jobType, s
                 activityId: 20
             })
         ]);
-        
+
         listener.emit('orderjob_status_updated', { jobGuid, currentUser, state: status });
         logEventErrors(proms, 'orderjob_undeleted');
     });
@@ -513,4 +513,22 @@ listener.on('orderjob_uncompleted', ({ jobGuid, currentUser }) =>
         }
     });
 });
+
+listener.on('orderjob_pay_updated', ({ jobGuid, currentUser }) =>
+{
+    setImmediate(async () =>
+    {
+        try
+        {
+            const currentJob = await OrderJobService.getJobData(jobGuid);
+            const proms = await Promise.allSettled([PubSubService.jobUpdated(jobGuid, currentJob)]);
+            logEventErrors(proms, 'orderjob_uncompleted');
+        }
+        catch (error)
+        {
+            logEventErrors(error, 'orderjob_uncompleted');
+        }
+    });
+});
+
 module.exports = listener;

@@ -22,11 +22,13 @@
         "typeId": 1
     },
     "Bill": {
+        "relationTypeId": 5,
         "isInvoice": false,
         "isValid": true,
         "referenceNumber": "DELETE-ME2"
     },
     "Invoice": {
+        "relationTypeId": 2,
         "isInvoice": true,
         "isValid": true,
         "referenceNumber": "DELETE-ME1"
@@ -35,24 +37,32 @@
         {
             "amount": "254.09",
             "itemId": "100000",
-            "isDeleted": false
+            "isDeleted": false,
+            "systemDefined": true,
+            "systemUsage": "base_pay"
         },
         {
             "amount": "150.54",
             "itemId": "100001",
-            "isDeleted": false
+            "isDeleted": false,
+            "systemDefined": true,
+            "systemUsage": "base_pay"
         }
     ],
     "BillLines": [
         {
             "amount": "154.32",
             "itemId": "100000",
-            "isDeleted": false
+            "isDeleted": false,
+            "systemDefined": true,
+            "systemUsage": "base_pay"
         },
         {
             "amount": "454.67",
             "itemId": "100001",
-            "isDeleted": false
+            "isDeleted": false,
+            "systemDefined": true,
+            "systemUsage": "base_pay"
         }
     ]
 }

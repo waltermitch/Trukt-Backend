@@ -19,9 +19,9 @@ const SFAccount = require('../Models/SFAccount');
 const SFContact = require('../Models/SFContact');
 const OrderStop = require('../Models/OrderStop');
 const OrderJob = require('../Models/OrderJob');
-const BillService = require('./BIllService');
 const { DateTime } = require('luxon');
 const R = require('ramda');
+const OrderJobService = require('./OrderJobService');
 
 const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
@@ -258,11 +258,7 @@ class LoadboardService
             await InvoiceBill.query(trx).patch({ paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job?.bills[0]?.guid);
 
             // evenly split a price across provided commodities
-            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
-            for (const line of lines)
-                line.transacting(trx);
-
-            allPromises.push(...lines);
+            allPromises.push(OrderJobService.updateCarrierPay(job.guid, body.price, currentUser, trx));
 
             // update scheduled dates on stops
             job.pickup.setScheduledDates(body.pickup.dateType, body.pickup.startDate, body.pickup.endDate);
@@ -829,7 +825,6 @@ class LoadboardService
     }
 
     /**
-     *
      * @param {list<Commodity>} commodities list of job commodities
      * @param {InvoiceLine} line a single invoice/bill line
      * @param {String} lineType a string indicating if this is a bill or an invoice
@@ -1491,12 +1486,7 @@ class LoadboardService
         }
 
         // split cost amongst commoditites
-        const lines = BillService.splitCarrierPay(bill, job.commodities, offerPayload.price, currentUser);
-
-        for (const line of lines)
-            line.transacting(trx);
-
-        promiseArray.push(...lines);
+        promiseArray.push(OrderJobService.updateCarrierPay(job.guid, offerPayload.price, currentUser, trx));
 
         bill.paymentTermId = offerPayload.paymentTerm;
         bill.setUpdatedBy(currentUser);
