@@ -3009,7 +3009,7 @@ class OrderService
         const referrerInvoiceToReturn = [];
 
         // Rule 1
-        if (referrer?.guid && !referrerInvoice)
+        if (referrer?.guid && Object.entries(referrerInvoice).length === 0)
         {
             const [referrerInvoiceToCreate] = OrderService.createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser);
             referrerInvoiceToReturn.push(referrerInvoiceToCreate);
