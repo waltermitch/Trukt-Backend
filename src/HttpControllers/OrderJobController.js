@@ -238,6 +238,19 @@ class OrderJobController
         }
     }
 
+    static async getCarrierBOL(req, res, next)
+    {
+        try
+        {
+            const document = await OrderJobService.getCarrierBOL(req.params.jobGuid);
+            res.status(200).json(document);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
     static async getRateConfirmation(req, res, next)
     {
         try

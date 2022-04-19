@@ -2106,7 +2106,21 @@ class OrderJobService
 
     static async getRateConfirmation(jobGuid)
     {
+        return OrderJobService.#getDocumentData(jobGuid, {});
+    }
 
+    static async getCarrierBOL(jobGuid)
+    {
+        return OrderJobService.#getDocumentData(jobGuid, {})
+            .then(data =>
+            {
+                delete data.bills;
+                return data;
+            });
+    }
+
+    static async #getDocumentData(jobGuid, options)
+    {
         const query = OrderJob.query()
             .findById(jobGuid)
             .withGraphFetched(OrderJob.fetch.fullData)
