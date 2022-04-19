@@ -24,6 +24,10 @@ const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
 const { raw } = require('objection');
 const R = require('ramda');
+const InvoiceLines = require('../Models/InvoiceLine');
+const InvoiceSystemLine = require('../Models/InvoiceSystemLine');
+const BillService = require('./BIllService');
+const InvoiceBillRelationType = require('../Models/InvoiceBillRelationType');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -1261,7 +1265,7 @@ class OrderJobService
             const appResponse = new AppResponse(OrderJob.validateJobForUncomplete(job));
             appResponse.throwErrorsIfExist();
             const isTransport = job.typeId === OrderJobType.TYPES.TRANSPORT;
- 
+
             await Promise.all([
                 job.$query(trx)
                     .patch({
@@ -1278,14 +1282,14 @@ class OrderJobService
                     isCompleted: false,
                     dateCompleted: null
                 })
-                .orderBy('sequence', 'desc')
-                .limit(1)
+                    .orderBy('sequence', 'desc')
+                    .limit(1)
             ]);
-            
+
             // to recalculate the job's status, we need all the order job changes to be applied
             // after that job instance is refreshed to get the latest status
             job.$set(await job.updateStatus(jobGuid, trx));
-            
+
             await trx.commit();
 
             emitter.emit('orderjob_uncompleted', job.guid);
@@ -1294,7 +1298,7 @@ class OrderJobService
                 currentUser,
                 state: { status: job.status }
             });
-    
+
             return 200;
         }
         catch (error)
@@ -1512,13 +1516,13 @@ class OrderJobService
 
             const appResponse = new AppResponse(OrderJob.validateJobForUndelete(job));
             appResponse.throwErrorsIfExist();
-            
+
             // updating orderJob in data base
             await job.$query(trx).patch({
                 isDeleted: false,
                 updatedByGuid: currentUser
             });
-            
+
             // this is required to orderjob_status_updated event to be emitted
             const jobStatus = { oldStatus: job.status };
 
@@ -2233,6 +2237,105 @@ class OrderJobService
             stop.sequence = seq++;
         }
         return orderJobInfo;
+    }
+
+    static async updateCarrierPay(jobGuid, carrierPay, currentUser, trx)
+    {
+
+        const systemLineQB = OrderJobService.getSystemLines(jobGuid, 'base_pay');
+        systemLineQB.transacting(trx);
+
+        const systemLines = await systemLineQB;
+
+        const billQB = Bill.query(trx).joinRelated('relation')
+            .where(qb =>
+            {
+                qb.orWhere({ 'relation.id': InvoiceBillRelationType.TYPES.CARRIER })
+                    .orWhere({ 'relation.id': InvoiceBillRelationType.TYPES.VENDOR });
+            })
+            .where({ 'jobGuid': jobGuid })
+            .select('billGuid');
+
+        const lines = await InvoiceLines.query(trx)
+            .modify('isSystemDefined', systemLines.systemUsage)
+            .andWhere('itemId', systemLines.lineItemId)
+            .whereIn('invoiceGuid', billQB);
+
+        const linesQB = BillService.distributeCostAcrossLines(lines, carrierPay, currentUser);
+        for (const qb of linesQB)
+            qb.transacting(trx);
+
+        await Promise.all(linesQB);
+
+        emitter.emit('orderjob_pay_updated', jobGuid);
+    }
+
+    static async updateTariff(jobGuid, amount, currentUser, trx)
+    {
+        const systemLineQB = OrderJobService.getSystemLines(jobGuid, 'base_pay');
+        systemLineQB.transacting(trx);
+
+        const systemLines = await systemLineQB;
+
+        const billQB = Bill.query(trx).joinRelated('relation')
+            .where(qb =>
+            {
+                qb.orWhere({ 'relation.id': InvoiceBillRelationType.TYPES.CARRIER })
+                    .orWhere({ 'relation.id': InvoiceBillRelationType.TYPES.VENDOR });
+            })
+            .where({ 'jobGuid': jobGuid })
+            .select('billGuid');
+
+        const orderQB = OrderJob.query().findById(jobGuid).select('orderGuid');
+
+        const invoiceQB = Invoice.query(trx).joinRelated('relation')
+            .where({ 'relation.id': InvoiceBillRelationType.TYPES.CONSIGNEE })
+            .whereIn('orderGuid', orderQB)
+            .select('invoiceGuid');
+
+        const lines = await InvoiceLines.query(trx).alias('lines')
+            .withGraphJoined('[linkOne, linkTwo]')
+            .where({ 'lines.itemId': systemLines.lineItemId, 'lines.systemDefined': true, 'lines.systemUsage': 'base_pay' })
+            .where('lines.invoiceGuid', 'in', billQB)
+            .where(qb =>
+            {
+                qb.orWhere(qb =>
+                {
+                    qb.where('linkOne.invoiceGuid', 'in', invoiceQB)
+                        .where({ 'linkOne.itemId': systemLines.lineItemId, 'linkOne.systemDefined': true, 'linkOne.systemUsage': 'base_pay' });
+                })
+                    .orWhere(qb =>
+                    {
+                        qb.where('linkTwo.invoiceGuid', 'in', invoiceQB)
+                            .where({
+                                'linkTwo.itemId': systemLines.lineItemId, 'linkTwo.systemDefined': true, 'linkTwo.systemUsage': 'base_pay'
+                            });
+                    });
+            });
+
+        // combine both of the lineOne and lineTwo into one array
+        const invoiceLines = lines.reduce((accumilator, line) =>
+        {
+            accumilator.push(...line.linkOne);
+            accumilator.push(...line.linkTwo);
+            return accumilator;
+        }, []);
+
+        const linesQB = BillService.distributeCostAcrossLines(invoiceLines, amount, currentUser);
+        for (const qb of linesQB)
+            qb.transacting(trx);
+
+        await Promise.all(linesQB);
+
+        emitter.emit('orderjob_pay_updated', jobGuid);
+    }
+
+    static getSystemLines(jobGuid, relationName)
+    {
+        const jobTypeQB = OrderJob.query().findById(jobGuid).select('typeId');
+
+        return InvoiceSystemLine.query()
+            .findOne('systemUsage', relationName).whereIn('jobTypeId', jobTypeQB);
     }
 }
 

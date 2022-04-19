@@ -35,7 +35,7 @@ class SFContact extends BaseModel
                 modelClass: require('./Order'),
                 join: {
                     from: 'salesforce.contacts.guid',
-                    to: 'salesforce.order.clientGuid'
+                    to: 'rcgTms.orders.clientContactGuid'
                 }
             },
             rectype: {
@@ -43,7 +43,7 @@ class SFContact extends BaseModel
                 modelClass: require('./SFRecordType'),
                 join: {
                     from: 'salesforce.contacts.recordTypeId',
-                    to: 'salesforce.record_types.sfId'
+                    to: 'salesforce.recordTypes.sfId'
                 }
             }
         };

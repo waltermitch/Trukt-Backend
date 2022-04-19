@@ -32,11 +32,6 @@
             "id": 6,
             "category": "service",
             "type": "diagnostics"
-        },
-        {
-            "id": 7,
-            "category": "service",
-            "type": "dry run"
         }
     ]
 }
