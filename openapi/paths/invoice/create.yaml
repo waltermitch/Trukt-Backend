@@ -1,0 +1,34 @@
+summary: Create an Invoice
+operationId: createInvoice
+description: Create an Invoice and attach it to an Order. The Invoice must specify the relation type.
+tags:
+  - Invoice
+
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          relation:
+            $ref: '../../components/schemas/Common.yaml#/Enums/invoiceRelations'
+          account:
+            $ref: '../../components/schemas/Common.yaml#/guidObject'
+          order:
+            $ref: '../../components/schemas/Common.yaml#/guidObject'
+        required:
+          - relation
+          - account
+          - order
+
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          $ref: '../../components/schemas/Common.yaml#/guidObject'
+  404:
+    $ref: ../../components/responses/404NotFound.yaml
+  400:
+    $ref: ../../components/responses/400BadRequest.yaml

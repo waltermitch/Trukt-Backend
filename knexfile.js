@@ -16,7 +16,7 @@ const {
 } = process.env;
 
 const conConfig = {
-    client: KNEX_CLIENT,
+    client: KNEX_CLIENT || 'pg',
     searchPath: ['rcg_tms', 'public', 'salesforce'],
     migrations: {
         tableName: KNEX_MIGRATION_TABLE

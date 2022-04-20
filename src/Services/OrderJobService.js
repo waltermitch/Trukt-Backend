@@ -2106,7 +2106,21 @@ class OrderJobService
 
     static async getRateConfirmation(jobGuid)
     {
+        return OrderJobService.#getDocumentData(jobGuid, {});
+    }
 
+    static async getCarrierBOL(jobGuid)
+    {
+        return OrderJobService.#getDocumentData(jobGuid, {})
+            .then(data =>
+            {
+                delete data.bills;
+                return data;
+            });
+    }
+
+    static async #getDocumentData(jobGuid, options)
+    {
         const query = OrderJob.query()
             .findById(jobGuid)
             .withGraphFetched(OrderJob.fetch.fullData)
@@ -2267,7 +2281,7 @@ class OrderJobService
 
         await Promise.all(linesQB);
 
-        // TODO: Event for pub sub
+        emitter.emit('orderjob_pay_updated', jobGuid);
     }
 
     static async updateTariff(jobGuid, amount, currentUser, trx)
@@ -2286,7 +2300,7 @@ class OrderJobService
             .where({ 'jobGuid': jobGuid })
             .select('billGuid');
 
-        const orderQB = OrderJob.query().findById(jobGuid).select('orderGuid');
+        const orderQB = OrderJob.query(trx).findById(jobGuid).select('orderGuid');
 
         const invoiceQB = Invoice.query(trx).joinRelated('relation')
             .where({ 'relation.id': InvoiceBillRelationType.TYPES.CONSIGNEE })
@@ -2327,7 +2341,7 @@ class OrderJobService
 
         await Promise.all(linesQB);
 
-        // TODO: Event for pub sub
+        emitter.emit('orderjob_pay_updated', jobGuid);
     }
 
     static getSystemLines(jobGuid, relationName)

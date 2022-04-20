@@ -14,8 +14,7 @@ router
     .get(`/order/:orderGuid(${uuidRegexStr})/invoices`, (req, res, next) => invoiceController.getFinances(req, res, next, 'order'))
     .get(`/job/:jobGuid(${uuidRegexStr})/bills`, (req, res, next) => invoiceController.getFinances(req, res, next, 'job'))
 
-    .post(`${billPrefix}`, (req, res) => http(req, res, billController.createBills))
-    .post(`${invoicePrefix}`, (req, res) => http(req, res, invoiceController.createInvoices))
+    .post(`${invoicePrefix}`, invoiceController.createInvoice)
     .post(`${billPrefix}/:billGuid/line`, billController.createBillLine)
     .post(`${invoicePrefix}/:invoiceGuid/line`, invoiceController.createInvoiceLine)
 
