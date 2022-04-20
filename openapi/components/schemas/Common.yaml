@@ -152,6 +152,14 @@ notes:
   type: string
   description: Use to add extra annotations.
 Enums:
+  invoiceRelations:
+    type: string
+    enum:
+      - client
+      - consignee
+      - referrer
+      - vendor
+      - carrier
   accountType:
     type: string
     enum:
@@ -445,7 +453,7 @@ Enums:
       - clientContactEmail
       - carrierName
       - grossProfitMargin
-      - clientContactName 
+      - clientContactName
     default: number
   stopStatus:
     type: string

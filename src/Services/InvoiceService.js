@@ -10,9 +10,60 @@ const Invoice = require('../Models/Invoice');
 const Order = require('../Models/Order');
 const Bill = require('../Models/Bill');
 const { DateTime } = require('luxon');
+const SFAccount = require('../Models/SFAccount');
+const InvoiceBillRelationType = require('../Models/InvoiceBillRelationType');
 
 class InvoiceService
 {
+
+    static async createInvoice(order, account, relation, currentUser)
+    {
+
+        const trx = await InvoiceBill.startTransaction();
+        try
+        {
+            const [account_, order_, relation_] = await Promise.all([SFAccount.query(trx).findById(account.guid), Order.query(trx).findById(order.guid), InvoiceBillRelationType.query(trx).findOne('name', relation)]);
+
+            if (!account_)
+            {
+                throw new NotFoundError(`Account with guid ${account.guid} does not exist.`);
+            }
+
+            if (!order_)
+            {
+                throw new NotFoundError(`Order with guid ${order.guid} does not exist.`);
+            }
+
+            if (!relation_)
+            {
+                throw new NotFoundError(`Invoice relation ${relation} does not exist.`);
+            }
+
+            const invoice = await InvoiceBill.query(trx).insertAndFetch({
+                consigneeGuid: account_.guid,
+                isInvoice: true,
+                createdByGuid: currentUser
+            });
+
+            await Invoice.query(trx).insert({
+                invoiceGuid: invoice.guid,
+                orderGuid: order_.guid,
+                relationTypeId: relation_.id
+
+            });
+
+            await trx.commit();
+            return { guid: invoice.guid };
+
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+
+    }
+
     static async getInvoice(guid)
     {
         const res = await InvoiceBill.query()
