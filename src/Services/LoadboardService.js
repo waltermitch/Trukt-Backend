@@ -634,11 +634,11 @@ class LoadboardService
         const loadboardNames = posts.map((post) => { return post.loadboard; });
         const job = await OrderJob.query().findById(jobId).withGraphFetched(`[
             commodities(distinct, isNotDeleted).[vehicle, commType],
-            order.[client, clientContact, dispatcher, invoices.lines(isNotDeleted, transportOnly).item],
+            order.[client, clientContact, dispatcher, invoices(transportOnly).lines(transportOnly).item],
             stops(distinct).[primaryContact, terminal], 
             loadboardPosts(getExistingFromList),
             equipmentType, 
-            bills.lines(isNotDeleted, transportOnly).item,
+            bills(transportOnly).lines(transportOnly).item,
             dispatcher, type
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
