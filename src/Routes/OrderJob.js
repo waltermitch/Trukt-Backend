@@ -27,6 +27,7 @@ router
     .put(`${prefix}/${JOB_GUID}/fin/tariff`, controller.updateTariff)
 
     // generated documents
-    .get(`${prefix}/${JOB_GUID}/doc/rate-confirmation`, controller.getRateConfirmation);
+    .get(`${prefix}/${JOB_GUID}/doc/rate-confirmation`, controller.getRateConfirmation)
+    .get(`${prefix}/${JOB_GUID}/doc/carrier-bol`, controller.getCarrierBOL);
 
 module.exports = router;
