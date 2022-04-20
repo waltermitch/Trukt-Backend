@@ -2300,7 +2300,7 @@ class OrderJobService
             .where({ 'jobGuid': jobGuid })
             .select('billGuid');
 
-        const orderQB = OrderJob.query().findById(jobGuid).select('orderGuid');
+        const orderQB = OrderJob.query(trx).findById(jobGuid).select('orderGuid');
 
         const invoiceQB = Invoice.query(trx).joinRelated('relation')
             .where({ 'relation.id': InvoiceBillRelationType.TYPES.CONSIGNEE })
