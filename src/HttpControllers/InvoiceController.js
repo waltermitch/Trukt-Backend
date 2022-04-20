@@ -7,7 +7,7 @@ class InvoiceController
 {
     static async createInvoice(req, res, next)
     {
-        const { order, account, relation, ..._ } = req.body;
+        const { order, account, relation } = req.body;
 
         const currentUser = req.session.userGuid;
         try
