@@ -1768,6 +1768,32 @@ class OrderService
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
+            if (orderUpdated.referrerGuid === null)
+            {
+                const referrerInvoices = orderUpdated.invoices.filter(({ relationInvoice }) => relationInvoice.some(({ name }) => name === 'referrer'));
+
+                if (oldOrder.referrerGuid === contacts.client.guid || oldOrder.referrerGuid === consignee.guid)
+                {
+                    const deleteRebateLines = referrerInvoices.map((invoice) =>
+                        InvoiceBill.query(trx).delete().where({ invoiceGuid: invoice.guid, itemId: 7 })
+                    );
+
+                    await Promise.all(deleteRebateLines);
+                }
+                else
+                {
+                    // delete referrer invoices and lines
+                    const deleteLinesAndInvoices = referrerInvoices.map(async (invoice) =>
+                            {
+                                await InvoiceLine.query(trx).delete().where({ invoiceGuid: invoice.guid });
+                                return [Invoice.query(trx).delete().where({ invoiceGuid: invoice.guid, orderGuid: orderUpdated.guid }), InvoiceBill.query(trx).deleteById(invoice.guid)];
+                            }
+                        ).flat(2);
+
+                    await Promise.all(deleteLinesAndInvoices);
+                }
+            }
+
             await trx.commit();
 
             const OrderStopService = require('./OrderStopService');
@@ -3029,7 +3055,7 @@ class OrderService
         }
 
         // Rule 2
-        else if (referrerInvoice && (referrer?.guid || referrerRebateAmount))
+        else if (referrerInvoice && (referrer?.guid || referrerRebateAmount) && referrerInvoice.setUpdatedBy)
         {
             if (referrer?.guid)
             {
@@ -3047,7 +3073,7 @@ class OrderService
         }
 
         // Rule 3
-        else if (referrerInvoice && !referrer && !referrerRebateAmount)
+        else if (referrerInvoice && referrerInvoice.setUpdatedBy && !referrer && !referrerRebateAmount)
         {
             // remove referrer from invoice VERY BAD WAY TO DO THIS but since referrer will always have one line we are OK for now
             referrerInvoice.consigneeGuid = null;
