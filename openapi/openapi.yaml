@@ -91,6 +91,9 @@ paths:
   /job/{jobGuid}/doc/rate-confirmation:
     get:
       $ref: paths/job/rateConfirmation.yaml
+  /job/{jobGuid}/doc/carrier-bol:
+    get:
+      $ref: paths/job/carrierBOL.yaml
   /job/{jobGuid}/fin/carrier-pay:
     put:
       $ref: paths/job/updateCarrierPay.yaml
@@ -164,6 +167,9 @@ paths:
   /loadboard/{jobId}/accept:
     put:
       $ref: paths/loadboard/dispatch/accept.yaml
+  /invoice:
+    post: 
+      $ref: paths/invoice/create.yaml
   /invoice/{invoiceGuid}:
     get:
       $ref: paths/invoice/get.yaml

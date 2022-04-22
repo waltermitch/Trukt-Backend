@@ -1,0 +1,173 @@
+summary: Carrier BOL
+operationId: getCarrierBOL
+description: Returns the data necessary to create a Carrier Bill of Lading.
+tags:
+  - Job
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            guid:
+              $ref: '../../components/schemas/Common.yaml#/guid'
+            number:
+              type: string
+              example: 'AB99999A'
+            category:
+              type: string
+            type:
+              type: string
+            distance:
+              type: string
+              example: '9999.9'
+            loadType:
+              type: string
+            instructions:
+              type: string
+            vendorContact:
+              $ref: '../../components/schemas/Contact.yaml'
+            vendor:
+              allOf:
+                - $ref: '../../components/schemas/Account.yaml#/Account Billing Info'
+                - $ref: '../../components/schemas/Account.yaml#/Account'
+            dispatcher:
+              $ref: '../../components/schemas/User.yaml#/TMSUser'
+            vendorAgent:
+              $ref: '../../components/schemas/Contact.yaml'
+            equipmentType:
+              type: object
+              properties:
+                id:
+                  type: number
+                  format: integer
+                name:
+                  type: string
+            stops:
+              type: object
+              properties:
+                guid:
+                  $ref: '../../components/schemas/Common.yaml#/guid'
+                stopType:
+                  type: string
+                sequence:
+                  type: number
+                  format: integer
+                notes:
+                  type: string
+                dateScheduledStart:
+                  $ref: '../../components/schemas/Common.yaml#/dateTime'
+                dateScheduledEnd:
+                  $ref: '../../components/schemas/Common.yaml#/dateTime'
+                dateScheduledType:
+                  $ref: '../../components/schemas/Common.yaml#/Enums/stopDateType'
+                dateRequestedStart:
+                  $ref: '../../components/schemas/Common.yaml#/dateTime'
+                dateRequestedEnd:
+                  $ref: '../../components/schemas/Common.yaml#/dateTime'
+                dateRequestedType:
+                  $ref: '../../components/schemas/Common.yaml#/Enums/stopDateType'
+                primaryContact:
+                  $ref: '../../components/schemas/Contact.yaml'
+                alternativeContact:
+                  $ref: '../../components/schemas/Contact.yaml'
+                terminal:
+                  $ref: '../../components/schemas/Terminal.yaml#/TerminalBase'
+                commodities:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      guid:
+                        $ref: '../../components/schemas/Common.yaml#/guid'
+                      capacity:
+                        type: string
+                      damaged:
+                        type: string
+                      inoperable:
+                        type: string
+                      length:
+                        type: number
+                        format: integer
+                      weight:
+                        type: number
+                        format: integer
+                      quantity:
+                        type: number
+                        format: integer
+                      description:
+                        type: string
+                      identifier:
+                        type: string
+                      lotNumber:
+                        type: string
+                      year:
+                        type: string
+                      make:
+                        type: string
+                      model:
+                        type: string
+                      trim:
+                        type: string
+                      name:
+                        type: string
+                      weightClassId:
+                        type: number
+                        format: integer
+                      weightClass:
+                        type: object
+                        properties:
+                          id:
+                            type: number
+                            format: integer
+                          class:
+                            type: string
+                          minWeight:
+                            type: number
+                            format: integer
+                          maxWeight:
+                            type: number
+                            format: integer
+                      typeId:
+                        type: number
+                        format: integer
+                      category:
+                        type: string
+                      type:
+                        type: string
+            dispatch:
+              type: object
+              properties:
+                guid:
+                  $ref: '../../components/schemas/Common.yaml#/guid'
+                dateAccepted:
+                  $ref: '../../components/schemas/Common.yaml#/dateTime'
+                vendorContact:
+                  $ref: '../../components/schemas/Contact.yaml'
+                paymentMethod: {}
+                vendor:
+                  allOf:
+                    - $ref: '../../components/schemas/Account.yaml#/Account Billing Info'
+                    - $ref: '../../components/schemas/Account.yaml#/Account'
+                vendorAgent:
+                  $ref: '../../components/schemas/Contact.yaml'
+                paymentTerms:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                      format: integer
+                    name:
+                      type: string
+  400:
+    $ref: '../../components/responses/400BadRequest.yaml'
+  404:
+    $ref: '../../components/responses/404NotFound.yaml'

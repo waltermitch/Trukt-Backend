@@ -1667,7 +1667,7 @@ class OrderService
                 ),
                 Order.relatedQuery('stops', trx).for(guid).withGraphFetched('terminal').distinctOn('guid'),
                 Order.query(trx).findById(guid).skipUndefined().withGraphJoined(Order.fetch.stopsPayload),
-                referrer?.guid && await OrderService.getOrderReferrerRebateInvoice(guid, trx),
+                await OrderService.getOrderReferrerRebateInvoice(guid, trx),
                 !referrer && referrerRebate ? Promise.reject(new MissingDataError('referrerRebate price can not be set without referrer')) : null
             ]);
 
@@ -1706,6 +1706,7 @@ class OrderService
                 stopContactsGraphMap,
                 currentUser
             );
+
             const { stopsForStopLinks, stopsGraphsToUpdate } = await OrderService.createMissingStops(stopsGraphs, stopsChecked, trx);
 
             const jobsToUpdate = OrderService.createJobsGraph(
@@ -1736,12 +1737,13 @@ class OrderService
             const referrerInvoiceToUpdate = OrderService.updateReferrerRebateInvoiceGraph(referrer, referrerRebate, referrerInvoice, currentUser);
 
             const contacts = OrderService.getContactReferences({
-                referrer: { guid: referrer?.guid || referrer },
+                referrer: { guid: referrer?.guid || referrer } ?? null,
                 salesperson: { guid: salesperson?.guid || salesperson },
                 client: { guid: client?.guid || client },
                 clientContact: { guid: orderContactCreated },
                 dispatcher: { guid: dispatcher?.guid ?? oldOrder.dispatcherGuid ?? jobsToUpdate?.find(x => x.dispatcher?.guid)?.dispatcher?.guid }
             });
+
             const orderGraph = Order.fromJson({
                 guid,
                 instructions,
@@ -1765,6 +1767,34 @@ class OrderService
                 });
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
+
+            if (orderUpdated.referrerGuid === null)
+            {
+                const referrerInvoices = await this.getOrderReferrerRebateInvoice(orderUpdated.guid, trx);
+
+                if (referrerInvoices)
+                {
+                    const deleteRecords = [];
+
+                    deleteRecords.push(
+                        InvoiceLine.query(trx).delete().where({ invoiceGuid: referrerInvoices.guid, systemUsage: 'referrer', systemDefined: true })
+                    );
+                    if (!(referrerInvoices.consigneeGuid == contacts.client.guid || referrerInvoices.consigneeGuid == consignee.guid) || referrerInvoices.consigneeGuid == undefined)
+                    {
+
+                        // If the invoice is not linked to another relation on the order, delete the invoice
+                        deleteRecords.push(
+                            InvoiceLine.query(trx).delete().where({ invoiceGuid: referrerInvoices.guid }),
+                            Invoice.query(trx).delete().where({ invoiceGuid: referrerInvoices.guid, orderGuid: orderUpdated.guid }),
+                            InvoiceBill.query(trx).deleteById(referrerInvoices.guid)
+                        );
+
+                    }
+
+                    await Promise.all(deleteRecords);
+
+                }
+            }
 
             await trx.commit();
 
@@ -1922,12 +1952,21 @@ class OrderService
             .modifyGraph('job', (builder) => builder.select('guid'));
     }
 
+    /**
+     * Method gets only invoices that are attached to consignee type, will not include invoices that are attached to
+     * referrer, client, vendor, etc.
+     * @param {string} orderGuid
+     * @param {Object} trx
+     * @returns Order Invoice that is attached to consignee type
+     */
     static async getOrderInvoices(orderGuid, trx)
     {
         const allInvoices = await InvoiceBill.query(trx).select('*')
             .whereIn(
                 'guid',
-                Invoice.query(trx).select('invoiceGuid').where('orderGuid', orderGuid)
+                Invoice.query(trx).joinRelated('relation').select('invoiceGuid').where({
+                    'relation.name': 'consignee', 'orderGuid': orderGuid
+                })
             );
 
         return InvoiceBill.fetchGraph(allInvoices, '[lines.link]', { transaction: trx });
@@ -1940,19 +1979,14 @@ class OrderService
      * In case the order.referrer is the same as the order.consignee, we may have multiple invoices were the invoice.consignee = order.referrer,
      * for those cases we also need to check for invoices that have "rebate" lines. If non invoice is return -> cretae new rebate invoice
      */
-    static async getOrderReferrerRebateInvoice(orderGuid, trx)
+    static getOrderReferrerRebateInvoice(orderGuid, trx)
     {
-        const invoiceBill = await InvoiceBill.query(trx)
+        return InvoiceBill.query(trx)
             .withGraphJoined('[relationInvoice, invoice, lines]')
             .findOne({ 'relationInvoice.id': InvoiceBillRelationTypes.TYPES.REFERRER, 'invoice.orderGuid': orderGuid }).modifyGraph('lines', (builder) =>
             {
                 builder.modify('isSystemDefined', 'referrer');
-            }).debug(true);
-
-        if (!invoiceBill)
-            return {};
-
-        return invoiceBill;
+            });
     }
 
     static async validateReferencesBeforeUpdate(
@@ -2979,6 +3013,7 @@ class OrderService
             return job;
         });
 
+        // NOTE: This will cause issues with multiple invoices
         if (orderInvoiceFromDB.length > 0)
             orderInvoiceFromDB[0].lines.push(...orderInvoiceListToCreate);
 
@@ -2996,7 +3031,8 @@ class OrderService
     /**
      * Rules:
      * 1) If referrer and referrerInvoice is empty -> create invoice and line, if non referrerRebate was provided use default 0.00
-     * 2) If referrer and referrerInvoice -> Update invoice with new values for invoice.consignee and amoun
+     * 2) If referrer and referrerInvoice -> Update invoice with new values for invoice.consignee and amount
+     * 3) If no referrer and no amount -> Remove invoice cosignee and line amount
      * @param {*} referrer referrer Guid provided in request payload
      * @param {*} referrerRebate amount provided in request payload, this is the invoiceLine amount
      * @param {*} referrerInvoice invoice (If exists) with referrer rebate line
@@ -3004,36 +3040,45 @@ class OrderService
      *  referrerInvoice: Invoice with the referrer line. If no rule apply, return an empty array so nothing is updated
      * }
      */
-    static updateReferrerRebateInvoiceGraph(referrer, referrerRebateAmount, referrerInvoice, currentUser)
+    static updateReferrerRebateInvoiceGraph(referrer, rebateAmount, invoice, currentUser)
     {
-        const referrerInvoiceToReturn = [];
+        const invoices = [];
 
         // Rule 1
-        if (referrer?.guid && !referrerInvoice)
+        // Invoice doesnt exist and referrer guid was provided. Create new invoice
+        if (!invoice && referrer?.guid)
         {
-            const [referrerInvoiceToCreate] = OrderService.createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser);
-            referrerInvoiceToReturn.push(referrerInvoiceToCreate);
+            const [invoiceToCreate] = OrderService.createReferrerRebateInvoice(rebateAmount, referrer, currentUser);
+            invoices.push(invoiceToCreate);
         }
 
         // Rule 2
-        else if (referrerInvoice && (referrer?.guid || referrerRebateAmount))
+        else if (invoice && (referrer?.guid || rebateAmount))
         {
             if (referrer?.guid)
             {
-                referrerInvoice.consigneeGuid = referrer.guid;
-                referrerInvoice.setUpdatedBy(currentUser);
+                invoice.consigneeGuid = referrer.guid;
+                invoice.setUpdatedBy(currentUser);
             }
 
-            if (referrerRebateAmount)
+            if (rebateAmount)
             {
-                referrerInvoice.lines[0].amount = referrerRebateAmount;
-                referrerInvoice.lines[0].setUpdatedBy(currentUser);
+                if (invoice.lines.length > 0)
+                {
+                    invoice.lines[0].amount = rebateAmount;
+                    invoice.lines[0].setUpdatedBy(currentUser);
+                }
+                else
+                {
+                    // create the invoice line if it doesnt exist
+                    invoice.lines.push(OrderService.createInvoiceLineGraph(rebateAmount, InvoiceLineItem.TYPE.REBATE, currentUser, null, 'referrer'));
+                }
             }
 
-            referrerInvoiceToReturn.push(referrerInvoice);
-        }
+            invoices.push(invoice);
 
-        return referrerInvoiceToReturn;
+        }
+        return invoices;
     }
 
     /**

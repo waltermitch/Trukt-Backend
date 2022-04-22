@@ -5,6 +5,27 @@ const { NotFoundError } = require('../ErrorHandling/Exceptions');
 
 class InvoiceController
 {
+    static async createInvoice(req, res, next)
+    {
+        const { order, account, relation } = req.body;
+
+        const currentUser = req.session.userGuid;
+        try
+        {
+            const invoice = await InvoiceService.createInvoice(
+                order,
+                account, relation, currentUser
+            );
+
+            res.status(200);
+            res.json(invoice);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
     static async getInvoice(req, res, next)
     {
         const result = await InvoiceService.getInvoice(req.params.invoiceGuid);

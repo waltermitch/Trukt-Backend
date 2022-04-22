@@ -19,9 +19,9 @@ const SFAccount = require('../Models/SFAccount');
 const SFContact = require('../Models/SFContact');
 const OrderStop = require('../Models/OrderStop');
 const OrderJob = require('../Models/OrderJob');
-const BillService = require('./BIllService');
 const { DateTime } = require('luxon');
 const R = require('ramda');
+const OrderJobService = require('./OrderJobService');
 
 const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
@@ -258,11 +258,7 @@ class LoadboardService
             await InvoiceBill.query(trx).patch({ paymentTermId: body.paymentTerm, updatedByGuid: currentUser }).findById(job?.bills[0]?.guid);
 
             // evenly split a price across provided commodities
-            const lines = BillService.splitCarrierPay(job.bills[0], job.commodities, body.price, currentUser);
-            for (const line of lines)
-                line.transacting(trx);
-
-            allPromises.push(...lines);
+            allPromises.push(OrderJobService.updateCarrierPay(job.guid, body.price, currentUser, trx));
 
             // update scheduled dates on stops
             job.pickup.setScheduledDates(body.pickup.dateType, body.pickup.startDate, body.pickup.endDate);
@@ -274,10 +270,12 @@ class LoadboardService
             allPromises.push(OrderStop.query(trx).patch(job.delivery).findById(job.delivery.guid));
 
             // validating that pick date is before delivery
-            if (job.delivery.dateScheduledStart < job.pickup.dateScheduledStart || job.delivery.dateScheduledEnd < job.pickup.dateScheduledEnd)
-            {
-                throw new ValidationError('Pickup dates should be before delivery date');
-            }
+            const pickupStart = DateTime.fromISO(job.pickup.dateScheduledStart);
+            const pickupEnd = DateTime.fromISO(job.pickup.dateScheduledEnd);
+            const deliveryStart = DateTime.fromISO(job.delivery.dateScheduledStart);
+            const deliveryEnd = DateTime.fromISO(job.delivery.dateScheduledEnd);
+
+            this.checkPickupBeforeDelivery(pickupStart, pickupEnd, deliveryStart, deliveryEnd);
 
             // update job status to pending and started date
             const jobForUpdate = OrderJob.fromJson({
@@ -634,11 +632,11 @@ class LoadboardService
         const loadboardNames = posts.map((post) => { return post.loadboard; });
         const job = await OrderJob.query().findById(jobId).withGraphFetched(`[
             commodities(distinct, isNotDeleted).[vehicle, commType],
-            order.[client, clientContact, dispatcher, invoices.lines(isNotDeleted, transportOnly).item],
+            order.[client, clientContact, dispatcher, invoices(transportOnly).lines(transportOnly).item],
             stops(distinct).[primaryContact, terminal], 
             loadboardPosts(getExistingFromList),
             equipmentType, 
-            bills.lines(isNotDeleted, transportOnly).item,
+            bills(transportOnly).lines(transportOnly).item,
             dispatcher, type
         ]`).modifiers({
             getExistingFromList: builder => builder.modify('getFromList', loadboardNames)
@@ -829,7 +827,6 @@ class LoadboardService
     }
 
     /**
-     *
      * @param {list<Commodity>} commodities list of job commodities
      * @param {InvoiceLine} line a single invoice/bill line
      * @param {String} lineType a string indicating if this is a bill or an invoice
@@ -1277,6 +1274,63 @@ class LoadboardService
     }
 
     /**
+     * Compares the dates and returns true if the state is valid.
+     *
+     * TIME 2000 --------------------> 2001
+     * Pickup        ======
+     * Delivery  ===                 invalid state  delivery is before pickup
+     * Delivery     ===              invalid state  delivery starts before pickup, ends between pickup
+     * Delivery       ===            invalid state  delivery starts after pickup, ends between pickup
+     * Delivery      ======          valid state    delivery starts same as pickup, ends same as pickup
+     * Delivery           ===        valid state    delivery starts after pickup, ends after pickup
+     * Delivery             ===      valid state    delivery starts after pickup, ends after pickup
+     * @param {DateTime} pickupStart
+     * @param {DateTime} pickupEnd
+     * @param {DateTime} deliveryStart
+     * @param {DateTime} deliveryEnd
+     * @throws {ValidationError}
+     * @throws {DataConflictError}
+     */
+    static checkPickupBeforeDelivery(pickupStart, pickupEnd, deliveryStart, deliveryEnd)
+    {
+        if (!(pickupStart instanceof DateTime))
+        {
+            throw new ValidationError('Pickup date must be a DateTime');
+        }
+        if (!(deliveryStart instanceof DateTime))
+        {
+            throw new ValidationError('Delivery date must be a DateTime');
+        }
+
+        const dStart = deliveryStart.toMillis();
+        const pStart = pickupStart.toMillis();
+
+        // may be undefined
+        const dEnd = deliveryEnd?.toMillis();
+
+        // may be undefined
+        const pEnd = pickupEnd?.toMillis();
+
+        if (dEnd && dStart > dEnd)
+        {
+            throw new DataConflictError('Delivery start time is after delivery end time.');
+        }
+
+        if (pEnd && pStart > pEnd)
+        {
+            throw new DataConflictError('Pickup start time is after pickup end time.');
+        }
+
+        // first term is to check if the pickup starts before the delivery
+        // second term checks if the pickup end is defined and checks the pick end is before the delivery end.
+
+        if (!(pStart <= dStart && (!pEnd || pEnd <= dEnd)))
+        {
+            throw new DataConflictError('Pickup dates should be before delivery date.');
+        }
+    }
+
+    /**
      * Methid accepts requests and creates a internal offer in our system.
      * @param {uuid} requestGuid
      * @param {uuid} currentUser
@@ -1302,9 +1356,16 @@ class LoadboardService
         try
         {
             const promiseArray = [];
+            const pickupStart = DateTime.fromISO(queryRequest.datePickupStart);
+            const pickupEnd = DateTime.fromISO(queryRequest.datePickupEnd);
+            const deliveryStart = DateTime.fromISO(queryRequest.dateDeliveryStart);
+            const deliveryEnd = DateTime.fromISO(queryRequest.dateDeliveryEnd);
 
-            if (queryRequest.datePickupEnd < queryRequest.dateDeliveryStart || queryRequest.dateDeliveryEnd < queryRequest.datePickupStart)
-                throw new DataConflictError('Pickup dates should be before delivery date');
+            this.checkPickupBeforeDelivery(
+                pickupStart,
+                pickupEnd,
+                deliveryStart,
+                deliveryEnd);
 
             // get Job with all data
             const [job, carrier] = await Promise.all([
@@ -1491,12 +1552,7 @@ class LoadboardService
         }
 
         // split cost amongst commoditites
-        const lines = BillService.splitCarrierPay(bill, job.commodities, offerPayload.price, currentUser);
-
-        for (const line of lines)
-            line.transacting(trx);
-
-        promiseArray.push(...lines);
+        promiseArray.push(OrderJobService.updateCarrierPay(job.guid, offerPayload.price, currentUser, trx));
 
         bill.paymentTermId = offerPayload.paymentTerm;
         bill.setUpdatedBy(currentUser);

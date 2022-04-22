@@ -524,11 +524,21 @@ class OrderJob extends BaseModel
                     'job.isCanceled': false
                 })
                 .whereNull('job.vendorGuid')
-                .whereExists(OrderJobDispatch.query().alias('ojd').where({ 'job.guid': ref('ojd.job_guid'), 'ojd.isPending': true }));
+                .whereExists(OrderJobDispatch.query().alias('ojd').where({ 'job.guid': ref('ojd.job_guid'), 'ojd.isPending': true, 'ojd.isValid': true }));
         },
         statusDeclined: (queryBuilder) =>
         {
             const OrderJobDispatch = require('./OrderJobDispatch');
+            const LoadboardPost = require('./LoadboardPost');
+
+            // TODO: remove the extra where exists, replace with correct logic to check if it is valid.
+            // The orderjobdispatches logic was not implemented correctly. The isValid flag is not being used for its intended purposes.
+
+            // this logic is wrong and needs to be corrected by using the isValid flag
+            const mostRecent = OrderJobDispatch.query().where('jobGuid', ref('job.guid'))
+                .orderBy('dateCreated', 'desc').as('mostRecent').limit(1);
+            const validDecline = OrderJobDispatch.query().select('mostRecent.guid').from(mostRecent).where('mostRecent.isDeclined', true);
+
             queryBuilder
                 .alias('job')
                 .where({
@@ -538,7 +548,9 @@ class OrderJob extends BaseModel
                     'job.isCanceled': false
                 })
                 .whereNull('job.vendorGuid')
-                .whereExists(OrderJobDispatch.query().alias('ojd').where({ 'job.guid': ref('ojd.job_guid'), 'ojd.isDeclined': true }));
+                .whereExists(validDecline)
+                .whereNotExists(LoadboardPost.query().alias('lp').where({ 'job.guid': ref('lp.job_guid'), 'lp.isPosted': true }));
+
         },
         statusRequests: (queryBuilder) =>
         {

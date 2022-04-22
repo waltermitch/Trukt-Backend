@@ -207,6 +207,15 @@ class InvoiceBill extends BaseModel
             invoice(builder)
             {
                 builder.where('isInvoice', true);
+            },
+            transportOnly(builder)
+            {
+                const InvoiceLine = require('./InvoiceLine');
+                builder.alias('inv').whereExists(
+                    InvoiceLine.query()
+                    .where('itemId', 1)
+                    .whereRaw('invoice_guid = inv.guid')
+                );
             }
         };
 
