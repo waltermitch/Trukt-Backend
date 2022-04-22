@@ -1768,6 +1768,34 @@ class OrderService
 
             const [orderUpdated] = await Promise.all([orderToUpdate, ...stopLinksToUpdate]);
 
+            if (orderUpdated.referrerGuid === null)
+            {
+                const referrerInvoices = await this.getOrderReferrerRebateInvoice(orderUpdated.guid, trx);
+
+                if (referrerInvoices)
+                {
+                    const deleteRecords = [];
+
+                    deleteRecords.push(
+                        InvoiceLine.query(trx).delete().where({ invoiceGuid: referrerInvoices.guid, systemUsage: 'referrer', systemDefined: true })
+                    );
+                    if (!(referrerInvoices.consigneeGuid == contacts.client.guid || referrerInvoices.consigneeGuid == consignee.guid) || referrerInvoices.consigneeGuid == undefined)
+                    {
+
+                        // If the invoice is not linked to another relation on the order, delete the invoice
+                        deleteRecords.push(
+                            InvoiceLine.query(trx).delete().where({ invoiceGuid: referrerInvoices.guid }),
+                            Invoice.query(trx).delete().where({ invoiceGuid: referrerInvoices.guid, orderGuid: orderUpdated.guid }),
+                            InvoiceBill.query(trx).deleteById(referrerInvoices.guid)
+                        );
+
+                    }
+
+                    await Promise.all(deleteRecords);
+
+                }
+            }
+
             await trx.commit();
 
             const OrderStopService = require('./OrderStopService');
@@ -1951,19 +1979,14 @@ class OrderService
      * In case the order.referrer is the same as the order.consignee, we may have multiple invoices were the invoice.consignee = order.referrer,
      * for those cases we also need to check for invoices that have "rebate" lines. If non invoice is return -> cretae new rebate invoice
      */
-    static async getOrderReferrerRebateInvoice(orderGuid, trx)
+    static getOrderReferrerRebateInvoice(orderGuid, trx)
     {
-        const invoiceBill = await InvoiceBill.query(trx)
+        return InvoiceBill.query(trx)
             .withGraphJoined('[relationInvoice, invoice, lines]')
             .findOne({ 'relationInvoice.id': InvoiceBillRelationTypes.TYPES.REFERRER, 'invoice.orderGuid': orderGuid }).modifyGraph('lines', (builder) =>
             {
                 builder.modify('isSystemDefined', 'referrer');
             });
-
-        if (!invoiceBill)
-            return {};
-
-        return invoiceBill;
     }
 
     static async validateReferencesBeforeUpdate(
@@ -3017,46 +3040,45 @@ class OrderService
      *  referrerInvoice: Invoice with the referrer line. If no rule apply, return an empty array so nothing is updated
      * }
      */
-    static updateReferrerRebateInvoiceGraph(referrer, referrerRebateAmount, referrerInvoice, currentUser)
+    static updateReferrerRebateInvoiceGraph(referrer, rebateAmount, invoice, currentUser)
     {
-        const referrerInvoiceToReturn = [];
+        const invoices = [];
 
         // Rule 1
-        if (referrer?.guid && Object.entries(referrerInvoice).length === 0)
+        // Invoice doesnt exist and referrer guid was provided. Create new invoice
+        if (!invoice && referrer?.guid)
         {
-            const [referrerInvoiceToCreate] = OrderService.createReferrerRebateInvoice(referrerRebateAmount, referrer, currentUser);
-            referrerInvoiceToReturn.push(referrerInvoiceToCreate);
+            const [invoiceToCreate] = OrderService.createReferrerRebateInvoice(rebateAmount, referrer, currentUser);
+            invoices.push(invoiceToCreate);
         }
 
         // Rule 2
-        else if (referrerInvoice && (referrer?.guid || referrerRebateAmount))
+        else if (invoice && (referrer?.guid || rebateAmount))
         {
             if (referrer?.guid)
             {
-                referrerInvoice.consigneeGuid = referrer.guid;
-                referrerInvoice.setUpdatedBy(currentUser);
+                invoice.consigneeGuid = referrer.guid;
+                invoice.setUpdatedBy(currentUser);
             }
 
-            if (referrerRebateAmount)
+            if (rebateAmount)
             {
-                referrerInvoice.lines[0].amount = referrerRebateAmount;
-                referrerInvoice.lines[0].setUpdatedBy(currentUser);
+                if (invoice.lines.length > 0)
+                {
+                    invoice.lines[0].amount = rebateAmount;
+                    invoice.lines[0].setUpdatedBy(currentUser);
+                }
+                else
+                {
+                    // create the invoice line if it doesnt exist
+                    invoice.lines.push(OrderService.createInvoiceLineGraph(rebateAmount, InvoiceLineItem.TYPE.REBATE, currentUser, null, 'referrer'));
+                }
             }
 
-            referrerInvoiceToReturn.push(referrerInvoice);
-        }
+            invoices.push(invoice);
 
-        // Rule 3
-        else if (referrerInvoice && !referrer && !referrerRebateAmount)
-        {
-            // remove referrer from invoice VERY BAD WAY TO DO THIS but since referrer will always have one line we are OK for now
-            referrerInvoice.consigneeGuid = null;
-            referrerInvoice.setUpdatedBy(currentUser);
-            referrerInvoice.lines[0].amount = 0;
-            referrerInvoice.lines[0].setUpdatedBy(currentUser);
-            referrerInvoiceToReturn.push(referrerInvoice);
         }
-        return referrerInvoiceToReturn;
+        return invoices;
     }
 
     /**
