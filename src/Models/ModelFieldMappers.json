@@ -320,6 +320,9 @@
                     "relationTypeId",
                     "updatedByGuid"
                 ]
+            },
+            "database": {
+                "into": ["relationTypeId"]
             }
         }
     },
