@@ -54,8 +54,7 @@ class BillService
             // if invoiceGuid exists create line and link
             if (invoiceGuid)
             {
-                // By default the linked invoice line should be created as a line not paid
-                const invoiceLine = InvoiceLine.fromJson({ ...line, isPaid: false });
+                const invoiceLine = InvoiceLine.fromJson(line);
                 invoiceLine.linkInvoice(invoice);
                 linksArray.push(invoiceLine);
             }
