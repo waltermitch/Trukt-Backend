@@ -1118,7 +1118,7 @@ class OrderJobService
     static async checkServiceJobsToMarkAsReady(serviceJobsFound)
     {
         // Check jobs that have at leats one stop, with 1 commodity asigned and dateRequested is not null
-        const jobsChecked = await OrderStopLink.query().distinct('jobGuid', 'job.dispatcherGuid', 'job.status', raw('o_j."canBeMarkAsReady"'))
+        const jobsChecked = await OrderStopLink.query().distinct('jobGuid', 'job.dispatcherGuid', 'job.status', raw('job."canBeMarkAsReady"'))
             .joinRelated('stop')
             .innerJoin(
                 OrderJob.query().select('guid', 'dispatcherGuid', 'status')
