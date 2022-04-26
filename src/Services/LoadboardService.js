@@ -21,7 +21,6 @@ const OrderStop = require('../Models/OrderStop');
 const OrderJob = require('../Models/OrderJob');
 const { DateTime } = require('luxon');
 const R = require('ramda');
-const OrderJobService = require('./OrderJobService');
 
 const connectionString = process.env.AZURE_SERVICEBUS_CONNECTIONSTRING;
 const queueName = 'loadboard_posts_outgoing';
@@ -192,6 +191,7 @@ class LoadboardService
 
     static async dispatchJob(jobId, body, currentUser)
     {
+        const OrderJobService = require('./OrderJobService');
         const trx = await OrderJobDispatch.startTransaction();
         const allPromises = [];
 
@@ -1515,6 +1515,7 @@ class LoadboardService
      */
     static async createInternalOffer(trx, job, internalPostGuid, offerPayload, currentUser)
     {
+        const OrderJobService = require('./OrderJobService');
         const promiseArray = [];
 
         // get only first and last stop only
