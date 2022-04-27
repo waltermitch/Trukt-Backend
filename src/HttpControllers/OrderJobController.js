@@ -11,12 +11,17 @@ class OrderJobController
     {
         try
         {
-            const result = await NotesService.getJobNotes(req.params.jobGuid);
+            // I am putting this on the controller level
+            // because application level logic for checking if the job exists is too heavy.
+            const jobGuid = req.params.jobGuid;
+            const job = await OrderJob.query().findById(jobGuid).count();
 
-            if (!result)
+            if (job.count == 0)
                 throw new NotFoundError('Job Not Found');
-            else
-                res.status(200).json(result);
+
+            const notes = await NotesService.getJobNotes(jobGuid);
+
+            res.status(200).json(notes);
         }
         catch (error)
         {
