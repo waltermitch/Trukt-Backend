@@ -109,25 +109,23 @@ class NotesService
     static async getOrderNotes(orderGuid)
     {
         // find all notes for order, (using extra join to know if order exists)
-        const order = await Order.query().findById(orderGuid).withGraphJoined('notes(notDeleted).[createdBy]');
+        const notes = await Order.relatedQuery('notes')
+            .for(orderGuid)
+            .withGraphJoined('createdBy')
+            .orderBy('dateCreated', 'desc');
 
-        if (!order)
-            return null;
-
-        // return notes
-        return order.notes;
+        return notes;
     }
 
     static async getJobNotes(jobGuid)
     {
         // find all notes for job, (using extra join to know if job exists)
-        const job = await OrderJob.query().findById(jobGuid).withGraphJoined('notes(notDeleted).[createdBy]').orderBy('notes:dateCreated', 'desc');
+        const notes = await OrderJob.relatedQuery('notes')
+            .for(jobGuid)
+            .withGraphJoined('createdBy')
+            .orderBy('dateCreated', 'desc');
 
-        if (!job)
-            return null;
-
-        // return notes
-        return job?.notes;
+        return notes;
     }
 
     // get all notes for an order
