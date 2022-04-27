@@ -24,22 +24,6 @@ class User extends BaseModel
         Object.assign(relations, isNotDeleted(User.tableName));
         return relations;
     }
-
-    $formatJson(json)
-    {
-        json = super.$formatJson(json);
-        if (json.isDeleted)
-        {
-            json = undefined;
-        }
-        else
-        {
-            delete json.source;
-            delete json.externalId;
-            delete json.isDeleted;
-        }
-        return json;
-    }
 }
 
 module.exports = User;
