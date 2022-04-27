@@ -1,6 +1,7 @@
 summary: Get All Notes by Order guid
 operationId: getOrderNotes
 description: Get All Notes By Order guid
+deprecated: true
 tags:
   - Order
   - Notes
