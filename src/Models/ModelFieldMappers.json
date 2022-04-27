@@ -238,6 +238,16 @@
                     "dateDeleted"
                 ]
             }
+        },
+        "whitelist": {
+            "database": {
+                "outgoing": [],
+                "incoming": []
+            },
+            "endpoint": {
+                "outgoing": ["guid", "name", "email"],
+                "incoming": []
+            }
         }
     },
     "OrderStop": {
