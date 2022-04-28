@@ -11,6 +11,9 @@
         },
         {
             "type": "referrer"
+        },
+        {
+            "type": "ari_fuel_surcharge"
         }
     ]
 }
