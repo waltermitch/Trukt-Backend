@@ -2,6 +2,7 @@ const OrderService = require('../Services/OrderService');
 const NotesService = require('../Services/NotesService');
 const emitter = require('../EventListeners/index');
 const { NotFoundError, MissingDataError } = require('../ErrorHandling/Exceptions');
+const Order = require('../Models/Order');
 
 class OrderController
 {
@@ -143,12 +144,17 @@ class OrderController
     {
         try
         {
-            const result = await NotesService.getOrderNotes(req.params.orderGuid);
+            // I am putting this on the controller level
+            // because application level logic for checking if the order exists is too heavy.
+            const orderGuid = req.params.orderGuid;
+            const order = await Order.query().findById(orderGuid).count();
 
-            if (!result)
+            if (order.count == 0)
                 throw new NotFoundError('Order not found');
-            else
-                res.status(200).json(result);
+
+            const notes = await NotesService.getOrderNotes(req.params.orderGuid);
+
+            res.status(200).json(notes);
         }
         catch (error)
         {

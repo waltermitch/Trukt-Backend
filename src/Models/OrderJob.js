@@ -835,6 +835,7 @@ class OrderJob extends BaseModel
                 'job.dateCreated',
                 'job.actualRevenue',
                 'job.actualExpense',
+                'job.actualIncome',
                 'job.dateUpdated',
                 'job.grossProfitMargin'
             ],
