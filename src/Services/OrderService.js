@@ -1818,6 +1818,7 @@ class OrderService
         }
         catch (error)
         {
+            console.log(error);
             await trx.rollback();
             throw error;
         }
@@ -2301,7 +2302,7 @@ class OrderService
 
                 const candidate = await TerminalService.geocodeAddress(stringAddress);
 
-                if (candidate.lat && candidate.long)
+                if (candidate?.lat && candidate?.long)
                 {
                     const { lat, long } = candidate;
                     const terminalToUpdate = await Terminal.query(trx).findOne({

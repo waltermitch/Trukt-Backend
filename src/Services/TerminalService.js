@@ -31,7 +31,7 @@ class TerminalService
     {
         const [res] = await Trimble.geocodeAddress(address, { format: true });
 
-        return res;
+        return res || null;
     }
 
     static async getById(terminalId)
