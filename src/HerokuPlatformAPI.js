@@ -22,7 +22,15 @@ class Heroku
         // search for config
         const res = await api.get(`/apps/${herokuAppId}/config-vars`);
 
-        return { 'DATABASE_URL': res.data?.[herokuDatabaseCredName] };
+        if (herokuDatabaseCredName in res.data)
+        {
+            return { 'DATABASE_URL': res.data?.[herokuDatabaseCredName] };
+        }
+        else
+        {
+            throw Error(`Cannot connect to the databse with cred ${herokuDatabaseCredName}.`);
+        }
+
     }
 }
 
