@@ -1,45 +1,38 @@
 {
-  "herokuGetToken": {
-    "access_token": "token"
-  },
-  "herokuGetConfig": {
-    "DATABASE_URL": "url",
-    "OtherStuff": "stuff"
-  },
-  "getAccountByTypeAndSearch": {
-    "rows": [
-      {
-        "name": "LKQ Corporation",
-        "phone": "615-258-5990",
-        "email": null,
-        "contacts": [
-          {
-            "firstName": "Ruby",
-            "lastName": "Stratz",
-            "phone": "570-451-7127"
-          },
-          {
-            "firstName": "Kim",
-            "lastName": "Mclean",
-            "phone": "205-566-3297"
-          },
-          {
-            "firstName": "Alexandra",
-            "lastName": "Haggerty",
-            "phone": "615-258-5990"
-          }
-        ],
-        "loadboardInstructions": null,
-        "orderInstructions": null,
-        "billingStreet": "5846 Crossings Boulevard",
-        "billingCity": "Nashville",
-        "billingState": "TN",
-        "billingPostalCode": "37013",
-        "shippingStreet": null,
-        "shippingCity": null,
-        "shippingState": null,
-        "shippingPostalCode": null
-      }
-    ]
-  }
+    "getAccountByTypeAndSearch": {
+        "rows": [
+            {
+                "name": "LKQ Corporation",
+                "phone": "615-258-5990",
+                "email": null,
+                "contacts": [
+                    {
+                        "firstName": "Ruby",
+                        "lastName": "Stratz",
+                        "phone": "570-451-7127"
+                    },
+                    {
+                        "firstName": "Kim",
+                        "lastName": "Mclean",
+                        "phone": "205-566-3297"
+                    },
+                    {
+                        "firstName": "Alexandra",
+                        "lastName": "Haggerty",
+                        "phone": "615-258-5990"
+                    }
+                ],
+                "loadboardInstructions": null,
+                "orderInstructions": null,
+                "billingStreet": "5846 Crossings Boulevard",
+                "billingCity": "Nashville",
+                "billingState": "TN",
+                "billingPostalCode": "37013",
+                "shippingStreet": null,
+                "shippingCity": null,
+                "shippingState": null,
+                "shippingPostalCode": null
+            }
+        ]
+    }
 }
