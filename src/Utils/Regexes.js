@@ -25,7 +25,7 @@ const salesforceIdRegex = /[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18}/g;
 
 const phoneNumberRegex = /\d{7}\d*/;
 
-const emailRegex = /\w+@\w+\./;
+const emailRegex = /\w+@(:?\w|-)+\./;
 
 const dotNumberRegex = /^\d{4}\d*$/;
 
