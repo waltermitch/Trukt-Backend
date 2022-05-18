@@ -22,6 +22,7 @@
     "rules": {
         "no-case-declarations": 0,
         "no-unused-vars": 1,
+        "no-control-regex": 0,
         "quotes": ["error", "single"],
         "no-fallthrough": "off",
         "lines-around-comment": [
