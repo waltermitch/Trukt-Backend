@@ -729,6 +729,7 @@ class OrderJobService
         for (const job of goodGuids)
         {
             jobsQueryArray.push(knex.raw(`
+                -- select a transport job along with the values that will use to validate the transition to the new state
                 SELECT
                 	oj.guid,
                 	oj.order_guid,
@@ -759,7 +760,7 @@ class OrderJobService
                 	stop.bad_delivery_address,
                     stop.commodity_guid
                 FROM rcg_tms.order_jobs oj
-                JOIN
+                LEFT JOIN 
                 	(SELECT DISTINCT
                 			os.date_requested_start  pickup_requested_date,
                 			os2.date_requested_start  delivery_requested_date,
@@ -780,9 +781,11 @@ class OrderJobService
                 		AND os."sequence" < os2."sequence"
                 		AND osl.order_guid = osl2.order_guid
                 		AND osl.job_guid = '${job.guid}'
+                        AND osl2.job_guid = '${job.guid}'
                 		ORDER BY os2."sequence" DESC, os."sequence" ASC LIMIT 1) AS stop ON stop.job_guid = oj.guid
                 WHERE guid = '${job.guid}' AND oj.is_transport;  
                 
+                -- select a service job along with the values that will use to validate the transition to the new state
                 SELECT
                         oj.guid,
                         oj.order_guid,
@@ -809,7 +812,7 @@ class OrderJobService
 	                    stop.not_resolved_address,
 	                    stop.stop_type
                     FROM rcg_tms.order_jobs oj
-                    JOIN
+                    LEFT JOIN
                         (SELECT DISTINCT
                                 osl.commodity_guid "commodityGuid",
                                 osl.job_guid,
@@ -820,7 +823,10 @@ class OrderJobService
                             LEFT JOIN rcg_tms.terminals t ON os.terminal_guid = t.guid
                             WHERE osl.job_guid = '${job.guid}') AS stop ON stop.job_guid = oj.guid
                     WHERE guid = '${job.guid}' AND oj.is_transport = false;   
-            `).then((result) => { return result[0].rows[0] ?? result[1].rows[0]; }));
+            `).then((result) =>
+            {
+                return result[0].rows[0] ?? result[1].rows[0];
+            }));
         }
 
         // making query reuests
