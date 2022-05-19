@@ -15,7 +15,7 @@ class Case extends BaseModel
         const CaseLabel = require('./CaseLabel');
         const relations = {
             label: {
-                relation: BaseModel.HasOneRelation,
+                relation: BaseModel.BelongsToOneRelation,
                 modelClass: CaseLabel,
                 join: {
                     from: 'rcgTms.cases.caseLabelId',
