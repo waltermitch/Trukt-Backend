@@ -29,5 +29,6 @@ exports.up = function(knex) {
 
 exports.down = function(knex) {
     return knex.schema.withSchema('rcg_tms')
-    .dropTableIfExists(TABLE_NAME);
+    .dropTableIfExists(TABLE_NAME)
+    .dropTableIfExists(TABLE_NAME_LABEL);
 };
