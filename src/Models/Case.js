@@ -1,5 +1,6 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const BaseModel = require("./BaseModel");
+const { Base } = require('applicationinsights/out/Declarations/Contracts');
 
 class Case extends BaseModel
 {
@@ -20,6 +21,18 @@ class Case extends BaseModel
                 join: {
                     from: 'rcgTms.cases.caseLabelId',
                     to: 'rcgTms.caseLabels.id'
+                }
+            },
+            notes: {
+                relation: BaseModel.ManyToManyRelation,
+                modelClass: require('./Notes'),
+                join: {
+                    from: 'rcgTms.cases.guid',
+                    through: {
+                        from: 'rcgTms.caseNotes.caseGuid',
+                        to: 'rcgTms.caseNotes.noteGuid'
+                    },
+                    to: 'rcgTms.genericNotes.guid'
                 }
             }
         }

@@ -22,6 +22,14 @@ class CaseLabel extends BaseModel
                     from: 'rcgTms.cases.caseLabelId',
                     to: 'rcgTms.caseLabels.id'
                 }
+            },
+            stat: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./CaseStat'),
+                join: {
+                    from: 'rcgTms.caseLabelStats.caseLabelId',
+                    to: 'rcgTms.caseLabels.id'
+                }
             }
         }
         return relations;
