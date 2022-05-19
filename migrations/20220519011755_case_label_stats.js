@@ -9,7 +9,7 @@ exports.up = function(knex) {
         const caseLabelId = 'case_label_id';
         table.integer(caseLabelId).unsigned().notNullable().comment('the name of the case');
         table.foreign(caseLabelId).references('id').inTable('rcg_tms.case_labels');
-        table.float('count');
+        table.bigInteger('count').notNullable().default(0);
     })
     .raw(migration_tools.guid_function(TABLE_NAME));
     

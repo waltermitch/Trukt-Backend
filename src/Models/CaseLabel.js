@@ -15,8 +15,8 @@ class CaseLabel extends BaseModel
     static get relationMappings()
     {
         const relations = {
-            case: {
-                relation: BaseModel.HasOneRelation,
+            cases: {
+                relation: BaseModel.ManyToManyRelation,
                 modelClass: require('./Case'),
                 join: {
                     from: 'rcgTms.cases.caseLabelId',

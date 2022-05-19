@@ -1,6 +1,5 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
 const BaseModel = require("./BaseModel");
-const { Base } = require('applicationinsights/out/Declarations/Contracts');
 
 class Case extends BaseModel
 {
@@ -16,7 +15,7 @@ class Case extends BaseModel
         const CaseLabel = require('./CaseLabel');
         const relations = {
             label: {
-                relation: BaseModel.BelongsToOneRelation,
+                relation: BaseModel.HasOneRelation,
                 modelClass: CaseLabel,
                 join: {
                     from: 'rcgTms.cases.caseLabelId',
