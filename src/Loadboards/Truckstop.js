@@ -56,7 +56,7 @@ class Truckstop extends Loadboard
 
                     // indicates order in stops
                     sequence: 1,
-                    earlyDateTime: this.data.pickup.dateRequestedStart,
+                    earlyDateTime: this.data.pickup.dateRequestedStart ?? DateTime.now().toUTC(),
                     lateDateTime: this.data.pickup.dateRequestedEnd,
                     location: {
                         locationName: this.data.pickup.terminal.name,
@@ -76,7 +76,7 @@ class Truckstop extends Loadboard
                     // indicates what kind of stop this is i.e 1 = pickup, 2 = delivery
                     type: 2,
                     sequence: 2,
-                    earlyDateTime: this.data.delivery.dateRequestedStart,
+                    earlyDateTime: this.data.delivery.dateRequestedStart ?? DateTime.now().toUTC(),
                     lateDateTime: this.data.delivery.dateRequestedEnd,
                     location: {
                         locationName: this.data.delivery.terminal.name,
