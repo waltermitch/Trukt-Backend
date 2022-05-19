@@ -889,8 +889,30 @@ class OrderJobService
                     errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
                 if (job.not_resolved_address && job.is_transport === false)
                     errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
-                if (!job.pickup_requested_date || !job.delivery_requested_date)
-                    errors.push('Client requested pickup and delivery dates must be set.');
+                if (job.pickup_requested_type == 'no later than' || job.delivery_requested_type == 'no later than')
+                {
+                    if (!job.pickup_requested_date_end)
+                        errors.push('Client requested pickup date is required for "No later than"');
+                    if (!job.delivery_requested_date_end)
+                        errors.push('Client requested delivery date is required for "No Earlier than"');
+                }
+                if (job.pickup_requested_type == 'no earlier than' || job.delivery_requested_type == 'no earlier than')
+                {
+                    if (!job.pickup_requested_date)
+                        errors.push('Client requested pickup date is required for "No Earlier than"');
+                    if (!job.delivery_requested_date)
+                        errors.push('Client requested delivery date is required for "No Earlier than"');
+                }
+                if (job.pickup_requested_type == 'exactly' || job.pickup_requested_type == 'estimated' || job.delivery_requested_type == 'exactly' || job.delivery_requested_type == 'estimated')
+                {
+                    if (!job.pickup_requested_date && !job.pickup_requested_date_end)
+                        errors.push('Client requested pickup date is required for "Estimated"');
+                    if (!job.delivery_requested_date && !job.elivery_requested_date_end)
+                        errors.push('Client requested delivery date is required for "Estimated"');
+                }
+
+                // if (!job.pickup_requested_date || !job.delivery_requested_date)
+                //     errors.push('Client requested pickup and delivery dates must be set.');
                 if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === true)
                     errors.push('There must be at least one commodity to pick up and deliver.');
                 if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === false)
@@ -1328,6 +1350,7 @@ class OrderJobService
         }
     }
 
+    // TODO: Rewrite to make it work with new  ready check
     /**
      * Sets a job to On Hold by checking the boolean field isOnHold to true
      * @param {uuid} jobGuid guid of job to set status
@@ -1406,6 +1429,7 @@ class OrderJobService
         }
     }
 
+    // TODO: Rewrite to not use the old ready check
     /**
      * Removes the job status from On Hold by setting the isOnHold field to false
      * @param {uuid} jobGuid guid of job to set status
@@ -1418,6 +1442,13 @@ class OrderJobService
 
         try
         {
+            // const job = await OrderJob.query(trx).patch({ isOnHold: false }).findById(jobGuid).returning('*');
+            // console.log('job', job);
+
+            // // rewite this function checkJobForReadyState
+            // const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([job.guid]);
+            // console.log('Ready State', goodJobs, jobsExceptions);
+
             const queryRes = await OrderJobService.getJobForReadyCheck([jobGuid]);
 
             if (queryRes.jobs.length < 1 && queryRes.exceptions?.doErrorsExist())
@@ -1644,6 +1675,7 @@ class OrderJobService
         return job;
     }
 
+    // TODO: Update cancel
     static async uncancelJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
