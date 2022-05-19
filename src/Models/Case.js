@@ -33,6 +33,18 @@ class Case extends BaseModel
                     },
                     to: 'rcgTms.genericNotes.guid'
                 }
+            },
+            orderJob: {
+                relation: BaseModel.HasOneThroughRelation,
+                modelClass: require('./OrderJob'),
+                join: {
+                    from: 'rcgTms.cases.guid',
+                    through: {
+                        from: 'rcgTms.orderJobCases.caseGuid',
+                        to: 'rcgTms.orderJobCases.jobGuid'
+                    },
+                    to: 'rcgTms.orderJobs.guid'
+                }
             }
         }
         return relations;
