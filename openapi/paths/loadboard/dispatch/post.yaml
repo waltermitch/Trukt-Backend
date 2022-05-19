@@ -57,13 +57,13 @@ requestBody:
                 $ref: '../../../components/schemas/Common.yaml#/Enums/stopDateType'
               startDate:
                 $ref: '../../../components/schemas/Common.yaml#/dateTime'
+                nullable: true                
                 description: the earliest date time the load can be picked up
               endDate:
                 $ref: '../../../components/schemas/Common.yaml#/dateTime'
                 description: the latest date time the load can be picked up
             required:
               - dateType
-              - startDate
           delivery:
             type: object
             description: the date type and the possible start and end dates of the pickup
@@ -72,13 +72,13 @@ requestBody:
                 $ref: '../../../components/schemas/Common.yaml#/Enums/stopDateType'
               startDate:
                 $ref: '../../../components/schemas/Common.yaml#/dateTime'
+                nullable: true                
                 description: the earliest date time the load can be delivered
               endDate:
                 $ref: '../../../components/schemas/Common.yaml#/dateTime'
                 description: the latest date time the load can be delivered
             required:
               - dateType
-              - startDate
           paymentTerm:
             type: number
             description: payment term id used for paying carrier
