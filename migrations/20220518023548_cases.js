@@ -27,7 +27,7 @@ exports.up = function(knex) {
     .raw(migration_tools.timestamps_trigger(TABLE_NAME))
     .raw(migration_tools.authors_trigger(TABLE_NAME))
     .raw(`CREATE TRIGGER rcg_case_stat_count_change
-            BEFORE INSERT OR UPDATE OR DELETE
+            AFTER INSERT OR UPDATE OR DELETE
             ON rcg_tms.${TABLE_NAME}
             FOR EACH ROW
             EXECUTE FUNCTION rcg_tms.rcg_case_stat_count();
