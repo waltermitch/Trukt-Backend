@@ -78,5 +78,5 @@ exports.up = async function (knex)
 
 exports.down = function (knex)
 {
-    // do nothing
+    return knex.raw('select 1');
 };
