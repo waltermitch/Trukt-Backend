@@ -3,6 +3,12 @@ const BaseModel = require('./BaseModel');
 
 class Notes extends BaseModel
 {
+    static NOTES_TYPES = {
+        LEAD: 'lead',
+        UPDATE: 'update',
+        FLAG: 'flag'
+    }
+
     static get tableName()
     {
         return 'rcgTms.genericNotes';

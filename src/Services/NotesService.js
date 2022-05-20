@@ -3,6 +3,8 @@ const PubSubService = require('../Services/PubSubService');
 const OrderJob = require('../Models/OrderJob');
 const Notes = require('../Models/Notes');
 const Order = require('../Models/Order');
+const { NOTES_TYPES } = require('../Models/Notes');
+const Objection = require('objection');
 
 class NotesService
 {
@@ -117,15 +119,35 @@ class NotesService
         return notes;
     }
 
-    static async getJobNotes(jobGuid)
+    static async getJobNotes(jobGuid, queryParams)
     {
-        // find all notes for job, (using extra join to know if job exists)
-        const notes = await OrderJob.relatedQuery('notes')
-            .for(jobGuid)
-            .withGraphJoined('createdBy')
-            .orderBy('dateCreated', 'desc');
+        const { type, pg: page, rc: recordCount, order } = queryParams;
 
-        return notes;
+        /**
+         * @type {Objection.QueryBuilder<Notes, Notes[]>}
+         */
+        let notesQueryBuilder = Notes.query().withGraphFetched('createdBy').alias('gn').select('gn.*')
+            .leftJoin('orderJobNotes', 'gn.guid', 'orderJobNotes.noteGuid')
+            .where('orderJobNotes.jobGuid', jobGuid);
+        
+        // filter between job notes types
+        if (type)
+            notesQueryBuilder = notesQueryBuilder.where('gn.type', type);
+        
+        // get order notes (which are client notes actually ;))
+        if (order)
+            notesQueryBuilder = notesQueryBuilder.union(
+                Notes.query().withGraphFetched('createdBy').alias('gn2').select('gn2.*')
+                    .leftJoin('orderNotes', 'gn2.guid', 'orderNotes.noteGuid')
+                    .rightJoin('orderJobs', 'orderNotes.orderGuid', 'orderJobs.orderGuid')
+                    .where('orderJobs.guid', jobGuid)
+                    .whereNotNull('gn2.guid')
+            );
+
+        notesQueryBuilder = notesQueryBuilder.orderBy('dateCreated', 'desc')
+            .page(page, recordCount);
+
+        return notesQueryBuilder;
     }
 
     // get all notes for an order

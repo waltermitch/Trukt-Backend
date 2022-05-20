@@ -19,7 +19,7 @@ class OrderJobController
             if (job.count == 0)
                 throw new NotFoundError('Job Not Found');
 
-            const notes = await NotesService.getJobNotes(jobGuid);
+            const notes = await NotesService.getJobNotes(jobGuid, req.query);
 
             res.status(200).json(notes);
         }
