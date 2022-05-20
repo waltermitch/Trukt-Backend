@@ -454,11 +454,10 @@ class InvoiceService
                         results[order.guid].status = 400;
                         results[order.guid].errors.setStatus(400);
                         results[order.guid].errors.addError(
-                            new DataConflictError('Invoice already marked as paid'),
-                            {
+                            new DataConflictError('Invoice already marked as paid', {
                                 guid: invoice.guid,
                                 data: invoice
-                            }
+                            })
                         );
                     }
                     else if (invoice.lines.length == 0)
@@ -466,11 +465,10 @@ class InvoiceService
                         results[order.guid].status = 400;
                         results[order.guid].errors.setStatus(400);
                         results[order.guid].errors.addError(
-                            new DataConflictError('Invoice Has No Non Zero Lines'),
-                            {
+                            new DataConflictError('Invoice Has No Non Zero Lines', {
                                 guid: invoice.guid,
                                 data: invoice
-                            }
+                            })
                         );
                     }
                     else if (!invoice.client.qbId)

@@ -1,7 +1,4 @@
 const BaseModel = require('./BaseModel');
-const R = require('ramda');
-
-const findNotNil = R.find(R.compose(R.not, R.isNil));
 
 class SFContact extends BaseModel
 {
@@ -84,13 +81,15 @@ class SFContact extends BaseModel
 
     cleanUpNames(obj)
     {
-        if (!obj.firstName && !obj.lastName && obj.name)
+        // Convert the "name" field into a firstName and lastName
+        if (obj.name && !obj.firstName && !obj.lastName)
         {
             const names = obj.name.replace(/\s+/, ' ').trim().split(' ');
             if (names.length < 2)
             {
-                obj.firstName = '';
-                obj.lastName = names[0] || 'LNU';
+                // Salesforce forces the firstname to null
+                obj.firstName = names[0] || 'FNU';
+                obj.lastName = 'LNU';
             }
             else
             {
@@ -98,7 +97,7 @@ class SFContact extends BaseModel
                 obj.lastName = names.slice(1, names.length).join(' ');
             }
 
-            obj.name = obj.firstName + ' ' + obj.lastName;
+            obj.name = (obj.firstName + ' ' + obj.lastName).trim();
         }
 
         for (const col of ['name', 'firstName', 'lastName'])
@@ -131,128 +130,116 @@ class SFContact extends BaseModel
         this.recordTypeId = recType.sfId;
     }
 
-    hasId()
-    {
-        const fields = SFContact.idColumns;
-        for (const field of fields)
-
-            if (this?.[field])
-
-                return true;
-
-        return false;
-    }
-
+    /**
+     * Salesforce records have many different Id's fields that are used.
+     * This method will return the field name and value that you can use to uniquely identify the salesforce record in the database
+     * @returns
+     */
     findIdValue()
     {
-        const fields = SFContact.idColumns;
-        for (const field of fields)
-
+        let retval = null;
+        for (const field of SFContact.idColumns)
+        {
             if (field in this)
-
-                return { id: this[field], field };
-        return undefined;
+            {
+                retval = {
+                    id: this[field],
+                    field: field
+                };
+            }
+        }
+        return retval;
     }
 
+    /**
+     * Tries to find the Contact in the database using id fields or unqiue field combination
+     * If no contact is found, it will create a new one, it will also attempt to patch the information.
+     * This function will NOT use all the fields on the record to create the record and populate the fields.
+     * @param {Transaction} trx
+     * @returns
+     */
     async findOrCreate(trx)
     {
-        const promises = [];
+        const idField = this.findIdValue();
+        const searchQuery = SFContact.query(trx);
 
-        // if there is an Id, we can look it up by Id
-        if (this.hasId())
+        if (idField)
         {
-            // find using an id
-            const { field, id } = this.findIdValue();
-            promises.push(this.constructor.query(trx).findOne(field, id));
+            // ID exists! Find it by the ID column and value
+            searchQuery.findOne(idField.field, idField.id);
         }
         else
         {
             // if there was no Id, we can look up by unique columns
-            const uniqueCols = SFContact.uniqueColumns;
+            // if a column in postgres has a null value then we need to treat it as a unique value
+            const uniqueColsWithNulls = SFContact.uniqueColumns.filter(col => this[col] === null);
+            const uniqueColsWithoutNulls = SFContact.uniqueColumns.filter(col => this[col] != undefined);
 
-            if (uniqueCols)
+            // using ilike so that it is case insensitive.
+            for (const col of uniqueColsWithoutNulls)
+                searchQuery.findOne(col, 'ilike', this[col]);
+
+            for (const col of uniqueColsWithNulls)
+                searchQuery.whereNull(col);
+        }
+
+        return searchQuery.then(async (contact) =>
+        {
+            if (!contact)
             {
-                // if a column in postgres has a null value then we need to treat it as a unique value
-                const uniqueColsWithNulls = uniqueCols.filter(col => this[col] === null);
-                const uniqueColsWithoutNulls = uniqueCols.filter(col => this[col] != undefined);
+                // contact was not found in the database, so we have to create a new one.
+                // setup the contact record
+                const clone = {
+                    firstName: this.firstName,
+                    lastName: this.lastName,
+                    name: (this.firstName + ' ' + this.lastName).trim(),
+                    accountId: this.accountId,
+                    email: this.email,
+                    phoneNumber: this.phoneNumber,
+                    mobileNumber: this.mobileNumber
+                };
 
-                const qb = this.constructor.query(trx);
-
-                // for each unique not null column use findOne
-                for (const col of uniqueColsWithoutNulls)
-                    qb.findOne(col, this.getColumnOp(col, this[col]), this[col]);
-
-                // for each unique null column use whereNull
-                for (const col of uniqueColsWithNulls)
-                    qb.whereNull(col);
-
-                promises.push(qb.first());
+                contact = await SFContact.query(trx).insertAndFetch(clone);
             }
-
-            /* It would first try to find the record in the database that matches the record
-            using an ID (if possible) or the unique fields.
-            If those return multiple rows, then it will try to find the first closest matching record.
-            If it can’t find the record then it will try to create the record by using the model instance.
-            It removes the IdColumns if for some reason they exist, then creates a record in the database and returns the object.
-            It creates a shallow copy because the data will be changed and we want to preserve it outside of this method.
-            Because the method is supposed to be a mixin, it is written to be generic.
-            However you can make it specific to the SFContact, which means you can cut out some of the redundant code.
-            Remember, this is a “Find or create”.
-            If you can’t find the record in the database, you have to create it,
-            which is what the last part is doing if finding the record fails. */
-            return Promise.all(promises).then(async (searches) =>
+            else
             {
-                // return the first non-nil element
-                let found = findNotNil(searches);
-                if (!found)
+                const updateFields = [
+                    'firstName',
+                    'lastName',
+                    'email',
+                    'mobileNumber',
+                    'phoneNumber'
+                ];
+                for (const field of updateFields)
                 {
-                    // create a shallow clone.
-                    const record = Object.assign({}, this);
-
-                    // when using this method, make sure that #id and #ref are not used in the model
-                    // will cause the insert method to crash, also findOrCreate is not used for graphs
-                    delete record['#id'];
-                    delete record['#ref'];
-                    delete record['#dbRef'];
-
-                    const idCols = this.constructor?.idColumns || [this.constructor?.idColumn];
-
-                    // remove the id columns because insert will fail, id values should not be provided by external sources
-                    // id columns are columns that are used to identify the record in our database
-                    // external data identifiers can be stored in "non-identifying" columns
-                    for (const field of idCols)
-                        delete record[field];
-
-                    if (this.constructor.onConflictIgnore)
+                    if ((contact[field] === null || contact[field] === '') && this[field] != null)
                     {
-                        const { field } = this.findIdValue();
-                        found = await this.constructor.query(trx)
-                            .insertAndFetch(this.constructor.fromJson(record))
-                            .skipUndefined()
-                            .onConflict(uniqueCols)
-                            .ignore();
-
-                        if (!found[field])
-                        {
-                            const uniqueWhereArgs = {};
-                            for (const uniqueColumn of uniqueCols)
-                                uniqueWhereArgs[uniqueColumn] = record[uniqueColumn];
-
-                            found = await this.constructor.query(trx).findOne(uniqueWhereArgs);
-                        }
+                        contact[field] = this[field];
                     }
-                    else
-                        found = await this.constructor.query(trx).insertAndFetch(this.constructor.fromJson(record));
                 }
 
-                return found;
-            });
-        }
-    }
+                // this logic is strictly for salesforce shit
+                // salesforce doesnt allow to have empty lastname, so it moves first name to the last name column
+                // need to move the first name to the firstname column and add the last name
+                // need to remove "LNU" (last name not used) if it now used
+                if (contact.lastName.toLowerCase() === 'lnu' && (this.firstName || this.lastName))
+                {
+                    contact.lastName = this.lastName;
+                    contact.firstName = this.firstName;
+                }
 
-    getColumnOp(colname, colvalue)
-    {
-        return typeof colvalue === 'string' ? 'ilike' : '=';
+                if ((contact.firstName === null || contact.firstName === '') && this.firstName && this.lastName)
+                {
+                    contact.firstName = this.firstName;
+                    contact.lastName = this.lastName;
+                }
+
+                contact.name = (contact.firstName + ' ' + contact.lastName).trim();
+                contact = await contact.$query(trx).updateAndFetch(contact);
+            }
+
+            return contact;
+        });
     }
 }
 

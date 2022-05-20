@@ -51,18 +51,10 @@ beforeEach(() =>
 
 describe('Classes', () =>
 {
-    describe('Heroku API', () =>
+    it('empty test', () =>
     {
-        it('Get Config', async () =>
-        {
-            // moxios mocks
-            moxios.onGet(r.herokuGetConfig).replyOnce(200, p.herokuGetConfig);
-            const res = await Heroku.getConfig();
-
-            expect(res).toMatchObject(p.herokuGetConfig);
-            expect(res).toHaveProperty('DATABASE_URL');
-            expect(spyOnGet).toHaveBeenCalledWith(r.herokuGetConfig);
-        });
+        // this is here because this file will throw errors without any tests
+        expect(true).toBeTruthy();
     });
 
     describe('Account', () =>
