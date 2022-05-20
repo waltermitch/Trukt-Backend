@@ -1311,23 +1311,33 @@ class LoadboardService
         // may be undefined
         const pEnd = pickupEnd?.toMillis();
 
-        if (dEnd && dStart > dEnd)
-        {
-            throw new DataConflictError('Delivery start time is after delivery end time.');
-        }
-
-        if (pEnd && pStart > pEnd)
-        {
-            throw new DataConflictError('Pickup start time is after pickup end time.');
-        }
-
         // first term is to check if the pickup starts before the delivery
         // second term checks if the pickup end is defined and checks the pick end is before the delivery end.
-
-        if (!(pStart <= dStart && (!pEnd || pEnd <= dEnd)))
+        if (!(isNaN(pStart) && isNaN(dStart)))
         {
-            throw new DataConflictError('Pickup dates should be before delivery date.');
+            if (dEnd && dStart > dEnd)
+            {
+                throw new DataConflictError('Delivery start time is after delivery end time.');
+            }
+
+            if (pEnd && pStart > pEnd)
+            {
+                throw new DataConflictError('Pickup start time is after pickup end time.');
+            }
+
+            if (!(pStart <= dStart && (!pEnd || pEnd <= dEnd)))
+            {
+                throw new DataConflictError('Pickup dates should be before delivery date.');
+            }
         }
+        else if ((isNaN(dStart) && isNaN(pStart)))
+        {
+            if (!dEnd || dEnd <= pEnd)
+            {
+                throw new DataConflictError('Delivery dates should be before pickup date.');
+            }
+        }
+
     }
 
     /**
