@@ -40,12 +40,12 @@ requestBody:
               startDate:
                 $ref: '../../components/schemas/Common.yaml#/dateTime'
                 description: the earliest date time the service can start
+                nullable: true
               endDate:
                 $ref: '../../components/schemas/Common.yaml#/dateTime'
                 description: the latest date time the service can finish
             required:
-              - dateType
-              - startDate          
+              - dateType          
 responses:
   204:
     description: Job Marked Succesfully

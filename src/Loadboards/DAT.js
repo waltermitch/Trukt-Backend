@@ -89,7 +89,7 @@ class DAT extends Loadboard
                         }
                     }
                 },
-                earliestAvailabilityWhen: this.data.pickup.dateRequestedStart,
+                earliestAvailabilityWhen: this.data.pickup.dateRequestedStart ?? DateTime.now().toUTC(),
                 latestAvailabilityWhen: this.data.pickup.dateRequestedEnd,
 
                 // endWhen - (From DAT) this is the date and time whent he posting is no longer visible to the target audience.

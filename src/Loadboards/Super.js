@@ -64,7 +64,7 @@ class Super extends Loadboard
             pickup:
             {
                 first_available_pickup_date: this.data.pickup.dateRequestedStart,
-                scheduled_at: !this.data.pickup.dateScheduledStart.invalid ? this.data.pickup.dateScheduledStart : this.data.pickup.dateRequestedStart,
+                scheduled_at: !this.data.pickup.dateScheduledStart.invalid ? this.data.pickup.dateScheduledStart : (this.data.pickup.dateRequestedStart ?? this.data.pickup.dateRequestedEnd),
                 scheduled_ends_at: !this.data.pickup.dateScheduledEnd.invalid ? this.data.pickup.dateScheduledEnd : this.data.pickup.dateRequestedEnd,
                 scheduled_at_by_customer: this.data.pickup.dateRequestedStart,
                 scheduled_ends_at_by_customer: this.data.pickup.dateRequestedEnd,
@@ -87,7 +87,7 @@ class Super extends Loadboard
             },
             delivery:
             {
-                scheduled_at: !this.data.delivery.dateScheduledStart.invalid ? this.data.delivery.dateScheduledStart : this.data.delivery.dateRequestedStart,
+                scheduled_at: !this.data.delivery.dateScheduledStart.invalid ? this.data.delivery.dateScheduledStart : (this.data.delivery.dateRequestedStart ?? this.data.delivery.dateRequestedEnd),
                 scheduled_ends_at: !this.data.delivery.dateScheduledEnd.invalid ? this.data.delivery.dateScheduledEnd : this.data.delivery.dateRequestedEnd,
                 scheduled_at_by_customer: this.data.delivery.dateRequestedStart,
                 scheduled_ends_at_by_customer: this.data.delivery.dateRequestedEnd,
@@ -153,11 +153,11 @@ class Super extends Loadboard
             price: this.data.dispatch.price,
             pickup: {
                 date_type: this.setDateType(this.data.pickup.dateScheduledType),
-                date_requested: this.data.pickup.dateScheduledStart
+                date_requested: this.data.pickup.dateRequestedStart ?? this.data.pickup.dateRequestedEnd
             },
             delivery: {
                 date_type: this.setDateType(this.data.delivery.dateScheduledType),
-                date_requested: this.data.delivery.dateScheduledStart
+                date_requested: this.data.delivery.dateRequestedStart ?? this.data.delivery.dateRequestedEnd
             }
         };
 

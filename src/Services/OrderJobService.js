@@ -752,8 +752,12 @@ class OrderJobService
                     oj.date_verified,
                 	(SELECT count(*) > 0 FROM rcg_tms.loadboard_requests lbr
                 		LEFT JOIN rcg_tms.loadboard_posts lbp2 ON lbp2.guid = lbr.loadboard_post_guid WHERE lbr.is_valid AND lbr.is_accepted AND lbp2.job_guid = oj.guid) AS has_accepted_requests,
+                	stop.pickup_request_type,
                 	stop.pickup_requested_date,
-                	stop.delivery_requested_date,
+                	stop.pickup_requested_date_end,
+                	stop.delivery_request_type,
+                	stop.delivery_requested_date,                	
+                	stop.delivery_requested_date_end,
                 	stop.pickup_sequence,
                 	stop.delivery_sequence,
                 	stop.bad_pickup_address,
@@ -762,8 +766,12 @@ class OrderJobService
                 FROM rcg_tms.order_jobs oj
                 LEFT JOIN 
                 	(SELECT DISTINCT
+                			os.date_requested_type pickup_request_type,
                 			os.date_requested_start  pickup_requested_date,
+                			os.date_requested_end  pickup_requested_date_end,
+                			os2.date_requested_type delivery_request_type,
                 			os2.date_requested_start  delivery_requested_date,
+                			os2.date_requested_end  delivery_requested_date_end,
                 			osl.job_guid,
                 			os."sequence" pickup_sequence,
                 			os2."sequence" delivery_sequence,
@@ -887,8 +895,30 @@ class OrderJobService
                     errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
                 if (job.not_resolved_address && job.is_transport === false)
                     errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
-                if (!job.pickup_requested_date || !job.delivery_requested_date)
-                    errors.push('Client requested pickup and delivery dates must be set.');
+                if (job.pickup_requested_type == 'no later than' || job.delivery_requested_type == 'no later than')
+                {
+                    if (!job.pickup_requested_date_end)
+                        errors.push('Client requested pickup date is required for "No later than"');
+                    if (!job.delivery_requested_date_end)
+                        errors.push('Client requested delivery date is required for "No Earlier than"');
+                }
+                if (job.pickup_requested_type == 'no earlier than' || job.delivery_requested_type == 'no earlier than')
+                {
+                    if (!job.pickup_requested_date)
+                        errors.push('Client requested pickup date is required for "No Earlier than"');
+                    if (!job.delivery_requested_date)
+                        errors.push('Client requested delivery date is required for "No Earlier than"');
+                }
+                if (job.pickup_requested_type == 'exactly' || job.pickup_requested_type == 'estimated' || job.delivery_requested_type == 'exactly' || job.delivery_requested_type == 'estimated')
+                {
+                    if (!job.pickup_requested_date && !job.pickup_requested_date_end)
+                        errors.push('Client requested pickup date is required for "Estimated"');
+                    if (!job.delivery_requested_date && !job.elivery_requested_date_end)
+                        errors.push('Client requested delivery date is required for "Estimated"');
+                }
+
+                // if (!job.pickup_requested_date || !job.delivery_requested_date)
+                //     errors.push('Client requested pickup and delivery dates must be set.');
                 if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === true)
                     errors.push('There must be at least one commodity to pick up and deliver.');
                 if ((job.commodity_guid === null || job.commodity_guid === undefined) && job.is_transport === false)
@@ -1047,52 +1077,56 @@ class OrderJobService
         // having matching commodities, and stops that at least
         // have a requested start date
         const rows = (await knex.raw(`
-            select distinct os.guid "stopGuid",
+          SELECT DISTINCT os.guid "stopGuid",
                     osl.commodity_guid "commodityGuid",
                     os.stop_type first_stop_type,
                     os2.stop_type second_stop_type,
                     os."sequence" pickup_sequence,
                     os2."sequence" delivery_sequence,
-                    os.date_requested_start,
-                    os2.date_requested_start,
+                    os.date_requested_start pickup_start_date,
+                    os.date_requested_end pickup_end_date,
+                    os2.date_requested_start delivery_start_date,
+                    os2.date_requested_end delivery_end_date,                    
                     osl.job_guid 
-            from rcg_tms.order_stop_links osl
-            left join rcg_tms.order_stops os 
-            on osl.stop_guid = os.guid ,
+            FROM rcg_tms.order_stop_links osl
+            LEFT JOIn rcg_tms.order_stops os ON osl.stop_guid = os.guid ,
             rcg_tms.order_stop_links osl2 
-            left join rcg_tms.order_stops os2
-            on osl2.stop_guid = os2.guid 
-            where os.stop_type = 'pickup'
-            and os2.stop_type = 'delivery'
-            and osl.commodity_guid = osl2.commodity_guid
-            and os."sequence" < os2."sequence"
-            and os.date_requested_start is not null
-            and os2.date_requested_start is not null
-            and osl.order_guid = osl2.order_guid
-            and osl.job_guid in (${questionMarks})
+            LEFT JOIN rcg_tms.order_stops os2 ON osl2.stop_guid = os2.guid 
+            WHERE os.stop_type = 'pickup'
+            AND os2.stop_type = 'delivery'
+            AND osl.commodity_guid = osl2.commodity_guid
+            AND os."sequence" < os2."sequence"
+            AND osl.order_guid = osl2.order_guid
+            AND osl.job_guid IN (${questionMarks})
             group by os.guid,
                 osl.commodity_guid,
                 os.stop_type,
                 os2.stop_type,
-                os."sequence", 
-                os2."sequence", 
-                os.date_requested_start, 
+                os."sequence",
+                os2."sequence",
+                os.date_requested_start,
+                os.date_requested_end,
                 os2.date_requested_start,
+                os2.date_requested_end,
                 osl.job_guid
-            order by pickup_sequence`, transportJobsFoundGUIDs)).rows;
+            order by pickup_sequence;`, transportJobsFoundGUIDs)).rows;
 
+        // if all dates are null, then the job is not ready
         const missingDates = (await knex.raw(`
-            select distinct(oj."number"), oj.guid "jobGuid", os.stop_type 
-            from rcg_tms.order_stop_links osl 
-            left join rcg_tms.order_stops os 
-            on osl.stop_guid = os.guid 
-            left join rcg_tms.order_jobs oj 
-            on osl.job_guid = oj.guid 
-            where os.date_requested_start is null
-            and osl.order_guid is null
-            and oj.guid in (${questionMarks});
+            SELECT DISTINCT(oj."number"), 
+                oj.guid "jobGuid", 
+                os.stop_type, 
+                os.date_requested_start, 
+                os.date_requested_end 
+            FROM rcg_tms.order_stop_links osl 
+            LEFT JOIN rcg_tms.order_stops os ON osl.stop_guid = os.guid 
+            LEFT JOIN rcg_tms.order_jobs oj ON osl.job_guid = oj.guid 
+            WHERE os.date_requested_start IS NULL
+            AND os.date_requested_end IS NULL 
+            AND oj.guid in (${questionMarks});
         `, transportJobsFoundGUIDs)).rows;
 
+        // THIS TECHNICALLY NEVER RAN BECAUSE QUERY ABOVE WAS WRONG
         for (const missingDate of missingDates)
         {
             const index = transportJobsFoundGUIDs.indexOf(missingDate.jobGuid);
@@ -1106,14 +1140,22 @@ class OrderJobService
         // Since the previous query only returns some data, we need to know which guids
         // passed the query and which ones did not so we can tell the client which guids
         // did not pass the first test.
-        const goodJobsGuids = new Set(rows.map(row => row.job_guid));
+        // UPDATE THIS TO DEAL WITH NEW QUERY LOGIC! SCRAY STUFF
+        const goodJobsGuids = new Set(rows.map(row =>
+        {
+            if ((row.pickup_start_date == null && row.pickup_end_date == null) || (row.delivery_start_date == null && row.delivery_end_date == null))
+            {
+                return;
+            }
+            return row.job_guid;
+        }));
 
         if (transportJobsFoundGUIDs.length != goodJobsGuids.size)
         {
             for (const guid of transportJobsFoundGUIDs)
             {
                 if (!goodJobsGuids.has(guid))
-                    exceptions.push(new DataConflictError(`${guid} has incorrect stop sequences, please ensure each commodity has a pickup and delivery.`));
+                    exceptions.push(new DataConflictError('Job has incorrect stop sequences, please ensure each commodity has a pickup and delivery. Who ever wrote this error is... a moron.'));
             }
         }
 
@@ -1314,6 +1356,7 @@ class OrderJobService
         }
     }
 
+    // TODO: Rewrite to make it work with new  ready check
     /**
      * Sets a job to On Hold by checking the boolean field isOnHold to true
      * @param {uuid} jobGuid guid of job to set status
@@ -1392,6 +1435,7 @@ class OrderJobService
         }
     }
 
+    // TODO: Rewrite to not use the old ready check
     /**
      * Removes the job status from On Hold by setting the isOnHold field to false
      * @param {uuid} jobGuid guid of job to set status
@@ -1404,6 +1448,13 @@ class OrderJobService
 
         try
         {
+            // const job = await OrderJob.query(trx).patch({ isOnHold: false }).findById(jobGuid).returning('*');
+            // console.log('job', job);
+
+            // // rewite this function checkJobForReadyState
+            // const { goodJobs, jobsExceptions } = await OrderJobService.checkJobForReadyState([job.guid]);
+            // console.log('Ready State', goodJobs, jobsExceptions);
+
             const queryRes = await OrderJobService.getJobForReadyCheck([jobGuid]);
 
             if (queryRes.jobs.length < 1 && queryRes.exceptions?.doErrorsExist())
@@ -1630,6 +1681,7 @@ class OrderJobService
         return job;
     }
 
+    // TODO: Update cancel
     static async uncancelJob(jobGuid, currentUser)
     {
         const trx = await OrderJob.startTransaction();
