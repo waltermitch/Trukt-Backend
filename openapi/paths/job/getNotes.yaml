@@ -10,6 +10,34 @@ parameters:
     schema:
       $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
+  - in: query
+    name: type
+    schema: 
+      type: string
+      enum: [lead, update, flag]
+      description: Filter notes by type. If no type provided, all notes will be returned.
+      example: update
+  - in: query
+    name: order
+    schema: 
+      type: boolean
+      default: false
+      description: Include client notes.
+      example: true
+  - in: query
+    name: pg
+    schema: 
+      type: integer
+      default: 0
+      description: Page number for pagination.
+      example: 1
+  - in: query
+    name: rc
+    schema: 
+      type: integer
+      default: 25
+      description: Number of records to return per page.
+      example: 25
 
 responses:
   200:
