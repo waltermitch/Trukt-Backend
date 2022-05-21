@@ -104,3 +104,7 @@ get:
                 example: '8 days'
               edi:
                 $ref: ../204/inbound.yaml#/post/requestBody/content/application~1json/schema/properties/edi
+    400:
+      description: To Implement
+      content:
+        application/json: {}

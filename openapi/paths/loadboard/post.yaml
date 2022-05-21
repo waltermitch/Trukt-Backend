@@ -31,3 +31,7 @@ responses:
     description: loadboards
     content:
       application/json: {}
+  400:
+    description: To Implement
+    content:
+      application/json: {}
