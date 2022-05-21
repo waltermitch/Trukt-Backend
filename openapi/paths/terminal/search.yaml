@@ -114,3 +114,7 @@ responses:
                     type: array
                     items:
                       $ref: ../../components/schemas/Contact.yaml
+  400:
+    description: To Implement
+    content:
+      application/json: {}

@@ -30,3 +30,7 @@ responses:
             $ref: ../../components/schemas/Models/AppResponse.yaml
   500:
     $ref: ../../components/responses/500InternalServerError.yaml
+  400:
+    description: To Implement
+    content:
+      application/json: {}
