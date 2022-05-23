@@ -20,26 +20,15 @@ exports.up = function(knex) {
         const resolvedUserFieldName = 'resolved_by_guid';
         table.uuid(resolvedUserFieldName).comment('records who marked the Case as resolved.');
         table.foreign(resolvedUserFieldName).references('guid').inTable('rcg_tms.tms_users');
-        migration_tools.timestamps(table);
-        migration_tools.authors(table);
     })
     .raw(migration_tools.guid_function(TABLE_NAME))
     .raw(migration_tools.timestamps_trigger(TABLE_NAME))
-    .raw(migration_tools.authors_trigger(TABLE_NAME))
-    .raw(`CREATE TRIGGER rcg_case_stat_count_change
-            AFTER INSERT OR UPDATE OR DELETE
-            ON rcg_tms.${TABLE_NAME}
-            FOR EACH ROW
-            EXECUTE FUNCTION rcg_tms.rcg_case_stat_count();
-
-            COMMENT ON TRIGGER rcg_case_stat_count_change ON rcg_tms.${TABLE_NAME}
-                IS 'Change the count of Case Label States';
-        `);
+    .raw(migration_tools.authors_trigger(TABLE_NAME));
 
 };
 
 exports.down = function(knex) {
     return knex.schema.withSchema('rcg_tms')
-    .dropTableIfExists(TABLE_NAME_LABEL)
-    .dropTableIfExists(TABLE_NAME);
+    .dropTableIfExists(TABLE_NAME)
+    .dropTableIfExists(TABLE_NAME_LABEL);
 };
