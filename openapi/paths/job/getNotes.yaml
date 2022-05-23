@@ -45,16 +45,24 @@ responses:
     content:
       application/json:
         schema:
-          type: array
-          items:
-            $ref: '../../components/schemas/Note.yaml'
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '../../components/schemas/Note.yaml'
+            page:
+              type: integer
+              example: 1
+            rowCount: 
+              type: integer
+              example: 25
+            total:
+              type: integer
+              example: 4
   404:
     description: Job Not Found
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            error:
-              type: string
-              description: Job Not Found
+          $ref: '../../components/schemas/SingleErrorResponse.yaml'
