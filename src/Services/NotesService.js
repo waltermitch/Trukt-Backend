@@ -5,6 +5,7 @@ const Notes = require('../Models/Notes');
 const Order = require('../Models/Order');
 const { NOTES_TYPES } = require('../Models/Notes');
 const Objection = require('objection');
+const { raw } = require('objection');
 
 class NotesService
 {
@@ -126,7 +127,8 @@ class NotesService
         /**
          * @type {Objection.QueryBuilder<Notes, Notes[]>}
          */
-        let notesQueryBuilder = Notes.query().withGraphFetched('createdBy').alias('gn').select('gn.*')
+        let notesQueryBuilder = Notes.query().withGraphFetched('createdBy').alias('gn')
+            .select(raw('gn.*, false as "isClientNote"'))
             .leftJoin('orderJobNotes', 'gn.guid', 'orderJobNotes.noteGuid')
             .where('orderJobNotes.jobGuid', jobGuid);
         
@@ -137,7 +139,8 @@ class NotesService
         // get order notes (which are client notes actually ;))
         if (order)
             notesQueryBuilder = notesQueryBuilder.union(
-                Notes.query().withGraphFetched('createdBy').alias('gn2').select('gn2.*')
+                Notes.query().withGraphFetched('createdBy').alias('gn2')
+                    .select(raw('gn2.*, true as "isClientNote"'))
                     .leftJoin('orderNotes', 'gn2.guid', 'orderNotes.noteGuid')
                     .rightJoin('orderJobs', 'orderNotes.orderGuid', 'orderJobs.orderGuid')
                     .where('orderJobs.guid', jobGuid)
