@@ -30,5 +30,6 @@ exports.down = function(knex) {
             table.dropColumn('created_by_guid');
             table.dropColumn('updated_by_guid');
             table.dropColumn('deleted_by_guid');
-        });
+        })
+        .raw(`DROP TRIGGER IF EXISTS rcg_case_stat_count_change ON rcg_tms.${TABLE_NAME};`);
 };
