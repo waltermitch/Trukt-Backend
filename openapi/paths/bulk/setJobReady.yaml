@@ -37,4 +37,8 @@ responses:
                   example: 
                     - 'Please assign a dispatcher.'
                     - 'Please use a real address instead of E 11th Street WA Tacoma 98421'
-                    - 'Client requested pickup and delivery dates must be set.'                    
+                    - 'Client requested pickup and delivery dates must be set.'     
+  400:
+    description: To Implement
+    content:
+      application/json: {}                                   

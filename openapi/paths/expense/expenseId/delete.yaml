@@ -13,3 +13,7 @@ parameters:
 responses:
   204:
     description: Expense deleted
+  400:
+    description: To Implement
+    content:
+      application/json: {}

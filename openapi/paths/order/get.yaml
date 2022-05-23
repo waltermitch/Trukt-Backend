@@ -17,3 +17,7 @@ responses:
       application/json:
         schema:
           $ref: ../../components/schemas/Order.yaml#/Order
+  400:
+    description: To Implement
+    content:
+      application/json: {}

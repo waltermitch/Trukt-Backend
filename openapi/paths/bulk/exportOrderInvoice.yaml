@@ -44,3 +44,7 @@ responses:
                     - 204
                 data:
                   $ref: ../../components/schemas/Finances.yaml#/Invoice
+  400:
+    description: To Implement
+    content:
+      application/json: {}                  

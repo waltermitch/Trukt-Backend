@@ -75,3 +75,7 @@ responses:
                     example: Job Canceled       
                     description: Name of the activity.   
 
+  400:
+    description: To Implement
+    content:
+      application/json: {}

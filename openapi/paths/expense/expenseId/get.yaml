@@ -15,3 +15,7 @@ responses:
     description: expense
     content:
       application/json: {}
+  400:
+    description: To Implement
+    content:
+      application/json: {}
