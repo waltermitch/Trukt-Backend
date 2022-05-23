@@ -121,7 +121,7 @@ class NotesService
 
     static async getJobNotes(jobGuid, queryParams)
     {
-        const { type, pg: page, rc: recordCount, order } = queryParams;
+        const { type, pg: page, rc: rowCount, order } = queryParams;
 
         /**
          * @type {Objection.QueryBuilder<Notes, Notes[]>}
@@ -144,10 +144,15 @@ class NotesService
                     .whereNotNull('gn2.guid')
             );
 
-        notesQueryBuilder = notesQueryBuilder.orderBy('dateCreated', 'desc')
-            .page(page, recordCount);
+        notesQueryBuilder = await notesQueryBuilder.orderBy('dateCreated', 'desc')
+            .page(page, rowCount);
 
-        return notesQueryBuilder;
+        return {
+            results: notesQueryBuilder.results,
+            page,
+            rowCount,
+            total: notesQueryBuilder.total
+        };
     }
 
     // get all notes for an order
