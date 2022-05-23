@@ -124,21 +124,18 @@ class NotesService
     {
         const { type, pg: page, rc: rowCount, order } = queryParams;
 
-        /**
-         * @type {Objection.QueryBuilder<Notes, Notes[]>}
-         */
-        let notesQueryBuilder = Notes.query().withGraphFetched('createdBy').alias('gn')
+        const notesQueryBuilder = Notes.query().withGraphFetched('createdBy').alias('gn')
             .select(raw('gn.*, false as "isClientNote"'))
             .leftJoin('orderJobNotes', 'gn.guid', 'orderJobNotes.noteGuid')
             .where('orderJobNotes.jobGuid', jobGuid);
         
         // filter between job notes types
         if (type)
-            notesQueryBuilder = notesQueryBuilder.where('gn.type', type);
+            notesQueryBuilder.where('gn.type', type);
         
         // get order notes (which are client notes actually ;))
         if (order)
-            notesQueryBuilder = notesQueryBuilder.union(
+            notesQueryBuilder.union(
                 Notes.query().withGraphFetched('createdBy').alias('gn2')
                     .select(raw('gn2.*, true as "isClientNote"'))
                     .leftJoin('orderNotes', 'gn2.guid', 'orderNotes.noteGuid')
@@ -147,14 +144,14 @@ class NotesService
                     .whereNotNull('gn2.guid')
             );
 
-        notesQueryBuilder = await notesQueryBuilder.orderBy('dateCreated', 'desc')
+        const { results, total } = await notesQueryBuilder.orderBy('dateCreated', 'desc')
             .page(page, rowCount);
 
         return {
-            results: notesQueryBuilder.results,
-            page,
+            results,
+            page: page + 1,
             rowCount,
-            total: notesQueryBuilder.total
+            total
         };
     }
 

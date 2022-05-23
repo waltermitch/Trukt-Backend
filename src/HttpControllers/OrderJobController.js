@@ -19,6 +19,7 @@ class OrderJobController
             if (job.count == 0)
                 throw new NotFoundError('Job Not Found');
 
+            req.query.pg = req.query.pg - 1;
             const notes = await NotesService.getJobNotes(jobGuid, req.query);
 
             res.status(200).json(notes);

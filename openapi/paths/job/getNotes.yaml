@@ -27,17 +27,11 @@ parameters:
   - in: query
     name: pg
     schema: 
-      type: integer
-      default: 0
-      description: Page number for pagination.
-      example: 1
+      $ref: '../../components/schemas/Common.yaml#/page'
   - in: query
     name: rc
     schema: 
-      type: integer
-      default: 25
-      description: Number of records to return per page.
-      example: 25
+      $ref: '../../components/schemas/Common.yaml#/rowCount'
 
 responses:
   200:
