@@ -1,0 +1,12 @@
+type: object
+properties:
+  id: 
+    type: number
+    format: integer
+  label: 
+    description: The label of CaseLabel
+    type: string
+  description:
+    description: The description of CaseLabel
+    type: string
+
