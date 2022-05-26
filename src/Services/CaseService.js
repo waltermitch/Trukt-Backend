@@ -5,23 +5,25 @@ class CaseService
     static async getAvailableCaseLabels(amount, order, search, popular)
 {
         const trx = await CaseLabel.startTransaction();
-        
         try
         {
-            const baseCaseLabelQuery =
+            const subCaseLabelQuery =
                 CaseLabel.query(trx)
                 .select(CaseLabel.fetch.getCaseLabelsPayload)
                 .where('label', 'ilike', `%${search}%`)
                 .orWhere('description', 'ilike', `%${search}%`)
-                .leftJoinRelated('stat')
-                .orderBy('label', order);
+                .leftJoinRelated('stat');
+                
             if(popular)
             {
-                baseCaseLabelQuery.orderBy('stat.count', 'desc');
+                subCaseLabelQuery.orderBy('stat.count', 'desc');
             }
 
-                baseCaseLabelQuery.page(0, amount);
-            const { results } = await baseCaseLabelQuery;
+            subCaseLabelQuery.page(0, amount);
+
+            const baseCaseLabelQuery = CaseLabel.query().select('cl.*').from(subCaseLabelQuery.as('cl'));
+            const resultQuery = baseCaseLabelQuery.orderBy('cl.label', 'asc');
+            const results = await resultQuery;
             await trx.commit();
             return results;
         }

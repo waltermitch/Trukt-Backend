@@ -3,31 +3,31 @@ operationId: labels
 description: Get available Case Labels
 tags: 
   - CaseLabel
-requestBody:
-  content:
-    application/json:
-      schema:
-        type: object
-        properties:
-          amount:
-            description: number of results to return. min 1, max is the number of case labels in the database. default value is 20, not required
-            type: integer
-            minimum: 1
-            default: 20
-            example: 1
-          order:
-            description: Sorting order, not required
-            type: string
-            enum:
-              - asc
-              - desc
-            default: desc
-          search: 
-            description: the keyword to search for in the case labels table, can be null, not required
-            type: string
-          popular:
-            type: boolean
-            description: true or false, if true, it will return the most used case labels. this should be affected by other query params, default false, not required
+parameters:
+  - in: query
+    name: amount
+    schema: 
+      type: integer
+    description: number of results to return.
+  - in: query
+    name: order
+    description: Sorting order
+    schema:
+      enum: 
+        [
+          asc,
+          desc,
+        ]
+  - in: query
+    name: search
+    description: the keyword to search for in the case labels table
+    schema:
+      type: string
+  - in: query
+    name: popular
+    schema: 
+      type: boolean
+    description:  if true, it will return the most used case labels. this should be affected by other query params
 responses:
   200:
     description: CaseLabels

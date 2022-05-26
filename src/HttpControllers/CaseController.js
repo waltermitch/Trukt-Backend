@@ -10,10 +10,10 @@ class CaseController
         try
         {
             
-            const amount = Math.max(req.body.amount || 20, 1);
-            const order = req.body.order || 'desc';
-            const search = req.body.search || '';
-            const popular = req.body.popular || false;
+            const amount = Math.max(req.query.amount || 20, 1);
+            const order = req.query.order || 'desc';
+            const search = req.query.search || '';
+            const popular = req.query.popular || false;
             const caseLabels = await CaseService.getAvailableCaseLabels(amount, order, search, popular);
 
             if (caseLabels)
@@ -23,7 +23,8 @@ class CaseController
             }
             else
             {
-                throw new NotFoundError('Case Label not found');
+                res.status(200);
+                res.json([]);
             }
         }
         catch (error)
