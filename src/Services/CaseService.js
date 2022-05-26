@@ -3,7 +3,7 @@ const CaseLabel = require('../Models/CaseLabel');
 class CaseService
 {
     static async getAvailableCaseLabels(amount, order, search, popular)
-{
+    {
         const trx = await CaseLabel.startTransaction();
         try
         {
