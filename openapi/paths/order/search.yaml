@@ -182,6 +182,18 @@ requestBody:
                   - not_invoiced
                   - part_invoiced
                   - part_billed
+              cases:
+                description: Filter to select jobs by case label
+                type: object
+                properties: 
+                  labels:
+                    description: list of labels
+                    type: array
+                    items: 
+                      type: string
+                  isResolved:
+                    description: Whether the order job case is resolved
+                    type: boolean
           sort:
             description: Sort results by field provided
             type: object
