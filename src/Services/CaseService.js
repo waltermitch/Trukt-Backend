@@ -14,9 +14,9 @@ class CaseService
                 .orWhere('description', 'ilike', `%${search}%`)
                 .leftJoinRelated('stat');
                 
-            if(popular)
+            if (popular)
             {
-                subCaseLabelQuery.orderBy('stat.count', 'desc');
+                subCaseLabelQuery.orderBy('stat.count', order);
             }
 
             subCaseLabelQuery.page(0, amount);
