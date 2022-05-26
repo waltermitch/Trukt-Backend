@@ -75,7 +75,8 @@ class OrderService
             salesperson,
             dates,
             jobCategory,
-            accountingType
+            accountingType,
+            cases
         },
         page,
         rowCount,
@@ -129,7 +130,7 @@ class OrderService
 
             const queryAllFilters = OrderService.addFilterModifiers(
                 queryFilterDates,
-                { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier }
+                { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier, cases }
             );
 
             const queryWithGraphModifiers = OrderService.addGraphModifiers(queryAllFilters);
@@ -1555,7 +1556,7 @@ class OrderService
 
     static addFilterModifiers(baseQuery, filters)
     {
-        const { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier }
+        const { jobCategory, sort, accountingType, dispatcher, customer, salesperson, carrier, cases }
             = filters;
         return baseQuery
             .modify('filterJobCategories', jobCategory)
@@ -1564,7 +1565,8 @@ class OrderService
             .modify('filterByCustomer', customer)
             .modify('filterByDispatcher', dispatcher)
             .modify('filterBySalesperson', salesperson)
-            .modify('filterByCarrier', carrier);
+            .modify('filterByCarrier', carrier)
+            .modify('filterCases', cases);
     }
 
     static addDeliveryAddress(jobsArray)

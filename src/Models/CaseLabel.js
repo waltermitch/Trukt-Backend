@@ -34,6 +34,11 @@ class CaseLabel extends BaseModel
         }
         return relations;
     }
+
+    static getCaseLabels(labels = [])
+    {
+        return this.query().select('id').whereIn('label', labels);
+    }
 }
 
 Object.assign(CaseLabel.prototype, RecordAuthorMixin);
