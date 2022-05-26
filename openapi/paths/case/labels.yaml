@@ -1,8 +1,8 @@
 summary: Get Case Labels
-operationId: labels
+operationId: getAvailableCaseLabels
 description: Get available Case Labels
 tags: 
-  - CaseLabel
+  - Case
 parameters:
   - in: query
     name: amount
