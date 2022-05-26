@@ -32,6 +32,20 @@ class CaseController
             next(error);
         }
     }
+
+    static async markCaseIsResolved(req, res, next)
+    {
+        try
+        {
+            await CaseService.markCaseIsResolved(req.params.guid, req.session.userGuid);
+            res.status(204);
+            res.json();
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = CaseController;

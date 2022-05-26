@@ -279,7 +279,10 @@ paths:
       $ref: paths/job/getStatuses.yaml
   /case/labels:
     get:
-      $ref: paths/case/labels.yaml    
+      $ref: paths/case/labels.yaml  
+  /case/{guid}/resolve:
+    put:
+      $ref: paths/case/putCaseIsResolved.yaml  
   /bulk/order/users:
     put:
       $ref: paths/bulk/updateOrderUsers.yaml

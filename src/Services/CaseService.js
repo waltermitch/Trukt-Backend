@@ -1,3 +1,5 @@
+const { DateTime } = require('luxon');
+const Case = require('../Models/Case');
 const CaseLabel = require('../Models/CaseLabel');
 
 class CaseService
@@ -34,6 +36,26 @@ class CaseService
         }
     }
     
+    static async markCaseIsResolved(caseGuid, currentUser)
+    {
+        const [caseToChange] = await Promise.all([
+            Case.query()
+            .where({ 'guid': caseGuid })
+            .first()
+        ]);
+
+        if (!caseToChange.isResolved)
+        {
+            await Promise.all([
+                Case.query().patch({
+                    'isResolved': true,
+                    'resolvedByGuid': currentUser,
+                    'dateResolved': DateTime.now()
+                }).where('guid', caseGuid)
+            ]);
+        }
+        
+    }
 }
 
 module.exports = CaseService;
