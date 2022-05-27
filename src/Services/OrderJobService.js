@@ -891,10 +891,12 @@ class OrderJobService
                     errors.push('Please un-dispatch the Carrier first.');
                 if (job.has_accepted_requests)
                     errors.push('Please cancel Carrier request.');
-                if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
-                    errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
-                if (job.not_resolved_address && job.is_transport === false)
-                    errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
+
+                // if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
+                //     errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
+                // if (job.not_resolved_address && job.is_transport === false)
+                //     errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
+
                 if (job.pickup_requested_type == 'no later than' || job.delivery_requested_type == 'no later than')
                 {
                     if (!job.pickup_requested_date_end)
