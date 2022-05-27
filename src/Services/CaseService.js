@@ -39,25 +39,29 @@ class CaseService
             throw error;
         }
     }
-    
+
     static async caseResolve(caseGuid, currentUser)
     {
-        const [caseToChange] = await Promise.all([
-            Case.query()
-            .where({ 'guid': caseGuid })
-            .first()
-        ]);
+        const trx = await Case.startTransaction();
 
-        if (!caseToChange.isResolved)
+        try
         {
-            caseToChange.isResolved = true;
-            caseToChange.resolvedByGuid = currentUser;
-            caseToChange.dateResolved = DateTime.now();
+            await Case.query(trx).patch({
+                isResolved: true,
+                resolvedByGuid: currentUser,
+                dateResolved: DateTime.now(),
+                updatedByGuid: currentUser
+            })
+                .findById(caseGuid)
+                .where({ isResolved: false });
 
-            await Case.query().patch(caseToChange).findById(caseToChange.guid);
+            await trx.commit();
         }
-        return;
-        
+        catch (err)
+        {
+            await trx.rollback();
+            throw err;
+        }
     }
 }
 
