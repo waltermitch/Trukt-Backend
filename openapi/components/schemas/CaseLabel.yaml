@@ -4,9 +4,9 @@ properties:
     type: number
     format: integer
   label: 
-    description: The label of CaseLabel
+    description: The name of the Case. Users should see this as the name of the Case. 
     type: string
   description:
-    description: The description of CaseLabel
+    description: A brief description of why users should utilize the Case Label.
     type: string
 
