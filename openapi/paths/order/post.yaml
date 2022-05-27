@@ -269,3 +269,7 @@ responses:
                 allOf:
                   - $ref: '../../components/schemas/Common.yaml#/guidObject'
                   - $ref: ../../components/schemas/Terminal.yaml#/TerminalOutbound
+  400:
+    description: To Implement
+    content:
+      application/json: {}

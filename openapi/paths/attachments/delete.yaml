@@ -12,3 +12,7 @@ parameters:
 responses:
   '204':
     description: Deleted Attachment
+  400:
+    description: To Implement
+    content:
+      application/json: {}

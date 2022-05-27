@@ -490,4 +490,7 @@ responses:
                       - $ref: ../../components/schemas/Terminal.yaml#/TerminalBase
                       - description: Last delivery terminal address
                     
-                  
+  400:
+    description: To Implement
+    content:
+      application/json: {}                  

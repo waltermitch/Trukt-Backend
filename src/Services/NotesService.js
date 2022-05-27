@@ -3,6 +3,9 @@ const PubSubService = require('../Services/PubSubService');
 const OrderJob = require('../Models/OrderJob');
 const Notes = require('../Models/Notes');
 const Order = require('../Models/Order');
+const { NOTES_TYPES } = require('../Models/Notes');
+const Objection = require('objection');
+const { raw } = require('objection');
 
 class NotesService
 {
@@ -117,15 +120,39 @@ class NotesService
         return notes;
     }
 
-    static async getJobNotes(jobGuid)
+    static async getJobNotes(jobGuid, queryParams)
     {
-        // find all notes for job, (using extra join to know if job exists)
-        const notes = await OrderJob.relatedQuery('notes')
-            .for(jobGuid)
-            .withGraphJoined('createdBy')
-            .orderBy('dateCreated', 'desc');
+        const { type, pg: page, rc: rowCount, order } = queryParams;
 
-        return notes;
+        const notesQueryBuilder = Notes.query().withGraphFetched('createdBy').alias('gn')
+            .select(raw('gn.*, false as "isClientNote"'))
+            .leftJoin('orderJobNotes', 'gn.guid', 'orderJobNotes.noteGuid')
+            .where('orderJobNotes.jobGuid', jobGuid);
+        
+        // filter between job notes types
+        if (type)
+            notesQueryBuilder.where('gn.type', type);
+        
+        // get order notes (which are client notes actually ;))
+        if (order)
+            notesQueryBuilder.union(
+                Notes.query().withGraphFetched('createdBy').alias('gn2')
+                    .select(raw('gn2.*, true as "isClientNote"'))
+                    .leftJoin('orderNotes', 'gn2.guid', 'orderNotes.noteGuid')
+                    .rightJoin('orderJobs', 'orderNotes.orderGuid', 'orderJobs.orderGuid')
+                    .where('orderJobs.guid', jobGuid)
+                    .whereNotNull('gn2.guid')
+            );
+
+        const { results, total } = await notesQueryBuilder.orderBy('dateCreated', 'desc')
+            .page(page, rowCount);
+
+        return {
+            results,
+            page: page + 1,
+            rowCount,
+            total
+        };
     }
 
     // get all notes for an order

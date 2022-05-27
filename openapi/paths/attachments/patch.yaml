@@ -18,3 +18,7 @@ requestBody:
 responses:
   '204':
     description: updated Attachment
+  400:
+    description: To Implement
+    content:
+      application/json: {}
