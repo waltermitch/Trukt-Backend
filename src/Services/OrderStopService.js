@@ -27,107 +27,107 @@ class OrderStopService
 
         // init transaction
         const trx = await knex.transaction();
-
-        /**
-         * raw query to verify if provided guid exist in tables
-         * check to see if job exist
-         * if stop exist
-         * if commodities that were provided exists
-         * if changing pickup, check if commodity has not be delivered
-         */
-        const [
-            orderRec,
-            stopRec,
-            jobRec,
-            rawQuery
-        ] =
-            await Promise.all([
-                OrderJob.relatedQuery('order').for(jobGuid).then(o => o[0]),
-                OrderStop.query().findById(stopGuid),
-                OrderJob.query().findById(jobGuid),
-                knex.raw(`
-                SELECT * FROM rcg_tms.order_jobs oj WHERE guid = '${jobGuid}';
-                SELECT * FROM rcg_tms.order_stops os WHERE os.guid = '${stopGuid}';
-                SELECT akeys(hstore('${hstoreValue.join(',')}') - hstore(array_agg(c.guid), array_agg(c.digit))) AS guid
-                FROM(SELECT guid:: text, '1' AS digit FROM rcg_tms.commodities WHERE guid IN ('${commodities.join('\',\'')}') ) c;
-                SELECT *
-                FROM rcg_tms.order_stop_links osl
-                LEFT JOIN rcg_tms.order_stops os ON os.guid = osl.stop_guid
-                WHERE osl.stop_guid = '${stopGuid}'
-                AND os.stop_type = 'pickup'
-                AND osl.job_guid = '${jobGuid}'
-                AND EXISTS (
-                    SELECT *
-                    FROM rcg_tms.order_stop_links osl2
-                    LEFT JOIN rcg_tms.order_stops os2 ON os2.guid = osl2.stop_guid
-                    WHERE os2.stop_type = 'delivery'  
-                    AND osl2.job_guid = osl.job_guid
-                    AND osl2.is_completed = true
-                );
-                `)
-            ]);
-
-        const [
-            jobRes,
-            jobStop,
-            dbCommodities,
-            illegalPickUp
-        ] = rawQuery;
-
-        // convert to a POJO unfortunately it is all snake_case
-        const job = jobRes.rows.shift();
-
-        // if job doesn't exist
-        if (!job)
-        {
-            throw new NotFoundError('Job does not exist');
-        }
- 
-        // getting order guid for updating commodities
-        const orderGuid = job.order_guid;
-
-        // if stop doens't exist
-        if (!jobStop.rows[0])
-        {
-            throw new NotFoundError('Stop does not exist');
-        }
-
-        // throw error on commodities that don't exist
-        if (dbCommodities.rows[0].guid == null || dbCommodities.rows[0].guid.length > 0)
-        {
-            let comms;
-            if (dbCommodities.rows[0].guid == null)
-            {
-                comms = commodities;
-            }
-            else
-            {
-                comms = dbCommodities.rows[0].guid;
-            }
-            throw new NotFoundError('Commodities do not exist', { commodities: comms });
-        }
-
-        // If the job is on hold, something is wrong with it and its stops should not be able to be updated
-        if (job.is_on_hold)
-        {
-            throw new DataConflictError('Please remove the hold on this job before updating pickup or delivery dates');
-        }
-
-        // Throw error when clearing pickup location if delivery is completed
-        if (date == null && illegalPickUp.rows[0] != undefined)
-        {
-            throw new DataConflictError(`Pickup/Delivery stop ${illegalPickUp.rows[0].stop_guid} cannot clear status ${status} because the commodity '${illegalPickUp.rows[0].commodity_guid}' is marked as delivered`);
-        }
-
-        /**
-         * After validating of all passed in parameters we need to update the stop link
-         * if the date is null we will be clearing the inputs and setting them to false
-         * if date is passed in we will be updating those fields accordingly.
-         * if the status is started we clear both the started and completed feilds
-         * if the status is completed, then we only update the completed date and flags.
-         */
         try
         {
+            /**
+             * raw query to verify if provided guid exist in tables
+             * check to see if job exist
+             * if stop exist
+             * if commodities that were provided exists
+             * if changing pickup, check if commodity has not be delivered
+             */
+            const [
+                orderRec,
+                stopRec,
+                jobRec,
+                rawQuery
+            ] =
+                await Promise.all([
+                    OrderJob.relatedQuery('order', trx).for(jobGuid).then(o => o[0]),
+                    OrderStop.query(trx).findById(stopGuid),
+                    OrderJob.query(trx).findById(jobGuid),
+                    knex.raw(`
+                        SELECT * FROM rcg_tms.order_jobs oj WHERE guid = '${jobGuid}';
+                        SELECT * FROM rcg_tms.order_stops os WHERE os.guid = '${stopGuid}';
+                        SELECT akeys(hstore('${hstoreValue.join(',')}') - hstore(array_agg(c.guid), array_agg(c.digit))) AS guid
+                        FROM(SELECT guid:: text, '1' AS digit FROM rcg_tms.commodities WHERE guid IN ('${commodities.join('\',\'')}') ) c;
+                        SELECT *
+                        FROM rcg_tms.order_stop_links osl
+                        LEFT JOIN rcg_tms.order_stops os ON os.guid = osl.stop_guid
+                        WHERE osl.stop_guid = '${stopGuid}'
+                        AND os.stop_type = 'pickup'
+                        AND osl.job_guid = '${jobGuid}'
+                        AND EXISTS (
+                            SELECT *
+                            FROM rcg_tms.order_stop_links osl2
+                            LEFT JOIN rcg_tms.order_stops os2 ON os2.guid = osl2.stop_guid
+                            WHERE os2.stop_type = 'delivery'  
+                            AND osl2.job_guid = osl.job_guid
+                            AND osl2.is_completed = true
+                        );
+                `).transacting(trx)
+                ]);
+
+            const [
+                jobRes,
+                jobStop,
+                dbCommodities,
+                illegalPickUp
+            ] = rawQuery;
+
+            // convert to a POJO unfortunately it is all snake_case
+            const job = jobRes.rows.shift();
+
+            // if job doesn't exist
+            if (!job)
+            {
+                throw new NotFoundError('Job does not exist');
+            }
+
+            // getting order guid for updating commodities
+            const orderGuid = job.order_guid;
+
+            // if stop doens't exist
+            if (!jobStop.rows[0])
+            {
+                throw new NotFoundError('Stop does not exist');
+            }
+
+            // throw error on commodities that don't exist
+            if (dbCommodities.rows[0].guid == null || dbCommodities.rows[0].guid.length > 0)
+            {
+                let comms;
+                if (dbCommodities.rows[0].guid == null)
+                {
+                    comms = commodities;
+                }
+                else
+                {
+                    comms = dbCommodities.rows[0].guid;
+                }
+                throw new NotFoundError('Commodities do not exist', { commodities: comms });
+            }
+
+            // If the job is on hold, something is wrong with it and its stops should not be able to be updated
+            if (job.is_on_hold)
+            {
+                throw new DataConflictError('Please remove the hold on this job before updating pickup or delivery dates');
+            }
+
+            // Throw error when clearing pickup location if delivery is completed
+            if (date == null && illegalPickUp.rows[0] != undefined)
+            {
+                throw new DataConflictError(`Pickup/Delivery stop ${illegalPickUp.rows[0].stop_guid} cannot clear status ${status} because the commodity '${illegalPickUp.rows[0].commodity_guid}' is marked as delivered`);
+            }
+
+            /**
+             * After validating of all passed in parameters we need to update the stop link
+             * if the date is null we will be clearing the inputs and setting them to false
+             * if date is passed in we will be updating those fields accordingly.
+             * if the status is started we clear both the started and completed feilds
+             * if the status is completed, then we only update the completed date and flags.
+             */
+
             // stopLink query builder
             const StopLinksQuery = OrderStopLinks.query(trx);
 
