@@ -1,5 +1,5 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
-const BaseModel = require("./BaseModel");
+const BaseModel = require('./BaseModel');
 
 class CaseLabel extends BaseModel
 {
@@ -31,8 +31,17 @@ class CaseLabel extends BaseModel
                     to: 'rcgTms.caseLabels.id'
                 }
             }
-        }
+        };
         return relations;
+    }
+
+    static get fetch()
+    {
+        return {
+            // fileds that case label will return
+            getCaseLabelsPayload:
+            ['id', 'label', 'description']
+        };
     }
 }
 

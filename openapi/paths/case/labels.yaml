@@ -1,0 +1,43 @@
+summary: Get Case Labels
+operationId: getAvailableCaseLabels
+description: |
+  Get available Case Labels in the application. 
+  This will always return an array and will always sort the results in ascending alphabetical order based on the Case Label's label. 
+  When popular query parameter is provided it will take precedence over the alphabetical sorting.
+  Order parameter will only affect the popular parameter and has no effect on the alphabetical sorting. 
+  The amount parameter will limit the number of results returned to you. It does not indicate the exact amount returned.
+  The search parameter will enable searching by Case Label's label and description before applying the popular parameter.
+tags:
+  - Case
+parameters:
+  - in: query
+    name: amount
+    schema:
+      type: integer
+    description: The maximum number of results to return.
+  - in: query
+    name: search
+    description: The keyword to search for in the Case Label's label or description fields.
+    schema:
+      type: string
+  - in: query
+    name: popular
+    schema:
+      type: boolean
+    description: If true, will search for Case Labels based on usage popularity. This is affected by "order" parameter.
+  - in: query
+    name: order
+    description: This affects the popular parameter, "asc" will give you the least popular, "desc" will give you the most popular.
+    schema:
+      enum: [asc, desc]
+responses:
+  200:
+    description: OK
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            $ref: '../../components/schemas/CaseLabel.yaml'
+  400:
+    $ref: ../../components/responses/400BadRequest.yaml
