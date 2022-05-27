@@ -9,23 +9,27 @@ class CaseService
         const trx = await CaseLabel.startTransaction();
         try
         {
-            const subCaseLabelQuery =
+            let query =
                 CaseLabel.query(trx)
-                .select(CaseLabel.fetch.getCaseLabelsPayload)
-                .where('label', 'ilike', `%${search}%`)
-                .orWhere('description', 'ilike', `%${search}%`)
-                .leftJoinRelated('stat');
-                
-            if (popular)
+                    .select(CaseLabel.fetch.getCaseLabelsPayload)
+                    .limit(amount, { skipBinding: true });
+
+            if (search)
             {
-                subCaseLabelQuery.orderBy('stat.count', order);
+                query.where('label', 'ilike', `%${search}%`)
+                    .orWhere('description', 'ilike', `%${search}%`);
             }
 
-            subCaseLabelQuery.page(0, amount);
+            if (popular)
+            {
+                const innerQuery = query;
+                innerQuery.leftJoinRelated('stat')
+                    .orderBy('stat.count', order);
+                query = CaseLabel.query(trx).from(innerQuery.as('cl'));
+            }
 
-            const baseCaseLabelQuery = CaseLabel.query().select('cl.*').from(subCaseLabelQuery.as('cl'));
-            const resultQuery = baseCaseLabelQuery.orderBy('cl.label', 'asc');
-            const results = await resultQuery;
+            query.orderBy('label', 'asc');
+            const results = await query;
             await trx.commit();
             return results;
         }
