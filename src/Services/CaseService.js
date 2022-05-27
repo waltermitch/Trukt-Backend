@@ -36,7 +36,7 @@ class CaseService
         }
     }
     
-    static async markCaseIsResolved(caseGuid, currentUser)
+    static async caseResolve(caseGuid, currentUser)
     {
         const [caseToChange] = await Promise.all([
             Case.query()

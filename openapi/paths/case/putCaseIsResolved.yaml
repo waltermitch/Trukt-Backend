@@ -1,5 +1,5 @@
 summary: Resolve Case
-operationId: markCaseIsResolvedbyGuid
+operationId: markCaseAsResolved
 description: Mark case as resolved
 tags:
   - Case

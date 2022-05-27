@@ -6,6 +6,6 @@ const prefix = '/case';
 
 router
     .get(`${prefix}/labels`, controller.getCaseLabels)
-    .put(`${prefix}/:guid(${uuidRegexStr})/resolve`, controller.markCaseIsResolved);
+    .put(`${prefix}/:guid(${uuidRegexStr})/resolve`, controller.caseResolve);
 
 module.exports = router;

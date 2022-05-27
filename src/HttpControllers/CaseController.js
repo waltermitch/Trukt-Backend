@@ -33,11 +33,11 @@ class CaseController
         }
     }
 
-    static async markCaseIsResolved(req, res, next)
+    static async caseResolve(req, res, next)
     {
         try
         {
-            await CaseService.markCaseIsResolved(req.params.guid, req.session.userGuid);
+            await CaseService.caseResolve(req.params.guid, req.session.userGuid);
             res.status(204);
             res.json();
         }
