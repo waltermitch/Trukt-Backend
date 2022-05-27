@@ -46,14 +46,13 @@ class CaseService
 
         if (!caseToChange.isResolved)
         {
-            await Promise.all([
-                Case.query().patch({
-                    'isResolved': true,
-                    'resolvedByGuid': currentUser,
-                    'dateResolved': DateTime.now()
-                }).where('guid', caseGuid)
-            ]);
+            caseToChange.isResolved = true;
+            caseToChange.resolvedByGuid = currentUser;
+            caseToChange.dateResolved = DateTime.now();
+
+            await Case.query().patch(caseToChange).findById(caseToChange.guid);
         }
+        return;
         
     }
 }
