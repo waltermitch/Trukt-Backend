@@ -244,6 +244,20 @@ class OrderJobController
         }
     }
 
+    static async createCase(req, res, next)
+    {
+        try
+        {
+            const response = await OrderJobService.createCase(req.params.jobGuid, req.body, req.session.userGuid);
+            res.status(200);
+            res.json(response);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
     static async getCarrierBOL(req, res, next)
     {
         try

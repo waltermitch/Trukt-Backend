@@ -274,6 +274,9 @@ paths:
   /job/{jobGuid}/stop/{stopGuid}/status/{status}:
     put:
       $ref: paths/job/updateStopStatus.yaml
+  /job/{jobGuid}/case:
+    post:
+      $ref: paths/job/createCase.yaml
   /job/statuses:
     get:
       $ref: paths/job/getStatuses.yaml
