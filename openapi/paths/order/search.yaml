@@ -192,7 +192,7 @@ requestBody:
                     items: 
                       type: string
                   isResolved:
-                    description: If true, it will select the jobs that the case is resolved. If false, it will select the jobs that the case is not resolved.
+                    description: If true, it will select only the jobs that have Cases that are resolved. If false, it will select only the jobs that have Cases that are not resolved. If undefined/null, it will select all jobs that have Cases that match the labels.
                     type: boolean
           sort:
             description: Sort results by field provided
