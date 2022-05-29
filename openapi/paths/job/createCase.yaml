@@ -17,39 +17,32 @@ requestBody:
         properties:
           isResolved:
             type: boolean
-            description: indicate if the case is resolved or not
+            description: Indicate if the case is resolved or not
           caseLabelId:
-            description: the Id of Case Label
+            description: The Id of Case Label
             type: integer
         required:
           - caseLabelId
 
 responses:
   200:
-    description: Notes have been created
+    description: Case has been created
     content:
       application/json:
         schema:
           type: object
           properties:
-
             guid:
               $ref: '../../components/schemas/Common.yaml#/guid'
             caseLabelId:
-              description: the id of Case Label
-              type: number
-              format: integer
+              description: The id of Case Label
+              type: integer
             isResolved:
-              description: indidate if the case is resolved or not
+              description: Indidate if the case is resolved or not
               type: boolean
             createdByGuid:
               $ref: ../../components/schemas/Common.yaml#/createdByGuid
             dateCreated:
               $ref: ../../components/schemas/Common.yaml#/dateCreated
   400:
-    description: Unable to create case
-    content:
-      application/json:
-        schema:
-          type: string
-          example: Some Error for DB
+    $ref: ../../components/responses/400BadRequest.yaml
