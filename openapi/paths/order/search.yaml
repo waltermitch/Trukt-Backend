@@ -187,12 +187,12 @@ requestBody:
                 type: object
                 properties: 
                   labels:
-                    description: list of labels
+                    description: The list of labels
                     type: array
                     items: 
                       type: string
                   isResolved:
-                    description: Whether the order job case is resolved
+                    description: If true, it will select the jobs that the case is resolved. If false, it will select the jobs that the case is not resolved.
                     type: boolean
           sort:
             description: Sort results by field provided
