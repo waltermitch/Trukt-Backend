@@ -1,17 +1,20 @@
 const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
-const BaseModel = require("./BaseModel");
+const BaseModel = require('./BaseModel');
 
 class Case extends BaseModel
 {
-    static get tableName() {
+    static get tableName()
+    {
         return 'rcgTms.cases';
     }
 
-    static get idColumn() {
+    static get idColumn()
+    {
         return 'guid';
     }
 
-    static get relationMappings() {
+    static get relationMappings()
+    {
         const CaseLabel = require('./CaseLabel');
         const relations = {
             label: {
@@ -58,7 +61,7 @@ class Case extends BaseModel
                     to: 'rcgTms.orders.guid'
                 }
             }
-        }
+        };
         return relations;
     }
 }
