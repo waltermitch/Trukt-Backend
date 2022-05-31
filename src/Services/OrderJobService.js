@@ -1934,7 +1934,8 @@ class OrderJobService
         const cases = Case.fromJson({
             isResolved: isResolved ? isResolved : false,
             caseLabelId: caseLabelId,
-            resolvedByGuid: isResolved ? currentUser : null
+            resolvedByGuid: isResolved ? currentUser : null,
+            dateResolved: isResolved ? DateTime.now() : null
         });
 
         // adding current user
