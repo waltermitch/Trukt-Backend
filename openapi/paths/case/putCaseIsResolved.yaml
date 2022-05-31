@@ -1,0 +1,17 @@
+summary: Resolve Case
+operationId: markCaseAsResolved
+description: Mark case as resolved
+tags:
+  - Case
+parameters:
+  - in: path
+    name: guid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  204:
+    description: Case Marked as Resolved Succesfully
+    content:
+      application/json: {}
