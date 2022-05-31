@@ -1933,7 +1933,8 @@ class OrderJobService
         // composing payload
         const cases = Case.fromJson({
             isResolved: isResolved ? isResolved : false,
-            caseLabelId: caseLabelId
+            caseLabelId: caseLabelId,
+            resolvedByGuid: isResolved ? currentUser : null
         });
 
         // adding current user
