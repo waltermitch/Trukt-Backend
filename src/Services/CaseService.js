@@ -1,6 +1,7 @@
 const { DateTime } = require('luxon');
 const Case = require('../Models/Case');
 const CaseLabel = require('../Models/CaseLabel');
+const Notes = require('../Models/Notes');
 
 class CaseService
 {
@@ -62,6 +63,31 @@ class CaseService
             await trx.rollback();
             throw err;
         }
+    }
+
+    static async getNotes(caseGuid, currentUser)
+    {
+        const trx = await Notes.startTransaction();
+        // const trx = await Case.startTransaction();
+        try 
+        {
+            // const res = await Case.query(trx).findById(caseGuid)
+                
+            const res = await Notes.query(trx)
+                .select('genericNotes.*', 'genericNotes.title')
+                .leftJoinRelated('case')
+                .where('case.guid', caseGuid)
+                .withGraphFetched('createdBy');
+            console.log('res====', res);   
+            await trx.commit();
+            return res;
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+        
     }
 }
 
