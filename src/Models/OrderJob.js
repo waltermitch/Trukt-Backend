@@ -301,6 +301,29 @@ class OrderJob extends BaseModel
         return query;
     }
 
+    static filterCases(query, cases)
+    {
+        if (!cases)
+        {
+            return query;
+        }
+        const CaseLabel = require('./CaseLabel');
+        const { labels, isResolved } = cases;
+        
+        let joinQuery = query.leftJoinRelated('cases');
+        if (labels?.length > 0)
+        {
+            joinQuery = joinQuery.whereIn('case_label_id', CaseLabel.getCaseLabels(labels));
+        }
+
+        if (isResolved)
+        {
+            joinQuery = joinQuery.where('is_resolved', isResolved);
+        }
+        
+        return joinQuery;
+    }
+
     static sorted(query, sortField = {})
     {
         const { field, order } = sortField;
@@ -428,6 +451,7 @@ class OrderJob extends BaseModel
     }
 
     static modifiers = {
+        filterCases: this.filterCases,
         filterJobCategories: this.filterJobCategories,
         sorted: this.sorted,
         globalSearch: this.globalSearch,
