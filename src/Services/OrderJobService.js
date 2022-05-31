@@ -28,6 +28,7 @@ const InvoiceLines = require('../Models/InvoiceLine');
 const InvoiceSystemLine = require('../Models/InvoiceSystemLine');
 const BillService = require('./BIllService');
 const InvoiceBillRelationType = require('../Models/InvoiceBillRelationType');
+const Case = require('../Models/Case');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -1920,6 +1921,34 @@ class OrderJobService
 
         // if we are here, we failed to update status
         throw new DataConflictError('Job Could Not Be Mark as Delivered, Please Check All Stops Are Delivered');
+    }
+
+    static async createCase(jobGuid, body, currentUser)
+    {
+        const { isResolved, caseLabelId } = body;
+
+        // create job model object to link cases to job
+        const job = OrderJob.fromJson({ guid: jobGuid });
+
+        // composing payload
+        const cases = Case.fromJson({
+            isResolved: isResolved ? isResolved : false,
+            caseLabelId: caseLabelId,
+            resolvedByGuid: isResolved ? currentUser : null,
+            dateResolved: isResolved ? DateTime.now() : null
+        });
+
+        // adding current user
+        cases.setCreatedBy(currentUser);
+
+        // linking models to proper table order/job
+        cases.graphLink('orderJob', job);
+        
+        // insert case into table with conjustion
+        const createdCase = await Case.query().insertGraph(cases, { allowRefs: true, relate: true });
+        
+        const result_case = await Case.query().findById(createdCase.guid);
+        return result_case;
     }
 
     static async dispatchServiceJob(jobGuid, body, currentUser)
