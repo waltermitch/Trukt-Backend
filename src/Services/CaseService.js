@@ -67,20 +67,20 @@ class CaseService
 
     static async getNotes(caseGuid, currentUser)
     {
-        const trx = await Notes.startTransaction();
-        // const trx = await Case.startTransaction();
+        const trx1 = await Notes.startTransaction();
+        const trx = await Case.startTransaction();
         try 
         {
-            // const res = await Case.query(trx).findById(caseGuid)
+            const res = await Case.query(trx).where('guid', caseGuid).leftJoinRelated('notes').withGraphFetched('notes.createdBy').select('notes.*');
                 
-            const res = await Notes.query(trx)
-                .select('genericNotes.*', 'genericNotes.title')
+            const res1 = await Notes.query(trx)
+                .select('genericNotes.*')
                 .leftJoinRelated('case')
                 .where('case.guid', caseGuid)
                 .withGraphFetched('createdBy');
             console.log('res====', res);   
             await trx.commit();
-            return res;
+            return res1;
         }
         catch (error)
         {
