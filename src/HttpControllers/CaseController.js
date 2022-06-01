@@ -51,7 +51,7 @@ class CaseController
     {
         try
         {
-            const response = await CaseService.getNotes(req.params.guid, req.session.userGuid);
+            const response = await CaseService.getNotes(req.params.guid);
             res.status(200);
             res.json(response);
         }

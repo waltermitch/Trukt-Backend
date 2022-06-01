@@ -64,7 +64,7 @@ class CaseService
         }
     }
 
-    static async getNotes(caseGuid, currentUser)
+    static async getNotes(caseGuid)
     {
         const trx = await Case.startTransaction();
         try 
