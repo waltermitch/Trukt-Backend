@@ -19,7 +19,9 @@ responses:
         schema:
           type: array
           items:
-            $ref: '../../components/schemas/Note.yaml'
+            allOf:
+              - $ref: '../../components/schemas/Note.yaml'
+              - $ref: '../../components/schemas/Common.yaml#/createdBy'
   404:
     description: Case Not Found
     $ref: ../../components/responses/404NotFound.yaml
