@@ -49,7 +49,6 @@ class CaseController
 
     static async getNotes(req, res, next)
     {
-        console.log('notesss========');
         try
         {
             const response = await CaseService.getNotes(req.params.guid, req.session.userGuid);

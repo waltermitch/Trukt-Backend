@@ -1,8 +1,7 @@
 const { DateTime } = require('luxon');
 const Case = require('../Models/Case');
 const CaseLabel = require('../Models/CaseLabel');
-const Notes = require('../Models/Notes');
-
+const { NotFoundError } = require('../ErrorHandling/Exceptions');
 class CaseService
 {
     static async getAvailableCaseLabels(amount, order, search, popular)
@@ -67,20 +66,21 @@ class CaseService
 
     static async getNotes(caseGuid, currentUser)
     {
-        const trx1 = await Notes.startTransaction();
         const trx = await Case.startTransaction();
         try 
         {
-            const res = await Case.query(trx).where('guid', caseGuid).leftJoinRelated('notes').withGraphFetched('notes.createdBy').select('notes.*');
-                
-            const res1 = await Notes.query(trx)
-                .select('genericNotes.*')
-                .leftJoinRelated('case')
-                .where('case.guid', caseGuid)
-                .withGraphFetched('createdBy');
-            console.log('res====', res);   
+            const res = await Case.query(trx).findById(caseGuid)
+                .withGraphFetched('notes')
+                .withGraphFetched('notes.createdBy');
+            
+            if (!res)
+            {
+                await trx.rollback();
+                throw new NotFoundError('Case "guid" not found.');
+            } 
+            
             await trx.commit();
-            return res1;
+            return res['notes'];
         }
         catch (error)
         {
