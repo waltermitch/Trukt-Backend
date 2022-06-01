@@ -45,16 +45,16 @@ const app = express();
 app.use(corsMiddleware());
 app.use(express.json());
 
-// app.use(
-//     openApiValidator.middleware({
-//         apiSpec: './openApi/openapi.yaml',
-//         ignorePaths: path => path.startsWith('/api/docs'),
-//         $refParser: {
-//             mode: 'dereference'
-//         },
-//         formats: require('./openapi/customFormats.js')
-//     })
-// );
+app.use(
+    openApiValidator.middleware({
+        apiSpec: './openApi/openapi.yaml',
+        ignorePaths: path => path.startsWith('/api/docs'),
+        $refParser: {
+            mode: 'dereference'
+        },
+        formats: require('./openapi/customFormats.js')
+    })
+);
 
 app.use(
     Auth.middleware({

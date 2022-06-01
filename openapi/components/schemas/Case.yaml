@@ -1,0 +1,14 @@
+type: object
+properties:
+  guid:
+    $ref: './Common.yaml#/guid'
+  caseLabelId:
+    description: The id of Case Label
+    type: integer
+  isResolved:
+    description: Indidate if the case is resolved or not
+    type: boolean
+  createdByGuid:
+    $ref: ./Common.yaml#/createdByGuid
+  dateCreated:
+    $ref: ./Common.yaml#/dateCreated

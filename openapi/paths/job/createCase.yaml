@@ -30,19 +30,6 @@ responses:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            guid:
-              $ref: '../../components/schemas/Common.yaml#/guid'
-            caseLabelId:
-              description: The id of Case Label
-              type: integer
-            isResolved:
-              description: Indidate if the case is resolved or not
-              type: boolean
-            createdByGuid:
-              $ref: ../../components/schemas/Common.yaml#/createdByGuid
-            dateCreated:
-              $ref: ../../components/schemas/Common.yaml#/dateCreated
+          $ref: '../../components/schemas/Case.yaml'
   400:
     $ref: ../../components/responses/400BadRequest.yaml

@@ -616,25 +616,19 @@ class OrderJobService
     {
         const trx = await OrderJob.startTransaction();
         
-        console.log('resolved=====', resolved);
-
         try
         {
-            const query = OrderJob.query(trx).findById(jobGuid)
-                // .withGraphFetched('cases')
+            let query = OrderJob.query(trx).findById(jobGuid)
                 .withGraphFetched('cases.createdBy');
 
-            // if ( resolved )
-            // {
-            //     // query.where('cases.isResolved', resolved);
-            //     query.modifiers({
-            //         onlyDogs(builder)
-            //         {
-            //           builder.where('isResolved', resolved);
-            //         }
-            //       });
-            // }
-
+            if ( resolved )
+            {
+                query = query.modifyGraph('cases', (builder) =>
+                {
+                    builder.where('cases.isResolved', resolved);
+                });
+            }
+            
             const res = await query;
 
             if (!res)

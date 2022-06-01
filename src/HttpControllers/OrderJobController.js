@@ -83,7 +83,7 @@ class OrderJobController
         try
         {
             const { resolved } = req.query;
-            console.log('resolved====', resolved);
+            
             const response = await OrderJobService.getCases(req.params.jobGuid, resolved);
 
             res.status(200);

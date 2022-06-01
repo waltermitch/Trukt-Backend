@@ -331,6 +331,9 @@ paths:
   /job/{jobGuid}/undeliver:
     put:
       $ref: paths/job/undeliver.yaml
+  /job/{jobGuid}/cases:
+    get:
+      $ref: paths/job/getCases.yaml
   /bulk/order/bill/export:
     put:
       $ref: paths/bulk/exportOrderBill.yaml
