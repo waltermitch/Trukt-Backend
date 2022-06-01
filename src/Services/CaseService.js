@@ -70,7 +70,6 @@ class CaseService
         try 
         {
             const res = await Case.query(trx).findById(caseGuid)
-                .withGraphFetched('notes')
                 .withGraphFetched('notes.createdBy');
             
             if (!res)
