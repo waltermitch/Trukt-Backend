@@ -17,12 +17,9 @@ responses:
     content:
       application/json:
         schema:
-          type: object
-          properties:
-            results:
-              type: array
-              items:
-                $ref: '../../components/schemas/Note.yaml'
+          type: array
+          items:
+            $ref: '../../components/schemas/Note.yaml'
   404:
     description: Case Not Found
     $ref: ../../components/responses/404NotFound.yaml
