@@ -60,6 +60,14 @@ class Case extends BaseModel
                     },
                     to: 'rcgTms.orders.guid'
                 }
+            },
+            createdBy: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./User'),
+                join: {
+                    from: 'rcgTms.cases.createdByGuid',
+                    to: 'rcgTms.tmsUsers.guid'
+                }
             }
         };
         return relations;

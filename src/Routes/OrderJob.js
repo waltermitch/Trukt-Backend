@@ -22,6 +22,7 @@ router
     .put(`${prefix}/${JOB_GUID}/uncancel`, controller.uncancelJob)
     .put(`${prefix}/${JOB_GUID}/deliver`, controller.deliveredJob)
     .put(`${prefix}/${JOB_GUID}/undeliver`, controller.undeliverJob)
+    .get(`${prefix}/${JOB_GUID}/cases`, controller.getCases)
 
     // finances
     .put(`${prefix}/${JOB_GUID}/fin/carrier-pay`, controller.updateCarrierPay)

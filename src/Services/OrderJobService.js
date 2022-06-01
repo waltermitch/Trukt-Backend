@@ -612,6 +612,47 @@ class OrderJobService
         };
     }
 
+    static async getCases(jobGuid, resolved)
+    {
+        const trx = await OrderJob.startTransaction();
+        
+        console.log('resolved=====', resolved);
+
+        try
+        {
+            const query = OrderJob.query(trx).findById(jobGuid)
+                // .withGraphFetched('cases')
+                .withGraphFetched('cases.createdBy');
+
+            // if ( resolved )
+            // {
+            //     // query.where('cases.isResolved', resolved);
+            //     query.modifiers({
+            //         onlyDogs(builder)
+            //         {
+            //           builder.where('isResolved', resolved);
+            //         }
+            //       });
+            // }
+
+            const res = await query;
+
+            if (!res)
+            {
+                await trx.rollback();
+                throw new NotFoundError('Job with "guid" not found.');
+            }
+
+            await trx.commit();
+            return res['cases'];
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
     /**
      * This method takes in a single job guid and will use the bulk method to validate job
      * before setting setting status to ready.
