@@ -1,6 +1,6 @@
 summary: Get Notes by Case guid
 operationId: getCaseNotes
-description: Get Notes By Case guid
+description: Get Notes on a Case
 tags:
   - Case
   - Notes
