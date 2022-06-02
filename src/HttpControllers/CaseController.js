@@ -46,6 +46,20 @@ class CaseController
             next(error);
         }
     }
+
+    static async deleteCase(req, res, next)
+    {
+        try
+        {
+            await CaseService.deleteCase(req.params.caseGuid, req.session.userGuid);
+            res.status(200);
+            res.send();
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
 }
 
 module.exports = CaseController;
