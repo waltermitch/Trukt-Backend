@@ -95,7 +95,7 @@ class NotesService
 
         // linking models to propper table order/job
         notes.graphLink(name, model);
-        
+
         // insert note into table with conjustion
         const createdNote = await Notes.query().insertGraph(notes, { allowRefs: true, relate: true });
 
