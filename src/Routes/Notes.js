@@ -4,7 +4,7 @@ const router = require('express').Router();
 
 const prefix = '/note';
 router
-    .post(`${prefix}/:object(job|order)/:objectGuid(${uuidRegexStr})`, controller.createNoteByGuid)
+    .post(`${prefix}/:object(job|order|case)/:objectGuid(${uuidRegexStr})`, controller.createNoteByGuid)
     .put(`${prefix}/:noteGuid(${uuidRegexStr})`, controller.updateNote)
     .delete(`${prefix}/:noteGuid(${uuidRegexStr})`, controller.deleteNote);
 

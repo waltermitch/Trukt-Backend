@@ -6,6 +6,7 @@ const Order = require('../Models/Order');
 const { NOTES_TYPES } = require('../Models/Notes');
 const Objection = require('objection');
 const { raw } = require('objection');
+const Case = require('../Models/Case');
 
 class NotesService
 {
@@ -27,6 +28,15 @@ class NotesService
 
         // generating cleint notes
         return await NotesService.genericCreator('order', order, notePayload, currentUser);
+    }
+
+    // creation of notes attached to case
+    static async createCaseNotes(caseGuid, notePayload, currentUser)
+    {
+        const case1 = Case.fromJson({ guid: caseGuid });
+
+        // generating case notes
+        return await NotesService.genericCreator('case', case1, notePayload, currentUser);
     }
 
     // function for updating notes
@@ -85,7 +95,7 @@ class NotesService
 
         // linking models to propper table order/job
         notes.graphLink(name, model);
-
+        
         // insert note into table with conjustion
         const createdNote = await Notes.query().insertGraph(notes, { allowRefs: true, relate: true });
 

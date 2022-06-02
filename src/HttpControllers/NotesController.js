@@ -21,6 +21,13 @@ class NotesController
                 res.status(200);
                 res.json(response);
             }
+            else if (req.params.object == 'case')
+            {
+                const response = await NotesService.createCaseNotes(req.params.objectGuid, req.body, req.session.userGuid);
+
+                res.status(200);
+                res.json(response);
+            }
         }
         catch (error)
         {
