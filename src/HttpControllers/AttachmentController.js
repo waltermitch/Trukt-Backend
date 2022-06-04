@@ -8,7 +8,7 @@ class AttachmentController
         try
         {
             const result = await AttachmentService.get(req.params.attachmentId);
-    
+
             if (!result)
                 throw new NotFoundError('Attachment Not Found');
             else if (result.isDeleted)
@@ -31,7 +31,7 @@ class AttachmentController
             else
             {
                 const result = await AttachmentService.searchByParent(req.query);
-    
+
                 res.status(200);
                 res.json(result);
             }
@@ -46,15 +46,26 @@ class AttachmentController
     {
         try
         {
-            if (!req.query?.parent || !req.query?.parentType)
-                throw new ValidationError('Missing parent and/or parentType');
-            else if (!req.files)
-                throw new ValidationError('Missing Attachment(s) In Body');
+            // based on content-type we can know if it's a file or url
+            if (req.headers['content-type'] === 'application/json')
+            {
+                const result = await AttachmentService.attachExistingFiles(req.query, req.body, req.session?.userGuid);
+
+                res.status(200);
+                res.json(result);
+            }
             else
             {
-                const result = await AttachmentService.insert(req.files, req.query, req.session?.userGuid);
-                res.status(201);
-                res.json(result);
+                if (!req.query?.parent || !req.query?.parentType)
+                    throw new ValidationError('Missing parent and/or parentType');
+                else if (!req.files)
+                    throw new ValidationError('Missing Attachment(s) In Body');
+                else
+                {
+                    const result = await AttachmentService.insert(req.files, req.query, req.session?.userGuid);
+                    res.status(201);
+                    res.json(result);
+                }
             }
         }
         catch (error)
@@ -72,7 +83,7 @@ class AttachmentController
             else
             {
                 const result = await AttachmentService.update(req.params.attachmentId, req.body, req.session?.userGuid);
-    
+
                 res.status(200);
                 res.json(result);
             }
@@ -88,7 +99,7 @@ class AttachmentController
         try
         {
             await AttachmentService.delete(req.params.attachmentId, req.session?.userGuid);
-    
+
             res.status(204).send();
         }
         catch (error)
