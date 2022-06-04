@@ -10,7 +10,7 @@ parameters:
       $ref: '../../components/schemas/Common.yaml#/guid'
     required: true
 responses:
-  '204':
+  204:
     description: Deleted Attachment
   400:
     description: To Implement

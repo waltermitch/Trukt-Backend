@@ -57,9 +57,6 @@ class AttachmentService
 
     static async insert(files, opts, currentUser)
     {
-        if (['job'].includes(opts.parentType))
-            return { 'status': 400, 'data': 'Not An Allowed parentType' };
-
         // get sas
         const sas = AzureStorage.getSAS();
 
@@ -95,6 +92,30 @@ class AttachmentService
         }
 
         return urls;
+    }
+
+    static async attachExistingFiles(query, files, currentUser)
+    {
+        const attachments = [];
+
+        for (const f of files)
+        {
+            attachments.push({
+                'guid': uuid.v4(),
+                'parent': query.parent,
+                'parent_table': query.parentType,
+                'type': f.attachmentType,
+                'extension': f.extension,
+                'url': f.url,
+                'name': f.name,
+                'visibility': f.visibility || ['internal'],
+                'createdByGuid': currentUser
+            });
+        }
+
+        const res = await Attachment.query().insertGraph(attachments);
+
+        return res;
     }
 
     static async update(guid, data, currentUser)
