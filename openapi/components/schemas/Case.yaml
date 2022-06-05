@@ -6,7 +6,7 @@ Case:
     caseLabelId:
       description: The id of Case Label
       type: integer
-      exmaple: 1
+      example: 1
     isResolved:
       description: Indidate if the case is resolved or not
       type: boolean

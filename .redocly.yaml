@@ -1,5 +1,6 @@
-apiDefinitions:
-  main: openapi/openapi.yaml
+apis:
+  main: 
+    root: openapi/openapi.yaml
 
 lint:
   extends:
