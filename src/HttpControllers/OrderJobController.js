@@ -78,6 +78,23 @@ class OrderJobController
         }
     }
 
+    static async getCases(req, res, next)
+    {
+        try
+        {
+            const { resolved } = req.query;
+            
+            const response = await OrderJobService.getCases(req.params.jobGuid, resolved);
+
+            res.status(200);
+            res.json(response);
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+    
     static async addHold(req, res, next)
     {
         await OrderJobController._toggleHold(true, req, res, next);
@@ -237,6 +254,20 @@ class OrderJobController
         {
             await OrderJobService.dispatchServiceJob(req.params.jobGuid, req.body, req.session.userGuid);
             res.status(200).send();
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async createCase(req, res, next)
+    {
+        try
+        {
+            const response = await OrderJobService.createCase(req.params.jobGuid, req.body, req.session.userGuid);
+            res.status(200);
+            res.json(response);
         }
         catch (error)
         {

@@ -12,9 +12,24 @@ requestBody:
       schema:
         type: string
         format: binary
-
+    application/json: 
+      schema:
+        type: array
+        items:
+          type: object
+          properties:
+            url:
+              type: string
+              description: URL of the attachment
+            name: 
+              type: string
+              description: Name of the attachment
+            extension:
+              type: string
+              description: mime-type of the attachment
+              example: [application/pdf, image/jpeg, image/png]
 responses:
-  '201':
+  201:
     description: Created Attachment
     content:
       application/json: {}

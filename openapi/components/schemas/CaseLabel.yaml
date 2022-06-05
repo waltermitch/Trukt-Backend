@@ -1,12 +1,12 @@
 type: object
 properties:
-  id: 
+  id:
     type: number
     format: integer
-  label: 
-    description: The name of the Case. Users should see this as the name of the Case. 
+    example: 1
+  label:
+    description: The name of the Case. Users should see this as the name of the Case.
     type: string
   description:
     description: A brief description of why users should utilize the Case Label.
     type: string
-

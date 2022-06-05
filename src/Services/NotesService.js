@@ -4,29 +4,51 @@ const OrderJob = require('../Models/OrderJob');
 const Notes = require('../Models/Notes');
 const Order = require('../Models/Order');
 const { NOTES_TYPES } = require('../Models/Notes');
-const Objection = require('objection');
 const { raw } = require('objection');
+const Case = require('../Models/Case');
+const User = require('../Models/User');
 
 class NotesService
 {
-    // creation of internal notes attached to job
-    static async createInternalNotes(jobGuid, notePayload, currentUser)
+    /**
+     * @description creation of internal notes attached to job
+     *
+     * @param {OrderJob} job
+     * @param {Notes} note
+     * @param {String | User} currentUser
+     * @returns {Notes}
+     */
+    static createInternalNotes(job, note, currentUser)
     {
-        // create job model object to link notes to job
-        const job = OrderJob.fromJson({ guid: jobGuid });
 
         // generating internal notes
-        return await NotesService.genericCreator('job', job, notePayload, currentUser);
+        return NotesService.genericCreator('job', job, note, currentUser);
     }
 
-    // creation of external notes, client notes
-    static async createClientNotes(orderGuid, notePayload, currentUser)
+    /**
+     * @description creation of external notes, client notes
+     *
+     * @param {Order} order
+     * @param {Notes} note
+     * @param {String | User} currentUser
+     * @returns {Notes}
+     */
+    static createClientNotes(order, note, currentUser)
     {
-        // create order model object to link notes to order
-        const order = Order.fromJson({ guid: orderGuid });
+        return NotesService.genericCreator('order', order, note, currentUser);
+    }
 
-        // generating cleint notes
-        return await NotesService.genericCreator('order', order, notePayload, currentUser);
+    /**
+     * @description creation of notes attached to case
+     *
+     * @param {Case} case_
+     * @param {Notes} note
+     * @param {String | User} currentUser
+     * @returns {Notes}
+     */
+    static createCaseNotes(case_, note, currentUser)
+    {
+        return NotesService.genericCreator('case', case_, note, currentUser);
     }
 
     // function for updating notes
@@ -56,7 +78,7 @@ class NotesService
         await PubSubService.publishNote(parentGuid, parentName, updatedNote, 'updated');
     }
 
-    // function to delete not
+    // function to delete note
     static async deleteNote(noteGuid)
     {
         // find note being that needs to be deleted return job/order guid
@@ -74,39 +96,35 @@ class NotesService
         await PubSubService.publishNote(parentGuid, parentName, updatedNote, 'deleted');
     }
 
-    // to create any note
-    static async genericCreator(name, model, notePayload, currentUser)
+    /**
+     * @description creates a note attached to a parent model.
+     *
+     * @param {String} name
+     * @param {Order | OrderJob | Case} model
+     * @param {Notes} note
+     * @param {String | User} currentUser
+     * @returns {Notes}
+     */
+    static async genericCreator(name, model, note, currentUser)
     {
-        // composing payload
-        const notes = Notes.fromJson(notePayload);
 
         // adding current user
-        notes.setCreatedBy(currentUser);
+        note.setCreatedBy(currentUser);
 
-        // linking models to propper table order/job
-        notes.graphLink(name, model);
+        // linking models to propper parent table
+        note.graphLink(name, model);
 
-        // insert note into table with conjustion
-        const createdNote = await Notes.query().insertGraph(notes, { allowRefs: true, relate: true });
+        const createdNote = await Notes.query()
+            .insertGraphAndFetch(note, { allowRefs: true, relate: true })
+            .withGraphFetched('createdBy');
 
-        // get related user
-        const note = await Notes.query().findById(createdNote.guid).withGraphFetched('createdBy');
-
-        // depending on model being job or order, publish to pubsub accordingly
-        let parentName;
-        if (model instanceof OrderJob)
-            parentName = 'job';
-        else
-            parentName = 'order';
-
-        delete note.order;
-        delete note.job;
+        // dont return the parent data that the note was attached to.
+        delete createdNote[name];
 
         // update pubsub accordingly
-        await PubSubService.publishNote(model.guid, parentName, note, 'created');
+        await PubSubService.publishNote(model.guid, name, createdNote, 'created');
 
-        // return note
-        return note;
+        return createdNote;
     }
 
     static async getOrderNotes(orderGuid)
@@ -128,11 +146,11 @@ class NotesService
             .select(raw('gn.*, false as "isClientNote"'))
             .leftJoin('orderJobNotes', 'gn.guid', 'orderJobNotes.noteGuid')
             .where('orderJobNotes.jobGuid', jobGuid);
-        
+
         // filter between job notes types
         if (type)
             notesQueryBuilder.where('gn.type', type);
-        
+
         // get order notes (which are client notes actually ;))
         if (order)
             notesQueryBuilder.union(

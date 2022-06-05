@@ -1,0 +1,35 @@
+summary: Create Case on a specific job
+operationId: createCaseOnJob
+description: Create a case on a specific job
+tags:
+  - Case
+parameters:
+  - in: path
+    name: jobGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+requestBody:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          isResolved:
+            type: boolean
+            description: Indicate if the case is resolved or not
+          caseLabelId:
+            description: The Id of Case Label
+            type: integer
+        required:
+          - caseLabelId
+
+responses:
+  200:
+    description: Case has been created
+    content:
+      application/json:
+        schema:
+          $ref: '../../components/schemas/Case.yaml#/Case'
+  400:
+    $ref: ../../components/responses/400BadRequest.yaml

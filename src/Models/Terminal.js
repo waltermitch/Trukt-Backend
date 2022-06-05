@@ -81,8 +81,11 @@ class Terminal extends BaseModel
                 // findorcreate breaks because since this is an integer
                 // it looks for an exact match which it cannot find and returns
                 // null. This is to make sure we can find existing terminals
-                // no matter how precise the provided geocoords are
-                json[field] = parseFloat(parseFloat(json[field]).toFixed(7));
+                // no matter how precise the provided geocoords are.
+                // Also, if geocode is provided as null values, then don't do parsing on it.
+                // Otherwise, NaN will be returned.
+                if (json[field] != null)
+                    json[field] = parseFloat(parseFloat(json[field]).toFixed(7));
             }
         }
 

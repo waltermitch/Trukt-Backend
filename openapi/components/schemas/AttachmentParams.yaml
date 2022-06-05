@@ -19,7 +19,7 @@ properties:
     allowEmptyValue: false
     description: The type of the parent object (i.e job, order)
     schema:
-      enum: [jobs]
+      enum: [jobs,orders,commodities]
   - in: query
     name: attachmentType
     required: false

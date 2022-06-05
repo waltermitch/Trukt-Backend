@@ -274,6 +274,9 @@ paths:
   /job/{jobGuid}/stop/{stopGuid}/status/{status}:
     put:
       $ref: paths/job/updateStopStatus.yaml
+  /job/{jobGuid}/case:
+    post:
+      $ref: paths/job/createCase.yaml
   /job/statuses:
     get:
       $ref: paths/job/getStatuses.yaml
@@ -286,6 +289,9 @@ paths:
   /case/{guid}/notes:
     get:
       $ref: paths/case/getNotes.yaml
+  /case/{caseGuid}:
+    delete:
+      $ref: paths/case/delete.yaml
   /bulk/order/users:
     put:
       $ref: paths/bulk/updateOrderUsers.yaml
@@ -331,6 +337,9 @@ paths:
   /job/{jobGuid}/undeliver:
     put:
       $ref: paths/job/undeliver.yaml
+  /job/{jobGuid}/cases:
+    get:
+      $ref: paths/job/getCases.yaml
   /bulk/order/bill/export:
     put:
       $ref: paths/bulk/exportOrderBill.yaml

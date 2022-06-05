@@ -28,6 +28,7 @@ const InvoiceLines = require('../Models/InvoiceLine');
 const InvoiceSystemLine = require('../Models/InvoiceSystemLine');
 const BillService = require('./BIllService');
 const InvoiceBillRelationType = require('../Models/InvoiceBillRelationType');
+const Case = require('../Models/Case');
 
 const regex = new RegExp(uuidRegexStr);
 
@@ -611,6 +612,41 @@ class OrderJobService
         };
     }
 
+    static async getCases(jobGuid, resolved)
+    {
+        const trx = await OrderJob.startTransaction();
+
+        try
+        {
+            const query = OrderJob.query(trx)
+                .findById(jobGuid)
+                .withGraphFetched('cases.[createdBy, label, resolvedBy]');
+
+            if (resolved != null)
+            {
+                query.modifyGraph('cases', (builder) =>
+                {
+                    builder.where('cases.isResolved', resolved);
+                });
+            }
+
+            const res = await query;
+
+            if (!res)
+            {
+                throw new NotFoundError(`Job with "${jobGuid}" not found.`);
+            }
+
+            await trx.commit();
+            return res.cases;
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
     /**
      * This method takes in a single job guid and will use the bulk method to validate job
      * before setting setting status to ready.
@@ -891,10 +927,12 @@ class OrderJobService
                     errors.push('Please un-dispatch the Carrier first.');
                 if (job.has_accepted_requests)
                     errors.push('Please cancel Carrier request.');
-                if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
-                    errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
-                if (job.not_resolved_address && job.is_transport === false)
-                    errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
+
+                // if ((job.bad_pickup_address || job.bad_delivery_address) && job.is_transport === true)
+                //     errors.push(`Please use a real address instead of ${job.bad_pickup_address || job.bad_delivery_address}`);
+                // if (job.not_resolved_address && job.is_transport === false)
+                //     errors.push(`Please use a real address instead of ${job.not_resolved_address}`);
+
                 if (job.pickup_requested_type == 'no later than' || job.delivery_requested_type == 'no later than')
                 {
                     if (!job.pickup_requested_date_end)
@@ -1920,6 +1958,34 @@ class OrderJobService
 
         // if we are here, we failed to update status
         throw new DataConflictError('Job Could Not Be Mark as Delivered, Please Check All Stops Are Delivered');
+    }
+
+    static async createCase(jobGuid, body, currentUser)
+    {
+        const { isResolved, caseLabelId } = body;
+
+        // create job model object to link cases to job
+        const job = OrderJob.fromJson({ guid: jobGuid });
+
+        // composing payload
+        const cases = Case.fromJson({
+            isResolved: isResolved ? isResolved : false,
+            caseLabelId: caseLabelId,
+            resolvedByGuid: isResolved ? currentUser : null,
+            dateResolved: isResolved ? DateTime.now() : null
+        });
+
+        // adding current user
+        cases.setCreatedBy(currentUser);
+
+        // linking models to proper table order/job
+        cases.graphLink('orderJob', job);
+
+        // insert case into table with conjustion
+        const createdCase = await Case.query().insertGraph(cases, { allowRefs: true, relate: true });
+
+        const result_case = await Case.query().findById(createdCase.guid);
+        return result_case;
     }
 
     static async dispatchServiceJob(jobGuid, body, currentUser)

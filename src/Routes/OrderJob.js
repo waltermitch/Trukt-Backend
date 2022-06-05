@@ -11,6 +11,7 @@ router
     .put(`${prefix}/${JOB_GUID}/stop/:stopGuid(${uuidRegexStr})/status/:status`, controller.updateStopStatus)
     .post(`${prefix}/${JOB_GUID}/hold`, controller.addHold)
     .post(`${prefix}/${JOB_GUID}/dispatch`, controller.dispatchServiceJob)
+    .post(`${prefix}/${JOB_GUID}/case`, controller.createCase)
     .delete(`${prefix}/${JOB_GUID}/hold`, controller.removeHold)
     .put(`${prefix}/${JOB_GUID}/ready`, controller.setJobToReadySingle)
     .put(`${prefix}/${JOB_GUID}/complete`, controller.markJobAsComplete)
@@ -21,6 +22,7 @@ router
     .put(`${prefix}/${JOB_GUID}/uncancel`, controller.uncancelJob)
     .put(`${prefix}/${JOB_GUID}/deliver`, controller.deliveredJob)
     .put(`${prefix}/${JOB_GUID}/undeliver`, controller.undeliverJob)
+    .get(`${prefix}/${JOB_GUID}/cases`, controller.getCases)
 
     // finances
     .put(`${prefix}/${JOB_GUID}/fin/carrier-pay`, controller.updateCarrierPay)

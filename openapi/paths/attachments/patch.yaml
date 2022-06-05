@@ -16,7 +16,7 @@ requestBody:
       schema:
         $ref: ../../components/schemas/Attachment.yaml
 responses:
-  '204':
+  204:
     description: updated Attachment
   400:
     description: To Implement

@@ -1,0 +1,21 @@
+summary: Delete Case
+operationId: deleteCase
+description: Delete a Case by CaseGuid
+tags:
+  - Case
+parameters:
+  - in: path
+    name: caseGuid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: Case has been deleted
+    content:
+      application/json: {}
+
+  404:
+    description: Case was not found and not deleted
+    $ref: ../../components/responses/404NotFound.yaml

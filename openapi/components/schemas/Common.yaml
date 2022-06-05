@@ -430,6 +430,7 @@ Enums:
     enum:
       - job
       - order
+      - case
   Get Orders sort fields:
     type: string
     enum:
