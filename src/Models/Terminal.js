@@ -84,7 +84,7 @@ class Terminal extends BaseModel
                 // no matter how precise the provided geocoords are.
                 // Also, if geocode is provided as null values, then don't do parsing on it.
                 // Otherwise, NaN will be returned.
-                if (json[field] !== null)
+                if (json[field] != null)
                     json[field] = parseFloat(parseFloat(json[field]).toFixed(7));
             }
         }
