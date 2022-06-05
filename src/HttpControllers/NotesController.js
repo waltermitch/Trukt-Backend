@@ -1,4 +1,8 @@
 const NotesService = require('../Services/NotesService');
+const Notes = require('../Models/Notes');
+const OrderJob = require('../Models/OrderJob');
+const Order = require('../Models/Order');
+const Case = require('../Models/Case');
 
 class NotesController
 {
@@ -6,28 +10,27 @@ class NotesController
     {
         try
         {
-            // logic to create 2 type of notes if job then it is internal notes order is external notes
-            if (req.params.object == 'job')
+            const noteToCreate = Notes.fromJson(req.body);
+            let parentModel = undefined;
+            switch (req.params.object)
             {
-                const response = await NotesService.createInternalNotes(req.params.objectGuid, req.body, req.session.userGuid);
-
-                res.status(200);
-                res.json(response);
+                case 'job':
+                    parentModel = OrderJob;
+                    break;
+                case 'order':
+                    parentModel = Order;
+                    break;
+                case 'case':
+                    parentModel = Case;
+                    break;
             }
-            else if (req.params.object == 'order')
-            {
-                const response = await NotesService.createClientNotes(req.params.objectGuid, req.body, req.session.userGuid);
 
-                res.status(200);
-                res.json(response);
-            }
-            else if (req.params.object == 'case')
-            {
-                const response = await NotesService.createCaseNotes(req.params.objectGuid, req.body, req.session.userGuid);
+            const parent = new parentModel();
+            parent.guid = req.params.objectGuid;
 
-                res.status(200);
-                res.json(response);
-            }
+            const response = await NotesService.genericCreator(req.params.object, parent, noteToCreate, req.session.userGuid);
+            res.status(200);
+            res.json(response);
         }
         catch (error)
         {
