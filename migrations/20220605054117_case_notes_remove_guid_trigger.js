@@ -1,9 +1,7 @@
 
 exports.up = function (knex)
 {
-    return knex.raw(`
-    DROP TRIGGER rcg_case_notes_guid ON rcg_tms.case_notes;
-  `);
+    return knex.raw('DROP TRIGGER IF EXISTS rcg_case_notes_guid ON rcg_tms.case_notes;');
 };
 
 exports.down = function (knex)

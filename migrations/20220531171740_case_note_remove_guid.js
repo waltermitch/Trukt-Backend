@@ -7,5 +7,5 @@ exports.up = function(knex)
 
 exports.down = function(knex)
 {
-  
+  return knex.raw('SELECT 1;');
 };
