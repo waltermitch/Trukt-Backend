@@ -15,3 +15,5 @@ responses:
     description: Case Marked as Resolved Succesfully
     content:
       application/json: {}
+  400:
+    $ref: '../../components/responses/400BadRequest.yaml'

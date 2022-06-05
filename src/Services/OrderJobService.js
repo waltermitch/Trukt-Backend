@@ -615,30 +615,30 @@ class OrderJobService
     static async getCases(jobGuid, resolved)
     {
         const trx = await OrderJob.startTransaction();
-        
+
         try
         {
-            let query = OrderJob.query(trx).findById(jobGuid)
-                .withGraphFetched('cases.createdBy');
+            const query = OrderJob.query(trx)
+                .findById(jobGuid)
+                .withGraphFetched('cases.[createdBy, label, resolvedBy]');
 
-            if ( resolved )
+            if (resolved != null)
             {
-                query = query.modifyGraph('cases', (builder) =>
+                query.modifyGraph('cases', (builder) =>
                 {
                     builder.where('cases.isResolved', resolved);
                 });
             }
-            
+
             const res = await query;
 
             if (!res)
             {
-                await trx.rollback();
-                throw new NotFoundError('Job with "guid" not found.');
+                throw new NotFoundError(`Job with "${jobGuid}" not found.`);
             }
 
             await trx.commit();
-            return res['cases'];
+            return res.cases;
         }
         catch (error)
         {
@@ -1980,10 +1980,10 @@ class OrderJobService
 
         // linking models to proper table order/job
         cases.graphLink('orderJob', job);
-        
+
         // insert case into table with conjustion
         const createdCase = await Case.query().insertGraph(cases, { allowRefs: true, relate: true });
-        
+
         const result_case = await Case.query().findById(createdCase.guid);
         return result_case;
     }

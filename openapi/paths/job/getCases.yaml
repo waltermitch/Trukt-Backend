@@ -24,9 +24,7 @@ responses:
         schema:
           type: array
           items:
-            allOf:
-              - $ref: '../../components/schemas/Case.yaml'
-              - $ref: '../../components/schemas/Common.yaml#/createdBy'
+            $ref: '../../components/schemas/Case.yaml#/Case'                  
   404:
     description: Job Not Found
     $ref: ../../components/responses/404NotFound.yaml
