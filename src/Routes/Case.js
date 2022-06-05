@@ -7,6 +7,7 @@ const prefix = '/case';
 router
     .get(`${prefix}/labels`, controller.getCaseLabels)
     .put(`${prefix}/:guid(${uuidRegexStr})/resolve`, controller.caseResolve)
+    .get(`${prefix}/:guid(${uuidRegexStr})/notes`, controller.getNotes)
     .delete(`${prefix}/:caseGuid(${uuidRegexStr})`, controller.deleteCase);
 
 module.exports = router;

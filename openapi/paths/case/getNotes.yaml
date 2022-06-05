@@ -1,0 +1,27 @@
+summary: Get Notes by Case guid
+operationId: getCaseNotes
+description: Get Notes on a Case
+tags:
+  - Case
+  - Notes
+parameters:
+  - in: path
+    name: guid
+    schema:
+      $ref: '../../components/schemas/Common.yaml#/guid'
+    required: true
+
+responses:
+  200:
+    description: Notes
+    content:
+      application/json:
+        schema:
+          type: array
+          items:
+            allOf:
+              - $ref: '../../components/schemas/Note.yaml'
+              - $ref: '../../components/schemas/Common.yaml#/createdBy'
+  404:
+    description: Case Not Found
+    $ref: ../../components/responses/404NotFound.yaml

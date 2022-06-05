@@ -65,6 +65,29 @@ class CaseService
         }
     }
 
+    static async getNotes(caseGuid)
+    {
+        const trx = await Case.startTransaction();
+        try
+        {
+            const res = await Case.query(trx).findById(caseGuid)
+                .withGraphFetched('notes.createdBy');
+
+            if (!res)
+            {
+                throw new NotFoundError(`Case with ${caseGuid} not found.`);
+            }
+
+            await trx.commit();
+            return res.notes;
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
     static async deleteCase(caseGuid, currentUser)
     {
         // Cases will be soft deleted, they will remain attached to the job.
@@ -95,7 +118,6 @@ class CaseService
             await trx.rollback();
             throw error;
         }
-
     }
 }
 

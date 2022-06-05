@@ -9,7 +9,7 @@ class CaseController
     {
         try
         {
-            
+
             const amount = Math.max(req.query.amount || 20, 1);
             const order = req.query.order || 'desc';
             const search = req.query.search || '';
@@ -40,6 +40,20 @@ class CaseController
             await CaseService.caseResolve(req.params.guid, req.session.userGuid);
             res.status(204);
             res.json();
+        }
+        catch (error)
+        {
+            next(error);
+        }
+    }
+
+    static async getNotes(req, res, next)
+    {
+        try
+        {
+            const response = await CaseService.getNotes(req.params.guid);
+            res.status(200);
+            res.json(response);
         }
         catch (error)
         {
