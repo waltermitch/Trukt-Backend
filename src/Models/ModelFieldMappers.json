@@ -388,5 +388,20 @@
                 ]
             }
         }
+    },
+    "Case": {
+        "hide": {
+            "external": {
+                "into": [
+                    "dateUpdated",
+                    "dateDeleted",
+                    "isDeleted",
+                    "createdByGuid",
+                    "updatedByGuid",
+                    "deletedByGuid",
+                    "resolvedByGuid"
+                ]
+            }
+        }
     }
 }

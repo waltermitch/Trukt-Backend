@@ -1,4 +1,4 @@
-const { RecordAuthorMixin } = require('./Mixins/RecordAuthors');
+const { RecordAuthorMixin, AuthorRelationMappings } = require('./Mixins/RecordAuthors');
 const BaseModel = require('./BaseModel');
 
 class Case extends BaseModel
@@ -60,8 +60,17 @@ class Case extends BaseModel
                     },
                     to: 'rcgTms.orders.guid'
                 }
+            },
+            resolvedBy: {
+                relation: BaseModel.HasOneRelation,
+                modelClass: require('./User'),
+                join: {
+                    from: 'rcgTms.cases.resolvedByGuid',
+                    to: 'rcgTms.tmsUsers.guid'
+                }
             }
         };
+        Object.assign(relations, AuthorRelationMappings(this.tableName));
         return relations;
     }
 }

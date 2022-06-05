@@ -1,0 +1,27 @@
+Case:
+  type: object
+  properties:
+    guid:
+      $ref: './Common.yaml#/guid'
+    caseLabelId:
+      description: The id of Case Label
+      type: integer
+      exmaple: 1
+    isResolved:
+      description: Indidate if the case is resolved or not
+      type: boolean
+    dateResolved:
+      description: The date the case was marked as resolved.
+      type: string
+      format: date-time
+      example: '2021-08-10T07:59:59.000Z'
+    dateCreated:
+      $ref: './Common.yaml#/dateCreated'
+    label:
+      $ref: ./CaseLabel.yaml
+    createdBy:
+      $ref: './Common.yaml#/createdBy'
+    resolvedBy:
+      allOf:
+        - $ref: './User.yaml#/TMSUser'
+        - description: The TMS User that marked this Case as resolved.

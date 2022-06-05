@@ -612,6 +612,41 @@ class OrderJobService
         };
     }
 
+    static async getCases(jobGuid, resolved)
+    {
+        const trx = await OrderJob.startTransaction();
+
+        try
+        {
+            const query = OrderJob.query(trx)
+                .findById(jobGuid)
+                .withGraphFetched('cases.[createdBy, label, resolvedBy]');
+
+            if (resolved != null)
+            {
+                query.modifyGraph('cases', (builder) =>
+                {
+                    builder.where('cases.isResolved', resolved);
+                });
+            }
+
+            const res = await query;
+
+            if (!res)
+            {
+                throw new NotFoundError(`Job with "${jobGuid}" not found.`);
+            }
+
+            await trx.commit();
+            return res.cases;
+        }
+        catch (error)
+        {
+            await trx.rollback();
+            throw error;
+        }
+    }
+
     /**
      * This method takes in a single job guid and will use the bulk method to validate job
      * before setting setting status to ready.
@@ -1945,10 +1980,10 @@ class OrderJobService
 
         // linking models to proper table order/job
         cases.graphLink('orderJob', job);
-        
+
         // insert case into table with conjustion
         const createdCase = await Case.query().insertGraph(cases, { allowRefs: true, relate: true });
-        
+
         const result_case = await Case.query().findById(createdCase.guid);
         return result_case;
     }
