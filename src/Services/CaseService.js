@@ -1,8 +1,8 @@
 const { DateTime } = require('luxon');
 const Case = require('../Models/Case');
 const CaseLabel = require('../Models/CaseLabel');
-const OrderJobCase = require('../Models/OrderJobCase');
 const { NotFoundError } = require('../ErrorHandling/Exceptions');
+
 class CaseService
 {
     static async getAvailableCaseLabels(amount, order, search, popular)
@@ -67,8 +67,11 @@ class CaseService
 
     static async deleteCase(caseGuid, currentUser)
     {
-        const trx = await Case.startTransaction(); 
-        
+        // Cases will be soft deleted, they will remain attached to the job.
+        // We want to be able to keep track of which case was attached to which job even after deletion.
+        // Querying for cases will require to query if the case is marked deleted or not.
+
+        const trx = await Case.startTransaction();
         try
         {
             const updatedCase = await Case.query(trx)
@@ -79,15 +82,12 @@ class CaseService
                     updatedByGuid: currentUser,
                     deletedByGuid: currentUser
                 });
-            
 
-            if (!updatedCase) 
+            if (!updatedCase)
             {
-                trx.rollback();
-                throw new NotFoundError('Case was not found and not deleted');
+                throw new NotFoundError('Case was not found and not deleted.');
             }
-            await OrderJobCase.query().delete().where('caseGuid', caseGuid);
-            
+
             await trx.commit();
         }
         catch (error)
@@ -95,7 +95,7 @@ class CaseService
             await trx.rollback();
             throw error;
         }
-        
+
     }
 }
 
