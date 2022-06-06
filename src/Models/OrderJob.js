@@ -308,7 +308,7 @@ class OrderJob extends BaseModel
             return query;
         }
         const CaseLabel = require('./CaseLabel');
-        const { labels, isResolved } = cases;
+        const { labels, isResolved, isDeleted } = cases;
         
         let joinQuery = query.leftJoinRelated('cases');
         if (labels?.length > 0)
@@ -316,9 +316,14 @@ class OrderJob extends BaseModel
             joinQuery = joinQuery.whereIn('case_label_id', CaseLabel.getCaseLabels(labels));
         }
 
-        if (isResolved)
+        if (isResolved !== undefined && isResolved !== null)
         {
-            joinQuery = joinQuery.where('is_resolved', isResolved);
+            joinQuery = joinQuery.where('cases.is_resolved', isResolved);
+        }
+        
+        if (isDeleted !== undefined && isDeleted !== null)
+        {
+            joinQuery = joinQuery.where('cases.is_deleted', isDeleted);
         }
         
         return joinQuery;
