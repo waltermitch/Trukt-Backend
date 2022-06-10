@@ -42,16 +42,14 @@ exports.up = function(knex) {
         table.timestamp('delivery_date_requested_end').nullable();
         table.timestamp('delivery_date_requested_start').nullable();
         
-        let exists = false
         table.enu(`delivery_date_requested_type`, [
             'estimated',
             'exactly',
             'no later than',
             'no earlier than'
         ], {
-            useNative: true, enumName: 'date_schedule_types', existingType: exists
+            useNative: true, enumName: 'date_schedule_types', existingType: true
         });
-        exists = true
         table.string('delivery_street1',64).nullable().index();
         table.string('delivery_street2',64).nullable();
         table.string('delivery_state',100).nullable().index();
