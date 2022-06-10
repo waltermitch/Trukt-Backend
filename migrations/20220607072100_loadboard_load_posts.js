@@ -44,9 +44,12 @@ exports.up = function(knex) {
         
         let exists = false
         table.enu(`delivery_date_requested_type`, [
-            'date_schedule_types'
+            'estimated',
+            'exactly',
+            'no later than',
+            'no earlier than'
         ], {
-            useNative: true, enumName: 'delivery_date_requested_type', existingType: exists
+            useNative: true, enumName: 'date_schedule_types', existingType: exists
         });
         exists = true
         table.string('delivery_street1',64).nullable().index();
