@@ -22,9 +22,9 @@ exports.up = function(knex) {
         table.foreign(dispatcherguid).references('guid').inTable('rcg_tms.tms_users');
         table.text('instructions').nullable();
         table.string('load_type').nullable();
-        table.numeric('carrier_pay',15,2).nullable();
-        table.numeric('distance',8,1);
-        table.numeric('rate_per_mile',15,2);
+        table.integer('carrier_pay',15,2).nullable();
+        table.integer('distance',8,1);
+        table.integer('rate_per_mile',15,2);
         table.specificType('equipment', 'text ARRAY');
         table.timestamp('date_created').defaultTo(knex.fn.now());
         table.timestamp('pickup_date_requested_end');
@@ -66,9 +66,9 @@ exports.up = function(knex) {
         table.integer('commodity_length').nullable();
         table.integer('commodity_quantity').nullable();
         table.integer('commodity_weight').nullable();
-        table.uuid('guid').defaultTo(knex.raw('gen_random_uuid()'));
         
     })
+    .raw(migration_tools.guid_function(TABLE_NAME))
 };
 
 exports.down = function(knex) {
