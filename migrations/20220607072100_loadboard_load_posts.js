@@ -29,7 +29,11 @@ exports.up = function(knex) {
         table.timestamp('date_created').defaultTo(knex.fn.now());
         table.timestamp('pickup_date_requested_end');
         table.timestamp('pickup_date_requested_start');
-        table.datetime('pickup_date_requested_type');
+        table.enu(`pickup_date_rquested_type`,null,{
+            useNative:true,
+            enumName:'date_schedule_types',
+            existingType:true
+        })
 
         table.string('pickup_street1',64).nullable().index();
         table.string('pickup_street2',64).nullable();
